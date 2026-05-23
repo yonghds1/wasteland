@@ -1,7 +1,15 @@
 import { Command } from "commander";
 
 import { createChatCommand } from "./commands/chat.js";
+import { createConfigCommand, createCurrentConfigCommand } from "./commands/config.js";
 import { createHelloCommand } from "./commands/hello.js";
+
+function registerRootCommands(program: Command): void {
+  program.addCommand(createHelloCommand());
+  program.addCommand(createChatCommand());
+  program.addCommand(createConfigCommand());
+  program.addCommand(createCurrentConfigCommand());
+}
 
 export function createProgram(): Command {
   const program = new Command();
@@ -11,8 +19,13 @@ export function createProgram(): Command {
     .description("一个基于 TypeScript 的 CLI 脚手架。")
     .version("0.1.0");
 
-  program.addCommand(createHelloCommand());
-  program.addCommand(createChatCommand());
+  registerRootCommands(program);
+
+  const devShim = new Command("rxc")
+    .description("开发模式兼容入口。");
+
+  registerRootCommands(devShim);
+  program.addCommand(devShim);
 
   return program;
 }

@@ -1,7 +1,7 @@
 {
-  "name": "rx-cli",
+  "name": "rxc",
   "version": "0.1.0",
-  "description": "A TypeScript CLI scaffold built with Commander.",
+  "description": "An RxJS-first TypeScript agent CLI scaffold.",
   "type": "module",
   "main": "./dist/cli.js",
   "bin": {

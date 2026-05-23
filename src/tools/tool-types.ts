@@ -27,6 +27,7 @@ export type ToolErrorResult = {
 };
 
 export type ToolExecutionResult = ToolSuccessResult | ToolErrorResult;
+export type ToolRunStatus = ToolExecutionResult["status"] | "blocked";
 
 export interface AgentTool {
   readonly name: string;

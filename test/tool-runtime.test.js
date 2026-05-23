@@ -49,7 +49,7 @@ test("permission gate applies default and bypass permission modes", () => {
 });
 
 test("dispatchToolCall persists an allowed tool lifecycle", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rx-cli-tool-runtime-"));
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-tool-runtime-"));
   const sessionDir = path.join(tempRoot, "sessions");
   const sessionManager = new SessionManager(sessionDir);
   const session = await sessionManager.startSession({
@@ -107,7 +107,7 @@ test("dispatchToolCall persists an allowed tool lifecycle", async () => {
 });
 
 test("dispatchToolCall blocks execution when permission is not granted", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rx-cli-tool-runtime-blocked-"));
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-tool-runtime-blocked-"));
   const sessionDir = path.join(tempRoot, "sessions");
   const sessionManager = new SessionManager(sessionDir);
   const session = await sessionManager.startSession({
@@ -153,6 +153,7 @@ test("dispatchToolCall blocks execution when permission is not granted", async (
     "tool_failed",
   ]);
   assert.equal(events[1].decision, "ask");
+  assert.equal(events[2].status, "blocked");
   assert.match(events[2].error, /要求确认/);
 
   const files = await readdir(sessionDir);

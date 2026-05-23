@@ -19,7 +19,10 @@
 ## 文档列表
 
 - [智能体 CLI 架构](./architecture/agent-cli.md)
+- [配置层与 `.rxc` 目录](./architecture/configuration.md)
+- [多角色配置方案](./architecture/multi-role-configuration.md)
 - [运行时分层与契约](./architecture/runtime-boundaries.md)
 - [项目结构规划](./project-structure.md)
 - [Phase 1：Agent Runtime 实施方案](./implementation/phase-1-agent-runtime.md)
 - [Phase 2：工具运行时与权限闸门](./implementation/phase-2-agent-tool-runtime.md)
+- [Phase 3：多步 Agent Loop 与调试追踪](./implementation/phase-3-multi-step-agent-loop.md)

@@ -1,6 +1,7 @@
 import type { Observable } from "rxjs";
 
 import type { TurnContext } from "../runtime/turn-context.js";
+import type { TurnState } from "../runtime/turn-state.js";
 import type { ToolCall } from "../tools/tool-types.js";
 
 export type ProviderStreamEvent =
@@ -17,7 +18,12 @@ export type ProviderStreamEvent =
       text: string;
     };
 
+export type ProviderStepInput = {
+  context: TurnContext;
+  state: TurnState;
+};
+
 export interface AgentProvider {
   readonly id: string;
-  streamReply(context: TurnContext): Observable<ProviderStreamEvent>;
+  runStep(input: ProviderStepInput): Observable<ProviderStreamEvent>;
 }

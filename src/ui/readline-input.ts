@@ -5,7 +5,14 @@ import type { Readable, Writable } from "node:stream";
 import { filter, from, fromEvent, map, scan, takeUntil, tap, type Observable } from "rxjs";
 
 import type { ChatInputTurn } from "../runtime/event-types.js";
-import { ANSI, paint } from "./terminal-theme.js";
+import {
+  ANSI,
+  PANEL_GUTTER,
+  indentBlock,
+  paint,
+  resolvePanelWidth,
+  wrapText,
+} from "./terminal-theme.js";
 
 const EXIT_COMMANDS = new Set(["/exit", "/quit"]);
 const LOCAL_COMMANDS = new Set(["/help", "/tools", "/clear"]);
@@ -13,26 +20,33 @@ const LOCAL_COMMANDS = new Set(["/help", "/tools", "/clear"]);
 function createInteractiveIntro(): string {
   return [
     paint("rxc interactive", ANSI.bold, ANSI.cyan),
-    paint("Commands: /help /tools /clear /exit", ANSI.dim, ANSI.gray),
+    paint("Prompt: >    Replies: rxc", ANSI.bold, ANSI.brightWhite),
+    paint("Commands: /help /tools /clear /exit", ANSI.brightWhite),
   ].join("\n");
 }
 
-function createHelpText(): string {
+function createLocalOutput(title: string, lines: string[], columns?: number): string {
   return [
-    paint("Session commands", ANSI.bold, ANSI.cyan),
-    "  /help   Show interactive help",
-    "  /tools  Show current local tool syntax",
-    "  /clear  Clear the terminal and redraw the header",
-    "  /exit   Exit interactive mode",
+    paint("local", ANSI.bold, ANSI.gray),
+    indentBlock(wrapText([title, ...lines].join("\n"), resolvePanelWidth(columns)), PANEL_GUTTER),
   ].join("\n");
 }
 
-function createToolsText(): string {
-  return [
-    paint("Current local tool syntax", ANSI.bold, ANSI.cyan),
-    "  /read <relative-path>",
-    "  /bash <command>",
-  ].join("\n");
+function createHelpText(columns?: number): string {
+  return createLocalOutput("Session commands", [
+    "/help   Show interactive help",
+    "/tools  Show current local tool syntax",
+    "/clear  Clear the terminal and redraw the header",
+    "/exit   Exit interactive mode",
+  ], columns);
+}
+
+function createToolsText(columns?: number): string {
+  return createLocalOutput("Current local tool syntax", ["/read <relative-path>", "/bash <command>"], columns);
+}
+
+function resolveOutputColumns(output: Writable): number | undefined {
+  return "columns" in output && typeof output.columns === "number" ? output.columns : undefined;
 }
 
 export type InteractiveTurnStream = {
@@ -90,6 +104,12 @@ export function createInteractiveTurnStream(params?: {
 
   output.write(`${intro}\n`);
 
+  function renderPrompt(): void {
+    output.write(ANSI.reset);
+    rl.setPrompt(promptText);
+    rl.prompt();
+  }
+
   const close$ = fromEvent(rl, "close");
 
   const turns$ = fromEvent<string>(rl, "line").pipe(
@@ -101,21 +121,21 @@ export function createInteractiveTurnStream(params?: {
       }
 
       if (line === "/help") {
-        output.write(`${createHelpText()}\n`);
-        rl.prompt();
+        output.write(`${ANSI.reset}\n${createHelpText("columns" in output ? output.columns : undefined)}\n\n`);
+        renderPrompt();
         return;
       }
 
       if (line === "/tools") {
-        output.write(`${createToolsText()}\n`);
-        rl.prompt();
+        output.write(`${ANSI.reset}\n${createToolsText("columns" in output ? output.columns : undefined)}\n\n`);
+        renderPrompt();
         return;
       }
 
       if (line === "/clear") {
-        output.write("\x1b[2J\x1b[H");
+        output.write(`${ANSI.reset}\x1b[2J\x1b[H`);
         output.write(`${intro}\n`);
-        rl.prompt();
+        renderPrompt();
       }
     }),
     takeUntil(close$),
@@ -136,10 +156,10 @@ export function createInteractiveTurnStream(params?: {
 
   return {
     turns$,
-    prompt: () => rl.prompt(),
+    prompt: renderPrompt,
     close: () => rl.close(),
     done: once(rl, "close").then(() => {
-      output.write(`${paint("Session ended.", ANSI.dim, ANSI.gray)}\n`);
+      output.write(`${ANSI.reset}${paint("Session ended.", ANSI.dim, ANSI.gray)}\n`);
     }),
   };
 }

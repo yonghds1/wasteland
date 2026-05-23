@@ -2,7 +2,7 @@ import { concat, concatMap, defer, from, map, of, type Observable } from "rxjs";
 
 import { executeToolCall } from "../tools/tool-runner.js";
 import { ToolRegistry } from "../tools/tool-registry.js";
-import type { ToolCall } from "../tools/tool-types.js";
+import type { ToolCall, ToolRunStatus } from "../tools/tool-types.js";
 import {
   type RuntimeEvent,
   type SessionPermissionRecord,
@@ -51,7 +51,7 @@ function createToolResultRecord(params: {
   session: SessionMetadata;
   turn: number;
   call: ToolCall;
-  status: "success" | "error" | "blocked";
+  status: ToolRunStatus;
   output?: string;
   error?: string;
 }): SessionToolResultRecord {
@@ -114,6 +114,7 @@ export function dispatchToolCall(params: {
           turn: params.turn,
           callId: params.call.id,
           toolName: params.call.toolName,
+          status: "error",
           error: failedRecord.error ?? "工具执行失败。",
         }),
       ),
@@ -150,11 +151,12 @@ export function dispatchToolCall(params: {
   );
 
   if (decision.decision !== "allow") {
+    const blockedStatus = decision.decision === "deny" ? "error" : "blocked";
     const failedRecord = createToolResultRecord({
       session: params.session,
       turn: params.turn,
       call: params.call,
-      status: decision.decision === "deny" ? "error" : "blocked",
+      status: blockedStatus,
       error: decision.reason,
     });
 
@@ -166,6 +168,7 @@ export function dispatchToolCall(params: {
           turn: params.turn,
           callId: params.call.id,
           toolName: params.call.toolName,
+          status: blockedStatus,
           error: decision.reason,
         }),
       ),
@@ -211,6 +214,7 @@ export function dispatchToolCall(params: {
               turn: params.turn,
               callId: params.call.id,
               toolName: params.call.toolName,
+              status: "success",
               output: result.output,
             }),
           ),
@@ -233,6 +237,7 @@ export function dispatchToolCall(params: {
             turn: params.turn,
             callId: params.call.id,
             toolName: params.call.toolName,
+            status: "error",
             error: result.error,
           }),
         ),

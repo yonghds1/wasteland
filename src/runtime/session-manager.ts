@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { appendFile, mkdir } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 
+import { resolveDefaultSessionDir } from "../config/paths.js";
 import type { RuntimeMode, SessionRecord } from "./event-types.js";
 
 export type SessionMetadata = {
@@ -13,11 +14,11 @@ export type SessionMetadata = {
 };
 
 function resolveSessionDir(): string {
-  if (process.env.RX_CLI_SESSION_DIR) {
-    return resolve(process.env.RX_CLI_SESSION_DIR);
-  }
-
-  return resolve(process.cwd(), ".rx-cli", "sessions");
+  return resolveDefaultSessionDir({
+    cwd: process.cwd(),
+    projectConfigDir: null,
+    env: process.env,
+  });
 }
 
 export class SessionManager {

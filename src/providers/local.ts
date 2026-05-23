@@ -1,7 +1,8 @@
-import { concat, from, map, of } from "rxjs";
+import { of } from "rxjs";
 
-import { buildLocalReplyText, splitReplyText } from "../chat/reply-pipeline.js";
-import type { TurnContext } from "../runtime/turn-context.js";
+import { buildLocalReplyText } from "../chat/reply-pipeline.js";
+import type { TurnToolResult } from "../runtime/turn-state.js";
+import { createAssistantTextEvents } from "./assistant-events.js";
 import type { AgentProvider, ProviderStreamEvent } from "./provider-types.js";
 
 function createToolCallFromInput(input: string, turn: number): ProviderStreamEvent | null {
@@ -48,10 +49,31 @@ function createToolCallFromInput(input: string, turn: number): ProviderStreamEve
   };
 }
 
+function buildToolResultReply(result: TurnToolResult): string {
+  if (result.status === "success") {
+    return [
+      `工具 ${result.toolName} 已完成。`,
+      result.output && result.output.length > 0 ? result.output : "(no output)",
+    ].join("\n");
+  }
+
+  if (result.status === "blocked") {
+    return `工具 ${result.toolName} 未执行：${result.error ?? "权限未通过。"}`;
+  }
+
+  return `工具 ${result.toolName} 执行失败：${result.error ?? "未知错误。"}`;
+}
+
 export function createLocalProvider(): AgentProvider {
   return {
     id: "local",
-    streamReply(context: TurnContext) {
+    runStep({ context, state }) {
+      const latestToolResult = state.toolResults[state.toolResults.length - 1];
+
+      if (latestToolResult) {
+        return createAssistantTextEvents(buildToolResultReply(latestToolResult));
+      }
+
       const toolCall = createToolCallFromInput(context.input.content, context.turn);
 
       if (toolCall) {
@@ -64,20 +86,7 @@ export function createLocalProvider(): AgentProvider {
         historyLength: context.history.length,
       });
 
-      return concat(
-        from(splitReplyText(text)).pipe(
-          map(
-            (chunk): ProviderStreamEvent => ({
-              type: "assistant_chunk",
-              text: chunk,
-            }),
-          ),
-        ),
-        of<ProviderStreamEvent>({
-          type: "assistant_message",
-          text,
-        }),
-      );
+      return createAssistantTextEvents(text);
     },
   };
 }

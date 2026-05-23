@@ -19,6 +19,6 @@ export function createTurnContext(params: {
     turn: params.input.turn,
     input: params.input,
     cwd: params.cwd,
-    history: params.history,
+    history: [...params.history],
   };
 }

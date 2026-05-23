@@ -3,6 +3,7 @@
 本目录当前已经承载终端输入与渲染边界：
 
 - `readline-input.ts`：单次输入、stdin 读取、交互式 turn 流
+- `debug-renderer.ts`：消费调试追踪流并输出到 stderr
 - `terminal-renderer.ts`：消费 `RuntimeEvent` 并渲染终端输出
 - `terminal-theme.ts`：交互模式的终端样式辅助
 

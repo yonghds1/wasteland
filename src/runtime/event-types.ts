@@ -1,5 +1,5 @@
 import type { PermissionDecisionKind, PermissionMode } from "./permission-gate.js";
-import type { ToolInput } from "../tools/tool-types.js";
+import type { ToolInput, ToolRunStatus } from "../tools/tool-types.js";
 
 export type InputSource = "message" | "stdin" | "interactive";
 export type RuntimeMode = "single" | "interactive";
@@ -47,7 +47,7 @@ export type SessionToolResultRecord = {
   turn: number;
   callId: string;
   toolName: string;
-  status: "success" | "error" | "blocked";
+  status: ToolRunStatus;
   output?: string;
   error?: string;
   timestamp: string;
@@ -129,6 +129,7 @@ export type RuntimeEvent =
       turn: number;
       callId: string;
       toolName: string;
+      status: "success";
       output: string;
     }
   | {
@@ -137,6 +138,7 @@ export type RuntimeEvent =
       turn: number;
       callId: string;
       toolName: string;
+      status: Exclude<ToolRunStatus, "success">;
       error: string;
     }
   | {

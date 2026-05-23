@@ -2,7 +2,7 @@
 
 ## 目的
 
-本文档描述 `rx-cli` 如何从一个 CLI 原型演进为智能体 CLI 的目标架构。
+本文档描述 `rxc` 如何从一个 CLI 原型演进为智能体 CLI 的目标架构。
 
 ---
 
@@ -14,20 +14,22 @@
 - 命令处理层位于 `src/commands/`
 - 基于 RxJS 的输入/回复原型位于 `src/chat/`
 - `src/runtime/` 下的 Phase 1 runtime 骨架
-- `src/providers/` 下的 provider interface 和本地 provider 适配器
+- `src/config/` 下的统一配置加载层
+- `src/providers/` 下的 provider interface、`local` provider 和 `qwen` provider 适配器
 - `src/tools/` 下的 Phase 2 工具合同、registry/runner 骨架
 - `src/tools/read-file.ts` 和 `src/tools/bash.ts` 的真实内建工具
 - `src/runtime/` 下的 permission gate 和 tool dispatch
 - `src/ui/` 下的终端输入/渲染边界
 - 位于 `bin/` 的轻量可执行包装层
 - 位于 `test/` 的进程级冒烟测试
-- 位于 `.rx-cli/sessions/` 的最小本地 transcript 持久化
+- 位于 `.rxc/sessions/` 的最小本地 transcript 持久化
+- 位于 `.rxc/settings.json` / `.rxc/auth.json` / `~/.rxc/settings.json` / `~/.rxc/auth.json` 的统一配置入口
 
 但它**还没有**：
 
 - 通用的多工具对话循环
 - 跨进程 resume 能力
-- 真实外部模型 provider
+- 通用的多外部模型 provider 能力
 - MCP 集成层
 
 ---
@@ -85,6 +87,14 @@ runtime 应依赖 provider interface，而不是直接耦合 Anthropic/OpenAI SD
 - 解析命令行参数
 - 选择执行模式
 - 调用 runtime 入口
+
+### Config 层
+
+职责：
+
+- 定位 `.rxc/` 与用户全局配置目录
+- 合并配置文件、环境变量和 CLI 默认值
+- 为命令层提供 provider/runtime/session 的默认参数
 
 ### UI 层
 

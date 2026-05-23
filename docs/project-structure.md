@@ -2,7 +2,7 @@
 
 ## 目的
 
-本文档定义 `rx-cli` 从简单 CLI 演进为智能体 CLI 时，近期应采用的源码布局。
+本文档定义 `rxc` 从简单 CLI 演进为智能体 CLI 时，近期应采用的源码布局。
 
 ---
 
@@ -15,6 +15,7 @@ src/
   cli.ts
   commands/
   chat/
+  config/
   runtime/
   providers/
   tools/
@@ -27,9 +28,13 @@ dist/
 Phase 2 第一批骨架之后，目录边界已经被建出来，但不同目录的成熟度并不相同：
 
 - `src/runtime/`、`src/providers/`、`src/ui/` 已经有可运行的最小实现
+- `src/config/` 已统一承载 `.rxc` 目录相关路径与配置加载
+- `src/runtime/turn-state.ts` 与 `src/runtime/debug-events.ts` 已把多步 loop 和 trace 合同独立出来
+- `src/providers/provider-registry.ts` 已把 provider 解析从命令层抽离
 - `src/tools/` 已经有工具合同、registry 和 runner 骨架
 - `src/runtime/` 已经补了 permission gate 与 tool dispatch
 - `src/tools/read-file.ts` 和 `src/tools/bash.ts` 已作为真实内建工具接入
+- `src/ui/debug-renderer.ts` 已把调试追踪输出从普通回复渲染中分离
 - `src/mcp/` 仍是预留层
 - `src/chat/` 仍是过渡层，当前用于承载本地回复构造逻辑
 
@@ -45,17 +50,25 @@ src/
     hello.ts
   chat/
     reply-pipeline.ts
+  config/
+    load-settings.ts
+    paths.ts
+    settings-types.ts
   runtime/
     agent-loop.ts
+    debug-events.ts
     event-types.ts
     permission-gate.ts
     tool-dispatch.ts
     session-manager.ts
     turn-context.ts
+    turn-state.ts
   providers/
     local.ts
+    provider-registry.ts
     provider-types.ts
   ui/
+    debug-renderer.ts
     readline-input.ts
     terminal-renderer.ts
   tools/
@@ -91,14 +104,20 @@ src/
     sessions.ts
     config.ts
     mcp.ts
+  config/
+    load-settings.ts
+    paths.ts
+    settings-types.ts
   runtime/
     agent-loop.ts
+    debug-events.ts
     event-types.ts
     permission-gate.ts
     session-manager.ts
     session-index.ts
     tool-dispatch.ts
     turn-context.ts
+    turn-state.ts
   providers/
     local.ts
     provider-registry.ts
@@ -114,6 +133,7 @@ src/
     git.ts
     tool-types.ts
   ui/
+    debug-renderer.ts
     terminal-renderer.ts
     readline-input.ts
   mcp/
@@ -136,6 +156,7 @@ test/
 
 - `commands/` 只负责 CLI 入口命令。
 - `runtime/` 负责编排逻辑和跨层运行时状态。
+- `runtime/` 下的 debug trace 模型也属于运行时契约的一部分，不应散落在命令层。
 - `providers/` 负责模型厂商集成。
 - `tools/` 负责内建工具实现与工具契约。
 - `ui/` 负责终端输入流与渲染器。
@@ -148,6 +169,7 @@ test/
 - `runtime/` 通过 contract 依赖 `providers/` 和未来的 `tools/`，不反向依赖命令层。
 - `providers/` 不直接写终端，也不依赖命令层。
 - `ui/` 只消费输入和 runtime 事件，不直接操作 provider。
+- `ui/` 可以消费独立的 debug trace 流，但不反向控制 runtime 状态推进。
 - `tools/` 和 `mcp/` 未来都应围绕 contract 设计，不要把 SDK 细节泄漏到 `commands/`。
 
 ## RxJS 落位规则
