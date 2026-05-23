@@ -2,7 +2,7 @@ import type { Observable } from "rxjs";
 import { Command } from "commander";
 
 import { loadRxcSettings } from "../config/load-settings.js";
-import { resolveDefaultSessionDir } from "../config/paths.js";
+import { resolveDefaultSessionDir, resolveDefaultTraceDir } from "../config/paths.js";
 import { resolveChatRuntime } from "../config/resolve-chat-runtime.js";
 import type { AgentProvider } from "../providers/provider-types.js";
 import { createDefaultProviderRegistry } from "../providers/provider-registry.js";
@@ -11,12 +11,13 @@ import { runAgentLoop } from "../runtime/agent-loop.js";
 import { createPermissionGate } from "../runtime/permission-gate.js";
 import { SessionManager } from "../runtime/session-manager.js";
 import { createDefaultToolRegistry } from "../tools/default-registry.js";
-import { renderDebugTrace } from "../ui/debug-renderer.js";
+import { renderDebugTrace, type DebugFormat } from "../ui/debug-renderer.js";
 import { createInteractiveTurnStream, createSingleTurnInput, readPipedInput } from "../ui/readline-input.js";
 import { renderRuntimeEvents } from "../ui/terminal-renderer.js";
 
 type ChatOptions = {
   debug?: boolean;
+  debugFormat?: DebugFormat;
   message?: string;
   provider?: string;
   role?: string;
@@ -33,6 +34,14 @@ function resolvePermissionMode(value: string | undefined) {
   throw new Error(`当前不支持 permission mode: ${mode}`);
 }
 
+function resolveDebugFormat(value: string | undefined): DebugFormat {
+  if (value === "jsonl") {
+    return "jsonl";
+  }
+
+  return "pretty";
+}
+
 async function runChatSession(params: {
   input$: Observable<ChatInputTurn>;
   provider: AgentProvider;
@@ -40,6 +49,8 @@ async function runChatSession(params: {
   cwd: string;
   mode: RuntimeMode;
   debug: boolean;
+  debugFormat: DebugFormat;
+  projectConfigDir: string | null;
   permissionMode: ReturnType<typeof resolvePermissionMode>;
   maxStepsPerTurn: number;
   render?: {
@@ -59,14 +70,24 @@ async function runChatSession(params: {
     mode: params.mode,
     maxStepsPerTurn: params.maxStepsPerTurn,
   });
-  const work = [
+
+  const work: Promise<void>[] = [
     renderRuntimeEvents(run.events$, params.render),
   ];
 
   if (params.debug) {
+    const traceDir = params.debugFormat === "jsonl"
+      ? resolveDefaultTraceDir({
+          cwd: params.cwd,
+          projectConfigDir: params.projectConfigDir,
+        })
+      : undefined;
+
     work.unshift(
       renderDebugTrace(run.debug$, {
         output: process.stderr,
+        format: params.debugFormat,
+        traceDir,
       }),
     );
   }
@@ -86,6 +107,10 @@ export function createChatCommand(): Command {
     )
     .option("-r, --role <name>", "按指定 role 解析模型与默认权限")
     .option("--debug", "输出调试追踪到 stderr")
+    .option(
+      "--debug-format <format>",
+      "调试输出格式：pretty（默认）或 jsonl",
+    )
     .option(
       "--permission-mode <mode>",
       "权限模式：default | accept_edits | bypass_permissions",
@@ -116,6 +141,7 @@ export function createChatCommand(): Command {
         options.permissionMode ?? resolvedRuntime.permissionMode,
       );
       const debug = options.debug === true || loadedSettings.settings.runtime.debug;
+      const debugFormat = resolveDebugFormat(options.debugFormat);
       const maxStepsPerTurn = loadedSettings.settings.runtime.maxStepsPerTurn;
 
       if (options.message?.trim()) {
@@ -126,6 +152,8 @@ export function createChatCommand(): Command {
           cwd,
           mode: "single",
           debug,
+          debugFormat,
+          projectConfigDir: loadedSettings.projectConfigDir,
           permissionMode,
           maxStepsPerTurn,
         });
@@ -142,6 +170,8 @@ export function createChatCommand(): Command {
           cwd,
           mode: "single",
           debug,
+          debugFormat,
+          projectConfigDir: loadedSettings.projectConfigDir,
           permissionMode,
           maxStepsPerTurn,
         });
@@ -164,6 +194,8 @@ export function createChatCommand(): Command {
           cwd,
           mode: "interactive",
           debug,
+          debugFormat,
+          projectConfigDir: loadedSettings.projectConfigDir,
           permissionMode,
           maxStepsPerTurn,
           render: {

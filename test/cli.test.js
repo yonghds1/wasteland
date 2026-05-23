@@ -814,3 +814,133 @@ test("resolves generic $auth ref from process env before auth.json", async () =>
     await server.close();
   }
 });
+
+test("renders JSONL debug format to stderr with --debug --debug-format jsonl", async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-debug-jsonl-"));
+
+  const { stdout, stderr } = await execFileAsync(
+    process.execPath,
+    [cliPath, "chat", "--debug", "--debug-format", "jsonl", "--message", "你好"],
+    {
+      cwd: tempRoot,
+      env: createCleanEnv(),
+    },
+  );
+
+  assert.equal(stdout.trim(), "assistant[1]> 你好，我已经收到你的输入：你好");
+
+  // Each line should be valid JSON
+  const lines = stderr.trim().split("\n");
+  assert.ok(lines.length > 0, "stderr should have JSONL output");
+
+  for (const line of lines) {
+    const parsed = JSON.parse(line);
+    assert.ok(parsed.timestamp, "each line should have timestamp");
+    assert.ok(parsed.sessionId, "each line should have sessionId");
+    assert.ok(parsed.scope, "each line should have scope");
+    assert.ok(parsed.phase, "each line should have phase");
+    assert.ok(parsed.message, "each line should have message");
+  }
+});
+
+test("persists JSONL trace file in .rxc/traces directory", async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-debug-jsonl-file-"));
+
+  const { stdout, stderr } = await execFileAsync(
+    process.execPath,
+    [cliPath, "chat", "--debug", "--debug-format", "jsonl", "--message", "你好"],
+    {
+      cwd: tempRoot,
+      env: createCleanEnv(),
+    },
+  );
+
+  assert.equal(stdout.trim(), "assistant[1]> 你好，我已经收到你的输入：你好");
+
+  // Check trace file was created
+  const traceDir = path.join(tempRoot, ".rxc", "traces");
+  const traceFiles = await readdir(traceDir);
+
+  assert.equal(traceFiles.length, 1, "should have one trace file");
+
+  const traceFile = traceFiles[0];
+  assert.match(traceFile, /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}_[a-f0-9]{6}\.jsonl$/, "trace file should match timestamp_shortId.jsonl format");
+
+  // Verify trace file content
+  const traceContent = await readFile(path.join(traceDir, traceFile), "utf8");
+  const traceLines = traceContent.trim().split("\n");
+
+  assert.ok(traceLines.length > 0, "trace file should have content");
+
+  for (const line of traceLines) {
+    const parsed = JSON.parse(line);
+    assert.ok(parsed.timestamp, "each line should have timestamp");
+    assert.ok(parsed.sessionId, "each line should have sessionId");
+  }
+});
+
+test("session ID uses timestamp prefix format", async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-session-id-format-"));
+  const sessionDir = path.join(tempRoot, "sessions");
+  const env = createCleanEnv({
+    RXC_SESSION_DIR: sessionDir,
+  });
+
+  await execFileAsync(process.execPath, [cliPath, "chat", "--message", "你好"], {
+    cwd: tempRoot,
+    env,
+  });
+
+  const files = await readdir(sessionDir);
+  assert.equal(files.length, 1);
+
+  const sessionFile = files[0];
+  // Format: 2026-05-23T14-30-00_abc123.jsonl
+  assert.match(
+    sessionFile,
+    /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}_[a-f0-9]{6}\.jsonl$/,
+    "session file should match timestamp_shortId.jsonl format",
+  );
+});
+
+test("JSONL output can be piped to jq for parsing", async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-debug-jsonl-jq-"));
+
+  const { stdout, stderr } = await execFileAsync(
+    process.execPath,
+    [cliPath, "chat", "--debug", "--debug-format", "jsonl", "--message", "你好"],
+    {
+      cwd: tempRoot,
+      env: createCleanEnv(),
+    },
+  );
+
+  // Extract session.start events by parsing each line
+  const lines = stderr.trim().split("\n");
+  const sessionStartEvents = lines
+    .map((line) => JSON.parse(line))
+    .filter((event) => event.phase === "session.start");
+
+  assert.ok(sessionStartEvents.length > 0, "should have session.start event");
+  assert.equal(sessionStartEvents[0].scope, "session");
+  assert.equal(sessionStartEvents[0].data.mode, "single");
+});
+
+test("pretty debug format is default when --debug is used without --debug-format", async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-debug-pretty-default-"));
+
+  const { stdout, stderr } = await execFileAsync(
+    process.execPath,
+    [cliPath, "chat", "--debug", "--message", "你好"],
+    {
+      cwd: tempRoot,
+      env: createCleanEnv(),
+    },
+  );
+
+  assert.equal(stdout.trim(), "assistant[1]> 你好，我已经收到你的输入：你好");
+
+  // Pretty format should have "trace" prefix, not JSON
+  assert.match(stderr, /trace session\.start/);
+  assert.doesNotMatch(stderr, /"timestamp"/);
+});

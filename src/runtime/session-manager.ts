@@ -13,6 +13,16 @@ export type SessionMetadata = {
   providerId: string;
 };
 
+/**
+ * Generates a session ID with timestamp prefix for easy identification.
+ * Format: 2026-05-23T14-30-00_abc123
+ */
+function generateSessionId(): string {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+  const shortId = randomUUID().slice(0, 6);
+  return `${timestamp}_${shortId}`;
+}
+
 function resolveSessionDir(): string {
   return resolveDefaultSessionDir({
     cwd: process.cwd(),
@@ -31,7 +41,7 @@ export class SessionManager {
   }): Promise<SessionMetadata> {
     await mkdir(this.sessionDir, { recursive: true });
 
-    const id = randomUUID();
+    const id = generateSessionId();
 
     return {
       id,

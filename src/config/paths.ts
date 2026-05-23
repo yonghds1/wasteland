@@ -99,3 +99,17 @@ export function resolveSessionDirOverride(env: NodeJS.ProcessEnv = process.env):
   return resolveEnvPath(env, RXC_SESSION_DIR_ENV)
     ?? resolveEnvPath(env, LEGACY_RX_CLI_SESSION_DIR_ENV);
 }
+
+export const TRACES_DIRNAME = "traces";
+
+export function resolveDefaultTraceDir(params: {
+  cwd: string;
+  projectConfigDir: string | null;
+  env?: NodeJS.ProcessEnv;
+}): string {
+  if (params.projectConfigDir) {
+    return join(params.projectConfigDir, TRACES_DIRNAME);
+  }
+
+  return join(resolve(params.cwd), RXC_DIRNAME, TRACES_DIRNAME);
+}
