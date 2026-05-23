@@ -10,6 +10,8 @@ export const ANSI = {
   red: "\x1b[31m",
   gray: "\x1b[90m",
   bgGray: "\x1b[100m",
+  magenta: "\x1b[35m",
+  blue: "\x1b[34m",
 } as const;
 
 const DEFAULT_TERMINAL_COLUMNS = 80;

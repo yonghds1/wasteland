@@ -1,4 +1,5 @@
 import type { ChatInputTurn, SessionMessageRecord } from "./event-types.js";
+import type { ToolRegistry } from "../tools/tool-registry.js";
 
 export type TurnContext = {
   sessionId: string;
@@ -6,6 +7,8 @@ export type TurnContext = {
   input: ChatInputTurn;
   cwd: string;
   history: readonly SessionMessageRecord[];
+  /** 工具注册表（用于 Provider 构建工具定义） */
+  toolRegistry?: ToolRegistry;
 };
 
 export function createTurnContext(params: {
@@ -13,6 +16,7 @@ export function createTurnContext(params: {
   input: ChatInputTurn;
   cwd: string;
   history: readonly SessionMessageRecord[];
+  toolRegistry?: ToolRegistry;
 }): TurnContext {
   return {
     sessionId: params.sessionId,
@@ -20,5 +24,6 @@ export function createTurnContext(params: {
     input: params.input,
     cwd: params.cwd,
     history: [...params.history],
+    toolRegistry: params.toolRegistry,
   };
 }

@@ -213,7 +213,9 @@ test("routes a local tool call through the main chat runtime path", async () => 
   assert.match(stdout, /tool\[1\]> request read-file/);
   assert.match(stdout, /permission\[1\]> read-file: allow \(default\)/);
   assert.match(stdout, /tool\[1\]> start read-file/);
-  assert.match(stdout, /tool\[1\]> result read-file: hello from tool/);
+  // 新格式包含文件元数据头和行号
+  assert.match(stdout, /tool\[1\]> result read-file: 📄 note\.txt/);
+  assert.match(stdout, /1│hello from tool/);
   assert.match(stdout, /assistant\[1\]> 工具 read-file 已完成。/);
 
   const files = await readdir(sessionDir);

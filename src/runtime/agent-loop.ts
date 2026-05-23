@@ -414,6 +414,7 @@ function runTurnLoop(params: {
           state = recordToolResult(state, {
             callId: event.call.id,
             toolName: event.call.toolName,
+            input: event.call.input,
             status: "error",
             error,
           });
@@ -456,6 +457,7 @@ function runTurnLoop(params: {
           registry: params.toolRegistry,
           permissionGate: params.permissionGate,
           cwd: params.cwd,
+          turnState: state,
         }).pipe(
           // tap 用于副作用：更新状态和记录追踪
           // 注意：这里更新外层的 state 变量，这是关键！
@@ -498,9 +500,13 @@ function runTurnLoop(params: {
             // tool_result: 工具执行成功
             // 更新状态，记录工具结果
             if (toolEvent.type === "tool_result") {
+              // 从 toolCalls 中查找原始 input
+              const originalCall = state.toolCalls.find((tc) => tc.id === toolEvent.callId);
+
               state = recordToolResult(state, {
                 callId: toolEvent.callId,
                 toolName: toolEvent.toolName,
+                input: originalCall?.input ?? {},
                 status: toolEvent.status,
                 output: toolEvent.output,
               });
@@ -525,9 +531,13 @@ function runTurnLoop(params: {
             // tool_failed: 工具执行失败
             // 同样需要更新状态，记录失败结果
             if (toolEvent.type === "tool_failed") {
+              // 从 toolCalls 中查找原始 input
+              const originalCall = state.toolCalls.find((tc) => tc.id === toolEvent.callId);
+
               state = recordToolResult(state, {
                 callId: toolEvent.callId,
                 toolName: toolEvent.toolName,
+                input: originalCall?.input ?? {},
                 status: toolEvent.status,
                 error: toolEvent.error,
               });
@@ -776,6 +786,7 @@ export function runAgentLoop(params: {
             input: turn,
             cwd: params.cwd,
             history: historySnapshot,
+            toolRegistry: params.toolRegistry,
           });
 
           // 创建用户记录

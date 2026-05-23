@@ -1,4 +1,4 @@
-import type { ToolCall, ToolRunStatus } from "../tools/tool-types.js";
+import type { ToolCall, ToolInput, ToolRunStatus } from "../tools/tool-types.js";
 import type { ChatInputTurn, SessionMessageRecord } from "./event-types.js";
 
 export type TurnStatus = "running" | "completed" | "failed";
@@ -6,6 +6,7 @@ export type TurnStatus = "running" | "completed" | "failed";
 export type TurnToolResult = {
   callId: string;
   toolName: string;
+  input: ToolInput;
   status: ToolRunStatus;
   output?: string;
   error?: string;

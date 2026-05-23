@@ -9,8 +9,10 @@ import {
   type SessionToolCallRecord,
   type SessionToolResultRecord,
 } from "./event-types.js";
+import { checkReadBeforeEdit } from "./file-audit.js";
 import type { PermissionGate } from "./permission-gate.js";
 import { SessionManager, type SessionMetadata } from "./session-manager.js";
+import type { TurnState } from "./turn-state.js";
 
 function createTimestamp(): string {
   return new Date().toISOString();
@@ -76,7 +78,46 @@ export function dispatchToolCall(params: {
   registry: ToolRegistry;
   permissionGate: PermissionGate;
   cwd: string;
+  turnState: TurnState;
 }): Observable<RuntimeEvent> {
+  // ---- read-before-edit 检查 ----
+  // 对于 edit-file 和 write-file，检查是否已读取过目标文件
+  const filePath = params.call.input.path;
+  if (typeof filePath === "string") {
+    const check = checkReadBeforeEdit({
+      toolName: params.call.toolName,
+      filePath,
+      turnState: params.turnState,
+    });
+
+    if (!check.ok) {
+      // 检查未通过，返回错误
+      const failedRecord = createToolResultRecord({
+        session: params.session,
+        turn: params.turn,
+        call: params.call,
+        status: "error",
+        error: check.error,
+      });
+
+      const failed$ = from(params.sessionManager.appendRecord(params.session, failedRecord)).pipe(
+        map(
+          (): RuntimeEvent => ({
+            type: "tool_failed",
+            sessionId: params.session.id,
+            turn: params.turn,
+            callId: params.call.id,
+            toolName: params.call.toolName,
+            status: "error",
+            error: check.error ?? "read-before-edit 检查未通过。",
+          }),
+        ),
+      );
+
+      return failed$;
+    }
+  }
+
   const requested$ = from(
     params.sessionManager.appendRecord(
       params.session,

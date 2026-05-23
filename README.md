@@ -192,9 +192,12 @@ dist/           构建产物
 - 独立的 permission gate
 - 独立的 tool lifecycle dispatch 与测试
 - `local` provider 下 `/read <path>` 与 `/bash <command>` 的真实工具调用路径
+- 内建工具：`read-file`、`bash`、`edit-file`、`write-file`
+- read-before-edit 安全检查：edit-file 和 write-file 需要先读取目标文件
 
 下一阶段会继续补：
 
+- 真实模型 provider 的 tool calling 支持
 - 更多内建工具与更完整权限策略
 - provider registry 与真实模型接入
 - session index / `resume` / `sessions`

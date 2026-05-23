@@ -16,4 +16,9 @@ export class ToolRegistry {
   get(toolName: string): AgentTool | undefined {
     return this.tools.get(toolName);
   }
+
+  /** 列出所有已注册的工具名称 */
+  list(): string[] {
+    return Array.from(this.tools.keys());
+  }
 }

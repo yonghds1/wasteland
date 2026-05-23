@@ -6,6 +6,92 @@ import type { RuntimeEvent } from "../runtime/event-types.js";
 import type { PermissionDecisionKind } from "../runtime/permission-gate.js";
 import { ANSI, PANEL_GUTTER, formatStatusLabel, indentBlock, paint, resolvePanelWidth, wrapText } from "./terminal-theme.js";
 
+// ============================================================
+// 配置常量
+// ============================================================
+
+/** 工具输出在终端显示的最大行数 */
+const MAX_TOOL_OUTPUT_LINES = 40;
+
+/** 头部和尾部各显示的行数（用于智能截断） */
+const SMART_TRUNCATE_HEAD_LINES = 15;
+const SMART_TRUNCATE_TAIL_LINES = 15;
+
+// ============================================================
+// 辅助函数
+// ============================================================
+
+/**
+ * 智能截断文件输出
+ *
+ * 对于文件输出（以 📄 开头），保留头部和尾部，中间用省略符连接。
+ * 这样用户可以看到文件开头和结尾的内容。
+ *
+ * @param output - 原始输出内容
+ * @param maxLines - 最大显示行数
+ * @returns 处理后的输出
+ */
+function smartTruncateFileOutput(output: string, maxLines: number = MAX_TOOL_OUTPUT_LINES): string {
+  const lines = output.split("\n");
+
+  if (lines.length <= maxLines) {
+    return output;
+  }
+
+  // 检查是否是文件输出（以 📄 开头）
+  const isFileOutput = output.startsWith("📄");
+
+  // 如果是文件输出且已经有 "... lines hidden"，说明工具层已截断
+  // 我们需要保留尾部可见，避免双重截断
+  if (isFileOutput && output.includes("lines hidden")) {
+    // 找到 "lines hidden" 行的位置
+    const hiddenLineIndex = lines.findIndex((line) => line.includes("lines hidden"));
+
+    if (hiddenLineIndex > 0 && hiddenLineIndex < lines.length - 1) {
+      // 工具已截断，显示：头部 + 省略 + 尾部
+      const headerLines = lines.slice(0, Math.min(SMART_TRUNCATE_HEAD_LINES, hiddenLineIndex + 1));
+      const tailLines = lines.slice(-SMART_TRUNCATE_TAIL_LINES);
+      const middleHiddenCount = lines.length - headerLines.length - tailLines.length;
+
+      if (middleHiddenCount > 0) {
+        return [
+          ...headerLines,
+          `... ${middleHiddenCount} lines hidden in terminal display`,
+          ...tailLines,
+        ].join("\n");
+      }
+    }
+  }
+
+  // 普通截断：只显示头部
+  const visibleLines = lines.slice(0, maxLines);
+  const hiddenCount = lines.length - maxLines;
+
+  if (isFileOutput) {
+    return [...visibleLines, `... ${hiddenCount} more lines (output truncated)`].join("\n");
+  }
+
+  return [...visibleLines, `... (${hiddenCount} more lines)`].join("\n");
+}
+
+/**
+ * 截断长输出以适应终端显示
+ *
+ * @param output - 原始输出内容
+ * @param maxLines - 最大显示行数
+ * @returns 处理后的输出（可能包含截断提示）
+ */
+function truncateOutputForDisplay(output: string, maxLines: number = MAX_TOOL_OUTPUT_LINES): string {
+  const lines = output.split("\n");
+
+  if (lines.length <= maxLines) {
+    return output;
+  }
+
+  // 使用智能截断
+  return smartTruncateFileOutput(output, maxLines);
+}
+
 function writeInteractiveLabel(stdout: Writable, label: string, ...styles: string[]): void {
   stdout.write(`${paint(label, ...styles)}\n`);
 }
@@ -184,7 +270,7 @@ export async function renderRuntimeEvents(
               flushTurnSpacing(event.turn);
               writeInteractiveStatusLine(stdout, {
                 label: "tool",
-                labelStyles: [ANSI.dim, ANSI.yellow],
+                labelStyles: [ANSI.bold, ANSI.magenta],
                 segments: [
                   {
                     text: `request ${event.toolName}`,
@@ -203,10 +289,10 @@ export async function renderRuntimeEvents(
               flushTurnSpacing(event.turn);
               writeInteractiveStatusLine(stdout, {
                 label: "perm",
-                labelStyles: [ANSI.dim, ANSI.gray],
+                labelStyles: [ANSI.bold, ANSI.cyan],
                 segments: [
                   {
-                    text: `${event.toolName} -> `,
+                    text: `${event.toolName} → `,
                     styles: [ANSI.brightWhite],
                   },
                   {
@@ -215,7 +301,7 @@ export async function renderRuntimeEvents(
                   },
                   {
                     text: ` (${event.mode})`,
-                    styles: [ANSI.brightWhite],
+                    styles: [ANSI.dim, ANSI.gray],
                   },
                 ],
               });
@@ -232,7 +318,7 @@ export async function renderRuntimeEvents(
               flushTurnSpacing(event.turn);
               writeInteractiveStatusLine(stdout, {
                 label: "tool",
-                labelStyles: [ANSI.dim, ANSI.yellow],
+                labelStyles: [ANSI.bold, ANSI.blue],
                 segments: [
                   {
                     text: `start ${event.toolName}`,
@@ -249,16 +335,20 @@ export async function renderRuntimeEvents(
           case "tool_result": {
             if (style === "interactive") {
               flushTurnSpacing(event.turn);
+              // 截断长输出以适应终端显示
+              const displayOutput = truncateOutputForDisplay(event.output);
               writeInteractiveBlock(stdout, {
                 label: "tool",
-                content: [`result ${event.toolName}`, event.output.length > 0 ? event.output : "(no output)"].join("\n"),
-                styles: [ANSI.dim, ANSI.green],
+                content: [`result ${event.toolName}`, displayOutput.length > 0 ? displayOutput : "(no output)"].join("\n"),
+                styles: [ANSI.bold, ANSI.green],
                 width: panelWidth,
               });
               break;
             }
 
-            stdout.write(`tool[${event.turn}]> result ${event.toolName}: ${event.output}\n`);
+            // Classic 模式也截断
+            const classicOutput = truncateOutputForDisplay(event.output);
+            stdout.write(`tool[${event.turn}]> result ${event.toolName}: ${classicOutput}\n`);
             break;
           }
           case "tool_failed": {
@@ -267,7 +357,7 @@ export async function renderRuntimeEvents(
               writeInteractiveBlock(stdout, {
                 label: "tool",
                 content: `failed ${event.toolName}\n${event.error}`,
-                styles: [ANSI.dim, ANSI.red],
+                styles: [ANSI.bold, ANSI.red],
                 width: panelWidth,
               });
               break;
