@@ -126,17 +126,10 @@ function runCliWithInput(args, input, env = process.env) {
   });
 }
 
-test("prints the hello command output", async () => {
-  const { stdout } = await execFileAsync(process.execPath, [cliPath, "hello", "Trellis"]);
-
-  assert.equal(stdout.trim(), "Hello, Trellis!");
-});
-
 test("shows help output", async () => {
   const { stdout } = await execFileAsync(process.execPath, [cliPath, "--help"]);
 
   assert.match(stdout, /Usage: rxc/);
-  assert.match(stdout, /hello/);
   assert.match(stdout, /chat/);
   assert.match(stdout, /config/);
   assert.match(stdout, /current/);

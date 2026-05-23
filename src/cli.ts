@@ -2,10 +2,8 @@ import { Command } from "commander";
 
 import { createChatCommand } from "./commands/chat.js";
 import { createConfigCommand, createCurrentConfigCommand } from "./commands/config.js";
-import { createHelloCommand } from "./commands/hello.js";
 
 function registerRootCommands(program: Command): void {
-  program.addCommand(createHelloCommand());
   program.addCommand(createChatCommand());
   program.addCommand(createConfigCommand());
   program.addCommand(createCurrentConfigCommand());
