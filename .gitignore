@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.rx-cli/
+.idea/
+.agents
+.trellis
+.claude
+.cursor
+.gemini

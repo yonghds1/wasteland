@@ -1,0 +1,44 @@
+{
+  "name": "rx-cli",
+  "version": "0.1.0",
+  "description": "A TypeScript CLI scaffold built with Commander.",
+  "type": "module",
+  "main": "./dist/cli.js",
+  "bin": {
+    "rxc": "./bin/rxc.js"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/cli.ts",
+    "chat": "tsx src/cli.ts chat",
+    "start": "npm run build && node ./bin/rxc.js",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "npm run build && node --test",
+    "check": "npm run typecheck && npm test"
+  },
+  "keywords": [
+    "cli",
+    "commander",
+    "typescript"
+  ],
+  "author": "",
+  "license": "ISC",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "commander": "^14.0.2",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "tsx": "^4.22.3",
+    "typescript": "^6.0.3"
+  }
+}
