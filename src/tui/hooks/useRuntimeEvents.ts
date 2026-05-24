@@ -95,10 +95,10 @@ function processRuntimeEvent(
     }
 
     case "assistant_chunk": {
-      // 累积 chunk，更新流式内容以触发 UI 渲染
+      // 此分支现在不会被调用（在 subscribe 中直接处理）
+      // 但保留以兼容其他调用路径
       chunkAccumulator.current += event.chunk;
       streamingContent = chunkAccumulator.current;
-      // 如果还没有 streamingMessageId，创建一个
       if (!streamingMessageId) {
         streamingMessageId = `msg-streaming-${event.turn}-${Date.now()}`;
       }
@@ -267,6 +267,12 @@ export function useRuntimeEvents(
 ): void {
   // Chunk 累积器（使用 ref 避免触发重新渲染）
   const chunkAccumulator = useRef<string>("");
+  // 流式内容缓冲区（用于批量渲染）
+  const streamingBuffer = useRef<string>("");
+  // 流式消息 ID
+  const streamingMsgId = useRef<string | null>(null);
+  // 渲染定时器
+  const renderTimerRef = useRef<NodeJS.Timeout | null>(null);
   // Tool 开始时间（用于计算耗时）
   const toolStartTimes = useRef<Map<string, number>>(new Map());
   // 订阅引用
@@ -278,25 +284,61 @@ export function useRuntimeEvents(
       return;
     }
 
+    // 启动渲染定时器（每 16ms 刷新一次，约 60fps）
+    renderTimerRef.current = setInterval(() => {
+      if (streamingBuffer.current) {
+        const content = streamingBuffer.current;
+        const msgId = streamingMsgId.current;
+        streamingBuffer.current = "";  // 清空缓冲区
+
+        setState((prev) => ({
+          ...prev,
+          session: {
+            ...prev.session,
+            streamingContent: content,
+            streamingMessageId: msgId,
+          },
+        }));
+      }
+    }, 16);
+
     // 订阅事件流
     subscriptionRef.current = events$.subscribe({
       next: (event) => {
-        setState((prev) => {
-          const result = processRuntimeEvent(
-            event,
-            prev.session,
-            chunkAccumulator,
-            toolStartTimes.current,
-          );
+        // 对于 assistant_chunk，累积到缓冲区而不是立即更新状态
+        if (event.type === "assistant_chunk") {
+          chunkAccumulator.current += event.chunk;
+          streamingBuffer.current = chunkAccumulator.current;
+          if (!streamingMsgId.current) {
+            streamingMsgId.current = `msg-streaming-${event.turn}-${Date.now()}`;
+          }
+        } else {
+          // 其他事件直接处理
+          setState((prev) => {
+            const result = processRuntimeEvent(
+              event,
+              prev.session,
+              chunkAccumulator,
+              toolStartTimes.current,
+            );
 
-          return {
-            ...prev,
-            session: result,
-          };
-        });
+            // 如果是 assistant_message，清空流式状态
+            if (event.type === "assistant_message") {
+              streamingBuffer.current = "";
+              streamingMsgId.current = null;
+            }
+
+            return {
+              ...prev,
+              session: result,
+            };
+          });
+        }
       },
       error: (error) => {
         console.error("Runtime event stream error:", error);
+        streamingBuffer.current = "";
+        streamingMsgId.current = null;
         setState((prev) => ({
           ...prev,
           session: {
@@ -308,6 +350,8 @@ export function useRuntimeEvents(
         }));
       },
       complete: () => {
+        streamingBuffer.current = "";
+        streamingMsgId.current = null;
         setState((prev) => ({
           ...prev,
           session: {
@@ -321,6 +365,12 @@ export function useRuntimeEvents(
     });
 
     return () => {
+      // 清理定时器
+      if (renderTimerRef.current) {
+        clearInterval(renderTimerRef.current);
+        renderTimerRef.current = null;
+      }
+      // 清理订阅
       if (subscriptionRef.current) {
         subscriptionRef.current.unsubscribe();
         subscriptionRef.current = null;
