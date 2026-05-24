@@ -12,6 +12,7 @@ import { Text, Box, useInput } from "ink";
 import { useAppContext } from "../../context/AppContext.js";
 import { loadRxcSettings } from "../../../config/load-settings.js";
 import { resolveUserSettingsPath, resolveProjectSettingsPath, findProjectConfigDir } from "../../../config/paths.js";
+import { resolveChatRuntime } from "../../../config/resolve-chat-runtime.js";
 import type { PermissionMode } from "../../../runtime/permission-gate.js";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
@@ -41,51 +42,55 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
     setEditMode(focusedField !== null);
   }, [focusedField, setEditMode]);
 
-  // 键盘导航
-  useInput((input, key) => {
-    // 编辑模式下的键盘处理
-    if (focusedField) {
-      handleEditModeInput(input, key);
-      return;
-    }
-
-    // 导航模式
-    if (key.upArrow) {
-      const sections: ConfigSection[] = ["provider", "runtime", "roles"];
-      const idx = sections.indexOf(focusedSection);
-      if (idx > 0) setFocusedSection(sections[idx - 1]);
-    }
-    if (key.downArrow) {
-      const sections: ConfigSection[] = ["provider", "runtime", "roles"];
-      const idx = sections.indexOf(focusedSection);
-      if (idx < sections.length - 1) setFocusedSection(sections[idx + 1]);
-    }
-
-    // Enter 进入编辑模式
-    if (key.return) {
-      if (focusedSection === "provider") {
-        setFocusedField("provider");
-      } else if (focusedSection === "runtime") {
-        // 默认聚焦第一个字段
-        setFocusedField("permissionMode");
-      } else if (focusedSection === "roles") {
-        // Roles 暂不支持编辑
-        setSaveMessage("Roles 编辑即将支持");
-        setSaveStatus("error");
-        setTimeout(() => setSaveStatus("idle"), 2000);
+  // 键盘导航（仅在配置页面且不在特殊模式下处理）
+  useInput(
+    (input, key) => {
+      // 编辑模式下的键盘处理
+      if (focusedField) {
+        handleEditModeInput(input, key);
+        return;
       }
-    }
 
-    // Ctrl+S 保存
-    if (input === "s" && key.ctrl) {
-      handleSave();
-    }
+      // 导航模式
+      if (key.upArrow) {
+        const sections: ConfigSection[] = ["provider", "runtime", "roles"];
+        const idx = sections.indexOf(focusedSection);
+        if (idx > 0) setFocusedSection(sections[idx - 1]);
+      }
+      if (key.downArrow) {
+        const sections: ConfigSection[] = ["provider", "runtime", "roles"];
+        const idx = sections.indexOf(focusedSection);
+        if (idx < sections.length - 1) setFocusedSection(sections[idx + 1]);
+      }
 
-    // Ctrl+R 重置（放弃更改）
-    if (input === "r" && key.ctrl) {
-      handleReset();
-    }
-  });
+      // Enter 进入编辑模式
+      if (key.return) {
+        if (focusedSection === "provider") {
+          setFocusedField("provider");
+        } else if (focusedSection === "runtime") {
+          // 默认聚焦第一个字段
+          setFocusedField("permissionMode");
+        } else if (focusedSection === "roles") {
+          // Roles 暂不支持编辑
+          setSaveMessage("Roles 编辑即将支持");
+          setSaveStatus("error");
+          setTimeout(() => setSaveStatus("idle"), 2000);
+        }
+      }
+
+      // Ctrl+S 保存
+      if (input === "s" && key.ctrl) {
+        handleSave();
+      }
+
+      // Ctrl+R 重置（放弃更改）
+      if (input === "r" && key.ctrl) {
+        handleReset();
+      }
+    },
+    // 仅在配置页面、导航模式、且不在特殊模式下处理
+    { isActive: state.currentPage === "config" && !state.inputMode && !state.filterMode && !state.exitConfirmPending && !state.showHelp }
+  );
 
   // 处理编辑模式下的输入
   const handleEditModeInput = (input: string, key: { return: boolean; escape: boolean; upArrow: boolean; downArrow: boolean; leftArrow: boolean; rightArrow: boolean }) => {
@@ -206,12 +211,16 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
   const handleReset = async () => {
     try {
       const loaded = await loadRxcSettings();
+      // 使用 resolveChatRuntime 获取完整的运行时配置
+      const resolved = resolveChatRuntime({
+        settings: loaded.settings,
+      });
       setState((prev) => ({
         ...prev,
         config: {
-          provider: loaded.settings.defaultProvider,
-          model: "default",
-          permissionMode: loaded.settings.runtime.permissionMode,
+          provider: resolved.providerName,
+          model: resolved.model?.name ?? "default",
+          permissionMode: resolved.permissionMode,
           maxTurns: 50,
           maxSteps: loaded.settings.runtime.maxStepsPerTurn,
         },

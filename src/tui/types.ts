@@ -29,6 +29,8 @@ export interface TuiRuntimeContext {
   input$: Subject<ChatInputTurn>;
   session: SessionMetadata;
   config: TuiConfig;
+  /** Provider ID（用于显示） */
+  providerId: string;
 }
 
 /**

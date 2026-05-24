@@ -43,21 +43,26 @@ export function MessageList({ height }: MessageListProps): React.ReactElement {
     }
   }, [messages.length, visibleLines]);
 
-  // 键盘滚动
-  useInput((input, key) => {
-    if (key.upArrow) {
-      setSelectedIdx((prev) => Math.max(0, prev - 1));
-      if (selectedIdx <= scrollOffset && scrollOffset > 0) {
-        setScrollOffset((prev) => Math.max(0, prev - 1));
+  // 键盘滚动（仅在导航模式下处理）
+  // useInput 只在导航模式下活跃，避免与输入模式冲突
+  useInput(
+    (input, key) => {
+      if (key.upArrow) {
+        setSelectedIdx((prev) => Math.max(0, prev - 1));
+        if (selectedIdx <= scrollOffset && scrollOffset > 0) {
+          setScrollOffset((prev) => Math.max(0, prev - 1));
+        }
       }
-    }
-    if (key.downArrow) {
-      setSelectedIdx((prev) => Math.min(messages.length - 1, prev + 1));
-      if (selectedIdx >= scrollOffset + visibleLines - 1) {
-        setScrollOffset((prev) => Math.min(Math.max(0, messages.length - visibleLines), prev + 1));
+      if (key.downArrow) {
+        setSelectedIdx((prev) => Math.min(messages.length - 1, prev + 1));
+        if (selectedIdx >= scrollOffset + visibleLines - 1) {
+          setScrollOffset((prev) => Math.min(Math.max(0, messages.length - visibleLines), prev + 1));
+        }
       }
-    }
-  });
+    },
+    // 仅在导航模式且不在特殊模式下时处理
+    { isActive: !state.inputMode && !state.filterMode && !state.editMode && !state.exitConfirmPending && !state.showHelp }
+  );
 
   // 空状态
   if (messages.length === 0) {

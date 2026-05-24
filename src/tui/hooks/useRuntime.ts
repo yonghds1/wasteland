@@ -120,6 +120,7 @@ export async function createTuiRuntime(cwd: string): Promise<TuiRuntimeContext> 
     session,
     config,
     sessionManager,
+    providerId: provider.id,
   } as InternalTuiRuntimeContext;
 }
 

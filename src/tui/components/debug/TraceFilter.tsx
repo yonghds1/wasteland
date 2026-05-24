@@ -22,72 +22,76 @@ export function TraceFilter({ onExit }: TraceFilterProps): React.ReactElement {
   const currentScope = state.debug.filter.scope ?? "all";
   const currentPhase = state.debug.filter.phase ?? "all";
 
-  // 键盘交互
-  useInput((input, key) => {
-    // Tab 切换字段
-    if (key.tab) {
-      setFocusField((prev) => (prev === "scope" ? "phase" : "scope"));
-      return;
-    }
-
-    // Esc 退出过滤模式
-    if (key.escape) {
-      onExit();
-      return;
-    }
-
-    // Enter 应用过滤
-    if (key.return) {
-      onExit();
-      return;
-    }
-
-    // 左右切换选项
-    if (key.leftArrow || key.rightArrow) {
-      if (focusField === "scope") {
-        const options = SCOPE_OPTIONS;
-        const idx = options.indexOf(currentScope);
-        const nextIdx = key.leftArrow
-          ? (idx - 1 + options.length) % options.length
-          : (idx + 1) % options.length;
-        const nextScope = options[nextIdx];
-        setState((prev) => ({
-          ...prev,
-          debug: {
-            ...prev.debug,
-            filter: {
-              ...prev.debug.filter,
-              scope: nextScope === "all" ? undefined : nextScope,
-            },
-          },
-        }));
-      } else {
-        const options = PHASE_OPTIONS;
-        const idx = options.indexOf(currentPhase);
-        const nextIdx = key.leftArrow
-          ? (idx - 1 + options.length) % options.length
-          : (idx + 1) % options.length;
-        const nextPhase = options[nextIdx];
-        setState((prev) => ({
-          ...prev,
-          debug: {
-            ...prev.debug,
-            filter: {
-              ...prev.debug.filter,
-              phase: nextPhase === "all" ? undefined : nextPhase,
-            },
-          },
-        }));
+  // 键盘交互（仅在过滤模式下活跃）
+  useInput(
+    (input, key) => {
+      // Tab 切换字段
+      if (key.tab) {
+        setFocusField((prev) => (prev === "scope" ? "phase" : "scope"));
+        return;
       }
-      return;
-    }
 
-    // 上下切换字段
-    if (key.upArrow || key.downArrow) {
-      setFocusField((prev) => (prev === "scope" ? "phase" : "scope"));
-      return;
-    }
-  });
+      // Esc 退出过滤模式
+      if (key.escape) {
+        onExit();
+        return;
+      }
+
+      // Enter 应用过滤
+      if (key.return) {
+        onExit();
+        return;
+      }
+
+      // 左右切换选项
+      if (key.leftArrow || key.rightArrow) {
+        if (focusField === "scope") {
+          const options = SCOPE_OPTIONS;
+          const idx = options.indexOf(currentScope);
+          const nextIdx = key.leftArrow
+            ? (idx - 1 + options.length) % options.length
+            : (idx + 1) % options.length;
+          const nextScope = options[nextIdx];
+          setState((prev) => ({
+            ...prev,
+            debug: {
+              ...prev.debug,
+              filter: {
+                ...prev.debug.filter,
+                scope: nextScope === "all" ? undefined : nextScope,
+              },
+            },
+          }));
+        } else {
+          const options = PHASE_OPTIONS;
+          const idx = options.indexOf(currentPhase);
+          const nextIdx = key.leftArrow
+            ? (idx - 1 + options.length) % options.length
+            : (idx + 1) % options.length;
+          const nextPhase = options[nextIdx];
+          setState((prev) => ({
+            ...prev,
+            debug: {
+              ...prev.debug,
+              filter: {
+                ...prev.debug.filter,
+                phase: nextPhase === "all" ? undefined : nextPhase,
+              },
+            },
+          }));
+        }
+        return;
+      }
+
+      // 上下切换字段
+      if (key.upArrow || key.downArrow) {
+        setFocusField((prev) => (prev === "scope" ? "phase" : "scope"));
+        return;
+      }
+    },
+    // 仅在过滤模式下处理（虽然组件只在 filterMode 时挂载，但显式声明更清晰）
+    { isActive: state.filterMode }
+  );
 
   return (
     <Box flexDirection="column" paddingX={1}>

@@ -89,6 +89,12 @@ export interface AppState {
   // 配置编辑状态
   configEdit: ConfigEdit;
   configHasChanges: boolean;  // 配置是否有未保存的更改
+
+  // Session 元数据
+  sessionMetadata: {
+    id: string;
+    providerId: string;
+  };
 }
 
 // ============================================================

@@ -30,15 +30,19 @@ export function TraceLog({ height }: TraceLogProps): React.ReactElement {
   // 可见 traces
   const visibleTraces = filteredTraces.slice(scrollOffset, scrollOffset + visibleLines);
 
-  // 键盘滚动
-  useInput((input, key) => {
-    if (key.upArrow) {
-      setScrollOffset((prev) => Math.max(0, prev - 1));
-    }
-    if (key.downArrow) {
-      setScrollOffset((prev) => Math.min(Math.max(0, filteredTraces.length - visibleLines), prev + 1));
-    }
-  });
+  // 键盘滚动（仅在导航模式下处理）
+  useInput(
+    (input, key) => {
+      if (key.upArrow) {
+        setScrollOffset((prev) => Math.max(0, prev - 1));
+      }
+      if (key.downArrow) {
+        setScrollOffset((prev) => Math.min(Math.max(0, filteredTraces.length - visibleLines), prev + 1));
+      }
+    },
+    // 仅在导航模式且不在特殊模式下时处理
+    { isActive: !state.inputMode && !state.filterMode && !state.editMode && !state.exitConfirmPending && !state.showHelp }
+  );
 
   // 空状态
   if (traces.length === 0) {

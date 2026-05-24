@@ -20,7 +20,7 @@ import { useUserInput } from "./hooks/useUserInput.js";
 import type { TuiRuntimeContext } from "./types.js";
 
 // 初始状态
-const createInitialState = (config: TuiRuntimeContext["config"]): AppState => ({
+const createInitialState = (config: TuiRuntimeContext["config"], session: TuiRuntimeContext["session"], providerId: string): AppState => ({
   currentPage: "session",
 
   // 模式状态
@@ -48,6 +48,12 @@ const createInitialState = (config: TuiRuntimeContext["config"]): AppState => ({
     originalValue: "",
   },
   configHasChanges: false,
+
+  // Session 元数据
+  sessionMetadata: {
+    id: session.id,
+    providerId,
+  },
 });
 
 interface AppProps {
@@ -55,7 +61,7 @@ interface AppProps {
 }
 
 export function App({ runtime }: AppProps): React.ReactElement {
-  const [state, setState] = useState<AppState>(() => createInitialState(runtime.config));
+  const [state, setState] = useState<AppState>(() => createInitialState(runtime.config, runtime.session, runtime.providerId));
 
   // 订阅 runtime 事件
   useRuntimeEvents(runtime.events$, runtime.debug$, setState);
