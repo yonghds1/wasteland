@@ -86,6 +86,29 @@ spawn_agent({
 - 主 Agent: `.rxc/sessions/{sessionId}.jsonl`
 - 子 Agent: `.rxc/sessions/{sessionId}-child-{name}.jsonl`
 
+**测试多 Agent（使用 Qwen）**：
+
+```bash
+# 1. 配置 Qwen API Key（如果还没配置）
+export APP_CHAT_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode"
+export APP_CHAT_API_KEY="<your-key>"
+export APP_CHAT_MODEL="qwen3-max"
+
+# 2. 使用 local provider 测试 spawn_agent 命令
+npm run chat -- --provider local --message "/spawn analyzer 分析 package.json"
+
+# 3. 使用 Qwen provider 测试（Qwen 会自动决定是否调用 spawn_agent）
+npm run chat -- --multi --message "分析这个项目的架构，并给出重构建议"
+
+# 4. 使用 bypass_permissions 模式允许 spawn_agent 执行
+npm run chat -- --multi --permission-mode bypass_permissions --message "..."
+```
+
+**注意**：
+- `local` provider 通过 `/spawn <name> <task>` 语法触发 spawn_agent
+- `qwen` provider 会根据任务自动决定是否调用 spawn_agent（需要模型支持 tool calling）
+- spawn_agent 是高风险工具，默认权限模式会要求确认
+
 `chat` 命令当前有三条输入路径：
 
 - `--message <text>`：单次输入，适合脚本和测试

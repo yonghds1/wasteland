@@ -81,6 +81,8 @@ function getToolDescription(name: string, riskLevel: string): string {
       "精确编辑文件。参数：path（文件路径）、old_string（要替换的字符串）、new_string（替换后的字符串）、replace_all（可选，是否替换所有匹配）。",
     "write-file": "创建或覆写文件。参数：path（文件路径）、content（文件内容）。",
     bash: "执行 shell 命令。参数：command（命令字符串）。",
+    "spawn_agent":
+      "创建并运行子 Agent。参数：name（子 Agent 标识）、task（任务描述）、model（可选，模型选择）、tools（可选，限定工具集）。用于并行执行或委派子任务。",
   };
 
   return descriptions[name] ?? `${name} 工具（风险等级：${riskLevel}）。`;
@@ -156,6 +158,29 @@ function getToolParameters(name: string): JsonSchema {
         },
       },
       required: ["command"],
+    },
+    "spawn_agent": {
+      type: "object",
+      properties: {
+        name: {
+          type: "string",
+          description: "子 Agent 的唯一标识符",
+        },
+        task: {
+          type: "string",
+          description: "子 Agent 要执行的任务描述",
+        },
+        model: {
+          type: "string",
+          description: "可选，模型选择（haiku/sonnet/opus 等）",
+        },
+        tools: {
+          type: "array",
+          items: { type: "string" },
+          description: "可选，限定子 Agent 可用的工具集",
+        },
+      },
+      required: ["name", "task"],
     },
   };
 
