@@ -1,4 +1,5 @@
 import { createLocalProvider } from "./local.js";
+import { createOllamaProvider } from "./ollama.js";
 import { createQwenProvider } from "./qwen.js";
 import type { AgentProvider } from "./provider-types.js";
 import type { ProviderSettings } from "../config/settings-types.js";
@@ -46,6 +47,7 @@ export class ProviderRegistry {
 export function createDefaultProviderRegistry(): ProviderRegistry {
   return new ProviderRegistry([
     ["local", createLocalProvider],
+    ["ollama", createOllamaProvider],
     ["qwen", createQwenProvider],
   ]);
 }
