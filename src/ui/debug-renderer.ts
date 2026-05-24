@@ -60,7 +60,7 @@ function renderPrettyEvent(output: Writable, event: DebugTraceEvent): void {
   parts.push(...formatDebugData(event.data));
 
   output.write(
-    `${maybePaint(output, formatStatusLabel("trace"), ANSI.dim, ANSI.gray)} ${maybePaint(output, parts.join(" "), ANSI.dim, ANSI.brightWhite)}\n`,
+    `${maybePaint(output, "trace", ANSI.dim, ANSI.gray)} ${maybePaint(output, parts.join(" "), ANSI.dim, ANSI.brightWhite)}\n`,
   );
 }
 

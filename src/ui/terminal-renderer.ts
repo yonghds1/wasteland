@@ -4,7 +4,17 @@ import type { Observable } from "rxjs";
 
 import type { RuntimeEvent } from "../runtime/event-types.js";
 import type { PermissionDecisionKind } from "../runtime/permission-gate.js";
-import { ANSI, PANEL_GUTTER, formatStatusLabel, indentBlock, paint, resolvePanelWidth, wrapText } from "./terminal-theme.js";
+import {
+  ANSI,
+  PANEL_GUTTER,
+  createDisplayTimestamp,
+  getDepthColor,
+  getDepthPrefix,
+  indentBlock,
+  paint,
+  resolvePanelWidth,
+  wrapText,
+} from "./terminal-theme.js";
 
 // ============================================================
 // 配置常量
@@ -16,6 +26,26 @@ const MAX_TOOL_OUTPUT_LINES = 40;
 /** 头部和尾部各显示的行数（用于智能截断） */
 const SMART_TRUNCATE_HEAD_LINES = 15;
 const SMART_TRUNCATE_TAIL_LINES = 15;
+
+/** 折叠输出阈值（字符数） */
+const COLLAPSE_THRESHOLD = 500;
+
+// ============================================================
+// Agent 上下文追踪
+// ============================================================
+
+/** 从 sessionId 推断 Agent 深度 */
+function inferDepthFromSessionId(sessionId: string): number {
+  // sessionId 格式: "xxx-child-analyzer" 或 "xxx"
+  const childCount = (sessionId.match(/-child-/g) || []).length;
+  return childCount;
+}
+
+/** 从 sessionId 提取子 Agent 名称 */
+function extractAgentName(sessionId: string): string | undefined {
+  const match = sessionId.match(/-child-([^-]+)/);
+  return match ? match[1] : undefined;
+}
 
 // ============================================================
 // 辅助函数
@@ -92,8 +122,19 @@ function truncateOutputForDisplay(output: string, maxLines: number = MAX_TOOL_OU
   return smartTruncateFileOutput(output, maxLines);
 }
 
-function writeInteractiveLabel(stdout: Writable, label: string, ...styles: string[]): void {
-  stdout.write(`${paint(label, ...styles)}\n`);
+function writeInteractiveLabel(
+  stdout: Writable,
+  params: {
+    label: string;
+    depth: number;
+    name?: string;
+  },
+): void {
+  const color = getDepthColor(params.depth);
+  const prefix = getDepthPrefix(params.depth, params.name);
+  const timestamp = createDisplayTimestamp();
+
+  stdout.write(`${paint(params.label, ANSI.bold, color)} ${paint(timestamp, ANSI.dim, ANSI.gray)}\n`);
 }
 
 function writeInteractiveBlock(
@@ -101,30 +142,48 @@ function writeInteractiveBlock(
   params: {
     label: string;
     content: string;
-    styles: string[];
+    depth: number;
+    name?: string;
+    collapsed?: boolean;
     width: number;
   },
 ): void {
-  writeInteractiveLabel(stdout, params.label, ...params.styles);
-  stdout.write(`${indentBlock(wrapText(params.content, params.width), PANEL_GUTTER)}\n`);
+  writeInteractiveLabel(stdout, {
+    label: params.label,
+    depth: params.depth,
+    name: params.name,
+  });
+
+  // 处理折叠
+  let displayContent = params.content;
+  if (params.collapsed && params.content.length > COLLAPSE_THRESHOLD) {
+    const lines = params.content.split("\n");
+    const firstLines = lines.slice(0, 10).join("\n");
+    const hiddenCount = lines.length - 10;
+    displayContent = `${firstLines}\n${paint(`... ${hiddenCount} lines hidden (press Enter to expand)`, ANSI.dim)}`;
+  }
+
+  stdout.write(`${indentBlock(wrapText(displayContent, params.width), PANEL_GUTTER)}\n`);
 }
 
 function writeInteractiveStatusLine(
   stdout: Writable,
   params: {
     label: string;
-    labelStyles: string[];
+    depth: number;
+    name?: string;
     segments: Array<{
       text: string;
       styles?: string[];
     }>;
   },
 ): void {
+  const color = getDepthColor(params.depth);
   const content = params.segments
     .map((segment) => paint(segment.text, ...(segment.styles ?? [])))
     .join("");
 
-  stdout.write(`${paint(formatStatusLabel(params.label), ...params.labelStyles)} ${content}\n`);
+  stdout.write(`${paint(params.label, ANSI.bold, color)} ${content}\n`);
 }
 
 function createChunkWriter(stdout: Writable, width: number): {
@@ -194,6 +253,15 @@ export async function renderRuntimeEvents(
   const pendingTurnSpacing = new Set<number>();
   const chunkWriter = createChunkWriter(stdout, panelWidth);
 
+  // 追踪当前 Agent 上下文
+  let currentDepth = 0;
+  let currentName: string | undefined;
+
+  function updateAgentContext(sessionId: string): void {
+    currentDepth = inferDepthFromSessionId(sessionId);
+    currentName = extractAgentName(sessionId);
+  }
+
   function flushTurnSpacing(turn: number): void {
     if (!pendingTurnSpacing.has(turn)) {
       return;
@@ -211,13 +279,22 @@ export async function renderRuntimeEvents(
   await new Promise<void>((resolve, reject) => {
     events$.subscribe({
       next: (event) => {
+        // 更新 Agent 上下文
+        if ("sessionId" in event) {
+          updateAgentContext(event.sessionId);
+        }
+
         switch (event.type) {
           case "assistant_chunk": {
             if (style === "interactive") {
               flushTurnSpacing(event.turn);
 
               if (!chunkedTurns.has(event.turn)) {
-                writeInteractiveLabel(stdout, "rxc", ANSI.bold, ANSI.cyan);
+                writeInteractiveLabel(stdout, {
+                  label: "rxc",
+                  depth: currentDepth,
+                  name: currentName,
+                });
                 stdout.write(PANEL_GUTTER);
                 chunkedTurns.add(event.turn);
               }
@@ -246,7 +323,8 @@ export async function renderRuntimeEvents(
                 writeInteractiveBlock(stdout, {
                   label: "rxc",
                   content: event.content,
-                  styles: [ANSI.bold, ANSI.cyan],
+                  depth: currentDepth,
+                  name: currentName,
                   width: panelWidth,
                 });
               }
@@ -270,7 +348,8 @@ export async function renderRuntimeEvents(
               flushTurnSpacing(event.turn);
               writeInteractiveStatusLine(stdout, {
                 label: "tool",
-                labelStyles: [ANSI.bold, ANSI.magenta],
+                depth: currentDepth,
+                name: currentName,
                 segments: [
                   {
                     text: `request ${event.toolName}`,
@@ -289,7 +368,8 @@ export async function renderRuntimeEvents(
               flushTurnSpacing(event.turn);
               writeInteractiveStatusLine(stdout, {
                 label: "perm",
-                labelStyles: [ANSI.bold, ANSI.cyan],
+                depth: currentDepth,
+                name: currentName,
                 segments: [
                   {
                     text: `${event.toolName} → `,
@@ -318,7 +398,8 @@ export async function renderRuntimeEvents(
               flushTurnSpacing(event.turn);
               writeInteractiveStatusLine(stdout, {
                 label: "tool",
-                labelStyles: [ANSI.bold, ANSI.blue],
+                depth: currentDepth,
+                name: currentName,
                 segments: [
                   {
                     text: `start ${event.toolName}`,
@@ -340,7 +421,8 @@ export async function renderRuntimeEvents(
               writeInteractiveBlock(stdout, {
                 label: "tool",
                 content: [`result ${event.toolName}`, displayOutput.length > 0 ? displayOutput : "(no output)"].join("\n"),
-                styles: [ANSI.bold, ANSI.green],
+                depth: currentDepth,
+                name: currentName,
                 width: panelWidth,
               });
               break;
@@ -357,7 +439,8 @@ export async function renderRuntimeEvents(
               writeInteractiveBlock(stdout, {
                 label: "tool",
                 content: `failed ${event.toolName}\n${event.error}`,
-                styles: [ANSI.bold, ANSI.red],
+                depth: currentDepth,
+                name: currentName,
                 width: panelWidth,
               });
               break;
@@ -367,10 +450,53 @@ export async function renderRuntimeEvents(
             break;
           }
           case "session_ended": {
+            if (style === "interactive") {
+              stdout.write(`\n${paint("━".repeat(40), ANSI.dim, ANSI.gray)}\n`);
+              stdout.write(`${paint("Session ended", ANSI.dim, ANSI.gray)}\n`);
+            }
             break;
           }
           case "session_started":
             break;
+          case "agent_spawned": {
+            if (style === "interactive") {
+              const childDepth = inferDepthFromSessionId(event.childId);
+              const childName = extractAgentName(event.childId);
+              const color = getDepthColor(childDepth);
+              const prefix = getDepthPrefix(childDepth, childName);
+
+              stdout.write(`${paint(prefix, ANSI.bold, color)} ${paint("spawned", ANSI.green)} ${paint(`"${event.task.slice(0, 50)}${event.task.length > 50 ? "..." : ""}"`, ANSI.dim)}\n`);
+            }
+            break;
+          }
+          case "agent_completed": {
+            if (style === "interactive") {
+              const childDepth = inferDepthFromSessionId(event.childId);
+              const childName = extractAgentName(event.childId);
+              const color = getDepthColor(childDepth);
+              const prefix = getDepthPrefix(childDepth, childName);
+
+              const statusText = event.status === "success"
+                ? paint("completed ✓", ANSI.green)
+                : event.status === "timeout"
+                  ? paint("timeout ⏱", ANSI.yellow)
+                  : paint("failed ✗", ANSI.red);
+
+              stdout.write(`${paint(prefix, ANSI.bold, color)} ${statusText}\n`);
+
+              if (event.result) {
+                const truncatedResult = event.result.length > 200
+                  ? `${event.result.slice(0, 200)}...`
+                  : event.result;
+                stdout.write(`${indentBlock(paint(truncatedResult, ANSI.dim), PANEL_GUTTER)}\n`);
+              }
+
+              if (event.error) {
+                stdout.write(`${indentBlock(paint(event.error, ANSI.red), PANEL_GUTTER)}\n`);
+              }
+            }
+            break;
+          }
           case "user_turn": {
             if (style === "interactive") {
               stdout.write(ANSI.reset);

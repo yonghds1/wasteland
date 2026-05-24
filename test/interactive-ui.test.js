@@ -95,8 +95,8 @@ test("interactive renderer uses codex-like layout", async () => {
   const rendered = stripAnsi(getStdout());
 
   assert.match(rendered, /tool/);
-  assert.match(rendered, /tool  request read-file/);
-  assert.match(rendered, /tool\n│  result read-file/);
+  assert.match(rendered, /tool request read-file/);
+  assert.match(rendered, /tool \d{2}:\d{2}:\d{2}\.\d{3}\n│  result read-file/);
   assert.match(rendered, /rxc/);
   assert.match(rendered, /│  hello/);
   assert.match(rendered, /│  done/);
@@ -135,5 +135,6 @@ test("interactive renderer wraps streamed assistant output to panel width", asyn
 
   const rendered = stripAnsi(getStdout());
 
-  assert.match(rendered, /rxc\n│  abcdefghijklmnopqrstuvwx\n│  yz1234\n\n$/);
+  // 新格式包含时间戳: rxc HH:MM:SS.mmm
+  assert.match(rendered, /rxc \d{2}:\d{2}:\d{2}\.\d{3}\n│  abcdefghijklmnopqrstuvwx\n│  yz1234\n\n$/);
 });
