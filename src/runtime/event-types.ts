@@ -167,6 +167,10 @@ export type SessionRecord =
       cwd: string;
       provider: string;
       timestamp: string;
+      /** 父会话 ID（如果是子 Agent） */
+      parentId?: string;
+      /** 子 Agent 名称（如果是子 Agent） */
+      childName?: string;
     }
   | SessionMessageRecord
   | SessionToolCallRecord

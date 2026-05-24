@@ -103,6 +103,8 @@ function createSessionStartRecord(session: SessionMetadata): SessionRecord {
     cwd: session.cwd,
     provider: session.providerId,
     timestamp: createTimestamp(),
+    parentId: session.parentId,
+    childName: session.childName,
   };
 }
 
