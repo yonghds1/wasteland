@@ -8,6 +8,7 @@ import { Command } from "commander";
 
 import { detectTTY } from "../ui/tty-detect.js";
 import { runTUI } from "../tui/index.js";
+import { createTuiRuntime, cleanupTuiRuntime } from "../tui/hooks/useRuntime.js";
 
 export function createTuiCommand(): Command {
   return new Command("tui")
@@ -33,7 +34,16 @@ export function createTuiCommand(): Command {
       }
 
       try {
-        await runTUI();
+        // 创建 TUI 运行时
+        const runtime = await createTuiRuntime(process.cwd());
+
+        try {
+          // 启动 TUI
+          await runTUI(runtime);
+        } finally {
+          // 清理资源
+          await cleanupTuiRuntime(runtime);
+        }
       } catch (error) {
         console.error("TUI 启动失败:", error instanceof Error ? error.message : error);
         process.exit(1);

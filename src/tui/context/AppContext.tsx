@@ -51,8 +51,20 @@ export interface TraceFilter {
   phase?: string;
 }
 
+export interface ConfigEdit {
+  field: "provider" | "permissionMode" | "maxSteps" | "maxTurns" | null;
+  originalValue: string | number;
+}
+
 export interface AppState {
   currentPage: PageName;
+
+  // 模式状态
+  inputMode: boolean;           // 是否在输入模式
+  exitConfirmPending: boolean;  // 是否等待退出确认
+  showHelp: boolean;            // 是否显示帮助
+  filterMode: boolean;          // 是否在过滤模式（调试页面）
+  editMode: boolean;            // 是否在编辑模式（配置页面）
 
   session: {
     agents: AgentNode[];
@@ -73,6 +85,10 @@ export interface AppState {
     maxTurns: number;
     maxSteps: number;
   };
+
+  // 配置编辑状态
+  configEdit: ConfigEdit;
+  configHasChanges: boolean;  // 配置是否有未保存的更改
 }
 
 // ============================================================
@@ -83,6 +99,13 @@ interface AppContextValue {
   state: AppState;
   setState: React.Dispatch<React.SetStateAction<AppState>>;
   setCurrentPage: (page: PageName) => void;
+  setInputMode: (mode: boolean) => void;
+  setExitConfirmPending: (pending: boolean) => void;
+  setShowHelp: (show: boolean) => void;
+  setFilterMode: (mode: boolean) => void;
+  setEditMode: (mode: boolean) => void;
+  updateConfig: (updates: Partial<AppState["config"]>) => void;
+  clearTraces: () => void;
 }
 
 export const AppContext = React.createContext<AppContextValue | null>(null);

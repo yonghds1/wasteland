@@ -51,12 +51,18 @@ export function TraceLog({ height }: TraceLogProps): React.ReactElement {
     );
   }
 
+  // 是否有激活的过滤器
+  const hasFilter = Boolean(filter.scope || filter.phase);
+
   return (
     <Box flexDirection="column" flexGrow={1}>
       {/* 标题栏 */}
       <Box flexDirection="row" justifyContent="space-between" paddingX={1}>
         <Text bold underline>Trace 日志</Text>
-        <Text dimColor>{filteredTraces.length} 条 | ↑/↓ 滚动</Text>
+        <Box flexDirection="row">
+          {hasFilter && <Text color="yellow">⚑ 过滤 </Text>}
+          <Text dimColor>{filteredTraces.length} 条 | ↑/↓ 滚动</Text>
+        </Box>
       </Box>
 
       {/* 日志列表 */}

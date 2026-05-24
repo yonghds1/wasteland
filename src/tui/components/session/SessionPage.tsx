@@ -3,22 +3,29 @@
  */
 
 import React from "react";
-import { Box, useStdout } from "ink";
+import { Box } from "ink";
 import { AgentTree } from "./AgentTree.js";
 import { MessageList } from "./MessageList.js";
 import { InputBar } from "./InputBar.js";
 
-export function SessionPage({ height }: { height?: number }): React.ReactElement {
+interface SessionPageProps {
+  height?: number;
+  width?: number;
+  sendMessage?: (content: string) => void;
+}
+
+export function SessionPage({ height, width, sendMessage }: SessionPageProps): React.ReactElement {
   // 内容高度 = 总高度 - InputBar(约2行)
   const contentHeight = height ? Math.max(height - 3, 5) : 20;
-
   // Agent 树宽度固定 25 列
   const agentTreeWidth = 25;
+  // 消息列表宽度 = 总宽度 - Agent树 - 边框
+  const messageWidth = width ? width - agentTreeWidth - 4 : undefined;
 
   return (
-    <Box flexDirection="column">
+    <Box flexDirection="column" width={width}>
       {/* 主内容区：Agent 树 + 消息列表 */}
-      <Box flexDirection="row" height={contentHeight}>
+      <Box flexDirection="row" height={contentHeight} width={width}>
         {/* Agent 树 - 左侧固定宽度 */}
         <Box
           width={agentTreeWidth}
@@ -41,7 +48,7 @@ export function SessionPage({ height }: { height?: number }): React.ReactElement
       </Box>
 
       {/* 输入框 - 底部 */}
-      <InputBar />
+      <InputBar width={width} sendMessage={sendMessage} />
     </Box>
   );
 }

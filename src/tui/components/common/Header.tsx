@@ -12,7 +12,11 @@ const TABS: { name: PageName; label: string }[] = [
   { name: "config", label: "配置" },
 ];
 
-export function Header(): React.ReactElement {
+interface HeaderProps {
+  width?: number;
+}
+
+export function Header({ width }: HeaderProps): React.ReactElement {
   const { state } = useAppContext();
 
   const now = new Date();
@@ -22,6 +26,7 @@ export function Header(): React.ReactElement {
     <Box
       flexDirection="row"
       justifyContent="space-between"
+      width={width}
       paddingX={1}
       borderStyle="single"
       borderBottom
