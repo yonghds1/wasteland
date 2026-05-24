@@ -1,17 +1,9 @@
-/**
- * App - TUI 根组件
- *
- * 管理页面路由和全局状态
- * 支持模式分离：导航模式和输入模式
- */
-
 import React, { useState, useCallback } from "react";
 import { Box, useInput, useStdout } from "ink";
 import { Header } from "./components/common/Header.js";
 import { Footer } from "./components/common/Footer.js";
 import { HelpModal } from "./components/common/HelpModal.js";
 import { ExitConfirm } from "./components/common/ExitConfirm.js";
-import { MessageDetailModal } from "./components/session/MessageDetailModal.js";
 import { SessionPage } from "./components/session/SessionPage.js";
 import { DebugPage } from "./components/debug/DebugPage.js";
 import { ConfigPage } from "./components/config/ConfigPage.js";
@@ -30,7 +22,6 @@ const createInitialState = (config: TuiRuntimeContext["config"], session: TuiRun
   showHelp: false,
   filterMode: false,
   editMode: false,
-  viewingMessage: null,
 
   session: {
     agents: [],
@@ -110,10 +101,6 @@ export function App({ runtime }: AppProps): React.ReactElement {
     }));
   }, []);
 
-  const viewMessage = useCallback((msg: typeof state.viewingMessage) => {
-    setState((prev) => ({ ...prev, viewingMessage: msg }));
-  }, []);
-
   // 获取终端尺寸，实现全屏布局
   const { stdout } = useStdout();
   const terminalRows = stdout?.rows ?? 24;
@@ -165,15 +152,6 @@ export function App({ runtime }: AppProps): React.ReactElement {
 
     // 编辑模式下（配置页面），不处理快捷键（由 ConfigPage 处理）
     if (state.editMode) {
-      return;
-    }
-
-    // 查看消息详情模式下
-    if (state.viewingMessage) {
-      if (key.escape || key.return) {
-        viewMessage(null);
-        return;
-      }
       return;
     }
 
@@ -288,21 +266,6 @@ export function App({ runtime }: AppProps): React.ReactElement {
       );
     }
 
-    // 消息详情模态框
-    if (state.viewingMessage) {
-      return (
-        <Box
-          height={contentHeight}
-          width={terminalColumns}
-          flexDirection="column"
-          alignItems="center"
-          justifyContent="center"
-        >
-          <MessageDetailModal message={state.viewingMessage} width={terminalColumns} />
-        </Box>
-      );
-    }
-
     // 正常内容
     return <Box height={contentHeight} width={terminalColumns}>{renderPage()}</Box>;
   };
@@ -320,7 +283,6 @@ export function App({ runtime }: AppProps): React.ReactElement {
         setEditMode,
         updateConfig,
         clearTraces,
-        viewMessage,
       }}
     >
       <Box flexDirection="column" width={terminalColumns}>
