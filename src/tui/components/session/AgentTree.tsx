@@ -56,7 +56,7 @@ export function AgentTree(): React.ReactElement {
     : "0ms";
 
   return (
-    <Box flexDirection="column" paddingX={1}>
+    <Box flexDirection="column" paddingX={1} width={21}>
       {/* 标题 - Gold 色系 */}
       <Box flexDirection="row" gap={1}>
         <Text bold color={GOLD}>
