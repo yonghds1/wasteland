@@ -87,6 +87,9 @@ test("dispatchToolCall persists an allowed tool lifecycle", async () => {
     }).pipe(toArray()),
   );
 
+  // 强制写入缓冲区
+  await sessionManager.closeSession(session.id);
+
   assert.deepEqual(events.map((event) => event.type), [
     "tool_call_requested",
     "permission_decision",
@@ -156,6 +159,9 @@ test("dispatchToolCall blocks execution when permission is not granted", async (
   assert.equal(events[2].status, "blocked");
   assert.match(events[2].error, /要求确认/);
 
+  // 强制写入缓冲区
+  await sessionManager.closeSession(session.id);
+
   const files = await readdir(sessionDir);
   const transcript = await readFile(path.join(sessionDir, files[0]), "utf8");
 
@@ -210,6 +216,9 @@ test("spawn_agent creates child agent with independent session", async () => {
 
   // 验证返回结果包含内容
   assert.ok(events[3].output, "应该有输出");
+
+  // 强制写入缓冲区
+  await sessionManager.closeAll();
 
   // 验证子 session 文件已创建（包含 -child- 格式）
   const files = await readdir(sessionDir);

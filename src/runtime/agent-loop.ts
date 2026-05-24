@@ -20,7 +20,7 @@
  * ```
  */
 
-import { EMPTY, Observable, Subject, concat, concatMap, defer, from, map, of, tap } from "rxjs";
+import { EMPTY, Observable, ReplaySubject, Subject, concat, concatMap, defer, from, map, of, tap } from "rxjs";
 
 import { createDebugTraceEvent, type DebugTraceEvent } from "./debug-events.js";
 import type { AgentProvider } from "../providers/provider-types.js";
@@ -52,10 +52,18 @@ import {
 // ============================================================
 
 /**
- * 创建 ISO 格式的时间戳字符串
+ * 创建易读的时间戳字符串
+ * 格式: 2026-05-24 11:30:00 (本地时间，精确到秒)
  */
 function createTimestamp(): string {
-  return new Date().toISOString();
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const hour = String(now.getHours()).padStart(2, "0");
+  const minute = String(now.getMinutes()).padStart(2, "0");
+  const second = String(now.getSeconds()).padStart(2, "0");
+  return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
 }
 
 /**
@@ -734,8 +742,8 @@ export function runAgentLoop(params: {
   existingSession?: SessionMetadata;
 }): AgentRun {
   // 创建调试追踪的 Subject
-  // Subject 既是 Observable 又是 Observer，可以手动发射值
-  const debugSubject = new Subject<DebugTraceEvent>();
+  // 使用 ReplaySubject 确保所有事件都能被订阅者接收
+  const debugSubject = new ReplaySubject<DebugTraceEvent>();
   const trace = createTraceEmitter(debugSubject);
   const maxStepsPerTurn = params.maxStepsPerTurn ?? 8;
 
@@ -757,8 +765,8 @@ export function runAgentLoop(params: {
 
       // ---- 会话开始阶段 ----
       // 持久化会话开始记录，发出 session_started 事件
-      const start$ = from(
-        params.sessionManager.appendRecord(session, createSessionStartRecord(session)),
+      const start$ = defer(() =>
+        from(params.sessionManager.appendRecord(session, createSessionStartRecord(session))),
       ).pipe(
         tap(() => {
           trace({
@@ -853,8 +861,8 @@ export function runAgentLoop(params: {
 
       // ---- 会话结束阶段 ----
       // 持久化会话结束记录，发出 session_ended 事件
-      const end$ = from(
-        params.sessionManager.appendRecord(session, createSessionEndRecord(session.id)),
+      const end$ = defer(() =>
+        from(params.sessionManager.appendRecord(session, createSessionEndRecord(session.id))),
       ).pipe(
         tap(() => {
           trace({
