@@ -47,6 +47,8 @@ type EventProcessResult = {
   messages: Message[];
   tools: ToolCall[];
   isStreaming: boolean;
+  streamingContent: string;
+  streamingMessageId: string | null;
 };
 
 /**
@@ -59,6 +61,8 @@ function processRuntimeEvent(
     messages: Message[];
     tools: ToolCall[];
     isStreaming: boolean;
+    streamingContent: string;
+    streamingMessageId: string | null;
   },
   chunkAccumulator: { current: string },
   toolStartTimes: Map<string, number>,
@@ -67,6 +71,7 @@ function processRuntimeEvent(
   const messages = [...currentState.messages];
   const tools = [...currentState.tools];
   let { isStreaming } = currentState;
+  let { streamingContent, streamingMessageId } = currentState;
 
   switch (event.type) {
     case "session_started": {
@@ -90,8 +95,13 @@ function processRuntimeEvent(
     }
 
     case "assistant_chunk": {
-      // 累积 chunk，不创建消息
+      // 累积 chunk，更新流式内容以触发 UI 渲染
       chunkAccumulator.current += event.chunk;
+      streamingContent = chunkAccumulator.current;
+      // 如果还没有 streamingMessageId，创建一个
+      if (!streamingMessageId) {
+        streamingMessageId = `msg-streaming-${event.turn}-${Date.now()}`;
+      }
       break;
     }
 
@@ -105,8 +115,10 @@ function processRuntimeEvent(
         type: "assistant",
         content,
       });
-      // 重置 chunk 累积器
+      // 重置 chunk 累积器和流式状态
       chunkAccumulator.current = "";
+      streamingContent = "";
+      streamingMessageId = null;
       break;
     }
 
@@ -220,7 +232,7 @@ function processRuntimeEvent(
     }
   }
 
-  return { agents, messages, tools, isStreaming };
+  return { agents, messages, tools, isStreaming, streamingContent, streamingMessageId };
 }
 
 /**
@@ -290,6 +302,8 @@ export function useRuntimeEvents(
           session: {
             ...prev.session,
             isStreaming: false,
+            streamingContent: "",
+            streamingMessageId: null,
           },
         }));
       },
@@ -299,6 +313,8 @@ export function useRuntimeEvents(
           session: {
             ...prev.session,
             isStreaming: false,
+            streamingContent: "",
+            streamingMessageId: null,
           },
         }));
       },

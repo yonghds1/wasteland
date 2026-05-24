@@ -71,6 +71,8 @@ export interface AppState {
     messages: Message[];
     tools: ToolCall[];
     isStreaming: boolean;
+    streamingContent: string;  // 流式输出的累积内容
+    streamingMessageId: string | null;  // 当前流式消息 ID
   };
 
   debug: {

@@ -28,6 +28,8 @@ const createInitialState = (config: TuiRuntimeContext["config"], session: TuiRun
     messages: [],
     tools: [],
     isStreaming: false,
+    streamingContent: "",
+    streamingMessageId: null,
   },
 
   debug: {

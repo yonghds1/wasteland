@@ -10,7 +10,7 @@
  * - 流式消息末尾显示 ▌ 光标 + ● 流式中 状态
  */
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Text, Box, useInput } from "ink";
 import { useAppContext, type Message } from "../../context/AppContext.js";
 import {
@@ -272,16 +272,12 @@ interface MessageListProps {
 
 export function MessageList({ height = 20, width = 80 }: MessageListProps): React.ReactElement {
   const { state } = useAppContext();
-  const { messages } = state.session;
+  const { messages, streamingContent, streamingMessageId } = state.session;
 
   // 滚动状态
   const [scrollOffset, setScrollOffset] = useState(0);
   // 是否自动滚动到底部
   const [autoScroll, setAutoScroll] = useState(true);
-  // 流式内容累积器
-  const [streamingContent, setStreamingContent] = useState("");
-  // 流式消息 ID
-  const streamingMessageId = useRef<string | null>(null);
 
   // 计算消息区可用高度：减去标题行和状态行
   const contentHeight = Math.max(height - 2, 5);
@@ -294,9 +290,9 @@ export function MessageList({ height = 20, width = 80 }: MessageListProps): Reac
       messages,
       contentWidth,
       streamingContent,
-      streamingMessageId.current,
+      streamingMessageId,
     );
-  }, [messages, contentWidth, streamingContent]);
+  }, [messages, contentWidth, streamingContent, streamingMessageId]);
 
   const totalLines = lines.length;
 
@@ -306,23 +302,6 @@ export function MessageList({ height = 20, width = 80 }: MessageListProps): Reac
       setScrollOffset(Math.max(0, totalLines - contentHeight));
     }
   }, [totalLines, contentHeight, autoScroll]);
-
-  // 监听流式消息更新
-  useEffect(() => {
-    // 如果正在流式输出，累积内容
-    if (state.session.isStreaming) {
-      // 查找最后一条 assistant 消息
-      const lastMsg = [...messages].reverse().find(m => m.type === "assistant");
-      if (lastMsg && lastMsg.content) {
-        streamingMessageId.current = lastMsg.id;
-        setStreamingContent(lastMsg.content);
-      }
-    } else {
-      // 流式结束，清空
-      setStreamingContent("");
-      streamingMessageId.current = null;
-    }
-  }, [messages, state.session.isStreaming]);
 
   // 处理滚动
   const handleScroll = useCallback((direction: "up" | "down" | "pageUp" | "pageDown" | "home" | "end") => {
