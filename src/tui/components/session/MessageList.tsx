@@ -342,7 +342,7 @@ export function MessageList({ height = 20, width = 80 }: MessageListProps): Reac
     }
   }, [totalLines, contentHeight]);
 
-  // 键盘事件处理
+  // 键盘事件处理 - 只在 session 页面且导航模式下激活
   useInput(
     (input, key) => {
       if (key.upArrow) {
@@ -359,7 +359,7 @@ export function MessageList({ height = 20, width = 80 }: MessageListProps): Reac
         handleScroll("end");
       }
     },
-    { isActive: !state.inputMode && !state.filterMode && !state.editMode && !state.exitConfirmPending && !state.showHelp }
+    { isActive: state.currentPage === "session" && !state.inputMode && !state.filterMode && !state.editMode && !state.exitConfirmPending && !state.showHelp }
   );
 
   // 计算可见行

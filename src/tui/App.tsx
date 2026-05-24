@@ -287,7 +287,7 @@ export function App({ runtime }: AppProps): React.ReactElement {
         clearTraces,
       }}
     >
-      <Box flexDirection="column" width={terminalColumns}>
+      <Box flexDirection="column" width={terminalColumns} height={terminalRows}>
         <Header width={terminalColumns} />
         {renderContent()}
         <Footer width={terminalColumns} />
