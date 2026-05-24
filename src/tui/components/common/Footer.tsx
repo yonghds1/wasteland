@@ -1,20 +1,19 @@
 /**
- * Footer - 底部状态栏 (Hermes 风格)
+ * Footer - 底部状态栏
  *
- * 改进：
- * - 使用分段样式（不同颜色区分不同提示）
- * - 上下文相关提示更醒目
- * - 使用 Hermes 风格分隔符 ┊
+ * 使用分段样式（不同颜色区分不同提示）
+ * 上下文相关提示更醒目
  */
 
 import React from "react";
 import { Text, Box } from "ink";
 import { useAppContext } from "../../context/AppContext.js";
 import {
-  GOLD,
-  AMBER,
+  PRIMARY,
+  SECONDARY,
   SUCCESS,
   WARNING,
+  BORDER,
   SEPARATORS,
 } from "../../utils/colors.js";
 
@@ -31,7 +30,7 @@ export function Footer({ width }: FooterProps): React.ReactElement {
       // 输入模式
       return (
         <Box flexDirection="row" gap={1}>
-          <Text bold color={AMBER}>
+          <Text bold color={SECONDARY}>
             [输入模式]
           </Text>
           <Text dimColor>Esc 取消</Text>
@@ -47,7 +46,7 @@ export function Footer({ width }: FooterProps): React.ReactElement {
       // 过滤模式
       return (
         <Box flexDirection="row" gap={1}>
-          <Text bold color={AMBER}>
+          <Text bold color={SECONDARY}>
             [过滤模式]
           </Text>
           <Text dimColor>Tab 切换字段</Text>
@@ -63,7 +62,7 @@ export function Footer({ width }: FooterProps): React.ReactElement {
       // 编辑模式
       return (
         <Box flexDirection="row" gap={1}>
-          <Text bold color={AMBER}>
+          <Text bold color={SECONDARY}>
             [编辑模式]
           </Text>
           <Text color={SUCCESS}>Enter 确认</Text>
@@ -102,13 +101,13 @@ export function Footer({ width }: FooterProps): React.ReactElement {
     // 导航模式 - 显示默认快捷键
     return (
       <Box flexDirection="row" gap={1}>
-        <Text color={GOLD}>h</Text>
+        <Text color={PRIMARY}>h</Text>
         <Text dimColor>帮助</Text>
         <Text dimColor>{SEPARATORS.item.trim()}</Text>
-        <Text color={GOLD}>Tab</Text>
+        <Text color={PRIMARY}>Tab</Text>
         <Text dimColor>切换页面</Text>
         <Text dimColor>{SEPARATORS.item.trim()}</Text>
-        <Text color={GOLD}>q</Text>
+        <Text color={PRIMARY}>q</Text>
         <Text dimColor>退出</Text>
       </Box>
     );
@@ -135,10 +134,10 @@ export function Footer({ width }: FooterProps): React.ReactElement {
           <Box flexDirection="row" gap={1}>
             <Text dimColor>↑/↓ 滚动</Text>
             <Text dimColor>{SEPARATORS.item.trim()}</Text>
-            <Text color={GOLD}>f</Text>
+            <Text color={PRIMARY}>f</Text>
             <Text dimColor>过滤</Text>
             <Text dimColor>{SEPARATORS.item.trim()}</Text>
-            <Text color={GOLD}>c</Text>
+            <Text color={PRIMARY}>c</Text>
             <Text dimColor>清空</Text>
           </Box>
         );
@@ -147,7 +146,7 @@ export function Footer({ width }: FooterProps): React.ReactElement {
           <Box flexDirection="row" gap={1}>
             <Text dimColor>↑/↓ 切换</Text>
             <Text dimColor>{SEPARATORS.item.trim()}</Text>
-            <Text color={GOLD}>Enter</Text>
+            <Text color={PRIMARY}>Enter</Text>
             <Text dimColor>编辑</Text>
             <Text dimColor>{SEPARATORS.item.trim()}</Text>
             <Text color={SUCCESS}>Ctrl+S 保存</Text>
@@ -176,7 +175,7 @@ export function Footer({ width }: FooterProps): React.ReactElement {
       paddingX={1}
       borderStyle="single"
       borderTop
-      borderColor="#CD7F32"
+      borderColor={BORDER}
     >
       <Box flexDirection="row">
         {getModeHelp()}
@@ -190,7 +189,7 @@ export function Footer({ width }: FooterProps): React.ReactElement {
         <Text dimColor>{SEPARATORS.item.trim()}</Text>
 
         {/* 当前页面 */}
-        <Text bold color={GOLD}>
+        <Text bold color={PRIMARY}>
           {getPageName()}
         </Text>
       </Box>

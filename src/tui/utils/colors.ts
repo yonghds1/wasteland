@@ -1,79 +1,79 @@
 /**
- * TUI Color Constants (Hermes-inspired theme)
+ * TUI Color Constants
  *
  * Uses ink color names (not ANSI codes) for React TUI components.
- * Based on Hermes default skin: gold/amber theme.
+ * Gets colors from the theme system.
  */
 
-// ============================================================
-// Primary Colors (Hermes gold theme)
-// ============================================================
-
-/** Gold - primary accent for headers and highlights */
-export const GOLD = "#FFD700";
-
-/** Amber - secondary accent for section headers */
-export const AMBER = "#FFBF00";
-
-/** Bronze - borders and dividers */
-export const BRONZE = "#CD7F32";
-
-/** Dark goldenrod - dim/muted text */
-export const DARK_GOLDENROD = "#B8860B";
-
-/** Goldenrod - labels */
-export const GOLDENROD = "#DAA520";
-
-/** Cornsilk - body text */
-export const CORNSILK = "#FFF8DC";
+import { theme } from "../../ui/themes/index.js";
 
 // ============================================================
-// Status Colors
+// Primary Colors (from theme)
 // ============================================================
 
-/** Success green */
-export const SUCCESS = "#4caf50";
+/** Primary accent color */
+export const PRIMARY = theme.primary;
 
-/** Error red */
-export const ERROR = "#ef5350";
+/** Secondary accent color */
+export const SECONDARY = theme.secondary;
 
-/** Warning orange */
-export const WARNING = "#ffa726";
+/** Muted/dim text color */
+export const MUTED = theme.muted;
+
+/** Border and divider color */
+export const BORDER = theme.border;
 
 // ============================================================
-// Message Type Colors
+// Status Colors (from theme)
 // ============================================================
 
-/** User messages - cyan */
-export const USER_MSG = "cyan";
+/** Success color */
+export const SUCCESS = theme.success;
 
-/** Assistant messages - green */
-export const ASSISTANT_MSG = "green";
+/** Error color */
+export const ERROR = theme.error;
 
-/** Tool messages - magenta */
-export const TOOL_MSG = "magenta";
+/** Warning color */
+export const WARNING = theme.warning;
 
-/** System messages - gray */
-export const SYSTEM_MSG = "gray";
+/** Info color */
+export const INFO = theme.info;
+
+// ============================================================
+// Message Type Colors (from theme)
+// ============================================================
+
+/** User messages */
+export const USER_MSG = theme.user;
+
+/** Assistant messages */
+export const ASSISTANT_MSG = theme.assistant;
+
+/** Tool messages */
+export const TOOL_MSG = theme.tool;
+
+/** System messages */
+export const SYSTEM_MSG = theme.system;
 
 // ============================================================
 // Ink Color Names (for use with ink components)
 // ============================================================
 
 /**
- * Map hex colors to ink color names where possible,
- * or use hex directly (ink supports hex colors)
+ * Map theme colors for ink components
+ * (ink supports hex colors directly)
  */
 export const TUI_COLORS = {
   // Primary
-  gold: GOLD,
-  amber: AMBER,
-  bronze: BRONZE,
+  primary: PRIMARY,
+  secondary: SECONDARY,
+  border: BORDER,
 
   // Status
   success: SUCCESS,
   error: ERROR,
   warning: WARNING,
+  info: INFO,
 
   // Message types
   user: USER_MSG,
@@ -82,12 +82,12 @@ export const TUI_COLORS = {
   system: SYSTEM_MSG,
 
   // UI elements
-  headerTitle: GOLD,
-  headerDim: DARK_GOLDENROD,
-  tabActive: GOLD,
+  headerTitle: PRIMARY,
+  headerDim: MUTED,
+  tabActive: PRIMARY,
   tabInactive: "gray",
   borderDefault: "gray",
-  borderAccent: BRONZE,
+  borderAccent: BORDER,
 
   // Agent status
   agentRunning: "green",
@@ -98,17 +98,17 @@ export const TUI_COLORS = {
 } as const;
 
 // ============================================================
-// Message Prefixes (Hermes style)
+// Message Prefixes (from theme)
 // ============================================================
 
 /** User message prefix */
-export const USER_PREFIX = "❯";
+export const USER_PREFIX = theme.prefix.user;
 
 /** Assistant message prefix */
-export const ASSISTANT_PREFIX = "✦";
+export const ASSISTANT_PREFIX = theme.prefix.assistant;
 
 /** System message prefix */
-export const SYSTEM_PREFIX = "ℹ";
+export const SYSTEM_PREFIX = theme.prefix.system;
 
 /** Streaming cursor */
 export const STREAMING_CURSOR = "▌";
@@ -170,9 +170,9 @@ export const TOOL_VERBS: Record<string, string> = {
 // Prompt Symbols
 // ============================================================
 
-export const PROMPT_SYMBOL = "❯";
+export const PROMPT_SYMBOL = theme.prefix.user;
 
-export const INPUT_PROMPT = "❯";
+export const INPUT_PROMPT = theme.prefix.user;
 
 // ============================================================
 // Separator Characters
@@ -187,6 +187,6 @@ export const SEPARATORS = {
   branch: "└─",
   /** Tree vertical */
   vertical: "│",
-  /** Tool prefix (Hermes style) */
+  /** Tool prefix */
   tool: "┊",
 } as const;

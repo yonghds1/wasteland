@@ -70,8 +70,9 @@ export interface AppState {
     agents: AgentNode[];
     messages: Message[];
     tools: ToolCall[];
-    isStreaming: boolean;
-    streamingContent: string;  // 流式输出的累积内容
+    isThinking: boolean;        // 等待第一个 chunk（思考中）
+    isStreaming: boolean;       // 正在接收流式数据
+    streamingContent: string;   // 流式输出的累积内容
     streamingMessageId: string | null;  // 当前流式消息 ID
   };
 

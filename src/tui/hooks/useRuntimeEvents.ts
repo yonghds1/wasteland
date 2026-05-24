@@ -2,6 +2,13 @@
  * useRuntimeEvents - 事件订阅和状态转换 Hook
  *
  * 订阅 events$ 和 debug$ 流，将 RuntimeEvent 转换为 AppState 更新。
+ *
+ * ## 流式状态管理
+ *
+ * 直接在 processRuntimeEvent 中管理流式显示状态：
+ * - isThinking: 等待第一个 chunk（session_started 后到第一个 chunk 之间）
+ * - isStreaming: 正在接收流式数据（收到 chunk 后）
+ * - streamingContent: 累积的流式内容
  */
 
 import { useEffect, useRef } from "react";
@@ -46,6 +53,7 @@ type EventProcessResult = {
   agents: AgentNode[];
   messages: Message[];
   tools: ToolCall[];
+  isThinking: boolean;
   isStreaming: boolean;
   streamingContent: string;
   streamingMessageId: string | null;
@@ -60,6 +68,7 @@ function processRuntimeEvent(
     agents: AgentNode[];
     messages: Message[];
     tools: ToolCall[];
+    isThinking: boolean;
     isStreaming: boolean;
     streamingContent: string;
     streamingMessageId: string | null;
@@ -70,7 +79,7 @@ function processRuntimeEvent(
   const agents = [...currentState.agents];
   const messages = [...currentState.messages];
   const tools = [...currentState.tools];
-  let { isStreaming } = currentState;
+  let { isThinking, isStreaming } = currentState;
   let { streamingContent, streamingMessageId } = currentState;
 
   switch (event.type) {
@@ -78,7 +87,9 @@ function processRuntimeEvent(
       // 创建主 Agent
       const mainAgent = createMainAgent(event.sessionId);
       agents.push(mainAgent);
-      isStreaming = true;
+      // 开始思考状态（等待第一个 chunk）
+      isThinking = true;
+      isStreaming = false;
       break;
     }
 
@@ -95,8 +106,12 @@ function processRuntimeEvent(
     }
 
     case "assistant_chunk": {
-      // 此分支现在不会被调用（在 subscribe 中直接处理）
-      // 但保留以兼容其他调用路径
+      // 收到第一个 chunk，从思考状态切换到流式状态
+      if (isThinking) {
+        isThinking = false;
+        isStreaming = true;
+      }
+      // 累积 chunk 到 streamingContent，触发 UI 更新实现打字机效果
       chunkAccumulator.current += event.chunk;
       streamingContent = chunkAccumulator.current;
       if (!streamingMessageId) {
@@ -119,6 +134,8 @@ function processRuntimeEvent(
       chunkAccumulator.current = "";
       streamingContent = "";
       streamingMessageId = null;
+      isStreaming = false;
+      isThinking = false;
       break;
     }
 
@@ -228,11 +245,12 @@ function processRuntimeEvent(
 
     case "session_ended": {
       isStreaming = false;
+      isThinking = false;
       break;
     }
   }
 
-  return { agents, messages, tools, isStreaming, streamingContent, streamingMessageId };
+  return { agents, messages, tools, isThinking, isStreaming, streamingContent, streamingMessageId };
 }
 
 /**
@@ -279,7 +297,7 @@ export function useRuntimeEvents(
     }
 
     // 订阅事件流
-    // Provider 层已用 RxJS delay 实现打字机效果，这里直接更新状态
+    // 订阅事件流，Provider 层直接发送 chunk，UI 层负责显示效果
     subscriptionRef.current = events$.subscribe({
       next: (event) => {
         setState((prev) => {
@@ -302,6 +320,7 @@ export function useRuntimeEvents(
           ...prev,
           session: {
             ...prev.session,
+            isThinking: false,
             isStreaming: false,
             streamingContent: "",
             streamingMessageId: null,
@@ -313,6 +332,7 @@ export function useRuntimeEvents(
           ...prev,
           session: {
             ...prev.session,
+            isThinking: false,
             isStreaming: false,
             streamingContent: "",
             streamingMessageId: null,

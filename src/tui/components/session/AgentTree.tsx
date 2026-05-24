@@ -1,19 +1,17 @@
 /**
- * AgentTree - Agent 树状图 (Hermes 风格)
+ * AgentTree - Agent 树状图
  *
- * 改进：
- * - 使用 Hermes 风格的状态图标
- * - 添加运行时长显示
- * - 使用树形连接线（└─、│）
- * - Gold 色系标题
+ * 使用主题系统的状态图标
+ * 添加运行时长显示
+ * 使用树形连接线（└─、│）
  */
 
 import React from "react";
 import { Text, Box } from "ink";
 import { useAppContext } from "../../context/AppContext.js";
 import {
-  GOLD,
-  DARK_GOLDENROD,
+  PRIMARY,
+  MUTED,
   SUCCESS,
   ERROR,
   WARNING,
@@ -57,9 +55,9 @@ export function AgentTree(): React.ReactElement {
 
   return (
     <Box flexDirection="column" paddingX={1} width={21}>
-      {/* 标题 - Gold 色系 */}
+      {/* 标题 */}
       <Box flexDirection="row" gap={1}>
-        <Text bold color={GOLD}>
+        <Text bold color={PRIMARY}>
           Agents
         </Text>
         <Text dimColor>
@@ -130,7 +128,7 @@ export function AgentTree(): React.ReactElement {
         <Text dimColor>─────────────</Text>
         <Box flexDirection="row" gap={1}>
           <Text dimColor>运行:</Text>
-          <Text color={DARK_GOLDENROD}>{totalDuration}</Text>
+          <Text color={MUTED}>{totalDuration}</Text>
         </Box>
       </Box>
     </Box>

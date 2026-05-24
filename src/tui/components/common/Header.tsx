@@ -1,20 +1,18 @@
 /**
- * Header - 顶部状态栏 + Tab 导航 (Hermes 风格)
+ * Header - 顶部状态栏 + Tab 导航
  *
- * 改进：
- * - 使用 gold/amber 色系标题
- * - 添加 Session 标识
- * - 流式状态指示器更醒目
- * - 使用 Hermes 风格分隔符
+ * 使用主题系统的颜色
+ * 添加 Session 标识
+ * 流式状态指示器更醒目
  */
 
 import React from "react";
 import { Text, Box } from "ink";
 import { useAppContext, type PageName } from "../../context/AppContext.js";
 import {
-  GOLD,
-  BRONZE,
-  DARK_GOLDENROD,
+  PRIMARY,
+  BORDER,
+  MUTED,
   TUI_COLORS,
   SEPARATORS,
 } from "../../utils/colors.js";
@@ -49,17 +47,17 @@ export function Header({ width }: HeaderProps): React.ReactElement {
       paddingX={1}
       borderStyle="single"
       borderBottom
-      borderColor={BRONZE}
+      borderColor={BORDER}
     >
       <Box flexDirection="row" gap={1}>
-        {/* 标题 - Gold 色系 */}
-        <Text bold color={GOLD}>
+        {/* 标题 */}
+        <Text bold color={PRIMARY}>
           rxc
         </Text>
-        <Text color={DARK_GOLDENROD}>v0.1.0</Text>
+        <Text color={MUTED}>v0.1.0</Text>
 
         {/* 分隔符 */}
-        <Text color={BRONZE}>{SEPARATORS.vertical}</Text>
+        <Text color={BORDER}>{SEPARATORS.vertical}</Text>
 
         {/* Tab 导航 */}
         <Box flexDirection="row" gap={1}>
@@ -68,7 +66,7 @@ export function Header({ width }: HeaderProps): React.ReactElement {
             return (
               <Box key={tab.name} flexDirection="row">
                 {isActive ? (
-                  <Text bold color={GOLD}>
+                  <Text bold color={PRIMARY}>
                     [{tab.label}]
                   </Text>
                 ) : (
@@ -87,7 +85,7 @@ export function Header({ width }: HeaderProps): React.ReactElement {
 
       <Box flexDirection="row" gap={1}>
         {/* Session 标识 */}
-        <Text color={DARK_GOLDENROD}>
+        <Text color={MUTED}>
           Session:
         </Text>
         <Text dimColor>
@@ -95,7 +93,7 @@ export function Header({ width }: HeaderProps): React.ReactElement {
         </Text>
 
         {/* 分隔符 */}
-        <Text color={BRONZE}>{SEPARATORS.vertical}</Text>
+        <Text color={BORDER}>{SEPARATORS.vertical}</Text>
 
         {/* 流式状态指示器 */}
         {state.session.isStreaming ? (

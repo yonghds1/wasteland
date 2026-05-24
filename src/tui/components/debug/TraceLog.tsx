@@ -1,20 +1,19 @@
 /**
- * TraceLog - Trace 日志 (Hermes 风格)
+ * TraceLog - Trace 日志
  *
  * 显示调试追踪日志，支持：
- * - Hermes 风格的 scope.phase 显示
+ * - scope.phase 显示
  * - 过滤器支持
  * - 滚动查看
- * - Gold 色系标题
  */
 
 import React, { useState } from "react";
 import { Text, Box, useInput } from "ink";
 import { useAppContext } from "../../context/AppContext.js";
 import {
-  GOLD,
-  DARK_GOLDENROD,
-  AMBER,
+  PRIMARY,
+  MUTED,
+  SECONDARY,
   SUCCESS,
   WARNING,
   SEPARATORS,
@@ -37,7 +36,7 @@ function getLogLevelColor(phase: string): string {
   if (phase.includes("success") || phase.includes("complete")) {
     return SUCCESS;
   }
-  return AMBER;
+  return SECONDARY;
 }
 
 export function TraceLog({ height }: TraceLogProps): React.ReactElement {
@@ -76,7 +75,7 @@ export function TraceLog({ height }: TraceLogProps): React.ReactElement {
   if (traces.length === 0) {
     return (
       <Box flexDirection="column" flexGrow={1} justifyContent="center" alignItems="center">
-        <Text color={GOLD}>✦ 暂无 trace 日志</Text>
+        <Text color={PRIMARY}>◆ 暂无 trace 日志</Text>
         <Text dimColor>使用 --debug 启动以查看详细追踪</Text>
         <Text dimColor color="gray">rxc chat --debug --message "你的消息"</Text>
       </Box>
@@ -88,10 +87,10 @@ export function TraceLog({ height }: TraceLogProps): React.ReactElement {
 
   return (
     <Box flexDirection="column" flexGrow={1}>
-      {/* 标题栏 - Gold 色系 */}
+      {/* 标题栏 */}
       <Box flexDirection="row" justifyContent="space-between" paddingX={1}>
         <Box flexDirection="row" gap={1}>
-          <Text bold color={GOLD}>
+          <Text bold color={PRIMARY}>
             Trace 日志
           </Text>
           {hasFilter && (
@@ -150,7 +149,7 @@ export function TraceLog({ height }: TraceLogProps): React.ReactElement {
             <Text color="cyan">scope={filter.scope}</Text>
           )}
           {filter.phase && (
-            <Text color={AMBER}>phase={filter.phase}</Text>
+            <Text color={SECONDARY}>phase={filter.phase}</Text>
           )}
           <Text dimColor>{SEPARATORS.item.trim()}</Text>
           <Text color={WARNING}>f 修改</Text>

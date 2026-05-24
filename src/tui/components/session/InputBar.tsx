@@ -1,20 +1,18 @@
 /**
- * InputBar - 输入框 (Hermes 风格)
+ * InputBar - 输入框
  *
- * 改进：
- * - 使用 Hermes 风格的 prompt symbol (❯)
- * - 输入模式时显示绿色高亮
- * - 添加模式指示器（更醒目）
- * - 使用 gold/amber 色系
+ * 使用主题系统的 prompt symbol (❯)
+ * 输入模式时显示绿色高亮
+ * 添加模式指示器（更醒目）
  */
 
 import React, { useState } from "react";
 import { Text, Box, useInput } from "ink";
 import { useAppContext } from "../../context/AppContext.js";
 import {
-  GOLD,
+  PRIMARY,
   SUCCESS,
-  AMBER,
+  SECONDARY,
   PROMPT_SYMBOL,
   STREAMING_CURSOR,
   SEPARATORS,
@@ -76,7 +74,7 @@ export function InputBar({ width, sendMessage }: InputBarProps): React.ReactElem
       {/* 模式指示器 - 输入模式时显示 */}
       {state.inputMode && (
         <Box paddingX={1} flexDirection="row" gap={1}>
-          <Text bold color={AMBER}>
+          <Text bold color={SECONDARY}>
             [输入模式]
           </Text>
           <Text dimColor>Esc 取消</Text>
@@ -87,8 +85,8 @@ export function InputBar({ width, sendMessage }: InputBarProps): React.ReactElem
 
       {/* 输入框 */}
       <Box flexDirection="row" paddingX={1} width={width}>
-        {/* Prompt symbol - Hermes 风格 */}
-        <Text bold color={state.inputMode ? SUCCESS : GOLD}>
+        {/* Prompt symbol */}
+        <Text bold color={state.inputMode ? SUCCESS : PRIMARY}>
           {PROMPT_SYMBOL}{" "}
         </Text>
 

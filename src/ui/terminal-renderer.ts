@@ -6,7 +6,7 @@ import type { RuntimeEvent } from "../runtime/event-types.js";
 import type { PermissionDecisionKind } from "../runtime/permission-gate.js";
 import {
   ANSI,
-  HERMES_COLORS,
+  hexToFgBold,
   PANEL_GUTTER,
   createDisplayTimestamp,
   getDepthColor,
@@ -16,6 +16,7 @@ import {
   resolvePanelWidth,
   wrapText,
 } from "./terminal-theme.js";
+import { theme } from "./themes/index.js";
 
 // ============================================================
 // 配置常量
@@ -32,7 +33,7 @@ const SMART_TRUNCATE_TAIL_LINES = 15;
 const COLLAPSE_THRESHOLD = 500;
 
 // ============================================================
-// 工具显示常量 (Hermes 风格)
+// 工具显示常量
 // ============================================================
 
 /** 工具图标映射 */
@@ -67,6 +68,25 @@ const TOOL_DISPLAY_VERBS: Record<string, string> = {
   "web-search": "search",
   web_search: "search",
 };
+
+// ============================================================
+// Theme-based ANSI colors
+// ============================================================
+
+/** Primary color (bold) */
+const PRIMARY_COLOR = hexToFgBold(theme.primary);
+
+/** Secondary color (bold) */
+const SECONDARY_COLOR = hexToFgBold(theme.secondary);
+
+/** Success color (bold) */
+const SUCCESS_COLOR = hexToFgBold(theme.success);
+
+/** Error color (bold) */
+const ERROR_COLOR = hexToFgBold(theme.error);
+
+/** Warning color (bold) */
+const WARNING_COLOR = hexToFgBold(theme.warning);
 
 // ============================================================
 // Agent 上下文追踪
@@ -294,6 +314,8 @@ export async function renderRuntimeEvents(
   // 追踪当前 Agent 上下文
   let currentDepth = 0;
   let currentName: string | undefined;
+  // 追踪是否正在显示思考状态
+  let isShowingThinking = false;
 
   function updateAgentContext(sessionId: string): void {
     currentDepth = inferDepthFromSessionId(sessionId);
@@ -327,6 +349,13 @@ export async function renderRuntimeEvents(
             if (style === "interactive") {
               flushTurnSpacing(event.turn);
 
+              // 第一个 chunk 到达时，清除思考状态
+              if (isShowingThinking) {
+                // 上移一行并清除该行，然后回到行首
+                stdout.write("\x1b[1A\x1b[2K\r");
+                isShowingThinking = false;
+              }
+
               if (!chunkedTurns.has(event.turn)) {
                 writeInteractiveLabel(stdout, {
                   label: "rxc",
@@ -352,6 +381,12 @@ export async function renderRuntimeEvents(
           case "assistant_message": {
             if (style === "interactive") {
               flushTurnSpacing(event.turn);
+
+              // 清除思考状态（如果没有通过 chunk 清除）
+              if (isShowingThinking) {
+                stdout.write("\x1b[1A\x1b[2K\r");
+                isShowingThinking = false;
+              }
 
               if (chunkedTurns.has(event.turn)) {
                 stdout.write("\n");
@@ -384,7 +419,7 @@ export async function renderRuntimeEvents(
           case "tool_call_requested": {
             if (style === "interactive") {
               flushTurnSpacing(event.turn);
-              // Hermes 风格: ┊ {emoji} {verb:9} {detail}
+              // 工具请求行
               const icon = TOOL_DISPLAY_ICONS[event.toolName] || TOOL_DISPLAY_ICONS.default;
               const verb = (TOOL_DISPLAY_VERBS[event.toolName] || event.toolName).padEnd(9);
               stdout.write(`${paint("┊", ANSI.dim)} ${icon} ${paint(verb, ANSI.brightWhite)} ${paint("requesting...", ANSI.dim)}\n`);
@@ -427,10 +462,10 @@ export async function renderRuntimeEvents(
           case "tool_started": {
             if (style === "interactive") {
               flushTurnSpacing(event.turn);
-              // Hermes 风格: ┊ {emoji} {verb:9} {detail}
+              // 工具开始行
               const icon = TOOL_DISPLAY_ICONS[event.toolName] || TOOL_DISPLAY_ICONS.default;
               const verb = (TOOL_DISPLAY_VERBS[event.toolName] || event.toolName).padEnd(9);
-              stdout.write(`${paint("┊", ANSI.dim)} ${icon} ${paint(verb, ANSI.cyan)} ${paint("running...", HERMES_COLORS.amber)}\n`);
+              stdout.write(`${paint("┊", ANSI.dim)} ${icon} ${paint(verb, ANSI.cyan)} ${paint("running...", SECONDARY_COLOR)}\n`);
               break;
             }
 
@@ -440,7 +475,7 @@ export async function renderRuntimeEvents(
           case "tool_result": {
             if (style === "interactive") {
               flushTurnSpacing(event.turn);
-              // Hermes 风格: ┊ {emoji} {verb:9} {detail}
+              // 工具结果行
               const icon = TOOL_DISPLAY_ICONS[event.toolName] || TOOL_DISPLAY_ICONS.default;
               const verb = (TOOL_DISPLAY_VERBS[event.toolName] || event.toolName).padEnd(9);
 
@@ -448,7 +483,7 @@ export async function renderRuntimeEvents(
               const displayOutput = truncateOutputForDisplay(event.output);
               const detail = displayOutput.length > 42 ? displayOutput.slice(0, 42) + "..." : displayOutput;
 
-              stdout.write(`${paint("┊", ANSI.dim)} ${icon} ${paint(verb, HERMES_COLORS.success)} ${paint(detail, ANSI.dim)}\n`);
+              stdout.write(`${paint("┊", ANSI.dim)} ${icon} ${paint(verb, SUCCESS_COLOR)} ${paint(detail, ANSI.dim)}\n`);
               break;
             }
 
@@ -460,11 +495,11 @@ export async function renderRuntimeEvents(
           case "tool_failed": {
             if (style === "interactive") {
               flushTurnSpacing(event.turn);
-              // Hermes 风格: ┊ {emoji} {verb:9} {detail}  [failed]
+              // 工具失败行
               const icon = TOOL_DISPLAY_ICONS[event.toolName] || TOOL_DISPLAY_ICONS.default;
               const verb = (TOOL_DISPLAY_VERBS[event.toolName] || event.toolName).padEnd(9);
 
-              stdout.write(`${paint("┊", ANSI.dim)} ${icon} ${paint(verb, HERMES_COLORS.error)} ${paint(event.error?.slice(0, 42) || "error", ANSI.dim)} ${paint("[failed]", HERMES_COLORS.error)}\n`);
+              stdout.write(`${paint("┊", ANSI.dim)} ${icon} ${paint(verb, ERROR_COLOR)} ${paint(event.error?.slice(0, 42) || "error", ANSI.dim)} ${paint("[failed]", ERROR_COLOR)}\n`);
               break;
             }
 
@@ -478,8 +513,13 @@ export async function renderRuntimeEvents(
             }
             break;
           }
-          case "session_started":
+          case "session_started": {
+            if (style === "interactive") {
+              stdout.write(`${paint("●", ANSI.bold, ANSI.yellow)} ${paint("思考中...", ANSI.yellow)}\n`);
+              isShowingThinking = true;
+            }
             break;
+          }
           case "agent_spawned": {
             if (style === "interactive") {
               const childDepth = inferDepthFromSessionId(event.childId);

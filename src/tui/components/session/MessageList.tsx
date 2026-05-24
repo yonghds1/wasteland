@@ -1,9 +1,9 @@
 /**
- * MessageList - 消息列表（Hermes 风格）
+ * MessageList - 消息列表
  *
  * 显示会话消息，支持：
  * - 用户消息使用 cyan + ❯ 前缀
- * - 助手消息使用 green + ✦ 前缀
+ * - 助手消息使用 green + ◆ 前缀
  * - 工具消息使用 magenta + emoji
  * - 系统消息使用 dim gray
  * - 消息分隔线（细线 ─）
@@ -18,8 +18,8 @@ import {
   ASSISTANT_MSG,
   TOOL_MSG,
   SYSTEM_MSG,
-  GOLD,
-  DARK_GOLDENROD,
+  PRIMARY,
+  MUTED,
   USER_PREFIX,
   ASSISTANT_PREFIX,
   SYSTEM_PREFIX,
@@ -99,7 +99,7 @@ function wrapText(text: string, maxWidth: number): string[] {
 }
 
 /**
- * 格式化工具消息预览 (Hermes 风格)
+ * 格式化工具消息预览
  * 格式: ┊ {emoji} {verb:9} {detail}  {duration}
  */
 function formatToolPreview(msg: Message): string {
@@ -133,7 +133,7 @@ function formatToolPreview(msg: Message): string {
   const icon = TOOL_ICONS[toolName] || TOOL_ICONS.default;
   const verb = (TOOL_VERBS[toolName] || TOOL_VERBS.default).padEnd(9);
 
-  // 构建预览 - Hermes 风格
+  // 构建预览
   let preview = `${SEPARATORS.tool} ${icon} ${verb}`;
   if (detail) {
     preview += ` ${detail.slice(0, 40)}${detail.length > 40 ? "..." : ""}`;
@@ -162,7 +162,7 @@ function messagesToLines(
     const prefix = TYPE_PREFIXES[msg.type];
 
     if (msg.type === "tool") {
-      // 工具消息：Hermes 风格单行预览
+      // 工具消息：单行预览
       const preview = formatToolPreview(msg);
       lines.push({
         type: "tool-header",
@@ -171,7 +171,7 @@ function messagesToLines(
         messageId: msg.id,
       });
     } else {
-      // 普通消息：标题行 + 内容行 (Hermes 风格)
+      // 普通消息：标题行 + 内容行
       // 格式: [timestamp] prefix label
       const label = TYPE_LABELS[msg.type];
       const isStreaming = msg.id === streamingMessageId;
@@ -197,7 +197,7 @@ function messagesToLines(
       }
     }
 
-    // 消息间细线分隔 (Hermes 风格)
+    // 消息间细线分隔
     lines.push({
       type: "separator",
       content: MESSAGE_SEPARATOR,
@@ -377,7 +377,7 @@ export function MessageList({ height = 20, width = 80 }: MessageListProps): Reac
   if (messages.length === 0) {
     return (
       <Box flexDirection="column" flexGrow={1} justifyContent="center" alignItems="center">
-        <Text color={GOLD}>✦ rxc - AI CLI Assistant</Text>
+        <Text color={PRIMARY}>◆ rxc - AI CLI Assistant</Text>
         <Text dimColor>在下方输入框输入消息开始对话</Text>
         <Text dimColor color="gray">Tab 切换页面 ┊ h 帮助 ┊ q 退出</Text>
       </Box>
@@ -389,13 +389,19 @@ export function MessageList({ height = 20, width = 80 }: MessageListProps): Reac
       {/* 标题栏 */}
       <Box flexDirection="row" justifyContent="space-between" paddingX={1}>
         <Box flexDirection="row" gap={1}>
-          <Text bold color={GOLD}>
+          <Text bold color={PRIMARY}>
             消息
           </Text>
           <Text dimColor>{messages.length} 条</Text>
         </Box>
         <Box flexDirection="row" gap={1}>
-          {state.session.isStreaming && (
+          {state.session.isThinking && (
+            <>
+              <Text bold color="yellow">●</Text>
+              <Text color="yellow">思考中...</Text>
+            </>
+          )}
+          {state.session.isStreaming && !state.session.isThinking && (
             <>
               <Text bold color="green">●</Text>
               <Text color="green">流式中</Text>
@@ -444,7 +450,7 @@ export function MessageList({ height = 20, width = 80 }: MessageListProps): Reac
         {scrollbar && (
           <Box flexDirection="column" width={1}>
             {scrollbar.split("").map((char, idx) => (
-              <Text key={idx} dimColor={char === "░"} color={char === "█" ? GOLD : undefined}>
+              <Text key={idx} dimColor={char === "░"} color={char === "█" ? PRIMARY : undefined}>
                 {char}
               </Text>
             ))}

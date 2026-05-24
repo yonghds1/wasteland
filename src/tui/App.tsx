@@ -27,6 +27,7 @@ const createInitialState = (config: TuiRuntimeContext["config"], session: TuiRun
     agents: [],
     messages: [],
     tools: [],
+    isThinking: false,
     isStreaming: false,
     streamingContent: "",
     streamingMessageId: null,

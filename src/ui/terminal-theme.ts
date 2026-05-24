@@ -43,11 +43,11 @@ export const ANSI = {
 } as const;
 
 // ============================================================
-// True-color 颜色 (Hermes default skin)
+// True-color 颜色转换
 // ============================================================
 
 /** 将 hex 转换为 true-color ANSI 前景色 */
-function hexToFg(hex: string): string {
+export function hexToFg(hex: string): string {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
@@ -55,34 +55,20 @@ function hexToFg(hex: string): string {
 }
 
 /** 将 hex 转换为 true-color ANSI 前景色 (bold) */
-function hexToFgBold(hex: string): string {
+export function hexToFgBold(hex: string): string {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
   return `\x1b[1;38;2;${r};${g};${b}m`;
 }
 
-/** Hermes 风格颜色常量 */
-export const HERMES_COLORS = {
-  /** Gold - primary accent (#FFD700) */
-  gold: hexToFgBold("#FFD700"),
-  /** Amber - secondary accent (#FFBF00) */
-  amber: hexToFgBold("#FFBF00"),
-  /** Bronze - borders and dividers (#CD7F32) */
-  bronze: hexToFg("#CD7F32"),
-  /** Dark goldenrod - dim/muted text (#B8860B) */
-  darkGoldenrod: hexToFg("#B8860B"),
-  /** Goldenrod - labels (#DAA520) */
-  goldenrod: hexToFg("#DAA520"),
-  /** Cornsilk - body text (#FFF8DC) */
-  cornsilk: hexToFg("#FFF8DC"),
-  /** Success green (#4caf50) */
-  success: hexToFgBold("#4caf50"),
-  /** Error red (#ef5350) */
-  error: hexToFgBold("#ef5350"),
-  /** Warning orange (#ffa726) */
-  warning: hexToFgBold("#ffa726"),
-} as const;
+/** 将 hex 转换为 true-color ANSI 背景色 */
+export function hexToBg(hex: string): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `\x1b[48;2;${r};${g};${b}m`;
+}
 
 // ============================================================
 // Agent 深度颜色映射
