@@ -728,6 +728,8 @@ export function runAgentLoop(params: {
   cwd: string;
   mode: RuntimeMode;
   maxStepsPerTurn?: number;
+  /** 可选：已有的 session（用于子 Agent） */
+  existingSession?: SessionMetadata;
 }): AgentRun {
   // 创建调试追踪的 Subject
   // Subject 既是 Observable 又是 Observer，可以手动发射值
@@ -738,8 +740,8 @@ export function runAgentLoop(params: {
   // ---- 主事件流 ----
   // 使用 defer 延迟执行异步的会话创建
   const events$ = defer(async () =>
-    // 异步创建新会话
-    params.sessionManager.startSession({
+    // 如果传入了已有 session，使用它；否则创建新会话
+    params.existingSession ?? params.sessionManager.startSession({
       cwd: params.cwd,
       mode: params.mode,
       providerId: params.provider.id,

@@ -27,8 +27,8 @@
  * ```
  */
 
+import { catchError, defaultIfEmpty, filter, map, take, timeout } from "rxjs/operators";
 import { forkJoin, from, lastValueFrom, of } from "rxjs";
-import { catchError, map, timeout } from "rxjs/operators";
 
 import { runAgentLoop } from "../runtime/agent-loop.js";
 import type { SessionMetadata } from "../runtime/session-manager.js";
@@ -52,9 +52,9 @@ export type SpawnAgentInput = {
   name: string;
   /** 任务描述 */
   task: string;
-  /** 可选：模型选择（haiku/sonnet/opus） */
+  /** 可选：模型选择（haiku/sonnet/opus）- 当前未实现，预留扩展 */
   model?: string;
-  /** 可选：限定工具集 */
+  /** 可选：限定工具集 - 当前未实现，预留扩展 */
   tools?: string[];
 };
 
@@ -108,7 +108,7 @@ export function createSpawnAgentTool(context: SpawnAgentContext): AgentTool {
           source: "message" as const,
         });
 
-        // 3. 运行子 Agent
+        // 3. 运行子 Agent（使用已有的 childSession）
         const { events$ } = runAgentLoop({
           input$: childInput$,
           provider: context.provider,
@@ -117,38 +117,43 @@ export function createSpawnAgentTool(context: SpawnAgentContext): AgentTool {
           permissionGate: context.permissionGate,
           cwd: context.cwd,
           mode: "single",
+          existingSession: childSession,
         });
 
         // 4. 等待子 Agent 完成
-        const result = await lastValueFrom(
-          events$.pipe(
-            // 60 秒超时
-            timeout(60000),
-            // 捕获错误
-            catchError((err) =>
-              of({
-                type: "agent_timeout" as const,
-                error: err instanceof Error ? err.message : String(err),
-              }),
+        let result: { success: boolean; content?: string; error?: string } = {
+          success: false,
+          error: "子 Agent 未返回响应",
+        };
+
+        try {
+          const finalEvent = await lastValueFrom(
+            events$.pipe(
+              // 只取最终的 assistant_message
+              filter(
+                (event): event is { type: "assistant_message"; sessionId: string; turn: number; content: string } =>
+                  "type" in event && event.type === "assistant_message",
+              ),
+              take(1),
+              // 60 秒超时
+              timeout(60000),
+              // 如果没有值，返回 undefined
+              defaultIfEmpty(undefined as unknown as { type: "assistant_message"; sessionId: string; turn: number; content: string }),
             ),
-            // 只取最终的 assistant_message
-            map((event) => {
-              if ("type" in event && event.type === "assistant_message") {
-                return { success: true, content: event.content };
-              }
-              if ("type" in event && event.type === "agent_timeout") {
-                return { success: false, error: event.error };
-              }
-              return null;
-            }),
-          ).pipe(
-            // 过滤掉 null
-            map((r) => r),
-          ),
-        );
+          );
+
+          if (finalEvent && finalEvent.type === "assistant_message") {
+            result = { success: true, content: finalEvent.content };
+          }
+        } catch (err) {
+          result = {
+            success: false,
+            error: err instanceof Error ? err.message : String(err),
+          };
+        }
 
         // 5. 返回结果
-        if (result && result.success) {
+        if (result.success) {
           return {
             status: "success",
             output: result.content || "子 Agent 执行完成",
@@ -160,7 +165,7 @@ export function createSpawnAgentTool(context: SpawnAgentContext): AgentTool {
         } else {
           return {
             status: "error",
-            error: result?.error || "子 Agent 执行失败",
+            error: result.error || "子 Agent 执行失败",
             data: {
               sessionPath: childSession.path,
               childId: childSession.id,
@@ -201,10 +206,10 @@ export function handleParallelSpawns(
       }),
     ).pipe(
       timeout(60000),
-      catchError((err) =>
+      catchError((err: Error) =>
         of({
           status: "error" as const,
-          error: err instanceof Error ? err.message : "timeout",
+          error: err.message || "timeout",
         }),
       ),
       map((result) => ({

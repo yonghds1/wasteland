@@ -162,3 +162,105 @@ test("dispatchToolCall blocks execution when permission is not granted", async (
   assert.match(transcript, /"type":"permission"/);
   assert.match(transcript, /"status":"blocked"/);
 });
+
+test("spawn_agent creates child agent with independent session", async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-spawn-agent-"));
+  const sessionDir = path.join(tempRoot, "sessions");
+  const sessionManager = new SessionManager(sessionDir);
+  const session = await sessionManager.startSession({
+    cwd: tempRoot,
+    mode: "single",
+    providerId: "local",
+  });
+
+  // 导入 createLocalProvider
+  const { createLocalProvider } = await import("../dist/providers/local.js");
+  const childProvider = createLocalProvider();
+
+  const registry = new ToolRegistry([]);
+
+  const events = await lastValueFrom(
+    dispatchToolCall({
+      session,
+      sessionManager,
+      turn: 1,
+      call: {
+        id: "tool-spawn-1",
+        toolName: "spawn_agent",
+        input: {
+          name: "analyzer",
+          task: "你好",  // 使用简单的问候，让 local provider 直接回复
+        },
+      },
+      registry,
+      permissionGate: createPermissionGate({ mode: "bypass_permissions" }),
+      cwd: tempRoot,
+      provider: childProvider,
+      history: [],
+    }).pipe(toArray()),
+  );
+
+  // 验证事件序列
+  assert.deepEqual(events.map((event) => event.type), [
+    "tool_call_requested",
+    "permission_decision",
+    "tool_started",
+    "tool_result",
+  ]);
+
+  // 验证返回结果包含内容
+  assert.ok(events[3].output, "应该有输出");
+
+  // 验证子 session 文件已创建（包含 -child- 格式）
+  const files = await readdir(sessionDir);
+  const allFiles = files || [];
+
+  // 查找 -child-analyzer.jsonl 文件
+  const childSessionFile = allFiles.find((f) => f.includes("-child-analyzer"));
+  assert.ok(childSessionFile, `应该创建子 Agent session 文件，实际文件: ${allFiles.join(", ")}`);
+});
+
+test("spawn_agent fails when required parameters are missing", async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-spawn-agent-missing-"));
+  const sessionDir = path.join(tempRoot, "sessions");
+  const sessionManager = new SessionManager(sessionDir);
+  const session = await sessionManager.startSession({
+    cwd: tempRoot,
+    mode: "single",
+    providerId: "local",
+  });
+
+  const childProvider = {
+    id: "local",
+    runStep: async function* () {
+      yield { type: "assistant_message", text: "ok" };
+    },
+  };
+
+  const registry = new ToolRegistry([]);
+
+  const events = await lastValueFrom(
+    dispatchToolCall({
+      session,
+      sessionManager,
+      turn: 1,
+      call: {
+        id: "tool-spawn-2",
+        toolName: "spawn_agent",
+        input: {
+          name: "analyzer",
+          // 缺少 task
+        },
+      },
+      registry,
+      permissionGate: createPermissionGate({ mode: "bypass_permissions" }),
+      cwd: tempRoot,
+      provider: childProvider,
+      history: [],
+    }).pipe(toArray()),
+  );
+
+  // 应该失败
+  assert.equal(events[events.length - 1].type, "tool_failed");
+  assert.match(events[events.length - 1].error, /requires.*name.*task/i);
+});

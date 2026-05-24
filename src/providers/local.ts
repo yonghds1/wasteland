@@ -8,6 +8,35 @@ import type { AgentProvider, ProviderStreamEvent } from "./provider-types.js";
 function createToolCallFromInput(input: string, turn: number): ProviderStreamEvent | null {
   const trimmed = input.trim();
 
+  // /spawn <name> <task> - 创建子 Agent
+  if (trimmed.startsWith("/spawn ")) {
+    const rest = trimmed.slice("/spawn ".length).trim();
+    const firstSpace = rest.indexOf(" ");
+
+    if (firstSpace === -1 || firstSpace === 0) {
+      return null;
+    }
+
+    const name = rest.slice(0, firstSpace).trim();
+    const task = rest.slice(firstSpace + 1).trim();
+
+    if (name.length === 0 || task.length === 0) {
+      return null;
+    }
+
+    return {
+      type: "tool_call",
+      call: {
+        id: `tool-spawn-${turn}`,
+        toolName: "spawn_agent",
+        input: {
+          name,
+          task,
+        },
+      },
+    };
+  }
+
   if (!trimmed.startsWith("/read ")) {
     if (!trimmed.startsWith("/bash ")) {
       return null;
