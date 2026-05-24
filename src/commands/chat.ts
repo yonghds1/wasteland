@@ -14,6 +14,7 @@ import { createDefaultToolRegistry } from "../tools/default-registry.js";
 import { renderDebugTrace, type DebugFormat } from "../ui/debug-renderer.js";
 import { createInteractiveTurnStream, createSingleTurnInput, readPipedInput } from "../ui/readline-input.js";
 import { renderRuntimeEvents } from "../ui/terminal-renderer.js";
+import { detectTTY } from "../ui/tty-detect.js";
 
 type ChatOptions = {
   debug?: boolean;
@@ -150,6 +151,10 @@ export function createChatCommand(): Command {
       const debugFormat = resolveDebugFormat(options.debugFormat);
       const maxStepsPerTurn = loadedSettings.settings.runtime.maxStepsPerTurn;
 
+      // TTY 检测：根据环境决定输出样式
+      const tty = detectTTY();
+      const renderStyle = tty.stdoutIsTTY ? "interactive" : "classic";
+
       if (options.message?.trim()) {
         await runChatSession({
           input$: createSingleTurnInput(options.message, "message"),
@@ -162,6 +167,7 @@ export function createChatCommand(): Command {
           projectConfigDir: loadedSettings.projectConfigDir,
           permissionMode,
           maxStepsPerTurn,
+          render: { style: renderStyle },
         });
         return;
       }
@@ -180,6 +186,7 @@ export function createChatCommand(): Command {
           projectConfigDir: loadedSettings.projectConfigDir,
           permissionMode,
           maxStepsPerTurn,
+          render: { style: "classic" }, // 管道输入使用经典样式
         });
         return;
       }
@@ -206,7 +213,7 @@ export function createChatCommand(): Command {
           maxStepsPerTurn,
           render: {
             onTurnComplete: interactive.prompt,
-            style: "interactive",
+            style: renderStyle,
           },
         });
       } catch (error) {
