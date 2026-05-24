@@ -6,6 +6,7 @@ import type { RuntimeEvent } from "../runtime/event-types.js";
 import type { PermissionDecisionKind } from "../runtime/permission-gate.js";
 import {
   ANSI,
+  HERMES_COLORS,
   PANEL_GUTTER,
   createDisplayTimestamp,
   getDepthColor,
@@ -29,6 +30,43 @@ const SMART_TRUNCATE_TAIL_LINES = 15;
 
 /** 折叠输出阈值（字符数） */
 const COLLAPSE_THRESHOLD = 500;
+
+// ============================================================
+// 工具显示常量 (Hermes 风格)
+// ============================================================
+
+/** 工具图标映射 */
+const TOOL_DISPLAY_ICONS: Record<string, string> = {
+  "read-file": "📖",
+  "read_file": "📖",
+  "write-file": "✍️",
+  "write_file": "✍️",
+  "edit-file": "✏️",
+  "edit_file": "✏️",
+  bash: "💻",
+  terminal: "💻",
+  "search-files": "🔎",
+  search_files: "🔎",
+  "web-search": "🔍",
+  web_search: "🔍",
+  default: "⚡",
+};
+
+/** 工具动词映射 */
+const TOOL_DISPLAY_VERBS: Record<string, string> = {
+  "read-file": "read",
+  "read_file": "read",
+  "write-file": "write",
+  "write_file": "write",
+  "edit-file": "edit",
+  "edit_file": "edit",
+  bash: "exec",
+  terminal: "exec",
+  "search-files": "find",
+  search_files: "find",
+  "web-search": "search",
+  web_search: "search",
+};
 
 // ============================================================
 // Agent 上下文追踪
@@ -346,17 +384,10 @@ export async function renderRuntimeEvents(
           case "tool_call_requested": {
             if (style === "interactive") {
               flushTurnSpacing(event.turn);
-              writeInteractiveStatusLine(stdout, {
-                label: "tool",
-                depth: currentDepth,
-                name: currentName,
-                segments: [
-                  {
-                    text: `request ${event.toolName}`,
-                    styles: [ANSI.brightWhite],
-                  },
-                ],
-              });
+              // Hermes 风格: ┊ {emoji} {verb:9} {detail}
+              const icon = TOOL_DISPLAY_ICONS[event.toolName] || TOOL_DISPLAY_ICONS.default;
+              const verb = (TOOL_DISPLAY_VERBS[event.toolName] || event.toolName).padEnd(9);
+              stdout.write(`${paint("┊", ANSI.dim)} ${icon} ${paint(verb, ANSI.brightWhite)} ${paint("requesting...", ANSI.dim)}\n`);
               break;
             }
 
@@ -396,17 +427,10 @@ export async function renderRuntimeEvents(
           case "tool_started": {
             if (style === "interactive") {
               flushTurnSpacing(event.turn);
-              writeInteractiveStatusLine(stdout, {
-                label: "tool",
-                depth: currentDepth,
-                name: currentName,
-                segments: [
-                  {
-                    text: `start ${event.toolName}`,
-                    styles: [ANSI.brightWhite],
-                  },
-                ],
-              });
+              // Hermes 风格: ┊ {emoji} {verb:9} {detail}
+              const icon = TOOL_DISPLAY_ICONS[event.toolName] || TOOL_DISPLAY_ICONS.default;
+              const verb = (TOOL_DISPLAY_VERBS[event.toolName] || event.toolName).padEnd(9);
+              stdout.write(`${paint("┊", ANSI.dim)} ${icon} ${paint(verb, ANSI.cyan)} ${paint("running...", HERMES_COLORS.amber)}\n`);
               break;
             }
 
@@ -416,15 +440,15 @@ export async function renderRuntimeEvents(
           case "tool_result": {
             if (style === "interactive") {
               flushTurnSpacing(event.turn);
+              // Hermes 风格: ┊ {emoji} {verb:9} {detail}
+              const icon = TOOL_DISPLAY_ICONS[event.toolName] || TOOL_DISPLAY_ICONS.default;
+              const verb = (TOOL_DISPLAY_VERBS[event.toolName] || event.toolName).padEnd(9);
+
               // 截断长输出以适应终端显示
               const displayOutput = truncateOutputForDisplay(event.output);
-              writeInteractiveBlock(stdout, {
-                label: "tool",
-                content: [`result ${event.toolName}`, displayOutput.length > 0 ? displayOutput : "(no output)"].join("\n"),
-                depth: currentDepth,
-                name: currentName,
-                width: panelWidth,
-              });
+              const detail = displayOutput.length > 42 ? displayOutput.slice(0, 42) + "..." : displayOutput;
+
+              stdout.write(`${paint("┊", ANSI.dim)} ${icon} ${paint(verb, HERMES_COLORS.success)} ${paint(detail, ANSI.dim)}\n`);
               break;
             }
 
@@ -436,13 +460,11 @@ export async function renderRuntimeEvents(
           case "tool_failed": {
             if (style === "interactive") {
               flushTurnSpacing(event.turn);
-              writeInteractiveBlock(stdout, {
-                label: "tool",
-                content: `failed ${event.toolName}\n${event.error}`,
-                depth: currentDepth,
-                name: currentName,
-                width: panelWidth,
-              });
+              // Hermes 风格: ┊ {emoji} {verb:9} {detail}  [failed]
+              const icon = TOOL_DISPLAY_ICONS[event.toolName] || TOOL_DISPLAY_ICONS.default;
+              const verb = (TOOL_DISPLAY_VERBS[event.toolName] || event.toolName).padEnd(9);
+
+              stdout.write(`${paint("┊", ANSI.dim)} ${icon} ${paint(verb, HERMES_COLORS.error)} ${paint(event.error?.slice(0, 42) || "error", ANSI.dim)} ${paint("[failed]", HERMES_COLORS.error)}\n`);
               break;
             }
 

@@ -1,12 +1,22 @@
 /**
- * Footer - 底部状态栏
+ * Footer - 底部状态栏 (Hermes 风格)
  *
- * 根据当前模式动态显示快捷键提示
+ * 改进：
+ * - 使用分段样式（不同颜色区分不同提示）
+ * - 上下文相关提示更醒目
+ * - 使用 Hermes 风格分隔符 ┊
  */
 
 import React from "react";
 import { Text, Box } from "ink";
 import { useAppContext } from "../../context/AppContext.js";
+import {
+  GOLD,
+  AMBER,
+  SUCCESS,
+  WARNING,
+  SEPARATORS,
+} from "../../utils/colors.js";
 
 interface FooterProps {
   width?: number;
@@ -20,71 +30,87 @@ export function Footer({ width }: FooterProps): React.ReactElement {
     if (state.inputMode) {
       // 输入模式
       return (
-        <Text dimColor>
-          <Text bold color="yellow">
+        <Box flexDirection="row" gap={1}>
+          <Text bold color={AMBER}>
             [输入模式]
-          </Text>{" "}
-          Esc 取消 | Enter 发送 | Ctrl+C 退出
-        </Text>
+          </Text>
+          <Text dimColor>Esc 取消</Text>
+          <Text color={SEPARATORS.item.trim()}>{SEPARATORS.item.trim()}</Text>
+          <Text color={SUCCESS}>Enter 发送</Text>
+          <Text color={SEPARATORS.item.trim()}>{SEPARATORS.item.trim()}</Text>
+          <Text dimColor>Ctrl+C 退出</Text>
+        </Box>
       );
     }
 
     if (state.filterMode) {
       // 过滤模式
       return (
-        <Text dimColor>
-          <Text bold color="yellow">
+        <Box flexDirection="row" gap={1}>
+          <Text bold color={AMBER}>
             [过滤模式]
-          </Text>{" "}
-          Tab 切换字段 | ←/→ 切换值 | Esc 关闭
-        </Text>
+          </Text>
+          <Text dimColor>Tab 切换字段</Text>
+          <Text color={SEPARATORS.item.trim()}>{SEPARATORS.item.trim()}</Text>
+          <Text dimColor>←/→ 切换值</Text>
+          <Text color={SEPARATORS.item.trim()}>{SEPARATORS.item.trim()}</Text>
+          <Text color={WARNING}>Esc 关闭</Text>
+        </Box>
       );
     }
 
     if (state.editMode) {
       // 编辑模式
       return (
-        <Text dimColor>
-          <Text bold color="yellow">
+        <Box flexDirection="row" gap={1}>
+          <Text bold color={AMBER}>
             [编辑模式]
-          </Text>{" "}
-          Enter 确认 | Esc 取消
-        </Text>
+          </Text>
+          <Text color={SUCCESS}>Enter 确认</Text>
+          <Text color={SEPARATORS.item.trim()}>{SEPARATORS.item.trim()}</Text>
+          <Text color={WARNING}>Esc 取消</Text>
+        </Box>
       );
     }
 
     if (state.exitConfirmPending) {
       // 退出确认状态
       return (
-        <Text dimColor>
-          <Text bold color="yellow">
+        <Box flexDirection="row" gap={1}>
+          <Text bold color="red">
             [退出确认]
-          </Text>{" "}
-          y 确认退出 | n 或其他键取消
-        </Text>
+          </Text>
+          <Text color={SUCCESS}>y 确认退出</Text>
+          <Text color={SEPARATORS.item.trim()}>{SEPARATORS.item.trim()}</Text>
+          <Text color={WARNING}>n 或其他键取消</Text>
+        </Box>
       );
     }
 
     if (state.showHelp) {
       // 帮助页面
       return (
-        <Text dimColor>
+        <Box flexDirection="row" gap={1}>
           <Text bold color="cyan">
             [帮助]
-          </Text>{" "}
-          h 或 Esc 关闭帮助
-        </Text>
+          </Text>
+          <Text color={WARNING}>h 或 Esc 关闭帮助</Text>
+        </Box>
       );
     }
 
     // 导航模式 - 显示默认快捷键
     return (
-      <Text dimColor>
-        <Text bold color="green">
-          [导航模式]
-        </Text>{" "}
-        h 帮助 | Tab 切换页面 | q 退出
-      </Text>
+      <Box flexDirection="row" gap={1}>
+        <Text color={GOLD}>h</Text>
+        <Text dimColor>帮助</Text>
+        <Text dimColor>{SEPARATORS.item.trim()}</Text>
+        <Text color={GOLD}>Tab</Text>
+        <Text dimColor>切换页面</Text>
+        <Text dimColor>{SEPARATORS.item.trim()}</Text>
+        <Text color={GOLD}>q</Text>
+        <Text dimColor>退出</Text>
+      </Box>
     );
   };
 
@@ -97,11 +123,48 @@ export function Footer({ width }: FooterProps): React.ReactElement {
 
     switch (state.currentPage) {
       case "session":
-        return <Text dimColor>↑/↓ 滚动 | Enter 输入</Text>;
+        return (
+          <Box flexDirection="row" gap={1}>
+            <Text dimColor>↑/↓ 滚动</Text>
+            <Text dimColor>{SEPARATORS.item.trim()}</Text>
+            <Text color={SUCCESS}>Enter 输入</Text>
+          </Box>
+        );
       case "debug":
-        return <Text dimColor>f 过滤 | c 清空</Text>;
+        return (
+          <Box flexDirection="row" gap={1}>
+            <Text dimColor>↑/↓ 滚动</Text>
+            <Text dimColor>{SEPARATORS.item.trim()}</Text>
+            <Text color={GOLD}>f</Text>
+            <Text dimColor>过滤</Text>
+            <Text dimColor>{SEPARATORS.item.trim()}</Text>
+            <Text color={GOLD}>c</Text>
+            <Text dimColor>清空</Text>
+          </Box>
+        );
       case "config":
-        return <Text dimColor>↑/↓ 切换 | Enter 编辑 | Ctrl+S 保存</Text>;
+        return (
+          <Box flexDirection="row" gap={1}>
+            <Text dimColor>↑/↓ 切换</Text>
+            <Text dimColor>{SEPARATORS.item.trim()}</Text>
+            <Text color={GOLD}>Enter</Text>
+            <Text dimColor>编辑</Text>
+            <Text dimColor>{SEPARATORS.item.trim()}</Text>
+            <Text color={SUCCESS}>Ctrl+S 保存</Text>
+          </Box>
+        );
+    }
+  };
+
+  // 获取页面名称
+  const getPageName = () => {
+    switch (state.currentPage) {
+      case "session":
+        return "会话页面";
+      case "debug":
+        return "调试页面";
+      case "config":
+        return "配置页面";
     }
   };
 
@@ -113,9 +176,24 @@ export function Footer({ width }: FooterProps): React.ReactElement {
       paddingX={1}
       borderStyle="single"
       borderTop
+      borderColor="#CD7F32"
     >
-      {getModeHelp()}
-      {getPageSpecificHelp()}
+      <Box flexDirection="row">
+        {getModeHelp()}
+      </Box>
+
+      <Box flexDirection="row" gap={1}>
+        {/* 页面特定提示 */}
+        {getPageSpecificHelp()}
+
+        {/* 分隔符 */}
+        <Text dimColor>{SEPARATORS.item.trim()}</Text>
+
+        {/* 当前页面 */}
+        <Text bold color={GOLD}>
+          {getPageName()}
+        </Text>
+      </Box>
     </Box>
   );
 }

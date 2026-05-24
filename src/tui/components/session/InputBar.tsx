@@ -1,12 +1,24 @@
 /**
- * InputBar - 输入框
+ * InputBar - 输入框 (Hermes 风格)
  *
- * 支持输入模式和导航模式切换
+ * 改进：
+ * - 使用 Hermes 风格的 prompt symbol (❯)
+ * - 输入模式时显示绿色高亮
+ * - 添加模式指示器（更醒目）
+ * - 使用 gold/amber 色系
  */
 
 import React, { useState } from "react";
 import { Text, Box, useInput } from "ink";
 import { useAppContext } from "../../context/AppContext.js";
+import {
+  GOLD,
+  SUCCESS,
+  AMBER,
+  PROMPT_SYMBOL,
+  STREAMING_CURSOR,
+  SEPARATORS,
+} from "../../utils/colors.js";
 
 interface InputBarProps {
   width?: number;
@@ -61,23 +73,35 @@ export function InputBar({ width, sendMessage }: InputBarProps): React.ReactElem
 
   return (
     <Box flexDirection="column" width={width}>
-      {/* 模式指示器 */}
+      {/* 模式指示器 - 输入模式时显示 */}
       {state.inputMode && (
-        <Box paddingX={1}>
-          <Text dimColor color="yellow">
-            [输入模式] Esc 取消 | Enter 发送
+        <Box paddingX={1} flexDirection="row" gap={1}>
+          <Text bold color={AMBER}>
+            [输入模式]
           </Text>
+          <Text dimColor>Esc 取消</Text>
+          <Text dimColor>{SEPARATORS.item.trim()}</Text>
+          <Text color={SUCCESS}>Enter 发送</Text>
         </Box>
       )}
 
       {/* 输入框 */}
       <Box flexDirection="row" paddingX={1} width={width}>
-        <Text bold color={state.inputMode ? "green" : "cyan"}>
-          &gt;{" "}
+        {/* Prompt symbol - Hermes 风格 */}
+        <Text bold color={state.inputMode ? SUCCESS : GOLD}>
+          {PROMPT_SYMBOL}{" "}
         </Text>
-        <Text>{input}</Text>
-        {state.inputMode && <Text dimColor>▌</Text>}
-        {!state.inputMode && (
+
+        {/* 输入内容 */}
+        {input && <Text>{input}</Text>}
+
+        {/* 光标 */}
+        {state.inputMode && (
+          <Text dimColor>{STREAMING_CURSOR}</Text>
+        )}
+
+        {/* 占位提示 */}
+        {!state.inputMode && !input && (
           <Text dimColor>按 Enter 进入输入模式...</Text>
         )}
       </Box>

@@ -2,21 +2,39 @@
  * MessageList - 消息列表（Hermes 风格）
  *
  * 显示会话消息，支持：
- * - 消息完整显示（不截断），自然换行
- * - 流式消息实时更新
- * - 滚动条回滚查看历史
- * - 工具调用单行预览
+ * - 用户消息使用 cyan + ❯ 前缀
+ * - 助手消息使用 green + ✦ 前缀
+ * - 工具消息使用 magenta + emoji
+ * - 系统消息使用 dim gray
+ * - 消息分隔线（细线 ─）
+ * - 流式消息末尾显示 ▌ 光标 + ● 流式中 状态
  */
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { Text, Box, useInput, measureElement } from "ink";
+import { Text, Box, useInput } from "ink";
 import { useAppContext, type Message } from "../../context/AppContext.js";
+import {
+  USER_MSG,
+  ASSISTANT_MSG,
+  TOOL_MSG,
+  SYSTEM_MSG,
+  GOLD,
+  DARK_GOLDENROD,
+  USER_PREFIX,
+  ASSISTANT_PREFIX,
+  SYSTEM_PREFIX,
+  STREAMING_CURSOR,
+  MESSAGE_SEPARATOR,
+  TOOL_ICONS,
+  TOOL_VERBS,
+  SEPARATORS,
+} from "../../utils/colors.js";
 
 const TYPE_COLORS: Record<string, string> = {
-  user: "cyan",
-  assistant: "green",
-  tool: "magenta",
-  system: "gray",
+  user: USER_MSG,
+  assistant: ASSISTANT_MSG,
+  tool: TOOL_MSG,
+  system: SYSTEM_MSG,
 };
 
 const TYPE_LABELS: Record<string, string> = {
@@ -26,32 +44,11 @@ const TYPE_LABELS: Record<string, string> = {
   system: "系统",
 };
 
-// 工具图标映射
-const TOOL_ICONS: Record<string, string> = {
-  "read-file": "📖",
-  "read_file": "📖",
-  "write-file": "✍️",
-  "write_file": "✍️",
-  "edit-file": "✏️",
-  "edit_file": "✏️",
-  bash: "💻",
-  terminal: "💻",
-  "search-files": "🔎",
-  search_files: "🔎",
-  "web-search": "🔍",
-  web_search: "🔍",
-};
-
-// 工具动词映射
-const TOOL_VERBS: Record<string, string> = {
-  "read-file": "read",
-  "read_file": "read",
-  "write-file": "write",
-  "write_file": "write",
-  "edit-file": "edit",
-  "edit_file": "edit",
-  bash: "exec",
-  terminal: "exec",
+const TYPE_PREFIXES: Record<string, string> = {
+  user: USER_PREFIX,
+  assistant: ASSISTANT_PREFIX,
+  tool: "",
+  system: SYSTEM_PREFIX,
 };
 
 /**
@@ -102,7 +99,8 @@ function wrapText(text: string, maxWidth: number): string[] {
 }
 
 /**
- * 格式化工具消息预览
+ * 格式化工具消息预览 (Hermes 风格)
+ * 格式: ┊ {emoji} {verb:9} {detail}  {duration}
  */
 function formatToolPreview(msg: Message): string {
   // 从 content 中提取关键信息
@@ -132,13 +130,13 @@ function formatToolPreview(msg: Message): string {
   }
 
   // 获取图标和动词
-  const icon = TOOL_ICONS[toolName] || "⚡";
-  const verb = TOOL_VERBS[toolName] || toolName;
+  const icon = TOOL_ICONS[toolName] || TOOL_ICONS.default;
+  const verb = (TOOL_VERBS[toolName] || TOOL_VERBS.default).padEnd(9);
 
-  // 构建预览
-  let preview = `${icon} ${verb}`;
+  // 构建预览 - Hermes 风格
+  let preview = `${SEPARATORS.tool} ${icon} ${verb}`;
   if (detail) {
-    preview += `  ${detail.slice(0, 40)}${detail.length > 40 ? "..." : ""}`;
+    preview += ` ${detail.slice(0, 40)}${detail.length > 40 ? "..." : ""}`;
   }
   if (duration) {
     preview += `  ${duration}`;
@@ -161,9 +159,10 @@ function messagesToLines(
 
   for (const msg of messages) {
     const color = TYPE_COLORS[msg.type];
+    const prefix = TYPE_PREFIXES[msg.type];
 
     if (msg.type === "tool") {
-      // 工具消息：单行预览
+      // 工具消息：Hermes 风格单行预览
       const preview = formatToolPreview(msg);
       lines.push({
         type: "tool-header",
@@ -172,13 +171,16 @@ function messagesToLines(
         messageId: msg.id,
       });
     } else {
-      // 普通消息：标题行 + 内容行
+      // 普通消息：标题行 + 内容行 (Hermes 风格)
+      // 格式: [timestamp] prefix label
+      const label = TYPE_LABELS[msg.type];
+      const isStreaming = msg.id === streamingMessageId;
       lines.push({
         type: "header",
-        content: `[${msg.timestamp.slice(11, 19)}] ${TYPE_LABELS[msg.type]}`,
+        content: `[${msg.timestamp.slice(11, 19)}] ${prefix} ${label}`,
         color,
         messageId: msg.id,
-        isStreaming: msg.id === streamingMessageId,
+        isStreaming,
       });
 
       // 内容行（自动换行）
@@ -190,15 +192,15 @@ function messagesToLines(
           content: `  ${line}`,
           color,
           messageId: msg.id,
-          isStreaming: msg.id === streamingMessageId,
+          isStreaming,
         });
       }
     }
 
-    // 消息间空行分隔
+    // 消息间细线分隔 (Hermes 风格)
     lines.push({
       type: "separator",
-      content: "",
+      content: MESSAGE_SEPARATOR,
       messageId: msg.id,
     });
   }
@@ -212,7 +214,7 @@ function messagesToLines(
       // 新的流式消息
       lines.push({
         type: "header",
-        content: `[${new Date().toISOString().slice(11, 19)}] ${TYPE_LABELS.assistant}`,
+        content: `[${new Date().toISOString().slice(11, 19)}] ${ASSISTANT_PREFIX} ${TYPE_LABELS.assistant}`,
         color: TYPE_COLORS.assistant,
         messageId: streamingMessageId,
         isStreaming: true,
@@ -280,8 +282,6 @@ export function MessageList({ height = 20, width = 80 }: MessageListProps): Reac
   const [streamingContent, setStreamingContent] = useState("");
   // 流式消息 ID
   const streamingMessageId = useRef<string | null>(null);
-  // 容器 ref
-  const containerRef = useRef<any>(null);
 
   // 计算消息区可用高度：减去标题行和状态行
   const contentHeight = Math.max(height - 2, 5);
@@ -398,9 +398,9 @@ export function MessageList({ height = 20, width = 80 }: MessageListProps): Reac
   if (messages.length === 0) {
     return (
       <Box flexDirection="column" flexGrow={1} justifyContent="center" alignItems="center">
-        <Text dimColor>等待输入...</Text>
-        <Text dimColor>在下方输入框输入消息</Text>
-        <Text dimColor color="gray">Tab 切换页面 | q 退出</Text>
+        <Text color={GOLD}>✦ rxc - AI CLI Assistant</Text>
+        <Text dimColor>在下方输入框输入消息开始对话</Text>
+        <Text dimColor color="gray">Tab 切换页面 ┊ h 帮助 ┊ q 退出</Text>
       </Box>
     );
   }
@@ -409,11 +409,18 @@ export function MessageList({ height = 20, width = 80 }: MessageListProps): Reac
     <Box flexDirection="column" flexGrow={1} height={height}>
       {/* 标题栏 */}
       <Box flexDirection="row" justifyContent="space-between" paddingX={1}>
-        <Text bold underline>消息</Text>
-        <Box>
+        <Box flexDirection="row" gap={1}>
+          <Text bold color={GOLD}>
+            消息
+          </Text>
           <Text dimColor>{messages.length} 条</Text>
+        </Box>
+        <Box flexDirection="row" gap={1}>
           {state.session.isStreaming && (
-            <Text color="green"> ● 流式中</Text>
+            <>
+              <Text bold color="green">●</Text>
+              <Text color="green">流式中</Text>
+            </>
           )}
         </Box>
       </Box>
@@ -424,14 +431,23 @@ export function MessageList({ height = 20, width = 80 }: MessageListProps): Reac
         <Box
           flexDirection="column"
           flexGrow={1}
-          ref={containerRef}
         >
           {visibleLines.map((line, idx) => {
             if (line.type === "separator") {
-              return <Text key={`sep-${idx}`}> </Text>;
+              // 分隔线 - 使用 dim 细线
+              return (
+                <Text key={`sep-${idx}`} dimColor color="gray">
+                  {line.content}
+                </Text>
+              );
             }
 
             const color = line.color as any;
+
+            // 判断是否是最后一条流式内容行
+            const isLastStreamingLine = line.isStreaming
+              && line.type === "content"
+              && idx === visibleLines.length - 1;
 
             return (
               <Text
@@ -439,7 +455,7 @@ export function MessageList({ height = 20, width = 80 }: MessageListProps): Reac
                 color={color}
               >
                 {line.content}
-                {line.isStreaming && line.type === "content" && idx === visibleLines.length - 1 ? "▌" : ""}
+                {isLastStreamingLine ? STREAMING_CURSOR : ""}
               </Text>
             );
           })}
@@ -449,7 +465,7 @@ export function MessageList({ height = 20, width = 80 }: MessageListProps): Reac
         {scrollbar && (
           <Box flexDirection="column" width={1}>
             {scrollbar.split("").map((char, idx) => (
-              <Text key={idx} dimColor={char === "░"} color={char === "█" ? "blue" : undefined}>
+              <Text key={idx} dimColor={char === "░"} color={char === "█" ? GOLD : undefined}>
                 {char}
               </Text>
             ))}
@@ -459,9 +475,9 @@ export function MessageList({ height = 20, width = 80 }: MessageListProps): Reac
 
       {/* 滚动状态 */}
       {scrollInfo && (
-        <Box flexDirection="row" justifyContent="center">
+        <Box flexDirection="row" justifyContent="center" gap={1}>
           <Text dimColor>{scrollInfo}</Text>
-          {!autoScroll && <Text dimColor color="yellow"> (已暂停自动滚动)</Text>}
+          {!autoScroll && <Text color="yellow">(已暂停自动滚动)</Text>}
         </Box>
       )}
     </Box>

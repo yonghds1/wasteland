@@ -1,15 +1,43 @@
 /**
- * TraceLog - Trace 日志
+ * TraceLog - Trace 日志 (Hermes 风格)
  *
- * 显示调试追踪日志，支持过滤
+ * 显示调试追踪日志，支持：
+ * - Hermes 风格的 scope.phase 显示
+ * - 过滤器支持
+ * - 滚动查看
+ * - Gold 色系标题
  */
 
 import React, { useState } from "react";
 import { Text, Box, useInput } from "ink";
 import { useAppContext } from "../../context/AppContext.js";
+import {
+  GOLD,
+  DARK_GOLDENROD,
+  AMBER,
+  SUCCESS,
+  WARNING,
+  SEPARATORS,
+} from "../../utils/colors.js";
 
 interface TraceLogProps {
   height?: number;
+}
+
+/**
+ * 根据日志级别获取颜色
+ */
+function getLogLevelColor(phase: string): string {
+  if (phase.includes("error") || phase.includes("fail")) {
+    return "red";
+  }
+  if (phase.includes("warn")) {
+    return WARNING;
+  }
+  if (phase.includes("success") || phase.includes("complete")) {
+    return SUCCESS;
+  }
+  return AMBER;
 }
 
 export function TraceLog({ height }: TraceLogProps): React.ReactElement {
@@ -48,7 +76,7 @@ export function TraceLog({ height }: TraceLogProps): React.ReactElement {
   if (traces.length === 0) {
     return (
       <Box flexDirection="column" flexGrow={1} justifyContent="center" alignItems="center">
-        <Text dimColor>暂无 trace 日志</Text>
+        <Text color={GOLD}>✦ 暂无 trace 日志</Text>
         <Text dimColor>使用 --debug 启动以查看详细追踪</Text>
         <Text dimColor color="gray">rxc chat --debug --message "你的消息"</Text>
       </Box>
@@ -60,38 +88,72 @@ export function TraceLog({ height }: TraceLogProps): React.ReactElement {
 
   return (
     <Box flexDirection="column" flexGrow={1}>
-      {/* 标题栏 */}
+      {/* 标题栏 - Gold 色系 */}
       <Box flexDirection="row" justifyContent="space-between" paddingX={1}>
-        <Text bold underline>Trace 日志</Text>
-        <Box flexDirection="row">
-          {hasFilter && <Text color="yellow">⚑ 过滤 </Text>}
-          <Text dimColor>{filteredTraces.length} 条 | ↑/↓ 滚动</Text>
+        <Box flexDirection="row" gap={1}>
+          <Text bold color={GOLD}>
+            Trace 日志
+          </Text>
+          {hasFilter && (
+            <Text color={WARNING}>⚑ 过滤</Text>
+          )}
+        </Box>
+        <Box flexDirection="row" gap={1}>
+          <Text dimColor>{filteredTraces.length} 条</Text>
+          <Text dimColor>{SEPARATORS.item.trim()}</Text>
+          <Text dimColor>↑/↓ 滚动</Text>
         </Box>
       </Box>
 
       {/* 日志列表 */}
       <Box flexDirection="column" flexGrow={1} paddingX={1}>
-        {visibleTraces.map((trace, idx) => (
-          <Box key={scrollOffset + idx} flexDirection="row">
-            {/* 时间戳 */}
-            <Text dimColor>[{trace.timestamp.slice(11, 19)}]</Text>
-            {/* scope.phase */}
-            <Text color="cyan"> {trace.scope}.</Text>
-            <Text color="yellow">{trace.phase}</Text>
-            {/* 消息 */}
-            {trace.message && <Text dimColor> {trace.message}</Text>}
-          </Box>
-        ))}
+        {visibleTraces.map((trace, idx) => {
+          const phaseColor = getLogLevelColor(trace.phase);
+
+          return (
+            <Box key={scrollOffset + idx} flexDirection="row" gap={1}>
+              {/* 时间戳 */}
+              <Text dimColor>[{trace.timestamp.slice(11, 19)}]</Text>
+
+              {/* scope */}
+              <Text color="cyan">{trace.scope}</Text>
+              <Text dimColor>.</Text>
+
+              {/* phase */}
+              <Text color={phaseColor}>{trace.phase}</Text>
+
+              {/* 消息 */}
+              {trace.message && (
+                <Text dimColor>{trace.message}</Text>
+              )}
+            </Box>
+          );
+        })}
       </Box>
 
       {/* 滚动指示器 */}
       {filteredTraces.length > visibleLines && (
-        <Box flexDirection="row" justifyContent="center">
+        <Box flexDirection="row" justifyContent="center" gap={1}>
           <Text dimColor>
             {scrollOffset > 0 ? "▲ " : "  "}
             {scrollOffset + 1}-{Math.min(scrollOffset + visibleLines, filteredTraces.length)} / {filteredTraces.length}
             {scrollOffset + visibleLines < filteredTraces.length ? " ▼" : "  "}
           </Text>
+        </Box>
+      )}
+
+      {/* 过滤器状态 */}
+      {hasFilter && (
+        <Box flexDirection="row" justifyContent="center" gap={1}>
+          <Text dimColor>过滤条件:</Text>
+          {filter.scope && (
+            <Text color="cyan">scope={filter.scope}</Text>
+          )}
+          {filter.phase && (
+            <Text color={AMBER}>phase={filter.phase}</Text>
+          )}
+          <Text dimColor>{SEPARATORS.item.trim()}</Text>
+          <Text color={WARNING}>f 修改</Text>
         </Box>
       )}
     </Box>
