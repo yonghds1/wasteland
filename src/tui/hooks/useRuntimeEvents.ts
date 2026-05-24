@@ -267,12 +267,6 @@ export function useRuntimeEvents(
 ): void {
   // Chunk 累积器（使用 ref 避免触发重新渲染）
   const chunkAccumulator = useRef<string>("");
-  // 流式内容缓冲区（用于批量渲染）
-  const streamingBuffer = useRef<string>("");
-  // 流式消息 ID
-  const streamingMsgId = useRef<string | null>(null);
-  // 渲染定时器
-  const renderTimerRef = useRef<NodeJS.Timeout | null>(null);
   // Tool 开始时间（用于计算耗时）
   const toolStartTimes = useRef<Map<string, number>>(new Map());
   // 订阅引用
@@ -284,61 +278,26 @@ export function useRuntimeEvents(
       return;
     }
 
-    // 启动渲染定时器（每 16ms 刷新一次，约 60fps）
-    renderTimerRef.current = setInterval(() => {
-      if (streamingBuffer.current) {
-        const content = streamingBuffer.current;
-        const msgId = streamingMsgId.current;
-        streamingBuffer.current = "";  // 清空缓冲区
-
-        setState((prev) => ({
-          ...prev,
-          session: {
-            ...prev.session,
-            streamingContent: content,
-            streamingMessageId: msgId,
-          },
-        }));
-      }
-    }, 16);
-
     // 订阅事件流
+    // Provider 层已用 RxJS delay 实现打字机效果，这里直接更新状态
     subscriptionRef.current = events$.subscribe({
       next: (event) => {
-        // 对于 assistant_chunk，累积到缓冲区而不是立即更新状态
-        if (event.type === "assistant_chunk") {
-          chunkAccumulator.current += event.chunk;
-          streamingBuffer.current = chunkAccumulator.current;
-          if (!streamingMsgId.current) {
-            streamingMsgId.current = `msg-streaming-${event.turn}-${Date.now()}`;
-          }
-        } else {
-          // 其他事件直接处理
-          setState((prev) => {
-            const result = processRuntimeEvent(
-              event,
-              prev.session,
-              chunkAccumulator,
-              toolStartTimes.current,
-            );
+        setState((prev) => {
+          const result = processRuntimeEvent(
+            event,
+            prev.session,
+            chunkAccumulator,
+            toolStartTimes.current,
+          );
 
-            // 如果是 assistant_message，清空流式状态
-            if (event.type === "assistant_message") {
-              streamingBuffer.current = "";
-              streamingMsgId.current = null;
-            }
-
-            return {
-              ...prev,
-              session: result,
-            };
-          });
-        }
+          return {
+            ...prev,
+            session: result,
+          };
+        });
       },
       error: (error) => {
         console.error("Runtime event stream error:", error);
-        streamingBuffer.current = "";
-        streamingMsgId.current = null;
         setState((prev) => ({
           ...prev,
           session: {
@@ -350,8 +309,6 @@ export function useRuntimeEvents(
         }));
       },
       complete: () => {
-        streamingBuffer.current = "";
-        streamingMsgId.current = null;
         setState((prev) => ({
           ...prev,
           session: {
@@ -365,11 +322,6 @@ export function useRuntimeEvents(
     });
 
     return () => {
-      // 清理定时器
-      if (renderTimerRef.current) {
-        clearInterval(renderTimerRef.current);
-        renderTimerRef.current = null;
-      }
       // 清理订阅
       if (subscriptionRef.current) {
         subscriptionRef.current.unsubscribe();
