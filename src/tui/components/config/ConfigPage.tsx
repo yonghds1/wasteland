@@ -8,9 +8,13 @@ import { ProviderSection } from "./ProviderSection.js";
 import { PermissionSection } from "./PermissionSection.js";
 import { SessionSection } from "./SessionSection.js";
 
-export function ConfigPage(): React.ReactElement {
+interface ConfigPageProps {
+  height?: number;
+}
+
+export function ConfigPage({ height }: ConfigPageProps): React.ReactElement {
   return (
-    <Box flexDirection="column" height="100%" paddingX={2}>
+    <Box flexDirection="column" height={height} paddingX={2}>
       <ProviderSection />
       <PermissionSection />
       <SessionSection />

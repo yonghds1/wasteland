@@ -3,15 +3,22 @@
  */
 
 import React from "react";
-import { Text, Box } from "ink";
+import { Box } from "ink";
 import { AgentTree } from "./AgentTree.js";
 import { MessageList } from "./MessageList.js";
 import { InputBar } from "./InputBar.js";
 
-export function SessionPage(): React.ReactElement {
+interface SessionPageProps {
+  height?: number;
+}
+
+export function SessionPage({ height }: SessionPageProps): React.ReactElement {
+  // 内容高度 = 总高度 - InputBar(约2行)
+  const contentHeight = height ? Math.max(height - 2, 5) : 20;
+
   return (
-    <Box flexDirection="column" height="100%">
-      <Box flexDirection="row" flexGrow={1}>
+    <Box flexDirection="column">
+      <Box flexDirection="row" height={contentHeight}>
         <Box width={25} borderStyle="single" flexDirection="column">
           <AgentTree />
         </Box>

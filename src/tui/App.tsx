@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useCallback } from "react";
-import { Box, useInput } from "ink";
+import { Box, useInput, useStdout } from "ink";
 import { Header } from "./components/common/Header.js";
 import { Footer } from "./components/common/Footer.js";
 import { SessionPage } from "./components/session/SessionPage.js";
@@ -39,6 +39,13 @@ export function App(): React.ReactElement {
     setState((prev) => ({ ...prev, currentPage: page }));
   }, []);
 
+  // 获取终端尺寸，实现全屏布局
+  const { stdout } = useStdout();
+  const terminalRows = stdout?.rows ?? 24;
+
+  // 内容区高度 = 终端行数 - Header(3行) - Footer(3行)
+  const contentHeight = Math.max(terminalRows - 6, 5);
+
   // 全局键盘快捷键
   useInput((input, key) => {
     if (input === "q" || (key.ctrl && input === "c")) {
@@ -61,19 +68,19 @@ export function App(): React.ReactElement {
   const renderPage = () => {
     switch (state.currentPage) {
       case "session":
-        return <SessionPage />;
+        return <SessionPage height={contentHeight} />;
       case "debug":
-        return <DebugPage />;
+        return <DebugPage height={contentHeight} />;
       case "config":
-        return <ConfigPage />;
+        return <ConfigPage height={contentHeight} />;
     }
   };
 
   return (
     <AppContext.Provider value={{ state, setState, setCurrentPage }}>
-      <Box flexDirection="column" height="100%">
+      <Box flexDirection="column">
         <Header />
-        <Box flexGrow={1}>{renderPage()}</Box>
+        <Box height={contentHeight}>{renderPage()}</Box>
         <Footer />
       </Box>
     </AppContext.Provider>
