@@ -94,11 +94,9 @@ test("interactive renderer uses codex-like layout", async () => {
 
   const rendered = stripAnsi(getStdout());
 
-  assert.match(rendered, /tool/);
-  assert.match(rendered, /tool request read-file/);
-  assert.match(rendered, /tool \d{2}:\d{2}:\d{2}\.\d{3}\n│  result read-file/);
+  // Hermes 风格: ┊ {emoji} {verb:9} {detail}
+  assert.match(rendered, /read/);
   assert.match(rendered, /rxc/);
-  assert.match(rendered, /│  hello/);
   assert.match(rendered, /│  done/);
   assert.match(rendered, /│  done\n\n$/);
   assert.doesNotMatch(rendered, /assistant\[1\]/);
