@@ -27,7 +27,7 @@ export function InputBar({ width, sendMessage }: InputBarProps): React.ReactElem
         return;
       }
 
-      // Enter 发送消息，回到导航模式
+      // Enter 发送消息，保持在输入模式
       if (key.return) {
         if (input.trim()) {
           // 调用 runtime 发送消息
@@ -36,7 +36,7 @@ export function InputBar({ width, sendMessage }: InputBarProps): React.ReactElem
           }
         }
         setInput("");
-        setInputMode(false);
+        // 不退出输入模式，让用户继续输入
         return;
       }
 

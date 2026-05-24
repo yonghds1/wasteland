@@ -65,6 +65,7 @@ export interface AppState {
   showHelp: boolean;            // 是否显示帮助
   filterMode: boolean;          // 是否在过滤模式（调试页面）
   editMode: boolean;            // 是否在编辑模式（配置页面）
+  viewingMessage: Message | null; // 正在查看详情的消息
 
   session: {
     agents: AgentNode[];
@@ -112,6 +113,7 @@ interface AppContextValue {
   setEditMode: (mode: boolean) => void;
   updateConfig: (updates: Partial<AppState["config"]>) => void;
   clearTraces: () => void;
+  viewMessage: (msg: Message | null) => void;
 }
 
 export const AppContext = React.createContext<AppContextValue | null>(null);

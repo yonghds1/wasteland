@@ -43,7 +43,7 @@ export function SessionPage({ height, width, sendMessage }: SessionPageProps): R
           borderColor="gray"
           flexDirection="column"
         >
-          <MessageList height={contentHeight - 2} />
+          <MessageList height={contentHeight - 2} width={messageWidth} />
         </Box>
       </Box>
 

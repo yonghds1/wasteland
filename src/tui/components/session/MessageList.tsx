@@ -24,16 +24,20 @@ const TYPE_LABELS: Record<string, string> = {
 
 interface MessageListProps {
   height?: number;
+  width?: number;
 }
 
-export function MessageList({ height }: MessageListProps): React.ReactElement {
-  const { state } = useAppContext();
+export function MessageList({ height, width }: MessageListProps): React.ReactElement {
+  const { state, viewMessage } = useAppContext();
   const { messages } = state.session;
   const [scrollOffset, setScrollOffset] = useState(0);
   const [selectedIdx, setSelectedIdx] = useState(0);
 
   // 可见行数（减去标题和滚动指示器）
   const visibleLines = height ? Math.max(height - 3, 3) : 10;
+
+  // 计算消息内容最大宽度：总宽度 - 时间戳(10) - 类型标签(6) - 选中指示器(1) - 边距(4)
+  const contentMaxWidth = width ? Math.max(width - 21, 60) : 80;
 
   // 新消息自动滚动到底部
   useEffect(() => {
@@ -59,9 +63,13 @@ export function MessageList({ height }: MessageListProps): React.ReactElement {
           setScrollOffset((prev) => Math.min(Math.max(0, messages.length - visibleLines), prev + 1));
         }
       }
+      // Enter 查看选中消息的详情
+      if (key.return && messages[selectedIdx]) {
+        viewMessage(messages[selectedIdx]);
+      }
     },
     // 仅在导航模式且不在特殊模式下时处理
-    { isActive: !state.inputMode && !state.filterMode && !state.editMode && !state.exitConfirmPending && !state.showHelp }
+    { isActive: !state.inputMode && !state.filterMode && !state.editMode && !state.exitConfirmPending && !state.showHelp && !state.viewingMessage }
   );
 
   // 空状态
@@ -101,8 +109,8 @@ export function MessageList({ height }: MessageListProps): React.ReactElement {
               <Text dimColor>[{msg.timestamp.slice(11, 19)}]</Text>
               {/* 类型标签 */}
               <Text color={color} bold> [{TYPE_LABELS[msg.type]}]</Text>
-              {/* 内容 */}
-              <Text> {msg.content.length > 50 ? msg.content.slice(0, 47) + "..." : msg.content}</Text>
+              {/* 内容 - 根据可用宽度截断 */}
+              <Text> {msg.content.length > contentMaxWidth ? msg.content.slice(0, contentMaxWidth - 3) + "..." : msg.content}</Text>
             </Box>
           );
         })}
