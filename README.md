@@ -2,6 +2,12 @@
 
 一个按架构拆分推进的 TypeScript、Commander 和 RxJS 智能体 CLI 原型。
 
+**核心特性**：
+- 基于 RxJS 的响应式 Agent 运行时
+- 支持单 Agent 和多 Agent（主从编排）模式
+- 完整的工具系统和权限控制
+- Session 持久化和追踪
+
 ## 环境要求
 
 - Node.js 20+
@@ -36,7 +42,49 @@ npm run chat -- --message "/bash pwd"
 npm run chat -- --permission-mode bypass_permissions --message "/bash pwd"
 printf 'hello' | npm run dev -- chat
 npm run dev -- chat
+
+# 多 Agent 模式（需要 Provider 支持 spawn_agent 工具）
+npm run chat -- --multi --message "分析并重构 UserService"
 ```
+
+## 多 Agent 模式
+
+rxc 支持单 Agent（默认）和多 Agent 两种运行模式：
+
+### 单 Agent 模式（默认）
+
+```bash
+rxc chat --message "分析代码"
+```
+
+行为与普通聊天一致，Agent 独立执行任务。
+
+### 多 Agent 模式
+
+```bash
+# 提示系统使用多 Agent（实际由 Agent 决定是否 spawn）
+rxc chat --multi --message "重构 UserService"
+```
+
+**工作原理**：
+1. 主 Agent 分析任务，决定是否需要子 Agent
+2. 通过 `spawn_agent` 工具创建子 Agent
+3. 子 Agent 并行或串行执行子任务
+4. 主 Agent 汇总结果并继续推理
+
+**spawn_agent 工具参数**：
+```typescript
+spawn_agent({
+  name: string;      // 子 Agent 标识
+  task: string;      // 任务描述
+  model?: string;    // 可选：模型选择（haiku/sonnet/opus）
+  tools?: string[];  // 可选：限定工具集
+})
+```
+
+**Session 文件**：
+- 主 Agent: `.rxc/sessions/{sessionId}.jsonl`
+- 子 Agent: `.rxc/sessions/{sessionId}-child-{name}.jsonl`
 
 `chat` 命令当前有三条输入路径：
 
@@ -155,6 +203,34 @@ rxc chat --message "你好"
 
 session transcript 默认写入 `.rxc/sessions/`。
 
+## 多 Agent 架构
+
+rxc 采用 **Agents-as-Tools** 模式实现多 Agent 编排：
+
+```
+单 Agent 模式（默认）:
+  runAgentLoop → runTurnLoop → Provider.runStep → tool_call → dispatchToolCall
+
+多 Agent 模式:
+  runAgentLoop → runTurnLoop → Provider.runStep
+    ↓ (tool_call: spawn_agent)
+    → dispatchToolCall
+      → createSpawnAgentTool
+        → runAgentLoop (子 Agent, mode="single")
+          → 返回 tool_result
+```
+
+**核心优势**：
+- 单 Agent 行为完全保持不变
+- spawn_agent 作为普通工具，无需修改核心架构
+- 利用现有权限系统控制 spawn 行为
+- RxJS forkJoin 自然支持并行执行
+
+**相关文件**：
+- `src/runtime/event-types.ts` - RuntimeEvent 类型（含 agent_spawned/agent_completed）
+- `src/runtime/session-manager.ts` - SessionManager（含 createChildSession）
+- `src/tools/spawn-agent.ts` - spawn_agent 工具实现
+
 ## 项目结构
 
 ```text
@@ -195,9 +271,18 @@ dist/           构建产物
 - 内建工具：`read-file`、`bash`、`edit-file`、`write-file`
 - read-before-edit 安全检查：edit-file 和 write-file 需要先读取目标文件
 
+**Phase 3 多 Agent 架构已完成**：
+
+- `spawn_agent` 工具：允许主 Agent 创建子 Agent
+- 子 Agent Session 管理：独立的 session 文件
+- RuntimeEvent 扩展：`agent_spawned`、`agent_completed` 事件
+- CLI 参数：`--multi` 提示多 Agent 模式
+- 架构设计：Agents-as-Tools 模式，与现有架构无缝整合
+
 下一阶段会继续补：
 
 - 真实模型 provider 的 tool calling 支持
+- 多 Agent 并行执行的端到端测试
 - 更多内建工具与更完整权限策略
 - provider registry 与真实模型接入
 - session index / `resume` / `sessions`

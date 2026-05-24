@@ -299,4 +299,22 @@ export type RuntimeEvent =
       /** 会话结束事件 */
       type: "session_ended";
       sessionId: string;
+    }
+  | {
+      /** 子 Agent 创建事件 */
+      type: "agent_spawned";
+      parentId: string;
+      childId: string;
+      childSessionPath: string;
+      name: string;
+      task: string;
+    }
+  | {
+      /** 子 Agent 完成事件 */
+      type: "agent_completed";
+      childId: string;
+      status: "success" | "error" | "timeout";
+      result?: string;
+      error?: string;
+      sessionPath: string;
     };

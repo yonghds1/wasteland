@@ -22,6 +22,8 @@ type ChatOptions = {
   provider?: string;
   role?: string;
   permissionMode?: string;
+  /** 多 Agent 模式提示 */
+  multi?: boolean;
 };
 
 function resolvePermissionMode(value: string | undefined) {
@@ -114,6 +116,10 @@ export function createChatCommand(): Command {
     .option(
       "--permission-mode <mode>",
       "权限模式：default | accept_edits | bypass_permissions",
+    )
+    .option(
+      "--multi",
+      "提示系统使用多 Agent 模式（实际由 Agent 决定是否 spawn 子 Agent）",
     )
     .action(async (options: ChatOptions) => {
       const cwd = process.cwd();

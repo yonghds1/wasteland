@@ -11,6 +11,10 @@ export type SessionMetadata = {
   cwd: string;
   mode: RuntimeMode;
   providerId: string;
+  /** 父会话 ID（如果是子 Agent） */
+  parentId?: string;
+  /** 子 Agent 名称（如果是子 Agent） */
+  childName?: string;
 };
 
 /**
@@ -49,6 +53,31 @@ export class SessionManager {
       cwd: params.cwd,
       mode: params.mode,
       providerId: params.providerId,
+    };
+  }
+
+  /**
+   * 创建子 Agent 会话
+   *
+   * @param parent - 父会话元数据
+   * @param name - 子 Agent 名称
+   */
+  async createChildSession(
+    parent: SessionMetadata,
+    name: string,
+  ): Promise<SessionMetadata> {
+    await mkdir(this.sessionDir, { recursive: true });
+
+    const childId = `${parent.id}-child-${name}`;
+
+    return {
+      id: childId,
+      path: join(this.sessionDir, `${childId}.jsonl`),
+      cwd: parent.cwd,
+      mode: "single",
+      providerId: parent.providerId,
+      parentId: parent.id,
+      childName: name,
     };
   }
 

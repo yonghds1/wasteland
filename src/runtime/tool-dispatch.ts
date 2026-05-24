@@ -13,6 +13,9 @@ import { checkReadBeforeEdit } from "./file-audit.js";
 import type { PermissionGate } from "./permission-gate.js";
 import { SessionManager, type SessionMetadata } from "./session-manager.js";
 import type { TurnState } from "./turn-state.js";
+import { createSpawnAgentTool, type SpawnAgentInput } from "../tools/spawn-agent.js";
+import type { AgentProvider } from "../providers/provider-types.js";
+import type { SessionMessageRecord } from "./event-types.js";
 
 function createTimestamp(): string {
   return new Date().toISOString();
@@ -79,6 +82,10 @@ export function dispatchToolCall(params: {
   permissionGate: PermissionGate;
   cwd: string;
   turnState: TurnState;
+  /** 多 Agent 支持：Provider 实例 */
+  provider?: AgentProvider;
+  /** 多 Agent 支持：历史消息 */
+  history?: SessionMessageRecord[];
 }): Observable<RuntimeEvent> {
   // ---- read-before-edit 检查 ----
   // 对于 edit-file 和 write-file，检查是否已读取过目标文件
@@ -137,6 +144,143 @@ export function dispatchToolCall(params: {
   );
 
   const tool = params.registry.get(params.call.toolName);
+
+  // ---- 特殊处理：spawn_agent ----
+  // spawn_agent 需要额外的上下文，直接在这里处理
+  if (params.call.toolName === "spawn_agent" && params.provider) {
+    const spawnTool = createSpawnAgentTool({
+      sessionId: params.session.id,
+      turn: params.turn,
+      cwd: params.cwd,
+      session: params.session,
+      sessionManager: params.sessionManager,
+      provider: params.provider,
+      toolRegistry: params.registry,
+      permissionGate: params.permissionGate,
+      history: params.history ?? [],
+    });
+
+    // 权限检查
+    const decision = params.permissionGate.evaluate(params.call, spawnTool.riskLevel);
+
+    const permission$ = from(
+      params.sessionManager.appendRecord(
+        params.session,
+        createPermissionRecord({
+          session: params.session,
+          turn: params.turn,
+          call: params.call,
+          decision,
+        }),
+      ),
+    ).pipe(
+      map(
+        (): RuntimeEvent => ({
+          type: "permission_decision",
+          sessionId: params.session.id,
+          turn: params.turn,
+          callId: params.call.id,
+          toolName: params.call.toolName,
+          decision: decision.decision,
+          mode: decision.mode,
+          reason: decision.reason,
+        }),
+      ),
+    );
+
+    if (decision.decision !== "allow") {
+      const blockedStatus = decision.decision === "deny" ? "error" : "blocked";
+      const failedRecord = createToolResultRecord({
+        session: params.session,
+        turn: params.turn,
+        call: params.call,
+        status: blockedStatus,
+        error: decision.reason,
+      });
+
+      const failed$ = from(params.sessionManager.appendRecord(params.session, failedRecord)).pipe(
+        map(
+          (): RuntimeEvent => ({
+            type: "tool_failed",
+            sessionId: params.session.id,
+            turn: params.turn,
+            callId: params.call.id,
+            toolName: params.call.toolName,
+            status: blockedStatus,
+            error: decision.reason,
+          }),
+        ),
+      );
+
+      return concat(requested$, permission$, failed$);
+    }
+
+    const started$ = of<RuntimeEvent>({
+      type: "tool_started",
+      sessionId: params.session.id,
+      turn: params.turn,
+      callId: params.call.id,
+      toolName: params.call.toolName,
+    });
+
+    const result$ = defer(() =>
+      spawnTool.execute(params.call.input, {
+        sessionId: params.session.id,
+        turn: params.turn,
+        cwd: params.cwd,
+      }),
+    ).pipe(
+      concatMap((result) => {
+        if (result.status === "success") {
+          const resultRecord = createToolResultRecord({
+            session: params.session,
+            turn: params.turn,
+            call: params.call,
+            status: "success",
+            output: result.output,
+          });
+
+          return from(params.sessionManager.appendRecord(params.session, resultRecord)).pipe(
+            map(
+              (): RuntimeEvent => ({
+                type: "tool_result",
+                sessionId: params.session.id,
+                turn: params.turn,
+                callId: params.call.id,
+                toolName: params.call.toolName,
+                status: "success",
+                output: result.output,
+              }),
+            ),
+          );
+        }
+
+        const failedRecord = createToolResultRecord({
+          session: params.session,
+          turn: params.turn,
+          call: params.call,
+          status: "error",
+          error: result.error,
+        });
+
+        return from(params.sessionManager.appendRecord(params.session, failedRecord)).pipe(
+          map(
+            (): RuntimeEvent => ({
+              type: "tool_failed",
+              sessionId: params.session.id,
+              turn: params.turn,
+              callId: params.call.id,
+              toolName: params.call.toolName,
+              status: "error",
+              error: result.error,
+            }),
+          ),
+        );
+      }),
+    );
+
+    return concat(requested$, permission$, started$, result$);
+  }
 
   if (!tool) {
     const failedRecord = createToolResultRecord({

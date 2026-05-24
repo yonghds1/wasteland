@@ -458,6 +458,9 @@ function runTurnLoop(params: {
           permissionGate: params.permissionGate,
           cwd: params.cwd,
           turnState: state,
+          // 多 Agent 支持
+          provider: params.provider,
+          history: params.history,
         }).pipe(
           // tap 用于副作用：更新状态和记录追踪
           // 注意：这里更新外层的 state 变量，这是关键！
