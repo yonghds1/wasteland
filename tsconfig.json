@@ -10,11 +10,14 @@
     "declaration": true,
     "sourceMap": true,
     "skipLibCheck": true,
+    "jsx": "react",
+    "esModuleInterop": true,
     "types": [
       "node"
     ]
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "src/**/*.tsx"
   ]
 }
