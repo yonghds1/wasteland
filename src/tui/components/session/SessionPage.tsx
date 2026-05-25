@@ -7,6 +7,7 @@ import { Box } from "ink";
 import { AgentTree } from "./AgentTree.js";
 import { MessageList } from "./MessageList.js";
 import { InputBar } from "./InputBar.js";
+import { useAppContext } from "../../context/AppContext.js";
 
 interface SessionPageProps {
   height?: number;
@@ -15,6 +16,7 @@ interface SessionPageProps {
 }
 
 export function SessionPage({ height, width, sendMessage }: SessionPageProps): React.ReactElement {
+  const { state } = useAppContext();
   // 内容高度 = 总高度 - InputBar(约2行)
   const contentHeight = height ? Math.max(height - 3, 5) : 20;
   // Agent 树宽度固定 25 列
@@ -29,8 +31,9 @@ export function SessionPage({ height, width, sendMessage }: SessionPageProps): R
         {/* Agent 树 - 左侧固定宽度 */}
         <Box
           width={agentTreeWidth}
+          flexShrink={0}
           borderStyle="single"
-          borderColor="gray"
+          borderColor={state.focusArea === "agentTree" ? "cyan" : "gray"}
           flexDirection="column"
         >
           <AgentTree />
@@ -39,8 +42,9 @@ export function SessionPage({ height, width, sendMessage }: SessionPageProps): R
         {/* 消息列表 - 右侧填充剩余空间 */}
         <Box
           flexGrow={1}
+          flexShrink={1}
           borderStyle="single"
-          borderColor="gray"
+          borderColor={state.focusArea === "messageList" ? "cyan" : "gray"}
           flexDirection="column"
         >
           <MessageList height={contentHeight - 2} width={messageWidth} />

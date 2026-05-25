@@ -47,7 +47,7 @@ export function Header({ width }: HeaderProps): React.ReactElement {
       paddingX={1}
       borderStyle="single"
       borderBottom
-      borderColor={BORDER}
+      borderColor={state.focusArea === "header" ? "cyan" : BORDER}
     >
       <Box flexDirection="row" gap={1}>
         {/* 标题 */}

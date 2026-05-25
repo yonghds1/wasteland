@@ -9,6 +9,7 @@ import React from "react";
 // ============================================================
 
 export type PageName = "session" | "debug" | "config";
+export type FocusArea = string | null;
 
 export interface AgentNode {
   id: string;
@@ -58,6 +59,7 @@ export interface ConfigEdit {
 
 export interface AppState {
   currentPage: PageName;
+  focusArea: FocusArea;         // 当前焦点区域
 
   // 模式状态
   inputMode: boolean;           // 是否在输入模式
@@ -108,6 +110,7 @@ interface AppContextValue {
   state: AppState;
   setState: React.Dispatch<React.SetStateAction<AppState>>;
   setCurrentPage: (page: PageName) => void;
+  setFocusArea: (area: FocusArea) => void;
   setInputMode: (mode: boolean) => void;
   setExitConfirmPending: (pending: boolean) => void;
   setShowHelp: (show: boolean) => void;

@@ -57,7 +57,7 @@ export function TraceLog({ height }: TraceLogProps): React.ReactElement {
   // 可见 traces
   const visibleTraces = filteredTraces.slice(scrollOffset, scrollOffset + visibleLines);
 
-  // 键盘滚动（仅在导航模式下处理）
+  // 键盘滚动（基于焦点区域激活）
   useInput(
     (input, key) => {
       if (key.upArrow) {
@@ -67,8 +67,8 @@ export function TraceLog({ height }: TraceLogProps): React.ReactElement {
         setScrollOffset((prev) => Math.min(Math.max(0, filteredTraces.length - visibleLines), prev + 1));
       }
     },
-    // 仅在导航模式且不在特殊模式下时处理
-    { isActive: !state.inputMode && !state.filterMode && !state.editMode && !state.exitConfirmPending && !state.showHelp }
+    // 仅在 traceLog 焦点时处理
+    { isActive: state.focusArea === "traceLog" && !state.inputMode && !state.filterMode && !state.editMode && !state.exitConfirmPending && !state.showHelp }
   );
 
   // 空状态

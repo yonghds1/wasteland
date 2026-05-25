@@ -25,12 +25,12 @@ export function DebugPage({ height, width }: DebugPageProps): React.ReactElement
     return (
       <Box flexDirection="row" height={height} width={width}>
         {/* 左侧：Session 信息 */}
-        <Box width={infoWidth} borderStyle="single" borderColor="gray" flexDirection="column">
+        <Box width={infoWidth} flexShrink={0} borderStyle="single" borderColor="gray" flexDirection="column">
           <SessionInfo />
         </Box>
 
         {/* 右侧：过滤器 */}
-        <Box flexGrow={1} width={traceWidth} borderStyle="single" borderColor="cyan" flexDirection="column">
+        <Box flexGrow={1} flexShrink={1} width={traceWidth} borderStyle="single" borderColor="cyan" flexDirection="column">
           <TraceFilter onExit={() => setFilterMode(false)} />
         </Box>
       </Box>
@@ -40,12 +40,25 @@ export function DebugPage({ height, width }: DebugPageProps): React.ReactElement
   return (
     <Box flexDirection="row" height={height} width={width}>
       {/* 左侧：Session 信息 */}
-      <Box width={infoWidth} borderStyle="single" borderColor="gray" flexDirection="column">
+      <Box
+        width={infoWidth}
+        flexShrink={0}
+        borderStyle="single"
+        borderColor={state.focusArea === "sessionInfo" ? "cyan" : "gray"}
+        flexDirection="column"
+      >
         <SessionInfo />
       </Box>
 
       {/* 右侧：Trace 日志 - 填充剩余空间 */}
-      <Box flexGrow={1} width={traceWidth} borderStyle="single" borderColor="gray" flexDirection="column">
+      <Box
+        flexGrow={1}
+        flexShrink={1}
+        width={traceWidth}
+        borderStyle="single"
+        borderColor={state.focusArea === "traceLog" ? "cyan" : "gray"}
+        flexDirection="column"
+      >
         <TraceLog height={height} />
       </Box>
     </Box>

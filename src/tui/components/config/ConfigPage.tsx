@@ -88,8 +88,8 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
         handleReset();
       }
     },
-    // 仅在配置页面、导航模式、且不在特殊模式下处理
-    { isActive: state.currentPage === "config" && !state.inputMode && !state.filterMode && !state.exitConfirmPending && !state.showHelp }
+    // 仅在配置页面、configList 焦点、且不在特殊模式下处理
+    { isActive: state.currentPage === "config" && state.focusArea === "configList" && !state.inputMode && !state.filterMode && !state.exitConfirmPending && !state.showHelp }
   );
 
   // 处理编辑模式下的输入
@@ -243,11 +243,14 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
     <Box flexDirection="column" height={height} width={width} paddingX={1}>
       {/* 标题 */}
       <Box marginBottom={1}>
-        <Text bold underline>
+        <Text bold underline color={state.focusArea === "configList" ? "cyan" : undefined}>
           配置
         </Text>
         {state.configHasChanges && (
           <Text color="yellow"> (未保存)</Text>
+        )}
+        {state.focusArea === "configList" && (
+          <Text dimColor color="cyan"> [焦点]</Text>
         )}
         {saveStatus !== "idle" && (
           <Text color={saveStatus === "saved" ? "green" : saveStatus === "error" ? "red" : "yellow"}>
