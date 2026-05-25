@@ -6,6 +6,14 @@
 
 import React from "react";
 import { Text, Box } from "ink";
+import {
+  PRIMARY,
+  SUCCESS,
+  WARNING,
+  SECONDARY,
+  INFO,
+  MUTED,
+} from "../../utils/colors.js";
 
 interface HelpModalProps {
   width?: number;
@@ -19,13 +27,13 @@ export function HelpModal({ width }: HelpModalProps): React.ReactElement {
       flexDirection="column"
       width={modalWidth}
       borderStyle="double"
-      borderColor="cyan"
+      borderColor={PRIMARY}
       paddingX={2}
       paddingY={1}
     >
       {/* 标题 */}
       <Box justifyContent="center" marginBottom={1}>
-        <Text bold color="cyan">
+        <Text bold color={PRIMARY}>
           快捷键帮助
         </Text>
       </Box>
@@ -37,7 +45,7 @@ export function HelpModal({ width }: HelpModalProps): React.ReactElement {
 
       {/* 导航模式 */}
       <Box flexDirection="column" marginBottom={1}>
-        <Text bold color="green">
+        <Text bold color={SUCCESS}>
           导航模式（默认）
         </Text>
         <Box flexDirection="column" paddingLeft={2}>
@@ -61,7 +69,7 @@ export function HelpModal({ width }: HelpModalProps): React.ReactElement {
 
       {/* 输入模式 */}
       <Box flexDirection="column" marginBottom={1}>
-        <Text bold color="yellow">
+        <Text bold color={WARNING}>
           输入模式
         </Text>
         <Box flexDirection="column" paddingLeft={2}>
@@ -79,7 +87,7 @@ export function HelpModal({ width }: HelpModalProps): React.ReactElement {
 
       {/* 页面特定快捷键 */}
       <Box flexDirection="column" marginBottom={1}>
-        <Text bold color="magenta">
+        <Text bold color={SECONDARY}>
           会话页面
         </Text>
         <Box flexDirection="column" paddingLeft={2}>
@@ -93,7 +101,7 @@ export function HelpModal({ width }: HelpModalProps): React.ReactElement {
       </Box>
 
       <Box flexDirection="column" marginBottom={1}>
-        <Text bold color="blue">
+        <Text bold color={INFO}>
           调试页面
         </Text>
         <Box flexDirection="column" paddingLeft={2}>
@@ -107,7 +115,7 @@ export function HelpModal({ width }: HelpModalProps): React.ReactElement {
       </Box>
 
       <Box flexDirection="column" marginBottom={1}>
-        <Text bold color="cyan">
+        <Text bold color={MUTED}>
           配置页面
         </Text>
         <Box flexDirection="column" paddingLeft={2}>

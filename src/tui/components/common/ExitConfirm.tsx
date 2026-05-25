@@ -6,6 +6,7 @@
 
 import React from "react";
 import { Text, Box } from "ink";
+import { WARNING, SUCCESS, ERROR } from "../../utils/colors.js";
 
 interface ExitConfirmProps {
   width?: number;
@@ -19,13 +20,13 @@ export function ExitConfirm({ width }: ExitConfirmProps): React.ReactElement {
       flexDirection="column"
       width={modalWidth}
       borderStyle="double"
-      borderColor="yellow"
+      borderColor={WARNING}
       paddingX={2}
       paddingY={1}
     >
       {/* 警告图标和消息 */}
       <Box justifyContent="center" marginBottom={1}>
-        <Text bold color="yellow">
+        <Text bold color={WARNING}>
           ⚠ 确认退出
         </Text>
       </Box>
@@ -38,12 +39,12 @@ export function ExitConfirm({ width }: ExitConfirmProps): React.ReactElement {
       {/* 确认提示 */}
       <Box justifyContent="center">
         <Text>
-          按 <Text bold color="green">y</Text> 确认退出
+          按 <Text bold color={SUCCESS}>y</Text> 确认退出
         </Text>
       </Box>
       <Box justifyContent="center">
         <Text>
-          按 <Text bold color="red">n</Text> 或其他键取消
+          按 <Text bold color={ERROR}>n</Text> 或其他键取消
         </Text>
       </Box>
     </Box>
