@@ -291,7 +291,7 @@ dist/           构建产物
 - 独立的 permission gate
 - 独立的 tool lifecycle dispatch 与测试
 - `local` provider 下 `/read <path>` 与 `/bash <command>` 的真实工具调用路径
-- 内建工具：`read-file`、`bash`、`edit-file`、`write-file`
+- 内建工具：`read-file`、`glob`、`grep`、`list-directory`、`web-fetch`、`bash`、`edit-file`、`write-file`
 - read-before-edit 安全检查：edit-file 和 write-file 需要先读取目标文件
 
 **Phase 3 多 Agent 架构已完成**：

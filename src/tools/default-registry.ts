@@ -1,7 +1,11 @@
 import { createBashTool } from "./bash.js";
 import { createEditFileTool } from "./edit-file.js";
+import { createGlobTool } from "./glob.js";
+import { createGrepTool } from "./grep.js";
+import { createListDirectoryTool } from "./list-directory.js";
 import { ToolRegistry } from "./tool-registry.js";
 import { createReadFileTool } from "./read-file.js";
+import { createWebFetchTool } from "./web-fetch.js";
 import { createWriteFileTool } from "./write-file.js";
 
 /**
@@ -24,6 +28,10 @@ function createSpawnAgentPlaceholder() {
 export function createDefaultToolRegistry(): ToolRegistry {
   return new ToolRegistry([
     createReadFileTool(),
+    createGlobTool(),
+    createGrepTool(),
+    createListDirectoryTool(),
+    createWebFetchTool(),
     createBashTool(),
     createEditFileTool(),
     createWriteFileTool(),

@@ -939,3 +939,276 @@ test("pretty debug format is default when --debug is used without --debug-format
   assert.match(stderr, /trace session\.start/);
   assert.doesNotMatch(stderr, /"timestamp"/);
 });
+
+// ============================================================
+// 新工具测试：glob、grep、list-directory、web-fetch
+// ============================================================
+
+test("glob tool finds files matching pattern", async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-glob-tool-"));
+  const sessionDir = path.join(tempRoot, "sessions");
+
+  // 创建测试文件结构
+  await mkdir(path.join(tempRoot, "src"), { recursive: true });
+  await writeFile(path.join(tempRoot, "src", "main.ts"), "export {};\n", "utf8");
+  await writeFile(path.join(tempRoot, "src", "utils.ts"), "export {};\n", "utf8");
+  await writeFile(path.join(tempRoot, "package.json"), "{}\n", "utf8");
+  await writeFile(path.join(tempRoot, "README.md"), "# test\n", "utf8");
+
+  const env = createCleanEnv({
+    RXC_SESSION_DIR: sessionDir,
+  });
+
+  const { stdout } = await execFileAsync(
+    process.execPath,
+    [cliPath, "chat", "--permission-mode", "bypass_permissions", "--message", "/glob *.ts"],
+    {
+      cwd: tempRoot,
+      env,
+    },
+  );
+
+  assert.match(stdout, /tool\[1\]> request glob/);
+  assert.match(stdout, /tool\[1\]> result glob/);
+  // glob *.ts 在根目录下应该找不到文件（因为 .ts 文件在 src/ 下）
+  assert.match(stdout, /no matches found/);
+});
+
+test("glob tool finds files in subdirectory", async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-glob-subdir-"));
+  const sessionDir = path.join(tempRoot, "sessions");
+
+  await mkdir(path.join(tempRoot, "src"), { recursive: true });
+  await writeFile(path.join(tempRoot, "src", "main.ts"), "export {};\n", "utf8");
+  await writeFile(path.join(tempRoot, "src", "utils.ts"), "export {};\n", "utf8");
+
+  const env = createCleanEnv({
+    RXC_SESSION_DIR: sessionDir,
+  });
+
+  const { stdout } = await execFileAsync(
+    process.execPath,
+    [cliPath, "chat", "--permission-mode", "bypass_permissions", "--message", "/glob src/*.ts"],
+    {
+      cwd: tempRoot,
+      env,
+    },
+  );
+
+  assert.match(stdout, /tool\[1\]> request glob/);
+  assert.match(stdout, /tool\[1\]> result glob/);
+  assert.match(stdout, /2 matches/);
+  assert.match(stdout, /main\.ts/);
+  assert.match(stdout, /utils\.ts/);
+});
+
+test("grep tool searches text in files", async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-grep-tool-"));
+  const sessionDir = path.join(tempRoot, "sessions");
+
+  await mkdir(path.join(tempRoot, "src"), { recursive: true });
+  await writeFile(path.join(tempRoot, "src", "main.ts"), "export function main() {}\n// TODO: implement\n", "utf8");
+  await writeFile(path.join(tempRoot, "src", "utils.ts"), "export function utils() {}\n// TODO: refactor\n", "utf8");
+
+  const env = createCleanEnv({
+    RXC_SESSION_DIR: sessionDir,
+  });
+
+  const { stdout } = await execFileAsync(
+    process.execPath,
+    [cliPath, "chat", "--permission-mode", "bypass_permissions", "--message", "/grep TODO"],
+    {
+      cwd: tempRoot,
+      env,
+    },
+  );
+
+  assert.match(stdout, /tool\[1\]> request grep/);
+  assert.match(stdout, /tool\[1\]> result grep/);
+  assert.match(stdout, /2 matches/);
+  assert.match(stdout, /TODO/);
+});
+
+test("grep tool filters by include pattern", async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-grep-include-"));
+  const sessionDir = path.join(tempRoot, "sessions");
+
+  await writeFile(path.join(tempRoot, "code.ts"), "export const x = 1;\n", "utf8");
+  await writeFile(path.join(tempRoot, "note.txt"), "This is a note\n", "utf8");
+
+  const env = createCleanEnv({
+    RXC_SESSION_DIR: sessionDir,
+  });
+
+  const { stdout } = await execFileAsync(
+    process.execPath,
+    [cliPath, "chat", "--permission-mode", "bypass_permissions", "--message", "/grep export"],
+    {
+      cwd: tempRoot,
+      env,
+    },
+  );
+
+  assert.match(stdout, /tool\[1\]> request grep/);
+  assert.match(stdout, /tool\[1\]> result grep/);
+  assert.match(stdout, /export/);
+});
+
+test("list-directory tool lists directory contents", async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-listdir-tool-"));
+  const sessionDir = path.join(tempRoot, "sessions");
+
+  await mkdir(path.join(tempRoot, "src"), { recursive: true });
+  await writeFile(path.join(tempRoot, "package.json"), "{}\n", "utf8");
+  await writeFile(path.join(tempRoot, "README.md"), "# test\n", "utf8");
+
+  const env = createCleanEnv({
+    RXC_SESSION_DIR: sessionDir,
+  });
+
+  const { stdout } = await execFileAsync(
+    process.execPath,
+    [cliPath, "chat", "--permission-mode", "bypass_permissions", "--message", "/list-directory"],
+    {
+      cwd: tempRoot,
+      env,
+    },
+  );
+
+  assert.match(stdout, /tool\[1\]> request list-directory/);
+  assert.match(stdout, /tool\[1\]> result list-directory/);
+  // 注意：sessions 目录也会被列出，所以是 4 个条目
+  assert.match(stdout, /\d+ entries/);
+  assert.match(stdout, /src/);
+  assert.match(stdout, /package\.json/);
+  assert.match(stdout, /README\.md/);
+});
+
+test("list-directory tool shows hidden files when requested", async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-listdir-hidden-"));
+  const sessionDir = path.join(tempRoot, "sessions");
+
+  await writeFile(path.join(tempRoot, ".gitignore"), "node_modules\n", "utf8");
+  await writeFile(path.join(tempRoot, "visible.txt"), "hello\n", "utf8");
+
+  const env = createCleanEnv({
+    RXC_SESSION_DIR: sessionDir,
+  });
+
+  // 不显示隐藏文件
+  const { stdout } = await execFileAsync(
+    process.execPath,
+    [cliPath, "chat", "--permission-mode", "bypass_permissions", "--message", "/list-directory"],
+    {
+      cwd: tempRoot,
+      env,
+    },
+  );
+
+  assert.match(stdout, /tool\[1\]> result list-directory/);
+  // sessions 目录 + visible.txt = 2 个条目（隐藏文件 .gitignore 不显示）
+  assert.match(stdout, /\d+ entries/);
+  assert.match(stdout, /visible\.txt/);
+});
+
+test("web-fetch tool fetches HTTP content", async () => {
+  const server = await createJsonServer(async (request, body, response) => {
+    assert.equal(request.method, "GET");
+    assert.equal(request.url, "/test");
+
+    response.statusCode = 200;
+    response.setHeader("Content-Type", "application/json");
+    response.end(JSON.stringify({
+      message: "Hello from test server",
+      timestamp: Date.now(),
+    }));
+  });
+
+  try {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-webfetch-tool-"));
+    const sessionDir = path.join(tempRoot, "sessions");
+
+    const env = createCleanEnv({
+      RXC_SESSION_DIR: sessionDir,
+    });
+
+    const { stdout } = await execFileAsync(
+      process.execPath,
+      [cliPath, "chat", "--permission-mode", "bypass_permissions", "--message", `/web-fetch ${server.baseUrl}/test`],
+      {
+        cwd: tempRoot,
+        env,
+      },
+    );
+
+    assert.match(stdout, /tool\[1\]> request web-fetch/);
+    assert.match(stdout, /tool\[1\]> result web-fetch/);
+    assert.match(stdout, /200 OK/);
+    assert.match(stdout, /Hello from test server/);
+  } finally {
+    await server.close();
+  }
+});
+
+test("web-fetch tool handles POST requests", async () => {
+  const server = await createJsonServer(async (request, body, response) => {
+    assert.equal(request.method, "POST");
+    assert.equal(request.url, "/api");
+
+    const payload = JSON.parse(body);
+    assert.equal(payload.name, "test");
+
+    response.statusCode = 200;
+    response.setHeader("Content-Type", "application/json");
+    response.end(JSON.stringify({
+      success: true,
+      received: payload,
+    }));
+  });
+
+  try {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-webfetch-post-"));
+    const sessionDir = path.join(tempRoot, "sessions");
+
+    const env = createCleanEnv({
+      RXC_SESSION_DIR: sessionDir,
+    });
+
+    const { stdout } = await execFileAsync(
+      process.execPath,
+      [cliPath, "chat", "--permission-mode", "bypass_permissions", "--message", `/web-fetch ${server.baseUrl}/api POST {"name":"test"}`],
+      {
+        cwd: tempRoot,
+        env,
+      },
+    );
+
+    assert.match(stdout, /tool\[1\]> result web-fetch/);
+    assert.match(stdout, /200 OK/);
+    assert.match(stdout, /success/);
+  } finally {
+    await server.close();
+  }
+});
+
+test("web-fetch tool rejects invalid URLs", async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-webfetch-invalid-"));
+  const sessionDir = path.join(tempRoot, "sessions");
+
+  const env = createCleanEnv({
+    RXC_SESSION_DIR: sessionDir,
+  });
+
+  const { stdout } = await execFileAsync(
+    process.execPath,
+    [cliPath, "chat", "--permission-mode", "bypass_permissions", "--message", "/web-fetch not-a-url"],
+    {
+      cwd: tempRoot,
+      env,
+    },
+  );
+
+  // 工具执行失败时，输出为 "failed" 而不是 "result: error"
+  assert.match(stdout, /tool\[1\]> failed web-fetch/);
+  assert.match(stdout, /无效.*URL|需要有效的/);
+});
