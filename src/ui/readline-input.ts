@@ -36,6 +36,7 @@ import type { Readable, Writable } from "node:stream";
 import { filter, from, fromEvent, map, scan, takeUntil, tap, type Observable } from "rxjs";
 
 import type { ChatInputTurn } from "../runtime/event-types.js";
+import type { SkillExecutor } from "../skills/skill-executor.js";
 import {
   ANSI,
   PANEL_GUTTER,
@@ -53,7 +54,7 @@ import {
 const EXIT_COMMANDS = new Set(["/exit", "/quit"]);
 
 /** 本地命令集合（不发送给 Agent） */
-const LOCAL_COMMANDS = new Set(["/help", "/tools", "/clear"]);
+const LOCAL_COMMANDS = new Set(["/help", "/tools", "/clear", "/skills"]);
 
 // ============================================================
 // UI 辅助函数
@@ -94,6 +95,7 @@ function createHelpText(columns?: number): string {
   return createLocalOutput("Session commands", [
     "/help   Show interactive help",
     "/tools  Show current local tool syntax",
+    "/skills Show available skills",
     "/clear  Clear the terminal and redraw the header",
     "/exit   Exit interactive mode",
   ], columns);
@@ -268,12 +270,15 @@ export function createInteractiveTurnStream(params?: {
   output?: Writable;
   intro?: string;
   promptText?: string;
+  /** 技能执行器（用于 /skills 命令和技能检测） */
+  skillExecutor?: SkillExecutor;
 }): InteractiveTurnStream {
   // 解构参数，提供默认值
   const input = params?.input ?? process.stdin;
   const output = params?.output ?? process.stdout;
   const intro = params?.intro ?? createInteractiveIntro();
   const promptText = params?.promptText ?? "> ";
+  const skillExecutor = params?.skillExecutor;
 
   // 创建 readline 接口
   // readline 是 Node.js 内置的逐行读取模块
@@ -338,6 +343,15 @@ export function createInteractiveTurnStream(params?: {
         output.write(`${ANSI.reset}\x1b[2J\x1b[H`);  // ANSI 清屏和移动光标
         output.write(`${intro}\n`);
         renderPrompt();
+        return;
+      }
+
+      // /skills: 显示可用技能
+      if (line === "/skills" && skillExecutor) {
+        const skillsHelp = skillExecutor.createSkillsHelp();
+        output.write(`${ANSI.reset}\n${createLocalOutput("Available skills", [skillsHelp], "columns" in output ? output.columns : undefined)}\n\n`);
+        renderPrompt();
+        return;
       }
     }),
 

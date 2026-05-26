@@ -262,6 +262,7 @@ export function createOllamaProvider(settings?: ProviderSettings): AgentProvider
           history: context.history,
           input: context.input.content,
           toolResults: state.toolResults,
+          prompt: context.prompt,
         });
 
         const tools = context.toolRegistry

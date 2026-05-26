@@ -36,6 +36,9 @@ import type { PermissionGate } from "./permission-gate.js";
 import { SessionManager, type SessionMetadata } from "./session-manager.js";
 import { dispatchToolCall } from "./tool-dispatch.js";
 import { createTurnContext } from "./turn-context.js";
+import type { SkillExecutor } from "../skills/skill-executor.js";
+import type { ProviderSettings } from "../config/settings-types.js";
+import type { ProviderRegistry } from "../providers/provider-registry.js";
 import {
   advanceTurnState,
   appendAssistantChunk,
@@ -283,9 +286,57 @@ function runTurnLoop(params: {
   cwd: string;
   maxStepsPerTurn: number;
   trace: (event: DebugTraceInput) => void;
+  /** 技能执行器（可选） */
+  skillExecutor?: SkillExecutor;
+  /** Provider 注册表（用于子 Agent 模型选择） */
+  providerRegistry?: ProviderRegistry;
+  /** Provider 配置（用于子 Agent 模型选择） */
+  providerSettings?: ProviderSettings;
 }): Observable<RuntimeEvent> {
   // defer 延迟执行，确保每次递归时重新评估条件
   return defer(() => {
+    // ---- 技能命令检测 ----
+    // 如果输入是技能命令，路由到 SkillExecutor
+    const inputContent = params.context.input.content;
+    if (params.skillExecutor && params.skillExecutor.isSkillCommand(inputContent)) {
+      params.trace({
+        sessionId: params.session.id,
+        turn: params.state.turn,
+        step: params.state.step,
+        scope: "skill",
+        phase: "skill.start",
+        message: "routing to skill executor",
+        data: {
+          input: inputContent,
+        },
+      });
+
+      // 执行技能
+      return params.skillExecutor.execute({
+        input: inputContent,
+        sessionId: params.session.id,
+        turn: params.state.turn,
+        cwd: params.cwd,
+        session: params.session,
+        toolRegistry: params.toolRegistry!,
+        permissionGate: params.permissionGate!,
+        sessionManager: params.sessionManager,
+        provider: params.provider,
+        history: params.history,
+        output: (msg) => {
+          // 技能的进度输出（目前暂不处理，可以后续扩展）
+          params.trace({
+            sessionId: params.session.id,
+            turn: params.state.turn,
+            step: params.state.step,
+            scope: "skill",
+            phase: "skill.output",
+            message: msg,
+          });
+        },
+      });
+    }
+
     // ---- 检查步数限制 ----
     // 如果超出最大步数，提前终止并返回错误消息
     if (params.state.step > params.maxStepsPerTurn) {
@@ -471,6 +522,8 @@ function runTurnLoop(params: {
           // 多 Agent 支持
           provider: params.provider,
           history: params.history,
+          providerRegistry: params.providerRegistry,
+          providerSettings: params.providerSettings,
         }).pipe(
           // tap 用于副作用：更新状态和记录追踪
           // 注意：这里更新外层的 state 变量，这是关键！
@@ -740,6 +793,14 @@ export function runAgentLoop(params: {
   maxStepsPerTurn?: number;
   /** 可选：已有的 session（用于子 Agent） */
   existingSession?: SessionMetadata;
+  /** 可选：技能执行器 */
+  skillExecutor?: SkillExecutor;
+  /** 可选：角色的 system prompt */
+  prompt?: string;
+  /** 可选：Provider 注册表（用于子 Agent 模型选择） */
+  providerRegistry?: ProviderRegistry;
+  /** 可选：Provider 配置（用于子 Agent 模型选择） */
+  providerSettings?: ProviderSettings;
 }): AgentRun {
   // 创建调试追踪的 Subject
   // 使用 ReplaySubject 确保所有事件都能被订阅者接收
@@ -802,6 +863,7 @@ export function runAgentLoop(params: {
             cwd: params.cwd,
             history: historySnapshot,
             toolRegistry: params.toolRegistry,
+            prompt: params.prompt,
           });
 
           // 创建用户记录
@@ -834,7 +896,7 @@ export function runAgentLoop(params: {
             ),
           );
 
-          // assistant$: 运行 Agent 响应循环
+          // assistant$, 运行 Agent 响应循环
           const assistant$ = runTurnLoop({
             session,
             sessionManager: params.sessionManager,
@@ -852,6 +914,7 @@ export function runAgentLoop(params: {
             cwd: params.cwd,
             maxStepsPerTurn,
             trace,
+            skillExecutor: params.skillExecutor,
           });
 
           // concat 确保先处理 user$，再处理 assistant$

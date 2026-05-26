@@ -273,3 +273,77 @@ test("spawn_agent fails when required parameters are missing", async () => {
   assert.equal(events[events.length - 1].type, "tool_failed");
   assert.match(events[events.length - 1].error, /requires.*name.*task/i);
 });
+
+test("spawn_agent respects tools parameter to limit child agent tools", async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-spawn-agent-tools-"));
+  const sessionDir = path.join(tempRoot, "sessions");
+  const sessionManager = new SessionManager(sessionDir);
+  const session = await sessionManager.startSession({
+    cwd: tempRoot,
+    mode: "single",
+    providerId: "local",
+  });
+
+  const { createLocalProvider } = await import("../dist/providers/local.js");
+  const childProvider = createLocalProvider();
+
+  // 创建包含多个工具的 registry
+  const registry = new ToolRegistry([
+    {
+      name: "read-file",
+      riskLevel: "read",
+      async execute() {
+        return { status: "success", output: "file content" };
+      },
+    },
+    {
+      name: "bash",
+      riskLevel: "execute",
+      async execute() {
+        return { status: "success", output: "command output" };
+      },
+    },
+    {
+      name: "write-file",
+      riskLevel: "write",
+      async execute() {
+        return { status: "success", output: "file written" };
+      },
+    },
+  ]);
+
+  const events = await lastValueFrom(
+    dispatchToolCall({
+      session,
+      sessionManager,
+      turn: 1,
+      call: {
+        id: "tool-spawn-tools",
+        toolName: "spawn_agent",
+        input: {
+          name: "limited-agent",
+          task: "测试任务",
+          tools: ["read-file"], // 只允许 read-file 工具
+        },
+      },
+      registry,
+      permissionGate: createPermissionGate({ mode: "bypass_permissions" }),
+      cwd: tempRoot,
+      provider: childProvider,
+      history: [],
+    }).pipe(toArray()),
+  );
+
+  // 验证事件序列
+  assert.deepEqual(events.map((event) => event.type), [
+    "tool_call_requested",
+    "permission_decision",
+    "tool_started",
+    "tool_result",
+  ]);
+
+  // 验证返回成功
+  assert.equal(events[3].status, "success");
+
+  await sessionManager.closeAll();
+});

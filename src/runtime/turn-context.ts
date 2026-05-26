@@ -9,6 +9,8 @@ export type TurnContext = {
   history: readonly SessionMessageRecord[];
   /** 工具注册表（用于 Provider 构建工具定义） */
   toolRegistry?: ToolRegistry;
+  /** 角色的 system prompt */
+  prompt?: string;
 };
 
 export function createTurnContext(params: {
@@ -17,6 +19,7 @@ export function createTurnContext(params: {
   cwd: string;
   history: readonly SessionMessageRecord[];
   toolRegistry?: ToolRegistry;
+  prompt?: string;
 }): TurnContext {
   return {
     sessionId: params.sessionId,
@@ -25,5 +28,6 @@ export function createTurnContext(params: {
     cwd: params.cwd,
     history: [...params.history],
     toolRegistry: params.toolRegistry,
+    prompt: params.prompt,
   };
 }

@@ -1,5 +1,6 @@
 import type { PermissionDecisionKind, PermissionMode } from "./permission-gate.js";
 import type { ToolInput, ToolRunStatus } from "../tools/tool-types.js";
+import type { SkillArgs, SkillResult } from "../skills/skill-types.js";
 
 /**
  * 输入来源
@@ -321,4 +322,20 @@ export type RuntimeEvent =
       result?: string;
       error?: string;
       sessionPath: string;
+    }
+  | {
+      /** 技能调用开始事件 */
+      type: "skill_started";
+      sessionId: string;
+      turn: number;
+      skillName: string;
+      args: SkillArgs;
+    }
+  | {
+      /** 技能执行结果事件 */
+      type: "skill_result";
+      sessionId: string;
+      turn: number;
+      skillName: string;
+      result: SkillResult;
     };

@@ -15,12 +15,13 @@
   "scripts": {
     "clean": "rm -rf dist",
     "build": "tsc -p tsconfig.json",
-    "dev": "tsx src/cli.ts",
-    "chat": "tsx src/cli.ts chat",
-    "start": "npm run build && node ./bin/rxc.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "npm run build && node --test",
-    "check": "npm run typecheck && npm test"
+    "check": "npm run typecheck && npm test",
+    "cli": "tsx src/cli.ts chat",
+    "cli:build": "npm run build && node ./bin/rxc.js chat",
+    "tui": "tsx src/cli.ts tui",
+    "tui:build": "npm run build && node ./bin/rxc.js tui"
   },
   "keywords": [
     "cli",

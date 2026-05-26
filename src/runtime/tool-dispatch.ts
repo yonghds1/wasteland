@@ -16,6 +16,8 @@ import type { TurnState } from "./turn-state.js";
 import { createSpawnAgentTool, type SpawnAgentInput } from "../tools/spawn-agent.js";
 import type { AgentProvider } from "../providers/provider-types.js";
 import type { SessionMessageRecord } from "./event-types.js";
+import type { ProviderSettings } from "../config/settings-types.js";
+import type { ProviderRegistry } from "../providers/provider-registry.js";
 
 function createTimestamp(): string {
   return new Date().toISOString();
@@ -86,6 +88,10 @@ export function dispatchToolCall(params: {
   provider?: AgentProvider;
   /** 多 Agent 支持：历史消息 */
   history?: SessionMessageRecord[];
+  /** 多 Agent 支持：Provider 注册表（用于模型选择） */
+  providerRegistry?: ProviderRegistry;
+  /** 多 Agent 支持：Provider 配置（用于模型选择） */
+  providerSettings?: ProviderSettings;
 }): Observable<RuntimeEvent> {
   // ---- read-before-edit 检查 ----
   // 对于 edit-file 和 write-file，检查是否已读取过目标文件
@@ -158,6 +164,8 @@ export function dispatchToolCall(params: {
       toolRegistry: params.registry,
       permissionGate: params.permissionGate,
       history: params.history ?? [],
+      providerRegistry: params.providerRegistry,
+      providerSettings: params.providerSettings,
     });
 
     // 权限检查

@@ -22,6 +22,7 @@
 - [配置层与 `.rxc` 目录](./architecture/configuration.md)
 - [多角色配置方案](./architecture/multi-role-configuration.md)
 - [运行时分层与契约](./architecture/runtime-boundaries.md)
+- [多Agent协作架构](./architecture/multi-agent-architecture.md)
 - [项目结构规划](./project-structure.md)
 - [Phase 1：Agent Runtime 实施方案](./implementation/phase-1-agent-runtime.md)
 - [Phase 2：工具运行时与权限闸门](./implementation/phase-2-agent-tool-runtime.md)

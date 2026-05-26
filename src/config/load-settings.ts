@@ -7,6 +7,8 @@ import {
   type AuthRef,
   DEFAULT_RXC_SETTINGS,
   type LoadedRxcSettings,
+  type MCPServerConfig,
+  type MCPServersConfig,
   type ModelSettings,
   type ProviderSettings,
   type RawRxcSettings,
@@ -314,6 +316,17 @@ function mergeSettings(
     }
   }
 
+  // 合并 mcpServers
+  const mergedMCPServers: MCPServersConfig = { ...base.mcpServers };
+  if (next.mcpServers) {
+    for (const [serverName, serverConfig] of Object.entries(next.mcpServers)) {
+      mergedMCPServers[serverName] = {
+        ...(mergedMCPServers[serverName] ?? {}),
+        ...serverConfig,
+      } as MCPServerConfig;
+    }
+  }
+
   return {
     defaultProvider: next.defaultProvider ?? base.defaultProvider,
     providers: mergedProviders,
@@ -325,6 +338,7 @@ function mergeSettings(
       maxStepsPerTurn: next.runtime?.maxStepsPerTurn ?? base.runtime.maxStepsPerTurn,
       debug: next.runtime?.debug ?? base.runtime.debug,
     },
+    mcpServers: mergedMCPServers,
   };
 }
 
@@ -418,6 +432,19 @@ function resolveSettingsAuthRefs(
   auth: AuthSettings,
   env: NodeJS.ProcessEnv,
 ): ResolvedRxcSettings {
+  // 解析 mcpServers 中的 auth refs
+  const resolvedMCPServers: Record<string, MCPServerConfig> = {};
+  for (const [name, config] of Object.entries(settings.mcpServers)) {
+    resolvedMCPServers[name] = {
+      ...config,
+      env: resolveAuthRefsInValue({
+        value: config.env ?? {},
+        auth,
+        env,
+      }) as Record<string, string> | undefined,
+    };
+  }
+
   return {
     defaultProvider: settings.defaultProvider,
     providers: resolveAuthRefsInValue({
@@ -438,6 +465,7 @@ function resolveSettingsAuthRefs(
     runtime: {
       ...settings.runtime,
     },
+    mcpServers: resolvedMCPServers,
   };
 }
 
@@ -456,6 +484,7 @@ function applyEnvironmentOverrides(
       maxStepsPerTurn: settings.runtime.maxStepsPerTurn,
       debug: settings.runtime.debug,
     },
+    mcpServers: { ...settings.mcpServers },
   } satisfies ResolvedRxcSettings;
 
   if (typeof env.RXC_PROVIDER === "string" && env.RXC_PROVIDER.trim().length > 0) {

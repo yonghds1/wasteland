@@ -19,6 +19,7 @@ import { createDefaultProviderRegistry } from "../../providers/provider-registry
 import { createDefaultToolRegistry } from "../../tools/default-registry.js";
 import type { TuiRuntimeContext, TuiConfig } from "../types.js";
 import type { ChatInputTurn } from "../../runtime/event-types.js";
+import type { ProviderRegistry } from "../../providers/provider-registry.js";
 
 /**
  * TUI 运行时上下文（扩展版，包含清理资源）
@@ -27,6 +28,7 @@ import type { ChatInputTurn } from "../../runtime/event-types.js";
  */
 interface InternalTuiRuntimeContext extends TuiRuntimeContext {
   sessionManager: SessionManager;
+  stopMCP?: () => Promise<void>;
 }
 
 /**
@@ -55,6 +57,7 @@ export async function createTuiRuntime(cwd: string): Promise<TuiRuntimeContext> 
     settings: loadedSettings.settings,
     roleName: undefined, // TUI 暂不支持 --role 参数
     providerName: undefined,
+    cwd,
   });
 
   // 3. 创建 Provider
@@ -77,8 +80,16 @@ export async function createTuiRuntime(cwd: string): Promise<TuiRuntimeContext> 
     mode: resolvedRuntime.permissionMode,
   });
 
-  // 6. 创建 ToolRegistry
-  const toolRegistry = createDefaultToolRegistry();
+  // 6. 创建 ToolRegistry（包含 MCP）
+  const mcpServers = loadedSettings.settings.mcpServers;
+  const { toolRegistry, startMCP, stopMCP } = createDefaultToolRegistry(mcpServers);
+
+  // 启动 MCP 服务器
+  try {
+    await startMCP();
+  } catch (error) {
+    console.warn("MCP servers startup failed:", error instanceof Error ? error.message : String(error));
+  }
 
   // 7. 创建 input$ Subject（用于接收用户输入）
   const input$ = new Subject<ChatInputTurn>();
@@ -101,6 +112,9 @@ export async function createTuiRuntime(cwd: string): Promise<TuiRuntimeContext> 
     mode: "interactive",
     maxStepsPerTurn: loadedSettings.settings.runtime.maxStepsPerTurn,
     existingSession: session,
+    prompt: resolvedRuntime.prompt,
+    providerRegistry,
+    providerSettings: resolvedRuntime.providerConfig,
   });
 
   // 10. 构建 TUI 配置
@@ -121,6 +135,7 @@ export async function createTuiRuntime(cwd: string): Promise<TuiRuntimeContext> 
     config,
     sessionManager,
     providerId: provider.id,
+    stopMCP,
   } as InternalTuiRuntimeContext;
 }
 
@@ -135,8 +150,13 @@ export async function cleanupTuiRuntime(
   // 完成 input$ 流
   runtime.input$.complete();
 
-  // 关闭所有会话
+  // 停止 MCP 服务器
   const internal = runtime as InternalTuiRuntimeContext;
+  if (internal.stopMCP) {
+    await internal.stopMCP();
+  }
+
+  // 关闭所有会话
   if (internal.sessionManager) {
     await internal.sessionManager.closeAll();
   }

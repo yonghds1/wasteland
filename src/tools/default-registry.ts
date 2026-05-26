@@ -7,6 +7,8 @@ import { ToolRegistry } from "./tool-registry.js";
 import { createReadFileTool } from "./read-file.js";
 import { createWebFetchTool } from "./web-fetch.js";
 import { createWriteFileTool } from "./write-file.js";
+import type { MCPServersConfig } from "../config/settings-types.js";
+import { MCPToolRegistry } from "./mcp-registry.js";
 
 /**
  * 创建 spawn_agent 的占位工具定义
@@ -25,8 +27,45 @@ function createSpawnAgentPlaceholder() {
   };
 }
 
-export function createDefaultToolRegistry(): ToolRegistry {
-  return new ToolRegistry([
+/**
+ * 创建 MCP 工具的占位定义
+ *
+ * MCP 工具在运行时动态发现和调用，这里只是占位声明。
+ * 实际执行通过 MCPToolRegistry 进行。
+ */
+function createMCPToolPlaceholder(name: string) {
+  return {
+    name,
+    riskLevel: "execute" as const,
+    async execute(): Promise<never> {
+      throw new Error(`MCP tool ${name} should be executed via MCPToolRegistry`);
+    },
+  };
+}
+
+/**
+ * 创建工具注册表的结果
+ */
+export type CreateToolRegistryResult = {
+  /** 工具注册表（用于 Provider） */
+  toolRegistry: ToolRegistry;
+  /** MCP 注册表（用于 MCP 工具调用，可选） */
+  mcpRegistry?: MCPToolRegistry;
+  /** 启动 MCP 服务器 */
+  startMCP: () => Promise<void>;
+  /** 停止 MCP 服务器 */
+  stopMCP: () => Promise<void>;
+};
+
+/**
+ * 创建默认工具注册表
+ *
+ * @param mcpServers - MCP 服务器配置（可选）
+ * @returns 包含 ToolRegistry 和 MCP 相关控制的对象
+ */
+export function createDefaultToolRegistry(mcpServers?: MCPServersConfig): CreateToolRegistryResult {
+  // 内置工具（硬编码，安全可靠）
+  const builtinTools = [
     createReadFileTool(),
     createGlobTool(),
     createGrepTool(),
@@ -36,5 +75,60 @@ export function createDefaultToolRegistry(): ToolRegistry {
     createEditFileTool(),
     createWriteFileTool(),
     createSpawnAgentPlaceholder(),
-  ]);
+  ];
+
+  // 创建 MCP 注册表（如果配置了）
+  let mcpRegistry: MCPToolRegistry | undefined;
+  let mcpStarted = false;
+
+  if (mcpServers && Object.keys(mcpServers).length > 0) {
+    mcpRegistry = new MCPToolRegistry();
+    mcpRegistry.registerServersConfigs(mcpServers);
+
+    // 添加 MCP 工具占位符（让 Provider 知道这些工具存在）
+    // 注意：实际调用会通过 mcpRegistry 进行
+    for (const serverName of Object.keys(mcpServers)) {
+      builtinTools.push(createMCPToolPlaceholder(`${serverName}/*`));
+    }
+  }
+
+  const toolRegistry = new ToolRegistry(builtinTools);
+
+  return {
+    toolRegistry,
+    mcpRegistry,
+    startMCP: async () => {
+      if (mcpRegistry && !mcpStarted) {
+        await mcpRegistry.startAll();
+        mcpStarted = true;
+
+        // 将 MCP 工具动态注册到 ToolRegistry
+        const mcpTools = mcpRegistry.toAgentTools();
+        for (const tool of mcpTools) {
+          toolRegistry.register(tool);
+        }
+      }
+    },
+    stopMCP: async () => {
+      if (mcpRegistry && mcpStarted) {
+        await mcpRegistry.stopAll();
+        mcpStarted = false;
+      }
+    },
+  };
+}
+
+/**
+ * 创建 MCP 工具注册表（独立使用）
+ *
+ * MCP (Model Context Protocol) 工具通过外部进程通信，
+ * 支持动态发现和调用工具。
+ *
+ * @param mcpServers - MCP 服务器配置
+ * @returns MCPToolRegistry 实例（需要手动启动）
+ */
+export function createMCPRegistry(mcpServers: MCPServersConfig): MCPToolRegistry {
+  const registry = new MCPToolRegistry();
+  registry.registerServersConfigs(mcpServers);
+  return registry;
 }

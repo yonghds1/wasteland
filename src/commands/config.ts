@@ -19,6 +19,7 @@ async function runCurrentConfig(options: ConfigCurrentOptions): Promise<void> {
   const resolved = resolveChatRuntime({
     settings: loadedSettings.settings,
     roleName: options.role,
+    cwd,
   });
 
   process.stdout.write(`${JSON.stringify({

@@ -179,6 +179,10 @@ function getToolParameters(name: string): JsonSchema {
           items: { type: "string" },
           description: "可选，限定子 Agent 可用的工具集",
         },
+        inheritHistory: {
+          type: "boolean",
+          description: "可选，是否继承父 Agent 的历史上下文，默认 false",
+        },
       },
       required: ["name", "task"],
     },

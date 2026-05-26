@@ -32,8 +32,6 @@ npm run dev -- --help
 ## 示例
 
 ```bash
-npm run dev -- hello Trellis
-npm start -- hello Trellis --upper
 npm run chat -- --message "你好"
 npm run dev -- chat --role coder --message "/bash pwd"
 npm run dev -- config current
@@ -261,13 +259,13 @@ bin/            可执行入口
 docs/           架构与实施文档
 src/            TypeScript 源码
 src/commands/   子命令
-src/chat/       RxJS 输入/回复管线
+src/chat/       RxJS 回复管线
 src/config/     统一配置加载与 `.rxc` 路径规则
 src/runtime/    当前已落地的 agent runtime 层
 src/providers/  当前已落地的 provider 抽象层
 src/tools/      当前已落地的工具合同与内建工具层
 src/ui/         当前已落地的终端 UI 层
-src/mcp/        预留的 MCP 集成层
+src/tui/        TUI 界面（基于 Ink/React）
 test/           冒烟测试
 dist/           构建产物
 ```
@@ -313,8 +311,6 @@ dist/           构建产物
 
 ## 文档
 
-实现规范以 `.trellis/spec/` 为准；`docs/` 负责架构说明和阶段设计。
-
 - [文档索引](./docs/README.md)
 - [智能体 CLI 架构](./docs/architecture/agent-cli.md)
 - [配置层与 `.rxc` 目录](./docs/architecture/configuration.md)
@@ -323,11 +319,3 @@ dist/           构建产物
 - [项目结构规划](./docs/project-structure.md)
 - [Phase 1：Agent Runtime 实施方案](./docs/implementation/phase-1-agent-runtime.md)
 - [Phase 2：工具运行时与权限闸门](./docs/implementation/phase-2-agent-tool-runtime.md)
-
-## 下一步
-
-- 用真实业务命令替换示例 `hello` 命令
-- 把 `local` provider 替换或并列接入真实模型 provider
-- 扩展 runtime 事件、工具执行和权限模型
-- 增加 `resume`、`sessions`、`config`、`mcp` 等命令
-- 等 CLI 表面稳定后再引入发布自动化

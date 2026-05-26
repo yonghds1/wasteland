@@ -411,6 +411,7 @@ export function createQwenProvider(settings?: ProviderSettings): AgentProvider {
           history: context.history,
           input: context.input.content,
           toolResults: state.toolResults,
+          prompt: context.prompt,
         });
 
         // 构建工具定义（如果有工具注册表）

@@ -1,0 +1,277 @@
+/**
+ * init-skill.ts - 项目初始化技能
+ *
+ * 初始化 CLAUDE.md 文件，生成项目上下文文档。
+ */
+
+import { join } from "node:path";
+import type {
+  Skill,
+  SkillArgs,
+  SkillExecutionContext,
+  SkillResult,
+} from "../skill-types.js";
+
+/**
+ * CLAUDE.md 默认模板
+ */
+const DEFAULT_TEMPLATE = `# 项目上下文
+
+## 概述
+{description}
+
+## 项目结构
+\`\`\`
+{structure}
+\`\`\`
+
+## 关键文件
+- \`src/\` - 源代码目录
+- \`tests/\` - 测试文件目录
+
+## 开发规范
+- 遵循现有代码风格
+- 提交前运行测试
+- 更新相关文档
+
+## 重要事项
+- 保持代码简洁清晰
+- 注释复杂逻辑
+- 处理边界情况
+`;
+
+/**
+ * 简洁模板
+ */
+const MINIMAL_TEMPLATE = `# 项目上下文
+
+{description}
+
+## 关键约定
+- 遵循现有代码风格
+- 提交前运行测试
+`;
+
+/**
+ * 完整模板
+ */
+const FULL_TEMPLATE = `# 项目上下文
+
+## 项目概述
+{description}
+
+## 技术栈
+- 运行时: Node.js
+- 语言: TypeScript
+- 包管理器: npm
+
+## 项目结构
+\`\`\`
+{structure}
+\`\`\`
+
+## 开发指南
+
+### 环境设置
+\`\`\`bash
+npm install
+\`\`\`
+
+### 常用命令
+- \`npm run build\` - 构建项目
+- \`npm run test\` - 运行测试
+- \`npm run lint\` - 代码检查
+
+### 代码规范
+- 使用 TypeScript 编写所有新代码
+- 遵循现有命名约定
+- 为公共 API 编写文档注释
+
+### 提交规范
+- 编写清晰的提交信息
+- 提交前确保测试通过
+- 大型更改拆分为小提交
+
+## 架构说明
+{architecture}
+
+## 已知问题
+{issues}
+
+## 未来计划
+{future}
+`;
+
+/**
+ * 获取模板内容
+ */
+function getTemplate(template: string): string {
+  switch (template) {
+    case "minimal":
+      return MINIMAL_TEMPLATE;
+    case "full":
+      return FULL_TEMPLATE;
+    default:
+      return DEFAULT_TEMPLATE;
+  }
+}
+
+/**
+ * 简单的项目结构生成
+ */
+async function getProjectStructure(
+  context: SkillExecutionContext,
+): Promise<string> {
+  const bashTool = context.toolRegistry.get("bash");
+  if (!bashTool) {
+    return "无法获取项目结构";
+  }
+
+  const result = await bashTool.execute(
+    { command: "ls -la" },
+    {
+      sessionId: context.sessionId,
+      turn: context.turn,
+      cwd: context.cwd,
+    },
+  );
+
+  if (result.status === "success") {
+    // 提取目录列表，简化输出
+    const lines = result.output.split("\n").slice(1, 11); // 取前 10 行
+    return lines.map((line) => line.split(/\s+/).pop()).join("\n");
+  }
+
+  return "无法获取项目结构";
+}
+
+/**
+ * /init 技能实现
+ */
+export const initSkill: Skill = {
+  definition: {
+    name: "init",
+    description: "初始化 CLAUDE.md 项目上下文文件",
+    riskLevel: "write",
+    aliases: ["i"],
+    category: "project",
+    parameters: {
+      template: {
+        type: "string",
+        description: "模板类型: default, minimal, full",
+        default: "default",
+        enum: ["default", "minimal", "full"],
+      },
+      force: {
+        type: "boolean",
+        description: "覆盖已存在的文件",
+        default: false,
+      },
+    },
+    examples: [
+      "/init",
+      "/init --template minimal",
+      "/init --force",
+      "/init --template full --force",
+    ],
+  },
+
+  async execute(
+    args: SkillArgs,
+    context: SkillExecutionContext,
+  ): Promise<SkillResult> {
+    const template = (args.named.template as string) ?? "default";
+    const force = (args.named.force as boolean) ?? false;
+    const targetPath = join(context.cwd, "CLAUDE.md");
+
+    context.output(`初始化项目上下文: ${targetPath}\n`);
+
+    // 检查文件是否存在
+    const readTool = context.toolRegistry.get("read-file");
+    if (readTool && !force) {
+      const checkResult = await readTool.execute(
+        { path: targetPath },
+        {
+          sessionId: context.sessionId,
+          turn: context.turn,
+          cwd: context.cwd,
+        },
+      );
+
+      if (checkResult.status === "success") {
+        return {
+          status: "error",
+          output: "CLAUDE.md 已存在。使用 --force 覆盖。",
+        };
+      }
+    }
+
+    // 获取项目名称
+    let projectName = "项目";
+    const packageJsonPath = join(context.cwd, "package.json");
+
+    if (readTool) {
+      const pkgResult = await readTool.execute(
+        { path: packageJsonPath },
+        {
+          sessionId: context.sessionId,
+          turn: context.turn,
+          cwd: context.cwd,
+        },
+      );
+
+      if (pkgResult.status === "success") {
+        try {
+          const pkg = JSON.parse(pkgResult.output);
+          projectName = pkg.name ?? pkg.description ?? "项目";
+        } catch {
+          // 忽略 JSON 解析错误
+        }
+      }
+    }
+
+    // 获取项目结构
+    context.output("获取项目结构...\n");
+    const structure = await getProjectStructure(context);
+
+    // 生成内容
+    const templateContent = getTemplate(template);
+    const content = templateContent
+      .replace("{description}", `${projectName} - 自动生成的项目上下文`)
+      .replace("{structure}", structure)
+      .replace("{architecture}", "待补充")
+      .replace("{issues}", "待补充")
+      .replace("{future}", "待补充");
+
+    // 写入文件
+    const writeTool = context.toolRegistry.get("write-file");
+    if (!writeTool) {
+      return {
+        status: "error",
+        output: "write-file 工具不可用",
+      };
+    }
+
+    context.output(`写入文件...\n`);
+    const writeResult = await writeTool.execute(
+      { path: targetPath, content },
+      {
+        sessionId: context.sessionId,
+        turn: context.turn,
+        cwd: context.cwd,
+      },
+    );
+
+    if (writeResult.status === "error") {
+      return {
+        status: "error",
+        output: `写入失败: ${writeResult.error}`,
+      };
+    }
+
+    return {
+      status: "success",
+      output: `已创建 CLAUDE.md: ${targetPath}`,
+    };
+  },
+};

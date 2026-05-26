@@ -27,9 +27,10 @@ import type { OpenAIMessage, OpenAIToolMessage } from "./types.js";
  *
  * ## 消息顺序
  *
- * 1. 历史对话消息（user/assistant）
- * 2. 当前用户输入
- * 3. 工具结果消息（如果有）
+ * 1. System 消息（如果提供了 prompt）
+ * 2. 历史对话消息（user/assistant）
+ * 3. 当前用户输入
+ * 4. 工具结果消息（如果有）
  *
  * ## 工具结果处理
  *
@@ -40,21 +41,32 @@ import type { OpenAIMessage, OpenAIToolMessage } from "./types.js";
  * @param params.history - 会话历史记录
  * @param params.input - 当前用户输入
  * @param params.toolResults - 当前 turn 的工具执行结果
+ * @param params.prompt - 可选的 system prompt
  * @returns OpenAI 消息数组
  *
  * @example
  * const messages = buildMessages({
  *   history: sessionHistory,
  *   input: "帮我编辑 config.ts",
- *   toolResults: [{ callId: 'call_abc', toolName: 'read-file', status: 'success', output: '...' }]
+ *   toolResults: [{ callId: 'call_abc', toolName: 'read-file', status: 'success', output: '...' }],
+ *   prompt: "你是一个专业的程序员。"
  * });
  */
 export function buildMessages(params: {
   history: readonly SessionMessageRecord[];
   input: string;
   toolResults: readonly TurnToolResult[];
+  prompt?: string;
 }): OpenAIMessage[] {
   const messages: OpenAIMessage[] = [];
+
+  // 0. 添加 system 消息（如果提供了 prompt）
+  if (params.prompt) {
+    messages.push({
+      role: "system",
+      content: params.prompt,
+    });
+  }
 
   // 1. 添加历史消息
   for (const record of params.history) {
@@ -76,9 +88,8 @@ export function buildMessages(params: {
   // 3. 如果有工具结果，添加工具历史
   if (params.toolResults.length > 0) {
     // 3.1 添加 assistant 消息（包含 tool_calls）
-    // 注意：这里需要从 toolResults 反推 tool_calls
-    // 由于 TurnToolResult 不包含原始 input，我们暂时用简化方式
-    const toolCalls = params.toolResults.map((result, index) => ({
+    // 从 toolResults 构建 tool_calls，包含原始 input
+    const toolCalls = params.toolResults.map((result) => ({
       id: result.callId,
       type: "function" as const,
       function: {

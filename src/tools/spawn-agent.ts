@@ -43,6 +43,40 @@ import type { AgentProvider } from "../providers/provider-types.js";
 import type { SessionManager } from "../runtime/session-manager.js";
 import type { ToolRegistry } from "./tool-registry.js";
 import type { PermissionGate } from "../runtime/permission-gate.js";
+import type { ProviderSettings } from "../config/settings-types.js";
+import type { ProviderRegistry } from "../providers/provider-registry.js";
+
+/**
+ * 将通用模型名称映射到实际模型名称
+ *
+ * @param model - 通用模型名称（haiku/sonnet/opus）
+ * @param providerId - Provider ID
+ * @returns 实际模型名称
+ */
+function mapModelToActualModel(model: string, providerId: string): string {
+  // 通用模型名称到各 Provider 的映射
+  const modelMappings: Record<string, Record<string, string>> = {
+    qwen: {
+      haiku: "qwen-turbo",
+      sonnet: "qwen-plus",
+      opus: "qwen-max",
+    },
+    ollama: {
+      haiku: "llama3.2:1b",
+      sonnet: "llama3.2",
+      opus: "llama3.3:70b",
+    },
+  };
+
+  // 如果是已知的通用名称，尝试映射
+  const providerMapping = modelMappings[providerId];
+  if (providerMapping && providerMapping[model]) {
+    return providerMapping[model];
+  }
+
+  // 否则直接返回原值（可能是具体的模型名称如 "qwen-max"）
+  return model;
+}
 
 /**
  * spawn_agent 工具的输入参数
@@ -52,10 +86,12 @@ export type SpawnAgentInput = {
   name: string;
   /** 任务描述 */
   task: string;
-  /** 可选：模型选择（haiku/sonnet/opus）- 当前未实现，预留扩展 */
+  /** 可选：模型选择（haiku/sonnet/opus 或具体模型名如 qwen-max） */
   model?: string;
-  /** 可选：限定工具集 - 当前未实现，预留扩展 */
+  /** 可选：限定工具集 - 限制子 Agent 可用的工具列表 */
   tools?: string[];
+  /** 可选：是否继承父 Agent 的历史上下文，默认 false */
+  inheritHistory?: boolean;
 };
 
 /**
@@ -68,6 +104,10 @@ export type SpawnAgentContext = ToolExecutionContext & {
   toolRegistry?: ToolRegistry;
   permissionGate?: PermissionGate;
   history: SessionMessageRecord[];
+  /** 可选：Provider 注册表，用于根据 model 参数创建新的 Provider */
+  providerRegistry?: ProviderRegistry;
+  /** 可选：当前 Provider 的配置，用于创建新 Provider 时继承配置 */
+  providerSettings?: ProviderSettings;
 };
 
 /**
@@ -85,7 +125,7 @@ export function createSpawnAgentTool(context: SpawnAgentContext): AgentTool {
       input: ToolInput,
       _toolContext: ToolExecutionContext,
     ): Promise<ToolExecutionResult> {
-      const { name, task } = input as SpawnAgentInput;
+      const { name, task, tools, model, inheritHistory } = input as SpawnAgentInput;
 
       if (!name || !task) {
         return {
@@ -102,25 +142,77 @@ export function createSpawnAgentTool(context: SpawnAgentContext): AgentTool {
         );
 
         // 2. 准备子 Agent 的输入
+        // 如果 inheritHistory 为 true，将历史上下文作为前缀添加到 task
+        let taskContent = task;
+        if (inheritHistory && context.history.length > 0) {
+          const historySummary = context.history
+            .filter((record) => record.type === "message")
+            .map((record) => {
+              const role = record.role === "user" ? "用户" : "助手";
+              return `【${role}】\n${record.content}`;
+            })
+            .join("\n\n");
+
+          if (historySummary) {
+            taskContent = `## 之前的对话历史\n\n${historySummary}\n\n## 当前任务\n\n${task}`;
+          }
+        }
+
         const childInput$ = of({
           turn: 1,
-          content: task,
+          content: taskContent,
           source: "message" as const,
         });
 
-        // 3. 运行子 Agent（使用已有的 childSession）
+        // 3. 处理工具限定：如果指定了 tools 参数，创建受限的 ToolRegistry
+        let childToolRegistry = context.toolRegistry;
+        if (tools && tools.length > 0 && context.toolRegistry) {
+          const allowedTools = tools
+            .map((toolName) => context.toolRegistry!.get(toolName))
+            .filter((tool): tool is AgentTool => tool !== undefined);
+
+          if (allowedTools.length > 0) {
+            // 使用动态导入避免循环依赖
+            const { ToolRegistry } = await import("./tool-registry.js");
+            childToolRegistry = new ToolRegistry(allowedTools);
+          }
+        }
+
+        // 4. 处理模型选择：如果指定了 model 参数，创建新的 Provider
+        let childProvider = context.provider;
+        if (model && context.providerRegistry && context.providerSettings) {
+          // 将 model 参数映射到实际的模型名称
+          const actualModel = mapModelToActualModel(model, context.provider.id);
+
+          // 创建新的 Provider 配置（继承原配置，覆盖 model）
+          const newSettings: ProviderSettings = {
+            ...context.providerSettings,
+            model: actualModel,
+          };
+
+          // 使用 ProviderRegistry 创建新的 Provider
+          childProvider = context.providerRegistry.resolve(
+            context.provider.id,
+            newSettings
+          );
+        }
+
+        // 5. 运行子 Agent（使用已有的 childSession、受限的 toolRegistry 和选择的 provider）
         const { events$ } = runAgentLoop({
           input$: childInput$,
-          provider: context.provider,
+          provider: childProvider,
           sessionManager: context.sessionManager,
-          toolRegistry: context.toolRegistry,
+          toolRegistry: childToolRegistry,
           permissionGate: context.permissionGate,
           cwd: context.cwd,
           mode: "single",
           existingSession: childSession,
+          // 传递 providerRegistry 和 providerSettings 以支持嵌套 spawn
+          providerRegistry: context.providerRegistry,
+          providerSettings: context.providerSettings,
         });
 
-        // 4. 等待子 Agent 完成
+        // 6. 等待子 Agent 完成
         let result: { success: boolean; content?: string; error?: string } = {
           success: false,
           error: "子 Agent 未返回响应",
@@ -152,7 +244,7 @@ export function createSpawnAgentTool(context: SpawnAgentContext): AgentTool {
           };
         }
 
-        // 5. 返回结果
+        // 7. 返回结果
         if (result.success) {
           return {
             status: "success",
