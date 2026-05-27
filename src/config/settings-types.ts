@@ -6,7 +6,26 @@ export type AuthRef = {
 };
 
 export type AuthSettings = Record<string, string>;
-export type ProviderSettings = Record<string, unknown>;
+/**
+ * Provider 配置
+ *
+ * @property type - API 协议/格式（openai-compatible、anthropic、local）
+ *                  如果未指定，使用 provider ID 作为默认值（向后兼容）
+ * @property baseUrl - API 端点地址
+ * @property apiKey - API 密钥（或 $auth 引用，Ollama 等本地服务可选）
+ * @property model - 模型名称（可选，可被 model 配置覆盖）
+ */
+export type ProviderSettings = {
+  /** API 协议/格式：openai-compatible、anthropic、local */
+  type?: string;
+  /** API 端点地址 */
+  baseUrl?: string;
+  /** API 密钥 */
+  apiKey?: string | { $auth: string };
+  /** 模型名称 */
+  model?: string;
+  [key: string]: unknown;
+};
 export type ModelSettings = {
   provider: string;
   model: string;

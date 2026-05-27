@@ -7,7 +7,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createQwenProvider } from "../../dist/providers/qwen.js";
-import { createOllamaProvider } from "../../dist/providers/ollama.js";
+import { createOpenAIProvider } from "../../dist/providers/openai.js";
 import { createDefaultToolRegistry } from "../../dist/tools/default-registry.js";
 import { ToolRegistry } from "../../dist/tools/tool-registry.js";
 import { firstValueFrom, toArray } from "rxjs";
@@ -264,13 +264,13 @@ test("Provider 接口: 有正确的 id", () => {
     model: "test-model",
   });
 
-  const ollamaProvider = createOllamaProvider({
-    baseUrl: "http://localhost:11434",
+  const ollamaProvider = createOpenAIProvider({
+    baseUrl: "http://localhost:11434/v1",
     model: "test-model",
   });
 
-  assert.equal(qwenProvider.id, "qwen");
-  assert.equal(ollamaProvider.id, "ollama");
+  assert.equal(qwenProvider.id, "openai-compatible");
+  assert.equal(ollamaProvider.id, "openai-compatible");
 });
 
 // ============================================================
@@ -347,19 +347,6 @@ test("工具执行: glob 工具", async () => {
 // ============================================================
 // 错误处理测试
 // ============================================================
-
-test("错误处理: 缺少 apiKey", () => {
-  assert.throws(
-    () => {
-      createQwenProvider({
-        baseUrl: "http://localhost:1234",
-        // apiKey: "test-key", // 缺少
-        model: "test-model",
-      });
-    },
-    /缺少 apiKey/
-  );
-});
 
 test("错误处理: 缺少 model", () => {
   assert.throws(

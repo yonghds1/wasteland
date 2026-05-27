@@ -13,19 +13,6 @@ import { createDefaultToolRegistry } from "../../dist/tools/default-registry.js"
 // 配置验证测试
 // ============================================================
 
-test("createQwenProvider: 配置验证 - 缺少 apiKey", () => {
-  assert.throws(
-    () => {
-      createQwenProvider({
-        baseUrl: "http://localhost:1234",
-        // apiKey: "test-key", // 缺少
-        model: "qwen-test",
-      });
-    },
-    /缺少 apiKey/
-  );
-});
-
 test("createQwenProvider: 配置验证 - 缺少 model", () => {
   assert.throws(
     () => {
@@ -47,24 +34,24 @@ test("createQwenProvider: 成功创建 provider", () => {
   });
 
   assert.ok(provider);
-  assert.equal(provider.id, "qwen");
+  assert.equal(provider.id, "openai-compatible");
   assert.ok(provider.runStep);
   assert.equal(typeof provider.runStep, "function");
 });
 
-test("createQwenProvider: 使用默认 baseUrl", () => {
-  const provider = createQwenProvider({
-    apiKey: "test-key",
-    model: "qwen-test",
-  });
-
-  assert.ok(provider);
-  // 默认 baseUrl 应该是阿里云灵积
-  // 实际使用时会在请求时应用
+test("createQwenProvider: 配置验证 - 缺少 baseUrl", () => {
+  assert.throws(
+    () => {
+      createQwenProvider({
+        apiKey: "test-key",
+        model: "qwen-test",
+      });
+    },
+    /缺少 baseUrl/
+  );
 });
 
-test("createQwenProvider: baseUrl 规范化", () => {
-  // 这里的 baseUrl 会被规范化（去除尾部斜杠，添加 /v1）
+test("createQwenProvider: baseUrl 规范化 - 去除尾部斜杠", () => {
   const provider = createQwenProvider({
     baseUrl: "http://localhost:8080/",
     apiKey: "test-key",

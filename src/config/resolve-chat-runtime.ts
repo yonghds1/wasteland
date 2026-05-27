@@ -7,7 +7,7 @@ import type {
   ResolvedRxcSettings,
   RoleSettings,
 } from "./settings-types.js";
-import { assemblePrompt, isBuiltinRoleId, ROLE_CHAT } from "../prompts/index.js";
+import { assemblePrompt, isBuiltinRoleId, ROLE_WORKER } from "../prompts/index.js";
 import type { PromptTemplateRef } from "../prompts/prompt-types.js";
 
 export type ResolvedRoleRef = {
@@ -59,10 +59,10 @@ function resolveRolePrompt(
     return undefined;
   }
 
-  // 没有配置 promptTemplate，使用默认的 role-chat
+  // 没有配置 promptTemplate，使用默认的 role-worker
   if (!role.promptTemplate) {
     return assemblePrompt(
-      ROLE_CHAT,
+      ROLE_WORKER,
       { cwd, variables: {} },
       {},
     );

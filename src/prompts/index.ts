@@ -35,16 +35,8 @@ export {
   getBuiltinRole,
   isBuiltinRoleId,
   listBuiltinRoles,
-  // 执行层
-  ROLE_CHAT,
-  ROLE_CODER,
-  ROLE_PLANNER,
-  ROLE_REVIEWER,
-  ROLE_RESEARCHER,
-  // 编排层
+  ROLE_WORKER,
   ROLE_ORCHESTRATOR,
-  ROLE_ROUTER,
-  ROLE_SUPERVISOR,
   // 兼容旧 API (deprecated)
   getBuiltinTemplate,
   isBuiltinTemplateId,

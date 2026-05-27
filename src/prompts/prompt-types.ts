@@ -178,28 +178,9 @@ export type ResolvedPrompt = {
 /**
  * 内置角色模板 ID
  *
- * 执行层角色：
- * - role-chat: 简单对话
- * - role-coder: 代码编写
- * - role-planner: 任务规划
- * - role-reviewer: 代码审查
- * - role-researcher: 信息收集
- *
- * 编排层角色：
- * - role-architect: 主架构师（三角色协作模式）
- * - role-orchestrator: 多 agent 编排
- * - role-router: 简单路由
- * - role-supervisor: 并行监督
+ * - role-worker: 通用执行角色（编码、审查、规划、研究、对话）
+ * - role-orchestrator: 多 agent 编排（路由、顺序、并行、循环迭代）
  */
 export type BuiltinRoleId =
-  // 执行层
-  | "role-chat"
-  | "role-coder"
-  | "role-planner"
-  | "role-reviewer"
-  | "role-researcher"
-  // 编排层
-  | "role-architect"
-  | "role-orchestrator"
-  | "role-router"
-  | "role-supervisor";
+  | "role-worker"
+  | "role-orchestrator";

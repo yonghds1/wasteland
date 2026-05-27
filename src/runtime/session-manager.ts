@@ -23,12 +23,14 @@ const FLUSH_INTERVAL_MS = 5000; // 或每 5 秒强制写入
 
 /**
  * Generates a session ID with timestamp prefix for easy identification.
- * Format: 2026-05-23T14-30-00_abc123
+ * Format: 2026-05-23_143000_abc123
  */
 function generateSessionId(): string {
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+  const now = new Date();
+  const date = now.toISOString().slice(0, 10); // 2026-05-23
+  const time = now.toISOString().slice(11, 19).replace(/:/g, ""); // 143000
   const shortId = randomUUID().slice(0, 6);
-  return `${timestamp}_${shortId}`;
+  return `${date}_${time}_${shortId}`;
 }
 
 function resolveSessionDir(): string {
