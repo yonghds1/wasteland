@@ -16,6 +16,9 @@ import { createInteractiveTurnStream, createSingleTurnInput, readPipedInput } fr
 import { renderRuntimeEvents } from "../ui/terminal-renderer.js";
 import { detectTTY } from "../ui/tty-detect.js";
 import type { ProviderSettings, MCPServersConfig } from "../config/settings-types.js";
+import { createSkillRegistry } from "../skills/skill-discovery.js";
+import { SkillExecutor } from "../skills/skill-executor.js";
+import { homedir } from "node:os";
 
 type ChatOptions = {
   debug?: boolean;
@@ -72,6 +75,15 @@ async function runChatSession(params: {
   // 创建工具注册表（包含 MCP）
   const { toolRegistry, startMCP, stopMCP } = createDefaultToolRegistry(params.mcpServers);
 
+  // 创建技能注册表（包含内置技能和用户自定义技能）
+  const skillRegistry = await createSkillRegistry({
+    projectSkillsDir: params.projectConfigDir ? `${params.projectConfigDir}/skills` : undefined,
+    userSkillsDir: `${homedir()}/.rxc/skills`,
+  });
+
+  // 创建技能执行器
+  const skillExecutor = new SkillExecutor(skillRegistry);
+
   // 启动 MCP 服务器（如果配置了）
   try {
     await startMCP();
@@ -94,6 +106,7 @@ async function runChatSession(params: {
       prompt: params.prompt,
       providerRegistry: params.providerRegistry,
       providerSettings: params.providerSettings,
+      skillExecutor,
     });
 
     const work: Promise<void>[] = [

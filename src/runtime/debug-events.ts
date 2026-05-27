@@ -1,4 +1,4 @@
-export type DebugTraceScope = "session" | "turn" | "provider" | "tool" | "ui" | "skill";
+export type DebugTraceScope = "session" | "turn" | "provider" | "tool" | "ui" | "skill" | "permission";
 
 export type DebugTraceEvent = {
   timestamp: string;

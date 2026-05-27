@@ -299,14 +299,18 @@ function runTurnLoop(params: {
     // 如果输入是技能命令，路由到 SkillExecutor
     const inputContent = params.context.input.content;
     if (params.skillExecutor && params.skillExecutor.isSkillCommand(inputContent)) {
+      // 解析技能名称用于trace
+      const skillName = inputContent.trim().split(/\s+/)[0]?.slice(1) ?? "";
+
       params.trace({
         sessionId: params.session.id,
         turn: params.state.turn,
         step: params.state.step,
         scope: "skill",
-        phase: "skill.start",
+        phase: "started",
         message: "routing to skill executor",
         data: {
+          skillName,
           input: inputContent,
         },
       });
@@ -330,11 +334,30 @@ function runTurnLoop(params: {
             turn: params.state.turn,
             step: params.state.step,
             scope: "skill",
-            phase: "skill.output",
+            phase: "progress",
             message: msg,
+            data: { skillName },
           });
         },
-      });
+      }).pipe(
+        // 在技能执行事件上添加debug trace
+        tap((event) => {
+          if (event.type === "skill_result") {
+            params.trace({
+              sessionId: params.session.id,
+              turn: params.state.turn,
+              step: params.state.step,
+              scope: "skill",
+              phase: event.result.status,
+              message: `skill ${event.result.status}`,
+              data: {
+                skillName: event.skillName,
+                result: event.result.output,
+              },
+            });
+          }
+        }),
+      );
     }
 
     // ---- 检查步数限制 ----
@@ -535,10 +558,11 @@ function runTurnLoop(params: {
                 turn: state.turn,
                 step: state.step,
                 scope: "tool",
-                phase: "tool.start",
+                phase: "call",
                 message: "tool execution started",
                 data: {
-                  tool: toolEvent.toolName,
+                  toolName: toolEvent.toolName,
+                  callId: toolEvent.callId,
                 },
               });
 
@@ -551,12 +575,13 @@ function runTurnLoop(params: {
                 turn: state.turn,
                 step: state.step,
                 scope: "tool",
-                phase: "tool.permission",
+                phase: "permission",
                 message: "permission decision resolved",
                 data: {
-                  tool: toolEvent.toolName,
+                  toolName: toolEvent.toolName,
                   decision: toolEvent.decision,
                   mode: toolEvent.mode,
+                  callId: toolEvent.callId,
                 },
               });
 
@@ -582,12 +607,13 @@ function runTurnLoop(params: {
                 turn: state.turn,
                 step: state.step,
                 scope: "tool",
-                phase: "tool.result",
+                phase: "success",
                 message: "tool execution completed",
                 data: {
-                  tool: toolEvent.toolName,
+                  toolName: toolEvent.toolName,
                   status: toolEvent.status,
                   ms: Date.now() - startedAt,
+                  callId: toolEvent.callId,
                 },
               });
 
@@ -613,12 +639,14 @@ function runTurnLoop(params: {
                 turn: state.turn,
                 step: state.step,
                 scope: "tool",
-                phase: "tool.result",
+                phase: "error",
                 message: "tool execution failed",
                 data: {
-                  tool: toolEvent.toolName,
+                  toolName: toolEvent.toolName,
                   status: toolEvent.status,
                   ms: Date.now() - startedAt,
+                  error: toolEvent.error,
+                  callId: toolEvent.callId,
                 },
               });
             }

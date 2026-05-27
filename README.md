@@ -224,6 +224,75 @@ rxc chat --message "你好"
 
 session transcript 默认写入 `.rxc/sessions/`。
 
+## 技能系统
+
+RxCLI 内置技能系统，支持高级工作流和自动化操作。
+
+### 内置技能
+
+使用 `/技能名` 调用技能：
+
+```bash
+# 系统技能
+rxc chat --message "/help"              # 显示帮助
+rxc chat --message "/status"            # 查看会话状态
+rxc chat --message "/tools"             # 列出可用工具
+
+# 项目技能
+rxc chat --message "/init"              # 初始化项目上下文
+rxc chat --message "/ctx"               # 显示项目概览
+rxc chat --message "/init --template minimal"  # 使用最小模板
+```
+
+### 技能别名
+
+大部分技能都有简短别名：
+
+- `/help` → `/h`, `/?`
+- `/status` → `/stat`, `/info`
+- `/tools` → `/tls`
+- `/init` → `/i`
+- `/context` → `/ctx`
+
+### 自定义技能
+
+在 `.rxc/skills/` 目录创建自定义技能：
+
+**JSON 格式**：
+```json
+{
+  "name": "my-skill",
+  "description": "我的自定义技能",
+  "riskLevel": "read",
+  "aliases": ["ms"],
+  "steps": [
+    { "tool": "bash", "input": { "command": "pwd" }, "saveAs": "dir" }
+  ],
+  "template": "当前目录: {{dir}}"
+}
+```
+
+**TypeScript 格式**：
+```typescript
+// .rxc/skills/my-skill.ts
+export default {
+  definition: {
+    name: "my-skill",
+    description: "我的自定义技能",
+    riskLevel: "read",
+  },
+  async execute(args, context) {
+    const result = await context.toolRegistry.get("bash")!.execute(
+      { command: "pwd" },
+      { sessionId: context.sessionId, turn: context.turn, cwd: context.cwd }
+    );
+    return { status: "success", output: result.output };
+  },
+};
+```
+
+详细文档见 [技能系统架构](./docs/architecture/skills.md)。
+
 ## 多 Agent 架构
 
 rxc 采用 **Agents-as-Tools** 模式实现多 Agent 编排：
@@ -264,6 +333,7 @@ src/config/     统一配置加载与 `.rxc` 路径规则
 src/runtime/    当前已落地的 agent runtime 层
 src/providers/  当前已落地的 provider 抽象层
 src/tools/      当前已落地的工具合同与内建工具层
+src/skills/     技能系统（技能注册、发现、执行）
 src/ui/         当前已落地的终端 UI 层
 src/tui/        TUI 界面（基于 Ink/React）
 test/           冒烟测试
@@ -300,6 +370,15 @@ dist/           构建产物
 - CLI 参数：`--multi` 提示多 Agent 模式
 - 架构设计：Agents-as-Tools 模式，与现有架构无缝整合
 
+**技能系统已完成**：
+
+- 内置技能：`/help`、`/status`、`/tools`、`/init`、`/context`
+- 技能注册表：支持名称和别名查找
+- 技能执行器：参数解析、验证和执行协调
+- 技能发现：自动加载 `.rxc/skills/` 和 `~/.rxc/skills/`
+- JSON 和 TypeScript 格式支持
+- TUI 日志增强：显示技能调用详情
+
 下一阶段会继续补：
 
 - 真实模型 provider 的 tool calling 支持
@@ -316,6 +395,7 @@ dist/           构建产物
 - [配置层与 `.rxc` 目录](./docs/architecture/configuration.md)
 - [多角色配置方案](./docs/architecture/multi-role-configuration.md)
 - [运行时分层与契约](./docs/architecture/runtime-boundaries.md)
+- [技能系统架构](./docs/architecture/skills.md)
 - [项目结构规划](./docs/project-structure.md)
 - [Phase 1：Agent Runtime 实施方案](./docs/implementation/phase-1-agent-runtime.md)
 - [Phase 2：工具运行时与权限闸门](./docs/implementation/phase-2-agent-tool-runtime.md)
