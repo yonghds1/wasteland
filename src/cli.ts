@@ -3,12 +3,16 @@ import { Command } from "commander";
 import { createChatCommand } from "./commands/chat.js";
 import { createConfigCommand, createCurrentConfigCommand } from "./commands/config.js";
 import { createTuiCommand } from "./commands/tui.js";
+import { createSessionsCommand } from "./commands/sessions.js";
+import { createResumeCommand } from "./commands/resume.js";
 
 function registerRootCommands(program: Command): void {
   program.addCommand(createChatCommand());
   program.addCommand(createConfigCommand());
   program.addCommand(createCurrentConfigCommand());
   program.addCommand(createTuiCommand());
+  program.addCommand(createSessionsCommand());
+  program.addCommand(createResumeCommand());
 }
 
 export function createProgram(): Command {

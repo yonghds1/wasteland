@@ -211,6 +211,30 @@ function parseSettings(raw: unknown, sourcePath: string): RawRxcSettings {
       runtime.maxStepsPerTurn = raw.runtime.maxStepsPerTurn;
     }
 
+    if ("maxTurns" in raw.runtime && raw.runtime.maxTurns !== undefined) {
+      if (
+        typeof raw.runtime.maxTurns !== "number"
+        || !Number.isInteger(raw.runtime.maxTurns)
+        || raw.runtime.maxTurns <= 0
+      ) {
+        throw new Error(`配置文件 ${sourcePath} 中 runtime.maxTurns 必须是正整数。`);
+      }
+
+      runtime.maxTurns = raw.runtime.maxTurns;
+    }
+
+    if ("childAgentTimeout" in raw.runtime && raw.runtime.childAgentTimeout !== undefined) {
+      if (
+        typeof raw.runtime.childAgentTimeout !== "number"
+        || !Number.isInteger(raw.runtime.childAgentTimeout)
+        || raw.runtime.childAgentTimeout <= 0
+      ) {
+        throw new Error(`配置文件 ${sourcePath} 中 runtime.childAgentTimeout 必须是正整数（毫秒）。`);
+      }
+
+      runtime.childAgentTimeout = raw.runtime.childAgentTimeout;
+    }
+
     if ("debug" in raw.runtime && raw.runtime.debug !== undefined) {
       if (typeof raw.runtime.debug !== "boolean") {
         throw new Error(`配置文件 ${sourcePath} 中 runtime.debug 必须是布尔值。`);
@@ -336,6 +360,8 @@ function mergeSettings(
       defaultRole: next.runtime?.defaultRole ?? base.runtime.defaultRole,
       permissionMode: next.runtime?.permissionMode ?? base.runtime.permissionMode,
       maxStepsPerTurn: next.runtime?.maxStepsPerTurn ?? base.runtime.maxStepsPerTurn,
+      maxTurns: next.runtime?.maxTurns ?? base.runtime.maxTurns,
+      childAgentTimeout: next.runtime?.childAgentTimeout ?? base.runtime.childAgentTimeout,
       debug: next.runtime?.debug ?? base.runtime.debug,
     },
     mcpServers: mergedMCPServers,
@@ -482,6 +508,8 @@ function applyEnvironmentOverrides(
       defaultRole: settings.runtime.defaultRole,
       permissionMode: settings.runtime.permissionMode,
       maxStepsPerTurn: settings.runtime.maxStepsPerTurn,
+      maxTurns: settings.runtime.maxTurns,
+      childAgentTimeout: settings.runtime.childAgentTimeout,
       debug: settings.runtime.debug,
     },
     mcpServers: { ...settings.mcpServers },

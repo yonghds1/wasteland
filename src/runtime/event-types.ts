@@ -134,18 +134,58 @@ export type SessionToolResultRecord = {
 };
 
 /**
+ * 会话开始记录
+ *
+ * 记录会话的初始化信息，包括工作目录、Provider、运行模式等。
+ *
+ * @property type - 固定为 "session"
+ * @property sessionId - 会话唯一标识
+ * @property mode - 运行模式
+ * @property cwd - 工作目录
+ * @property provider - Provider 名称
+ * @property timestamp - 创建时间戳
+ * @property parentId - 父会话 ID（如果是子 Agent）
+ * @property childName - 子 Agent 名称（如果是子 Agent）
+ */
+export type SessionStartRecord = {
+  type: "session";
+  sessionId: string;
+  mode: RuntimeMode;
+  cwd: string;
+  provider: string;
+  timestamp: string;
+  /** 父会话 ID（如果是子 Agent） */
+  parentId?: string;
+  /** 子 Agent 名称（如果是子 Agent） */
+  childName?: string;
+};
+
+/**
+ * 会话结束记录
+ *
+ * @property type - 固定为 "session_end"
+ * @property sessionId - 会话唯一标识
+ * @property timestamp - 结束时间戳
+ */
+export type SessionEndRecord = {
+  type: "session_end";
+  sessionId: string;
+  timestamp: string;
+};
+
+/**
  * 会话记录（联合类型）
  *
  * 所有会话相关记录的总类型。使用可辨识联合模式，
  * 通过 type 字段区分不同类型的记录。
  *
  * 支持的记录类型：
- * - { type: "session" } - 会话开始记录
+ * - SessionStartRecord - 会话开始记录
  * - SessionMessageRecord - 消息记录
  * - SessionToolCallRecord - 工具调用记录
  * - SessionPermissionRecord - 权限决策记录
  * - SessionToolResultRecord - 工具结果记录
- * - { type: "session_end" } - 会话结束记录
+ * - SessionEndRecord - 会话结束记录
  *
  * @example
  * function saveRecord(record: SessionRecord) {
@@ -161,27 +201,12 @@ export type SessionToolResultRecord = {
  * }
  */
 export type SessionRecord =
-  | {
-      type: "session";
-      sessionId: string;
-      mode: RuntimeMode;
-      cwd: string;
-      provider: string;
-      timestamp: string;
-      /** 父会话 ID（如果是子 Agent） */
-      parentId?: string;
-      /** 子 Agent 名称（如果是子 Agent） */
-      childName?: string;
-    }
+  | SessionStartRecord
   | SessionMessageRecord
   | SessionToolCallRecord
   | SessionPermissionRecord
   | SessionToolResultRecord
-  | {
-      type: "session_end";
-      sessionId: string;
-      timestamp: string;
-    };
+  | SessionEndRecord;
 
 /**
  * 运行时事件（可辨识联合类型）

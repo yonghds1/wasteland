@@ -292,6 +292,8 @@ function runTurnLoop(params: {
   providerRegistry?: ProviderRegistry;
   /** Provider 配置（用于子 Agent 模型选择） */
   providerSettings?: ProviderSettings;
+  /** 子 Agent 执行超时（毫秒） */
+  childAgentTimeout?: number;
 }): Observable<RuntimeEvent> {
   // defer 延迟执行，确保每次递归时重新评估条件
   return defer(() => {
@@ -547,6 +549,7 @@ function runTurnLoop(params: {
           history: params.history,
           providerRegistry: params.providerRegistry,
           providerSettings: params.providerSettings,
+          childAgentTimeout: params.childAgentTimeout,
         }).pipe(
           // tap 用于副作用：更新状态和记录追踪
           // 注意：这里更新外层的 state 变量，这是关键！
@@ -829,6 +832,8 @@ export function runAgentLoop(params: {
   providerRegistry?: ProviderRegistry;
   /** 可选：Provider 配置（用于子 Agent 模型选择） */
   providerSettings?: ProviderSettings;
+  /** 可选：子 Agent 执行超时（毫秒） */
+  childAgentTimeout?: number;
 }): AgentRun {
   // 创建调试追踪的 Subject
   // 使用 ReplaySubject 确保所有事件都能被订阅者接收
@@ -943,6 +948,9 @@ export function runAgentLoop(params: {
             maxStepsPerTurn,
             trace,
             skillExecutor: params.skillExecutor,
+            providerRegistry: params.providerRegistry,
+            providerSettings: params.providerSettings,
+            childAgentTimeout: params.childAgentTimeout,
           });
 
           // concat 确保先处理 user$，再处理 assistant$

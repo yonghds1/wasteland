@@ -92,6 +92,8 @@ export function dispatchToolCall(params: {
   providerRegistry?: ProviderRegistry;
   /** 多 Agent 支持：Provider 配置（用于模型选择） */
   providerSettings?: ProviderSettings;
+  /** 子 Agent 执行超时（毫秒） */
+  childAgentTimeout?: number;
 }): Observable<RuntimeEvent> {
   // ---- read-before-edit 检查 ----
   // 对于 edit-file 和 write-file，检查是否已读取过目标文件
@@ -166,6 +168,7 @@ export function dispatchToolCall(params: {
       history: params.history ?? [],
       providerRegistry: params.providerRegistry,
       providerSettings: params.providerSettings,
+      childAgentTimeout: params.childAgentTimeout,
     });
 
     // 权限检查

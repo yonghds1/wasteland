@@ -67,6 +67,8 @@ async function runChatSession(params: {
   providerSettings: ProviderSettings;
   /** MCP 服务器配置 */
   mcpServers?: MCPServersConfig;
+  /** 子 Agent 执行超时（毫秒） */
+  childAgentTimeout?: number;
   render?: {
     onTurnComplete?: () => void;
     style?: "classic" | "interactive";
@@ -107,6 +109,7 @@ async function runChatSession(params: {
       providerRegistry: params.providerRegistry,
       providerSettings: params.providerSettings,
       skillExecutor,
+      childAgentTimeout: params.childAgentTimeout,
     });
 
     const work: Promise<void>[] = [
@@ -212,6 +215,7 @@ export function createChatCommand(): Command {
           providerRegistry,
           providerSettings: resolvedRuntime.providerConfig,
           mcpServers,
+          childAgentTimeout: loadedSettings.settings.runtime.childAgentTimeout,
           render: { style: renderStyle },
         });
         return;
@@ -235,6 +239,7 @@ export function createChatCommand(): Command {
           providerRegistry,
           providerSettings: resolvedRuntime.providerConfig,
           mcpServers,
+          childAgentTimeout: loadedSettings.settings.runtime.childAgentTimeout,
           render: { style: "classic" }, // 管道输入使用经典样式
         });
         return;
@@ -264,6 +269,7 @@ export function createChatCommand(): Command {
           providerRegistry,
           providerSettings: resolvedRuntime.providerConfig,
           mcpServers,
+          childAgentTimeout: loadedSettings.settings.runtime.childAgentTimeout,
           render: {
             onTurnComplete: interactive.prompt,
             style: renderStyle,

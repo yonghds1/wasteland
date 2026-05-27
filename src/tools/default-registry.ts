@@ -7,6 +7,8 @@ import { ToolRegistry } from "./tool-registry.js";
 import { createReadFileTool } from "./read-file.js";
 import { createWebFetchTool } from "./web-fetch.js";
 import { createWriteFileTool } from "./write-file.js";
+import { createAskUserTool } from "./ask-user.js";
+import { createHttpRequestTool } from "./http-request.js";
 import type { MCPServersConfig } from "../config/settings-types.js";
 import { MCPToolRegistry } from "./mcp-registry.js";
 
@@ -74,6 +76,8 @@ export function createDefaultToolRegistry(mcpServers?: MCPServersConfig): Create
     createBashTool(),
     createEditFileTool(),
     createWriteFileTool(),
+    createAskUserTool(),
+    createHttpRequestTool(),
     createSpawnAgentPlaceholder(),
   ];
 

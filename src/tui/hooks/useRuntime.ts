@@ -115,6 +115,7 @@ export async function createTuiRuntime(cwd: string): Promise<TuiRuntimeContext> 
     prompt: resolvedRuntime.prompt,
     providerRegistry,
     providerSettings: resolvedRuntime.providerConfig,
+    childAgentTimeout: loadedSettings.settings.runtime.childAgentTimeout,
   });
 
   // 10. 构建 TUI 配置
@@ -122,7 +123,7 @@ export async function createTuiRuntime(cwd: string): Promise<TuiRuntimeContext> 
     provider: resolvedRuntime.providerName,
     model: resolvedRuntime.model?.name ?? "",
     permissionMode: resolvedRuntime.permissionMode,
-    maxTurns: 20, // TODO: 从配置读取
+    maxTurns: loadedSettings.settings.runtime.maxTurns,
     maxSteps: loadedSettings.settings.runtime.maxStepsPerTurn,
   };
 

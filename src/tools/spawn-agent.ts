@@ -108,6 +108,8 @@ export type SpawnAgentContext = ToolExecutionContext & {
   providerRegistry?: ProviderRegistry;
   /** 可选：当前 Provider 的配置，用于创建新 Provider 时继承配置 */
   providerSettings?: ProviderSettings;
+  /** 子 Agent 执行超时（毫秒），默认 120000 */
+  childAgentTimeout?: number;
 };
 
 /**
@@ -227,8 +229,8 @@ export function createSpawnAgentTool(context: SpawnAgentContext): AgentTool {
                   "type" in event && event.type === "assistant_message",
               ),
               take(1),
-              // 60 秒超时
-              timeout(60000),
+              // 子 Agent 执行超时
+              timeout(context.childAgentTimeout ?? 120000),
               // 如果没有值，返回 undefined
               defaultIfEmpty(undefined as unknown as { type: "assistant_message"; sessionId: string; turn: number; content: string }),
             ),
@@ -297,7 +299,7 @@ export function handleParallelSpawns(
         cwd: context.cwd,
       }),
     ).pipe(
-      timeout(60000),
+      timeout(context.childAgentTimeout ?? 120000),
       catchError((err: Error) =>
         of({
           status: "error" as const,

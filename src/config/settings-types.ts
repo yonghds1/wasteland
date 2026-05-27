@@ -57,6 +57,8 @@ export type RawRxcSettings = {
     defaultRole?: string;
     permissionMode?: PermissionMode;
     maxStepsPerTurn?: number;
+    maxTurns?: number;
+    childAgentTimeout?: number;
     debug?: boolean;
   };
   /** MCP 服务器配置 */
@@ -72,6 +74,8 @@ export type ResolvedRxcSettings = {
     defaultRole?: string;
     permissionMode: PermissionMode;
     maxStepsPerTurn: number;
+    maxTurns: number;
+    childAgentTimeout: number;
     debug: boolean;
   };
   mcpServers: MCPServersConfig;
@@ -98,6 +102,8 @@ export const DEFAULT_RXC_SETTINGS: ResolvedRxcSettings = {
     defaultRole: undefined,
     permissionMode: "default",
     maxStepsPerTurn: 8,
+    maxTurns: 20,
+    childAgentTimeout: 120000,
     debug: false,
   },
   mcpServers: {},
