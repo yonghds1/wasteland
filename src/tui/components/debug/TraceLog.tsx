@@ -109,12 +109,16 @@ function renderTraceMessage(trace: TraceEvent): { icon: string; content: string;
     if (trace.phase === "agent_spawned") {
       const name = trace.data?.name as string;
       const task = trace.data?.task as string;
-      return { icon: "🤖", content: `创建子Agent: ${name}`, detail: task?.slice(0, 30) };
+      const depth = trace.data?.depth as number ?? 0;
+      const indent = "  ".repeat(depth);
+      return { icon: "🤖", content: `${indent}创建子Agent: ${name}`, detail: task?.slice(0, 30) };
     }
     if (trace.phase === "agent_completed") {
       const name = trace.data?.name as string;
       const status = trace.data?.status as string;
-      return { icon: status === "success" ? "✓" : "✗", content: `Agent完成: ${name}` };
+      const depth = trace.data?.depth as number ?? 0;
+      const indent = "  ".repeat(depth);
+      return { icon: status === "success" ? "✓" : "✗", content: `${indent}Agent完成: ${name}` };
     }
   }
 

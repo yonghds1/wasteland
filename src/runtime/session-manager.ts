@@ -22,14 +22,24 @@ const FLUSH_THRESHOLD = 10; // 累积 10 条记录后写入
 const FLUSH_INTERVAL_MS = 5000; // 或每 5 秒强制写入
 
 /**
- * Generates a session ID with timestamp prefix for easy identification.
- * Format: 2026-05-23_143000_abc123
+ * Generates a session ID with local timestamp prefix for easy identification.
+ * Format: 2026-05-23_143000_abc123 (使用本地时区)
  */
 function generateSessionId(): string {
   const now = new Date();
-  const date = now.toISOString().slice(0, 10); // 2026-05-23
-  const time = now.toISOString().slice(11, 19).replace(/:/g, ""); // 143000
+
+  // 使用本地时间而非 UTC
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const hours = String(now.getHours()).padStart(2, "0");
+  const minutes = String(now.getMinutes()).padStart(2, "0");
+  const seconds = String(now.getSeconds()).padStart(2, "0");
+
+  const date = `${year}-${month}-${day}`;
+  const time = `${hours}${minutes}${seconds}`;
   const shortId = randomUUID().slice(0, 6);
+
   return `${date}_${time}_${shortId}`;
 }
 

@@ -24,8 +24,8 @@ interface ConfigPageProps {
   width?: number;
 }
 
-// Provider 选项
-const PROVIDER_OPTIONS = ["local", "ollama", "qwen"];
+// 默认 Provider 选项（当无法加载配置时使用）
+const DEFAULT_PROVIDER_OPTIONS = ["local", "ollama", "openai-compatible"];
 
 // Permission Mode 选项
 const PERMISSION_MODE_OPTIONS: PermissionMode[] = ["default", "accept_edits", "bypass_permissions"];
@@ -36,6 +36,23 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [saveMessage, setSaveMessage] = useState<string>("");
+  const [providerOptions, setProviderOptions] = useState<string[]>(DEFAULT_PROVIDER_OPTIONS);
+
+  // 加载可用的 Provider 列表
+  useEffect(() => {
+    async function loadProviders() {
+      try {
+        const loaded = await loadRxcSettings({ cwd: process.cwd(), env: process.env });
+        const providerNames = Object.keys(loaded.settings.providers);
+        if (providerNames.length > 0) {
+          setProviderOptions(providerNames);
+        }
+      } catch {
+        // 使用默认选项
+      }
+    }
+    loadProviders();
+  }, []);
 
   // 监听编辑模式变化
   useEffect(() => {
@@ -120,9 +137,9 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
     // 字段特定编辑
     if (focusedField === "provider") {
       // 循环切换 provider
-      const idx = PROVIDER_OPTIONS.indexOf(state.config.provider);
-      const nextIdx = (idx + 1) % PROVIDER_OPTIONS.length;
-      updateConfig({ provider: PROVIDER_OPTIONS[nextIdx] });
+      const idx = providerOptions.indexOf(state.config.provider);
+      const nextIdx = (idx + 1) % providerOptions.length;
+      updateConfig({ provider: providerOptions[nextIdx] });
     } else if (focusedField === "permissionMode") {
       // 循环切换 permissionMode
       const idx = PERMISSION_MODE_OPTIONS.indexOf(state.config.permissionMode as PermissionMode);
@@ -285,7 +302,7 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
         <Box flexDirection="row">
           <Text dimColor>可用: </Text>
           <Text>
-            {PROVIDER_OPTIONS.map((p, idx) => (
+            {providerOptions.map((p, idx) => (
               <Text
                 key={p}
                 color={p === state.config.provider ? "green" : undefined}

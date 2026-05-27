@@ -1,5 +1,7 @@
 /**
  * SessionInfo - Session 信息面板
+ *
+ * 简化显示：只显示 ID 和大意（首条用户消息）
  */
 
 import React from "react";
@@ -9,11 +11,16 @@ import { useAppContext } from "../../context/AppContext.js";
 export function SessionInfo(): React.ReactElement {
   const { state } = useAppContext();
 
-  // 从 sessionMetadata 获取真实的 session ID
-  // 显示 ID 的后 20 个字符（保留时间戳部分）
-  const sessionIdDisplay = state.sessionMetadata.id.length > 20
-    ? "..." + state.sessionMetadata.id.slice(-20)
-    : state.sessionMetadata.id;
+  // 从 sessionMetadata 获取完整的 session ID
+  const sessionId = state.sessionMetadata.id;
+
+  // 获取首条用户消息作为大意
+  const firstUserMessage = state.session.messages.find((m) => m.type === "user");
+  const summary = firstUserMessage
+    ? (firstUserMessage.content.length > 30
+        ? firstUserMessage.content.slice(0, 30) + "..."
+        : firstUserMessage.content)
+    : "(无消息)";
 
   return (
     <Box flexDirection="column" paddingX={1}>
@@ -21,13 +28,9 @@ export function SessionInfo(): React.ReactElement {
         Session
       </Text>
       <Text dimColor>ID:</Text>
-      <Text> {sessionIdDisplay}</Text>
-      <Text dimColor>Mode:</Text>
-      <Text> {state.config.provider}</Text>
-      <Text dimColor>Provider:</Text>
-      <Text> {state.sessionMetadata.providerId}</Text>
-      <Text dimColor>Status:</Text>
-      <Text> {state.session.isStreaming ? "running" : "idle"}</Text>
+      <Text> {sessionId}</Text>
+      <Text dimColor>大意:</Text>
+      <Text> {summary}</Text>
     </Box>
   );
 }
