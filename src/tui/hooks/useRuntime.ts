@@ -17,7 +17,7 @@ import { createPermissionGate } from "../../runtime/permission-gate.js";
 import { SessionManager } from "../../runtime/session-manager.js";
 import { createDefaultProviderRegistry } from "../../providers/provider-registry.js";
 import { createDefaultToolRegistry } from "../../tools/default-registry.js";
-import type { TuiRuntimeContext, TuiConfig } from "../types.js";
+import type { TuiRuntimeContext, TuiConfig, TuiFullConfig } from "../types.js";
 import type { ChatInputTurn } from "../../runtime/event-types.js";
 import type { ProviderRegistry } from "../../providers/provider-registry.js";
 
@@ -125,6 +125,18 @@ export async function createTuiRuntime(cwd: string): Promise<TuiRuntimeContext> 
     permissionMode: resolvedRuntime.permissionMode,
     maxTurns: loadedSettings.settings.runtime.maxTurns,
     maxSteps: loadedSettings.settings.runtime.maxStepsPerTurn,
+    defaultRole: loadedSettings.settings.runtime.defaultRole ?? "",
+    childAgentTimeout: loadedSettings.settings.runtime.childAgentTimeout,
+    debug: loadedSettings.settings.runtime.debug,
+  };
+
+  // 11. 构建完整配置信息
+  const fullConfig: TuiFullConfig = {
+    providers: loadedSettings.settings.providers,
+    models: loadedSettings.settings.models,
+    roles: loadedSettings.settings.roles,
+    sources: loadedSettings.sources,
+    defaultProvider: loadedSettings.settings.defaultProvider,
   };
 
   // 返回扩展的上下文（包含 sessionManager 用于清理）
@@ -134,6 +146,7 @@ export async function createTuiRuntime(cwd: string): Promise<TuiRuntimeContext> 
     input$,
     session,
     config,
+    fullConfig,
     sessionManager,
     providerId: provider.id,
     stopMCP,

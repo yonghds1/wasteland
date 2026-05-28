@@ -25,6 +25,24 @@ interface TraceLogProps {
 }
 
 /**
+ * 根据 scope 获取颜色
+ */
+function getScopeColor(scope: string): string {
+  switch (scope) {
+    case "tool":
+      return "yellow";
+    case "session":
+      return "cyan";
+    case "skill":
+      return "magenta";
+    case "provider":
+      return "green";
+    default:
+      return SECONDARY;
+  }
+}
+
+/**
  * 根据日志级别获取颜色
  */
 function getLogLevelColor(phase: string): string {
@@ -49,14 +67,14 @@ function formatToolParams(input: Record<string, unknown> | undefined): string {
   const parts: string[] = [];
   for (const [key, value] of Object.entries(input).slice(0, 3)) {
     let valueStr = String(value);
-    if (valueStr.length > 20) {
-      valueStr = valueStr.slice(0, 20) + "...";
+    if (valueStr.length > 25) {
+      valueStr = valueStr.slice(0, 25) + "...";
     }
     parts.push(`${key}=${valueStr}`);
   }
 
   const result = parts.join(", ");
-  return result.length > 50 ? result.slice(0, 50) + "..." : result;
+  return result.length > 60 ? result.slice(0, 60) + "..." : result;
 }
 
 /**
@@ -74,13 +92,13 @@ function formatSkillArgs(args: { positional: string[]; named: Record<string, unk
     .map(([k, v]) => `${k}=${String(v).slice(0, 15)}`);
   parts.push(...namedParts);
 
-  return parts.join(" ").slice(0, 40);
+  return parts.join(" ").slice(0, 50);
 }
 
 /**
  * 渲染增强的trace消息
  */
-function renderTraceMessage(trace: TraceEvent): { icon: string; content: string; detail?: string } {
+function renderTraceMessage(trace: TraceEvent): { icon: string; content: string; detail?: string; phaseLabel: string } {
   // 工具调用
   if (trace.scope === "tool" && trace.data?.toolName) {
     const toolName = trace.data.toolName as string;
@@ -88,11 +106,11 @@ function renderTraceMessage(trace: TraceEvent): { icon: string; content: string;
 
     switch (trace.phase) {
       case "call":
-        return { icon: "🔧", content: `调用 ${toolName}`, detail: params ? `(${params})` : undefined };
+        return { icon: "🔧", content: `调用 ${toolName}`, detail: params ? `(${params})` : undefined, phaseLabel: "call" };
       case "success":
-        return { icon: "✓", content: `${toolName} 成功` };
+        return { icon: "✓", content: `${toolName} 成功`, phaseLabel: "success" };
       case "error":
-        return { icon: "✗", content: `${toolName} 失败`, detail: trace.data?.error as string };
+        return { icon: "✗", content: `${toolName} 失败`, detail: trace.data?.error as string, phaseLabel: "error" };
     }
   }
 
@@ -101,7 +119,7 @@ function renderTraceMessage(trace: TraceEvent): { icon: string; content: string;
     const decision = trace.data?.decision as string;
     const toolName = trace.data?.toolName as string;
     const icon = decision === "allow" ? "✓" : decision === "deny" ? "✗" : "?";
-    return { icon, content: `权限: ${toolName}`, detail: decision };
+    return { icon, content: `权限: ${toolName}`, detail: decision, phaseLabel: "permission" };
   }
 
   // Agent 事件
@@ -111,14 +129,14 @@ function renderTraceMessage(trace: TraceEvent): { icon: string; content: string;
       const task = trace.data?.task as string;
       const depth = trace.data?.depth as number ?? 0;
       const indent = "  ".repeat(depth);
-      return { icon: "🤖", content: `${indent}创建子Agent: ${name}`, detail: task?.slice(0, 30) };
+      return { icon: "🤖", content: `${indent}创建子Agent: ${name}`, detail: task?.slice(0, 35), phaseLabel: "spawn" };
     }
     if (trace.phase === "agent_completed") {
       const name = trace.data?.name as string;
       const status = trace.data?.status as string;
       const depth = trace.data?.depth as number ?? 0;
       const indent = "  ".repeat(depth);
-      return { icon: status === "success" ? "✓" : "✗", content: `${indent}Agent完成: ${name}` };
+      return { icon: status === "success" ? "✓" : "✗", content: `${indent}Agent完成: ${name}`, phaseLabel: "complete" };
     }
   }
 
@@ -129,32 +147,33 @@ function renderTraceMessage(trace: TraceEvent): { icon: string; content: string;
 
     switch (trace.phase) {
       case "started":
-        return { icon: "⚡", content: `执行技能: /${skillName}`, detail: formatSkillArgs(args) };
+        return { icon: "⚡", content: `执行技能: /${skillName}`, detail: formatSkillArgs(args), phaseLabel: "started" };
       case "success":
-        return { icon: "✓", content: `/${skillName} 完成` };
+        return { icon: "✓", content: `/${skillName} 完成`, phaseLabel: "success" };
       case "error":
-        return { icon: "✗", content: `/${skillName} 失败` };
+        return { icon: "✗", content: `/${skillName} 失败`, phaseLabel: "error" };
     }
   }
 
   // Provider 事件
   if (trace.scope === "provider") {
     if (trace.phase === "request") {
-      return { icon: "→", content: "发送请求" };
+      return { icon: "→", content: "发送请求", phaseLabel: "request" };
     }
     if (trace.phase === "response") {
-      return { icon: "←", content: "收到响应" };
+      return { icon: "←", content: "收到响应", phaseLabel: "response" };
     }
   }
 
   // 默认渲染
-  return { icon: "●", content: trace.message };
+  return { icon: "●", content: trace.message, phaseLabel: trace.phase };
 }
 
 export function TraceLog({ height }: TraceLogProps): React.ReactElement {
   const { state } = useAppContext();
   const { traces, filter } = state.debug;
   const [scrollOffset, setScrollOffset] = useState(0);
+  const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
 
   // 可见行数
   const visibleLines = height ? Math.max(height - 4, 5) : 15;
@@ -178,6 +197,11 @@ export function TraceLog({ height }: TraceLogProps): React.ReactElement {
       if (key.downArrow) {
         setScrollOffset((prev) => Math.min(Math.max(0, filteredTraces.length - visibleLines), prev + 1));
       }
+      // 空格展开/折叠详情
+      if (input === " ") {
+        const absIdx = scrollOffset + Math.min(visibleLines - 1, filteredTraces.length - 1);
+        setExpandedIdx((prev) => prev === absIdx ? null : absIdx);
+      }
     },
     // 仅在 traceLog 焦点时处理
     { isActive: state.focusArea === "traceLog" && !state.inputMode && !state.filterMode && !state.editMode && !state.exitConfirmPending && !state.showHelp }
@@ -187,7 +211,7 @@ export function TraceLog({ height }: TraceLogProps): React.ReactElement {
   if (traces.length === 0) {
     return (
       <Box flexDirection="column" flexGrow={1} justifyContent="center" alignItems="center">
-        <Text color={PRIMARY}>◆ 暂无 trace 日志</Text>
+        <Text color={PRIMARY}>◆ 等待 trace 数据...</Text>
         <Text dimColor>使用 --debug 启动以查看详细追踪</Text>
         <Text dimColor color="gray">rxc chat --debug --message "你的消息"</Text>
       </Box>
@@ -210,7 +234,7 @@ export function TraceLog({ height }: TraceLogProps): React.ReactElement {
           )}
         </Box>
         <Box flexDirection="row" gap={1}>
-          <Text dimColor>{filteredTraces.length} 条</Text>
+          <Text dimColor>{filteredTraces.length}/{traces.length} 条</Text>
           <Text dimColor>{SEPARATORS.item.trim()}</Text>
           <Text dimColor>↑/↓ 滚动</Text>
         </Box>
@@ -219,33 +243,55 @@ export function TraceLog({ height }: TraceLogProps): React.ReactElement {
       {/* 日志列表 */}
       <Box flexDirection="column" flexGrow={1} paddingX={1}>
         {visibleTraces.map((trace, idx) => {
+          const absIdx = scrollOffset + idx;
+          const scopeColor = getScopeColor(trace.scope);
           const phaseColor = getLogLevelColor(trace.phase);
-          const { icon, content, detail } = renderTraceMessage(trace);
+          const { icon, content, detail, phaseLabel } = renderTraceMessage(trace);
+          const isExpanded = expandedIdx === absIdx;
 
           return (
-            <Box key={scrollOffset + idx} flexDirection="row" gap={1}>
-              {/* 时间戳 */}
-              <Text dimColor>[{trace.timestamp.slice(11, 19)}]</Text>
+            <Box key={absIdx} flexDirection="column">
+              <Box flexDirection="row" gap={1}>
+                {/* 展开指示 */}
+                <Text dimColor color="gray">{isExpanded ? "▼" : " "}</Text>
 
-              {/* 图标 */}
-              <Text>{icon}</Text>
+                {/* 时间戳 */}
+                <Text dimColor color="gray">[{trace.timestamp.slice(11, 19)}]</Text>
 
-              {/* scope */}
-              <Text color="cyan" dimColor>{trace.scope}</Text>
+                {/* 图标 */}
+                <Text>{icon}</Text>
 
-              {/* 主要内容 */}
-              <Text color={phaseColor}>{content}</Text>
+                {/* scope */}
+                <Text color={scopeColor} bold>{trace.scope}</Text>
 
-              {/* 详情 */}
-              {detail && (
-                <Text dimColor>{detail}</Text>
-              )}
+                {/* phase 标签 */}
+                <Text dimColor color="gray">.{phaseLabel}</Text>
 
-              {/* turn/step 标识 */}
-              {(trace.turn || trace.step) && (
-                <Text dimColor color="gray">
-                  [t{trace.turn ?? "-"}s{trace.step ?? "-"}]
-                </Text>
+                {/* 主要内容 */}
+                <Text color={phaseColor}>{content}</Text>
+
+                {/* turn/step 标识 */}
+                {(trace.turn || trace.step) && (
+                  <Text dimColor color="gray">
+                    [t{trace.turn ?? "-"}s{trace.step ?? "-"}]
+                  </Text>
+                )}
+              </Box>
+
+              {/* 展开详情 */}
+              {isExpanded && (
+                <Box flexDirection="column" paddingLeft={4}>
+                  {detail && (
+                    <Box flexDirection="row">
+                      <Text dimColor>详情: </Text>
+                      <Text>{detail}</Text>
+                    </Box>
+                  )}
+                  <Box flexDirection="row">
+                    <Text dimColor>原始数据: </Text>
+                    <Text dimColor color="gray">{JSON.stringify(trace.data ?? {}).slice(0, 80)}</Text>
+                  </Box>
+                </Box>
               )}
             </Box>
           );
@@ -255,7 +301,7 @@ export function TraceLog({ height }: TraceLogProps): React.ReactElement {
       {/* 滚动指示器 */}
       {filteredTraces.length > visibleLines && (
         <Box flexDirection="row" justifyContent="center" gap={1}>
-          <Text dimColor>
+          <Text dimColor color="gray">
             {scrollOffset > 0 ? "▲ " : "  "}
             {scrollOffset + 1}-{Math.min(scrollOffset + visibleLines, filteredTraces.length)} / {filteredTraces.length}
             {scrollOffset + visibleLines < filteredTraces.length ? " ▼" : "  "}

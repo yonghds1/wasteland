@@ -1,10 +1,12 @@
 /**
  * ConfigPage - 配置页面
  *
- * 可配置区域：
- * 1. Provider - defaultProvider, providers 配置
- * 2. Runtime - permissionMode, maxStepsPerTurn, debug
- * 3. Roles - 角色配置
+ * 完整配置编辑器，支持：
+ * - Sources：显示配置源和优先级
+ * - Runtime：defaultRole, permissionMode, maxStepsPerTurn, maxTurns, childAgentTimeout, debug
+ * - Providers：只读展示
+ * - Models：只读展示
+ * - Roles：只读展示
  */
 
 import React, { useState, useEffect } from "react";
@@ -16,27 +18,37 @@ import { resolveChatRuntime } from "../../../config/resolve-chat-runtime.js";
 import type { PermissionMode } from "../../../runtime/permission-gate.js";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
+import {
+  PRIMARY,
+  SUCCESS,
+  WARNING,
+  SEPARATORS,
+} from "../../utils/colors.js";
 
-type ConfigSection = "provider" | "runtime" | "roles";
+type ConfigSection = "sources" | "runtime" | "providers" | "models" | "roles";
+
+const SECTIONS: { key: ConfigSection; label: string; color: string; editable: boolean }[] = [
+  { key: "sources", label: "配置源", color: "gray", editable: false },
+  { key: "runtime", label: "Runtime", color: "green", editable: true },
+  { key: "providers", label: "Providers", color: "cyan", editable: false },
+  { key: "models", label: "Models", color: "yellow", editable: false },
+  { key: "roles", label: "Roles", color: "magenta", editable: false },
+];
+
+const PERMISSION_MODE_OPTIONS: PermissionMode[] = ["default", "accept_edits", "bypass_permissions"];
 
 interface ConfigPageProps {
   height?: number;
   width?: number;
 }
 
-// 默认 Provider 选项（当无法加载配置时使用）
-const DEFAULT_PROVIDER_OPTIONS = ["local", "ollama", "openai-compatible"];
-
-// Permission Mode 选项
-const PERMISSION_MODE_OPTIONS: PermissionMode[] = ["default", "accept_edits", "bypass_permissions"];
-
 export function ConfigPage({ height, width }: ConfigPageProps): React.ReactElement {
   const { state, setState, setEditMode, updateConfig } = useAppContext();
-  const [focusedSection, setFocusedSection] = useState<ConfigSection>("provider");
+  const [focusedSection, setFocusedSection] = useState<ConfigSection>("sources");
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [saveMessage, setSaveMessage] = useState<string>("");
-  const [providerOptions, setProviderOptions] = useState<string[]>(DEFAULT_PROVIDER_OPTIONS);
+  const [providerOptions, setProviderOptions] = useState<string[]>([]);
 
   // 加载可用的 Provider 列表
   useEffect(() => {
@@ -59,72 +71,23 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
     setEditMode(focusedField !== null);
   }, [focusedField, setEditMode]);
 
-  // 键盘导航（仅在配置页面且不在特殊模式下处理）
-  useInput(
-    (input, key) => {
-      // 编辑模式下的键盘处理
-      if (focusedField) {
-        handleEditModeInput(input, key);
-        return;
-      }
-
-      // 导航模式
-      if (key.upArrow) {
-        const sections: ConfigSection[] = ["provider", "runtime", "roles"];
-        const idx = sections.indexOf(focusedSection);
-        if (idx > 0) setFocusedSection(sections[idx - 1]);
-      }
-      if (key.downArrow) {
-        const sections: ConfigSection[] = ["provider", "runtime", "roles"];
-        const idx = sections.indexOf(focusedSection);
-        if (idx < sections.length - 1) setFocusedSection(sections[idx + 1]);
-      }
-
-      // Enter 进入编辑模式
-      if (key.return) {
-        if (focusedSection === "provider") {
-          setFocusedField("provider");
-        } else if (focusedSection === "runtime") {
-          // 默认聚焦第一个字段
-          setFocusedField("permissionMode");
-        } else if (focusedSection === "roles") {
-          // Roles 暂不支持编辑
-          setSaveMessage("Roles 编辑即将支持");
-          setSaveStatus("error");
-          setTimeout(() => setSaveStatus("idle"), 2000);
-        }
-      }
-
-      // Ctrl+S 保存
-      if (input === "s" && key.ctrl) {
-        handleSave();
-      }
-
-      // Ctrl+R 重置（放弃更改）
-      if (input === "r" && key.ctrl) {
-        handleReset();
-      }
-    },
-    // 仅在配置页面、configList 焦点、且不在特殊模式下处理
-    { isActive: state.currentPage === "config" && state.focusArea === "configList" && !state.inputMode && !state.filterMode && !state.exitConfirmPending && !state.showHelp }
-  );
+  // 获取当前 section 配置
+  const sectionKeys = SECTIONS.map((s) => s.key);
 
   // 处理编辑模式下的输入
   const handleEditModeInput = (input: string, key: { return: boolean; escape: boolean; upArrow: boolean; downArrow: boolean; leftArrow: boolean; rightArrow: boolean }) => {
-    // Esc 退出编辑模式
     if (key.escape) {
       setFocusedField(null);
       return;
     }
 
-    // Enter 确认并移动到下一个字段
     if (key.return) {
+      // 在 runtime 区域内移动
       if (focusedSection === "runtime") {
-        // 在 runtime 区域内移动
-        if (focusedField === "permissionMode") {
-          setFocusedField("maxSteps");
-        } else if (focusedField === "maxSteps") {
-          setFocusedField("maxTurns");
+        const runtimeFields = ["permissionMode", "maxSteps", "maxTurns", "defaultRole", "childAgentTimeout", "debug"];
+        const idx = runtimeFields.indexOf(focusedField ?? "");
+        if (idx < runtimeFields.length - 1) {
+          setFocusedField(runtimeFields[idx + 1]);
         } else {
           setFocusedField(null);
         }
@@ -135,40 +98,94 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
     }
 
     // 字段特定编辑
-    if (focusedField === "provider") {
-      // 循环切换 provider
-      const idx = providerOptions.indexOf(state.config.provider);
-      const nextIdx = (idx + 1) % providerOptions.length;
-      updateConfig({ provider: providerOptions[nextIdx] });
-    } else if (focusedField === "permissionMode") {
-      // 循环切换 permissionMode
+    if (focusedField === "permissionMode") {
       const idx = PERMISSION_MODE_OPTIONS.indexOf(state.config.permissionMode as PermissionMode);
-      const nextIdx = (idx + 1) % PERMISSION_MODE_OPTIONS.length;
+      const nextIdx = key.leftArrow
+        ? (idx - 1 + PERMISSION_MODE_OPTIONS.length) % PERMISSION_MODE_OPTIONS.length
+        : (idx + 1) % PERMISSION_MODE_OPTIONS.length;
       updateConfig({ permissionMode: PERMISSION_MODE_OPTIONS[nextIdx] });
     } else if (focusedField === "maxSteps") {
-      // 上下调整 maxSteps
       if (key.upArrow) {
-        const newValue = Math.min(20, state.config.maxSteps + 1);
-        updateConfig({ maxSteps: newValue });
+        updateConfig({ maxSteps: Math.min(50, state.config.maxSteps + 1) });
       } else if (key.downArrow) {
-        const newValue = Math.max(1, state.config.maxSteps - 1);
-        updateConfig({ maxSteps: newValue });
+        updateConfig({ maxSteps: Math.max(1, state.config.maxSteps - 1) });
       }
     } else if (focusedField === "maxTurns") {
-      // 上下调整 maxTurns
       if (key.upArrow) {
-        const newValue = Math.min(100, state.config.maxTurns + 1);
-        updateConfig({ maxTurns: newValue });
+        updateConfig({ maxTurns: Math.min(200, state.config.maxTurns + 1) });
       } else if (key.downArrow) {
-        const newValue = Math.max(1, state.config.maxTurns - 1);
-        updateConfig({ maxTurns: newValue });
+        updateConfig({ maxTurns: Math.max(1, state.config.maxTurns - 1) });
       }
+    } else if (focusedField === "defaultRole") {
+      // 循环切换 role
+      const roleNames = Object.keys(state.fullConfig.roles);
+      if (roleNames.length > 0) {
+        const idx = roleNames.indexOf(state.config.defaultRole);
+        const nextIdx = key.leftArrow
+          ? (idx - 1 + roleNames.length) % roleNames.length
+          : (idx + 1) % roleNames.length;
+        updateConfig({ defaultRole: roleNames[nextIdx] });
+      }
+    } else if (focusedField === "childAgentTimeout") {
+      if (key.upArrow) {
+        updateConfig({ childAgentTimeout: Math.min(600000, state.config.childAgentTimeout + 10000) });
+      } else if (key.downArrow) {
+        updateConfig({ childAgentTimeout: Math.max(10000, state.config.childAgentTimeout - 10000) });
+      }
+    } else if (focusedField === "debug") {
+      updateConfig({ debug: !state.config.debug });
     }
   };
 
+  // 键盘导航
+  useInput(
+    (input, key) => {
+      if (focusedField) {
+        handleEditModeInput(input, key);
+        return;
+      }
+
+      // 上下切换 section
+      if (key.upArrow) {
+        const idx = sectionKeys.indexOf(focusedSection);
+        if (idx > 0) setFocusedSection(sectionKeys[idx - 1]);
+      }
+      if (key.downArrow) {
+        const idx = sectionKeys.indexOf(focusedSection);
+        if (idx < sectionKeys.length - 1) setFocusedSection(sectionKeys[idx + 1]);
+      }
+
+      // Enter 进入编辑模式
+      if (key.return) {
+        const section = SECTIONS.find((s) => s.key === focusedSection);
+        if (section?.editable) {
+          if (focusedSection === "runtime") {
+            setFocusedField("permissionMode");
+          }
+        }
+      }
+
+      // Ctrl+S 保存到 project config
+      if (input === "s" && key.ctrl) {
+        handleSave("project");
+      }
+
+      // Ctrl+U 保存到 user config
+      if (input === "u" && key.ctrl) {
+        handleSave("user");
+      }
+
+      // Ctrl+R 重置
+      if (input === "r" && key.ctrl) {
+        handleReset();
+      }
+    },
+    { isActive: state.currentPage === "config" && state.focusArea === "configList" && !state.inputMode && !state.filterMode && !state.exitConfirmPending && !state.showHelp }
+  );
+
   // 保存配置
-  const handleSave = async () => {
-    if (!state.configHasChanges) {
+  const handleSave = async (target: "project" | "user") => {
+    if (!state.configHasChanges && target === "project") {
       setSaveMessage("没有更改需要保存");
       setSaveStatus("error");
       setTimeout(() => setSaveStatus("idle"), 2000);
@@ -179,20 +196,25 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
     setSaveMessage("正在保存...");
 
     try {
-      // 加载当前配置以获取文件路径
       const cwd = process.cwd();
-      const projectConfigDir = await findProjectConfigDir(cwd);
-      const settingsPath = projectConfigDir
-        ? resolveProjectSettingsPath(projectConfigDir)
-        : resolveUserSettingsPath(process.env);
+      let settingsPath: string;
+
+      if (target === "project") {
+        const projectConfigDir = await findProjectConfigDir(cwd);
+        settingsPath = projectConfigDir
+          ? resolveProjectSettingsPath(projectConfigDir)
+          : resolveProjectSettingsPath(`${cwd}/.rxc`);
+      } else {
+        settingsPath = resolveUserSettingsPath(process.env);
+      }
 
       // 读取现有配置
-      let existingSettings = {};
+      let existingSettings: Record<string, unknown> = {};
       try {
-        const content = await import("node:fs/promises").then(fs => fs.readFile(settingsPath, "utf8"));
+        const content = await import("node:fs/promises").then((fs) => fs.readFile(settingsPath, "utf8"));
         existingSettings = JSON.parse(content);
       } catch {
-        // 文件不存在，使用空对象
+        // 文件不存在
       }
 
       // 合并更改
@@ -200,9 +222,13 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
         ...existingSettings,
         defaultProvider: state.config.provider,
         runtime: {
-          ...(existingSettings as Record<string, unknown>).runtime as Record<string, unknown> | undefined,
+          ...(existingSettings.runtime as Record<string, unknown> | undefined) as Record<string, unknown> | undefined,
+          defaultRole: state.config.defaultRole || undefined,
           permissionMode: state.config.permissionMode,
           maxStepsPerTurn: state.config.maxSteps,
+          maxTurns: state.config.maxTurns,
+          childAgentTimeout: state.config.childAgentTimeout,
+          debug: state.config.debug,
         },
       };
 
@@ -213,7 +239,7 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
       await writeFile(settingsPath, JSON.stringify(newSettings, null, 2), "utf8");
 
       setSaveStatus("saved");
-      setSaveMessage(`已保存到 ${settingsPath}`);
+      setSaveMessage(`已保存到 ${target === "project" ? "项目" : "用户"}配置: ${settingsPath}`);
       setState((prev) => ({ ...prev, configHasChanges: false }));
 
       setTimeout(() => setSaveStatus("idle"), 3000);
@@ -224,22 +250,30 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
     }
   };
 
-  // 重置更改
+  // 重置
   const handleReset = async () => {
     try {
       const loaded = await loadRxcSettings();
-      // 使用 resolveChatRuntime 获取完整的运行时配置
-      const resolved = resolveChatRuntime({
-        settings: loaded.settings,
-      });
+      const resolved = resolveChatRuntime({ settings: loaded.settings });
       setState((prev) => ({
         ...prev,
         config: {
           provider: resolved.providerName,
-          model: resolved.model?.name ?? "default",
+          model: resolved.model?.name ?? "",
           permissionMode: resolved.permissionMode,
-          maxTurns: 50,
+          maxTurns: loaded.settings.runtime.maxTurns,
           maxSteps: loaded.settings.runtime.maxStepsPerTurn,
+          defaultRole: loaded.settings.runtime.defaultRole ?? "",
+          childAgentTimeout: loaded.settings.runtime.childAgentTimeout,
+          debug: loaded.settings.runtime.debug,
+        },
+        fullConfig: {
+          ...prev.fullConfig,
+          providers: loaded.settings.providers,
+          models: loaded.settings.models,
+          roles: loaded.settings.roles,
+          sources: loaded.sources,
+          defaultProvider: loaded.settings.defaultProvider,
         },
         configHasChanges: false,
       }));
@@ -253,8 +287,25 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
     }
   };
 
-  // 动态计算每个区域高度
-  const sectionHeight = height ? Math.floor((height - 6) / 3) : 5;
+  // 计算可用高度
+  const sectionHeight = height ? Math.floor((height - 8) / SECTIONS.length) : 4;
+
+  const renderSectionHeader = (key: ConfigSection, label: string, color: string, editable: boolean) => {
+    const isFocused = focusedSection === key;
+    return (
+      <Box flexDirection="row" gap={1}>
+        <Text bold color={isFocused ? color : "gray"}>
+          {isFocused ? "▸ " : "  "}{label}
+        </Text>
+        {editable && isFocused && !focusedField && (
+          <Text dimColor>Enter 编辑</Text>
+        )}
+        {focusedField && key === "runtime" && (
+          <Text dimColor>Enter 下一字段 | Esc 退出编辑</Text>
+        )}
+      </Box>
+    );
+  };
 
   return (
     <Box flexDirection="column" height={height} width={width} paddingX={1}>
@@ -271,54 +322,36 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
         )}
         {saveStatus !== "idle" && (
           <Text color={saveStatus === "saved" ? "green" : saveStatus === "error" ? "red" : "yellow"}>
-            {" "}
-            - {saveMessage}
+            {" "} - {saveMessage}
           </Text>
         )}
       </Box>
 
-      {/* Provider 区域 */}
+      {/* Sources 区域 */}
       <Box
         flexDirection="column"
-        borderStyle={focusedSection === "provider" ? "double" : "single"}
-        borderColor={focusedSection === "provider" ? "cyan" : "gray"}
+        borderStyle={focusedSection === "sources" ? "double" : "single"}
+        borderColor={focusedSection === "sources" ? "cyan" : "gray"}
         paddingX={1}
         marginBottom={1}
         height={sectionHeight}
       >
-        <Text bold color="cyan">
-          Provider
-        </Text>
-        <Box flexDirection="row">
-          <Text dimColor>默认 Provider: </Text>
-          <Text
-            bold
-            color={focusedField === "provider" ? "yellow" : undefined}
-          >
-            {state.config.provider}
-          </Text>
-          {focusedField === "provider" && <Text color="yellow"> ◀</Text>}
+        {renderSectionHeader("sources", "配置源", "gray", false)}
+        <Box flexDirection="row" gap={2}>
+          <Box flexDirection="row">
+            <Text dimColor>项目: </Text>
+            <Text color={state.fullConfig.sources.project ? "green" : "gray"}>
+              {state.fullConfig.sources.project ?? "(未配置)"}
+            </Text>
+          </Box>
+          <Box flexDirection="row">
+            <Text dimColor>用户: </Text>
+            <Text color={state.fullConfig.sources.user ? "green" : "gray"}>
+              {state.fullConfig.sources.user ?? "(未配置)"}
+            </Text>
+          </Box>
         </Box>
-        <Box flexDirection="row">
-          <Text dimColor>可用: </Text>
-          <Text>
-            {providerOptions.map((p, idx) => (
-              <Text
-                key={p}
-                color={p === state.config.provider ? "green" : undefined}
-                bold={p === state.config.provider}
-              >
-                {idx > 0 ? ", " : ""}
-                {p}
-              </Text>
-            ))}
-          </Text>
-        </Box>
-        <Text dimColor={focusedSection === "provider" && !focusedField} color={focusedSection === "provider" && !focusedField ? "cyan" : undefined}>
-          {focusedField === "provider"
-            ? "按 Enter 切换 | Esc 取消"
-            : "按 Enter 编辑 Provider 设置"}
-        </Text>
+        <Text dimColor>优先级: 项目 &gt; 用户 &gt; 默认值</Text>
       </Box>
 
       {/* Runtime 区域 */}
@@ -330,48 +363,103 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
         marginBottom={1}
         height={sectionHeight}
       >
-        <Text bold color="green">
-          Runtime
-        </Text>
-        <Box flexDirection="row">
-          <Text dimColor>权限模式: </Text>
-          <Text
-            bold
-            color={focusedField === "permissionMode" ? "yellow" : "yellow"}
-          >
-            {state.config.permissionMode}
-          </Text>
-          {focusedField === "permissionMode" && <Text color="yellow"> ◀</Text>}
+        {renderSectionHeader("runtime", "Runtime", "green", true)}
+        <Box flexDirection="row" gap={2}>
+          <Box flexDirection="row">
+            <Text dimColor>权限: </Text>
+            <Text bold color={focusedField === "permissionMode" ? "yellow" : "green"}>
+              {state.config.permissionMode}
+            </Text>
+            {focusedField === "permissionMode" && <Text color="yellow"> ◀</Text>}
+          </Box>
+          <Box flexDirection="row">
+            <Text dimColor>步骤/轮: </Text>
+            <Text bold color={focusedField === "maxSteps" ? "yellow" : undefined}>
+              {state.config.maxSteps}
+            </Text>
+            {focusedField === "maxSteps" && <Text color="yellow"> ◀ ↑/↓</Text>}
+          </Box>
+          <Box flexDirection="row">
+            <Text dimColor>轮次: </Text>
+            <Text bold color={focusedField === "maxTurns" ? "yellow" : undefined}>
+              {state.config.maxTurns}
+            </Text>
+            {focusedField === "maxTurns" && <Text color="yellow"> ◀ ↑/↓</Text>}
+          </Box>
         </Box>
-        <Box flexDirection="row">
-          <Text dimColor>最大步骤/轮: </Text>
-          <Text bold color={focusedField === "maxSteps" ? "yellow" : undefined}>
-            {state.config.maxSteps}
-          </Text>
-          {focusedField === "maxSteps" && (
-            <>
-              <Text color="yellow"> ◀</Text>
-              <Text dimColor> (↑/↓ 调整)</Text>
-            </>
-          )}
+        <Box flexDirection="row" gap={2}>
+          <Box flexDirection="row">
+            <Text dimColor>默认角色: </Text>
+            <Text bold color={focusedField === "defaultRole" ? "yellow" : undefined}>
+              {state.config.defaultRole || "(未设置)"}
+            </Text>
+            {focusedField === "defaultRole" && <Text color="yellow"> ◀ ←/→</Text>}
+          </Box>
+          <Box flexDirection="row">
+            <Text dimColor>超时: </Text>
+            <Text bold color={focusedField === "childAgentTimeout" ? "yellow" : undefined}>
+              {state.config.childAgentTimeout}ms
+            </Text>
+            {focusedField === "childAgentTimeout" && <Text color="yellow"> ◀ ↑/↓</Text>}
+          </Box>
+          <Box flexDirection="row">
+            <Text dimColor>Debug: </Text>
+            <Text bold color={focusedField === "debug" ? "yellow" : state.config.debug ? "green" : "gray"}>
+              {state.config.debug ? "ON" : "OFF"}
+            </Text>
+            {focusedField === "debug" && <Text color="yellow"> ◀ Enter</Text>}
+          </Box>
         </Box>
-        <Box flexDirection="row">
-          <Text dimColor>最大轮次: </Text>
-          <Text bold color={focusedField === "maxTurns" ? "yellow" : undefined}>
-            {state.config.maxTurns}
-          </Text>
-          {focusedField === "maxTurns" && (
-            <>
-              <Text color="yellow"> ◀</Text>
-              <Text dimColor> (↑/↓ 调整)</Text>
-            </>
-          )}
-        </Box>
-        <Text dimColor={focusedSection === "runtime" && !focusedField} color={focusedSection === "runtime" && !focusedField ? "cyan" : undefined}>
-          {focusedField
-            ? "按 Enter 确认 | Esc 取消"
-            : "按 Enter 编辑 Runtime 设置"}
-        </Text>
+      </Box>
+
+      {/* Providers 区域 */}
+      <Box
+        flexDirection="column"
+        borderStyle={focusedSection === "providers" ? "double" : "single"}
+        borderColor={focusedSection === "providers" ? "cyan" : "gray"}
+        paddingX={1}
+        marginBottom={1}
+        height={sectionHeight}
+      >
+        {renderSectionHeader("providers", "Providers", "cyan", false)}
+        {Object.entries(state.fullConfig.providers).length === 0 ? (
+          <Text dimColor>  无已配置的 Provider</Text>
+        ) : (
+          Object.entries(state.fullConfig.providers).map(([name, cfg]) => (
+            <Box key={name} flexDirection="row" gap={1}>
+              <Text bold color={name === state.config.provider ? "green" : "cyan"}>{name}</Text>
+              <Text dimColor>({cfg.type ?? "unknown"})</Text>
+              {cfg.baseUrl && <Text dimColor>{cfg.baseUrl.slice(0, 40)}</Text>}
+              {cfg.model && <Text dimColor>model={cfg.model}</Text>}
+            </Box>
+          ))
+        )}
+        <Text dimColor>  默认: {state.config.provider}</Text>
+      </Box>
+
+      {/* Models 区域 */}
+      <Box
+        flexDirection="column"
+        borderStyle={focusedSection === "models" ? "double" : "single"}
+        borderColor={focusedSection === "models" ? "cyan" : "gray"}
+        paddingX={1}
+        marginBottom={1}
+        height={sectionHeight}
+      >
+        {renderSectionHeader("models", "Models", "yellow", false)}
+        {Object.entries(state.fullConfig.models).length === 0 ? (
+          <Text dimColor>  无已配置的 Model</Text>
+        ) : (
+          Object.entries(state.fullConfig.models).map(([name, cfg]) => (
+            <Box key={name} flexDirection="row" gap={1}>
+              <Text bold color="yellow">{name}</Text>
+              <Text dimColor>→</Text>
+              <Text>{cfg.model}</Text>
+              <Text dimColor>({cfg.provider})</Text>
+            </Box>
+          ))
+        )}
+        <Text dimColor>  当前: {state.config.model}</Text>
       </Box>
 
       {/* Roles 区域 */}
@@ -382,18 +470,34 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
         paddingX={1}
         height={sectionHeight}
       >
-        <Text bold color="magenta">
-          Roles
-        </Text>
-        <Text dimColor>自定义角色配置</Text>
-        <Text dimColor>当前角色: default</Text>
-        <Text dimColor>即将支持编辑</Text>
+        {renderSectionHeader("roles", "Roles", "magenta", false)}
+        {Object.entries(state.fullConfig.roles).length === 0 ? (
+          <Text dimColor>  无已配置的 Role</Text>
+        ) : (
+          Object.entries(state.fullConfig.roles).map(([name, cfg]) => (
+            <Box key={name} flexDirection="row" gap={1}>
+              <Text bold color="magenta">{name}</Text>
+              <Text dimColor>→</Text>
+              <Text>{cfg.model}</Text>
+              {cfg.permissionMode && <Text dimColor>({cfg.permissionMode})</Text>}
+            </Box>
+          ))
+        )}
+        <Text dimColor>  默认: {state.config.defaultRole || "(未设置)"}</Text>
       </Box>
 
       {/* 底部操作提示 */}
       <Box flexDirection="row" justifyContent="center" marginTop={1}>
-        <Text dimColor>↑/↓ 切换区域 | Enter 编辑 | </Text>
-        <Text bold color="green">Ctrl+S 保存</Text>
+        <Text dimColor>↑/↓ 切换 | </Text>
+        {SECTIONS.find((s) => s.key === focusedSection)?.editable && (
+          <>
+            <Text color={PRIMARY}>Enter 编辑</Text>
+            <Text dimColor> | </Text>
+          </>
+        )}
+        <Text bold color="green">Ctrl+S 保存项目</Text>
+        <Text dimColor> | </Text>
+        <Text bold color="cyan">Ctrl+U 保存用户</Text>
         <Text dimColor> | </Text>
         <Text dimColor>Ctrl+R 重置</Text>
       </Box>

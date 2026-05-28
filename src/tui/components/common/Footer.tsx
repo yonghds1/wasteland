@@ -134,6 +134,9 @@ export function Footer({ width }: FooterProps): React.ReactElement {
           <Box flexDirection="row" gap={1}>
             <Text dimColor>↑/↓ 滚动</Text>
             <Text dimColor>{SEPARATORS.item.trim()}</Text>
+            <Text color={PRIMARY}>Space</Text>
+            <Text dimColor>展开</Text>
+            <Text dimColor>{SEPARATORS.item.trim()}</Text>
             <Text color={PRIMARY}>f</Text>
             <Text dimColor>过滤</Text>
             <Text dimColor>{SEPARATORS.item.trim()}</Text>
@@ -149,7 +152,9 @@ export function Footer({ width }: FooterProps): React.ReactElement {
             <Text color={PRIMARY}>Enter</Text>
             <Text dimColor>编辑</Text>
             <Text dimColor>{SEPARATORS.item.trim()}</Text>
-            <Text color={SUCCESS}>Ctrl+S 保存</Text>
+            <Text color={SUCCESS}>Ctrl+S 项目</Text>
+            <Text dimColor>{SEPARATORS.item.trim()}</Text>
+            <Text color="cyan">Ctrl+U 用户</Text>
           </Box>
         );
     }

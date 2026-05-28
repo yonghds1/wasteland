@@ -12,6 +12,12 @@ import type {
 } from "../runtime/event-types.js";
 import type { DebugTraceEvent } from "../runtime/debug-events.js";
 import type { SessionMetadata } from "../runtime/session-manager.js";
+import type {
+  ProviderSettings,
+  ModelSettings,
+  RoleSettings,
+} from "../config/settings-types.js";
+import type { PermissionMode } from "../runtime/permission-gate.js";
 
 /**
  * TUI 运行时上下文
@@ -31,6 +37,8 @@ export interface TuiRuntimeContext {
   config: TuiConfig;
   /** Provider ID（用于显示） */
   providerId: string;
+  /** 完整配置信息（用于配置页面） */
+  fullConfig: TuiFullConfig;
 }
 
 /**
@@ -44,6 +52,31 @@ export interface TuiConfig {
   permissionMode: string;
   maxTurns: number;
   maxSteps: number;
+  // 扩展字段
+  defaultRole: string;
+  childAgentTimeout: number;
+  debug: boolean;
+}
+
+/**
+ * 配置源信息
+ */
+export interface TuiConfigSources {
+  user?: string;
+  project?: string;
+  userAuth?: string;
+  projectAuth?: string;
+}
+
+/**
+ * 完整配置信息（用于配置页面显示）
+ */
+export interface TuiFullConfig {
+  providers: Record<string, ProviderSettings>;
+  models: Record<string, ModelSettings>;
+  roles: Record<string, RoleSettings>;
+  sources: TuiConfigSources;
+  defaultProvider: string;
 }
 
 // 导出 runtime 类型供 TUI 使用

@@ -3,6 +3,14 @@
  */
 
 import React from "react";
+import type {
+  ProviderSettings,
+  ModelSettings,
+  RoleSettings,
+} from "../../config/settings-types.js";
+import type {
+  TuiFullConfig,
+} from "../types.js";
 
 // ============================================================
 // 类型定义
@@ -53,8 +61,8 @@ export interface TraceFilter {
 }
 
 export interface ConfigEdit {
-  field: "provider" | "permissionMode" | "maxSteps" | "maxTurns" | null;
-  originalValue: string | number;
+  field: "provider" | "permissionMode" | "maxSteps" | "maxTurns" | "defaultRole" | "childAgentTimeout" | "debug" | null;
+  originalValue: string | number | boolean;
 }
 
 export interface AppState {
@@ -89,7 +97,13 @@ export interface AppState {
     permissionMode: string;
     maxTurns: number;
     maxSteps: number;
+    defaultRole: string;
+    childAgentTimeout: number;
+    debug: boolean;
   };
+
+  // 完整配置信息
+  fullConfig: TuiFullConfig;
 
   // 配置编辑状态
   configEdit: ConfigEdit;

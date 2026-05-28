@@ -10,10 +10,10 @@ import { ConfigPage } from "./components/config/ConfigPage.js";
 import { AppContext, type AppState, type PageName, type FocusArea } from "./context/AppContext.js";
 import { useRuntimeEvents } from "./hooks/useRuntimeEvents.js";
 import { useUserInput } from "./hooks/useUserInput.js";
-import type { TuiRuntimeContext } from "./types.js";
+import type { TuiRuntimeContext, TuiFullConfig } from "./types.js";
 
 // 初始状态
-const createInitialState = (config: TuiRuntimeContext["config"], session: TuiRuntimeContext["session"], providerId: string): AppState => ({
+const createInitialState = (config: TuiRuntimeContext["config"], session: TuiRuntimeContext["session"], providerId: string, fullConfig: TuiFullConfig): AppState => ({
   currentPage: "session",
   focusArea: null,  // 初始无焦点
   inputMode: false,
@@ -38,6 +38,7 @@ const createInitialState = (config: TuiRuntimeContext["config"], session: TuiRun
   },
 
   config,
+  fullConfig,
   configEdit: {
     field: null,
     originalValue: "",
@@ -55,7 +56,7 @@ interface AppProps {
 }
 
 export function App({ runtime }: AppProps): React.ReactElement {
-  const [state, setState] = useState<AppState>(() => createInitialState(runtime.config, runtime.session, runtime.providerId));
+  const [state, setState] = useState<AppState>(() => createInitialState(runtime.config, runtime.session, runtime.providerId, runtime.fullConfig));
 
   // 订阅 runtime 事件
   useRuntimeEvents(runtime.events$, runtime.debug$, setState);
@@ -118,7 +119,7 @@ export function App({ runtime }: AppProps): React.ReactElement {
   // 页面区域配置
   const pageAreas: Record<PageName, string[]> = {
     session: ["header", "agentTree", "messageList", "inputBar"],
-    debug: ["header", "sessionInfo", "traceLog"],
+    debug: ["header", "traceLog"],
     config: ["header", "configList"],
   };
 
