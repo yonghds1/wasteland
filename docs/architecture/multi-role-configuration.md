@@ -2,7 +2,7 @@
 
 ## 目的
 
-本文档定义 `rxc` 后续支持多角色、多模型、多 provider 时，建议采用的配置结构。
+本文档定义 `joe` 后续支持多角色、多模型、多 provider 时，建议采用的配置结构。
 
 这是一份架构设计文档，不代表当前代码已经全部实现。当前仓库已经落地的是：
 
@@ -207,7 +207,7 @@
 - `roles`
 - `runtime.defaultRole`
 - `chat --role`
-- `rxc config current`
+- `joe config current`
 
 先不急着做：
 

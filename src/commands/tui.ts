@@ -26,10 +26,10 @@ export function createTuiCommand(): Command {
         console.error(`  - stdout TTY: ${tty.stdoutIsTTY ? "是" : "否"}`);
         console.error("");
         console.error("请在终端中直接运行:");
-        console.error("  rxc tui");
+        console.error("  joe tui");
         console.error("");
         console.error("或使用 CLI 模式:");
-        console.error("  rxc chat --message '你的消息'");
+        console.error("  joe chat --message '你的消息'");
         process.exit(1);
       }
 

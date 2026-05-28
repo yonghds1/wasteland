@@ -296,7 +296,7 @@ test("工具执行: read-file 工具", async () => {
   if (result.status === "success") {
     // 输出格式是带行号的文本，不是纯 JSON
     assert.ok(result.output.includes("package.json"), "输出应该包含文件名");
-    assert.ok(result.output.includes('"name": "rxc"'), "输出应该包含 package.json 内容");
+    assert.ok(result.output.includes('"name": "wasteland"'), "输出应该包含 package.json 内容");
   }
 });
 

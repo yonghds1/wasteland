@@ -37,7 +37,7 @@ const MAX_DISPLAY_LENGTH = 50000;
 
 /** 默认请求头 */
 const DEFAULT_HEADERS: Record<string, string> = {
-  "User-Agent": "rxc/0.1.0",
+  "User-Agent": "joe/0.1.0",
   Accept: "*/*",
 };
 

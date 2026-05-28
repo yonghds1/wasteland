@@ -45,7 +45,7 @@ const DEFAULT_IGNORE_DIRS = new Set([
   "node_modules",
   ".git",
   "dist",
-  ".rxc",
+  ".wasteland",
   "__pycache__",
   ".next",
   ".nuxt",

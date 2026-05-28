@@ -27,7 +27,7 @@ describe("AgentLoop", () => {
     const permMod = await import("../../dist/runtime/permission-gate.js");
     createPermissionGate = permMod.createPermissionGate;
 
-    tempDir = await mkdtemp(join(tmpdir(), "rxc-agent-loop-"));
+    tempDir = await mkdtemp(join(tmpdir(), "joe-agent-loop-"));
   });
 
   after(async () => {

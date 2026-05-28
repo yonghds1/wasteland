@@ -49,7 +49,7 @@ test("permission gate applies default and bypass permission modes", () => {
 });
 
 test("dispatchToolCall persists an allowed tool lifecycle", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-tool-runtime-"));
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-tool-runtime-"));
   const sessionDir = path.join(tempRoot, "sessions");
   const sessionManager = new SessionManager(sessionDir);
   const session = await sessionManager.startSession({
@@ -110,7 +110,7 @@ test("dispatchToolCall persists an allowed tool lifecycle", async () => {
 });
 
 test("dispatchToolCall blocks execution when permission is not granted", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-tool-runtime-blocked-"));
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-tool-runtime-blocked-"));
   const sessionDir = path.join(tempRoot, "sessions");
   const sessionManager = new SessionManager(sessionDir);
   const session = await sessionManager.startSession({
@@ -170,7 +170,7 @@ test("dispatchToolCall blocks execution when permission is not granted", async (
 });
 
 test("spawn_agent creates child agent with independent session", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-spawn-agent-"));
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-spawn-agent-"));
   const sessionDir = path.join(tempRoot, "sessions");
   const sessionManager = new SessionManager(sessionDir);
   const session = await sessionManager.startSession({
@@ -230,7 +230,7 @@ test("spawn_agent creates child agent with independent session", async () => {
 });
 
 test("spawn_agent fails when required parameters are missing", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-spawn-agent-missing-"));
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-spawn-agent-missing-"));
   const sessionDir = path.join(tempRoot, "sessions");
   const sessionManager = new SessionManager(sessionDir);
   const session = await sessionManager.startSession({
@@ -275,7 +275,7 @@ test("spawn_agent fails when required parameters are missing", async () => {
 });
 
 test("spawn_agent respects tools parameter to limit child agent tools", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-spawn-agent-tools-"));
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-spawn-agent-tools-"));
   const sessionDir = path.join(tempRoot, "sessions");
   const sessionManager = new SessionManager(sessionDir);
   const session = await sessionManager.startSession({

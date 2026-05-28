@@ -7,7 +7,7 @@
 
 import { Subject } from "rxjs";
 
-import { loadRxcSettings } from "../../config/load-settings.js";
+import { loadJoeSettings } from "../../config/load-settings.js";
 import {
   resolveDefaultSessionDir,
 } from "../../config/paths.js";
@@ -17,9 +17,11 @@ import { createPermissionGate } from "../../runtime/permission-gate.js";
 import { SessionManager } from "../../runtime/session-manager.js";
 import { createDefaultProviderRegistry } from "../../providers/provider-registry.js";
 import { createDefaultToolRegistry } from "../../tools/default-registry.js";
+import { loadSkin } from "../../skins/index.js";
 import type { TuiRuntimeContext, TuiConfig, TuiFullConfig } from "../types.js";
 import type { ChatInputTurn } from "../../runtime/event-types.js";
 import type { ProviderRegistry } from "../../providers/provider-registry.js";
+import type { Skin } from "../../skins/index.js";
 
 /**
  * TUI 运行时上下文（扩展版，包含清理资源）
@@ -35,7 +37,7 @@ interface InternalTuiRuntimeContext extends TuiRuntimeContext {
  * 创建 TUI 运行时上下文
  *
  * 此函数执行以下步骤：
- * 1. 加载配置（复用 loadRxcSettings）
+ * 1. 加载配置（复用 loadJoeSettings）
  * 2. 创建 SessionManager
  * 3. 创建 Provider（使用 resolveChatRuntime）
  * 4. 创建 PermissionGate
@@ -47,7 +49,7 @@ interface InternalTuiRuntimeContext extends TuiRuntimeContext {
  */
 export async function createTuiRuntime(cwd: string): Promise<TuiRuntimeContext> {
   // 1. 加载配置
-  const loadedSettings = await loadRxcSettings({
+  const loadedSettings = await loadJoeSettings({
     cwd,
     env: process.env,
   });
@@ -134,10 +136,19 @@ export async function createTuiRuntime(cwd: string): Promise<TuiRuntimeContext> 
   const fullConfig: TuiFullConfig = {
     providers: loadedSettings.settings.providers,
     models: loadedSettings.settings.models,
-    roles: loadedSettings.settings.roles,
+    subAgents: loadedSettings.settings.subAgents,
     sources: loadedSettings.sources,
     defaultProvider: loadedSettings.settings.defaultProvider,
   };
+
+  // 12. 加载皮肤配置（从 defaultRole 推导）
+  let skin: Skin | null = null;
+  try {
+    const skinId = loadedSettings.settings.runtime.defaultRole ?? "immortan-joe";
+    skin = await loadSkin(skinId);
+  } catch (error) {
+    console.warn("Failed to load skin:", error instanceof Error ? error.message : String(error));
+  }
 
   // 返回扩展的上下文（包含 sessionManager 用于清理）
   return {
@@ -150,6 +161,7 @@ export async function createTuiRuntime(cwd: string): Promise<TuiRuntimeContext> 
     sessionManager,
     providerId: provider.id,
     stopMCP,
+    skin,
   } as InternalTuiRuntimeContext;
 }
 

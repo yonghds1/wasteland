@@ -33,7 +33,7 @@ export type ModelSettings = {
   [key: string]: unknown;
 };
 export type RoleSettings = {
-  model: string;
+  model?: string;
   permissionMode?: PermissionMode;
   /** @deprecated 使用 promptTemplate 代替 */
   prompt?: string;
@@ -67,13 +67,28 @@ export type MCPServerConfig = {
  */
 export type MCPServersConfig = Record<string, MCPServerConfig>;
 
-export type RawRxcSettings = {
+/**
+ * 子角色配置
+ * 子角色可以被用户自定义覆盖，但主角色 immortan-joe 完全内置不可覆盖
+ */
+export type SubAgentSettings = RoleSettings & {
+  /** 子角色描述，用于配置页面显示 */
+  description?: string;
+};
+
+export type RawJoeSettings = {
   defaultProvider?: string;
   providers?: Record<string, ProviderSettings>;
   models?: Record<string, ModelSettings>;
-  roles?: Record<string, RoleSettings>;
+  /**
+   * 子角色配置
+   * 注意：主角色 immortan-joe 完全内置，不在此配置中
+   * 用户可以在此配置自定义子角色或覆盖内置子角色
+   */
+  subAgents?: Record<string, SubAgentSettings>;
   runtime?: {
     defaultRole?: string;
+    defaultModel?: string;
     permissionMode?: PermissionMode;
     maxStepsPerTurn?: number;
     maxTurns?: number;
@@ -84,13 +99,18 @@ export type RawRxcSettings = {
   mcpServers?: MCPServersConfig;
 };
 
-export type ResolvedRxcSettings = {
+export type ResolvedJoeSettings = {
   defaultProvider: string;
   providers: Record<string, ProviderSettings>;
   models: Record<string, ModelSettings>;
-  roles: Record<string, RoleSettings>;
+  /**
+   * 子角色配置（解析后）
+   * 主角色 immortan-joe 完全内置，不在此配置中
+   */
+  subAgents: Record<string, SubAgentSettings>;
   runtime: {
     defaultRole?: string;
+    defaultModel?: string;
     permissionMode: PermissionMode;
     maxStepsPerTurn: number;
     maxTurns: number;
@@ -100,8 +120,8 @@ export type ResolvedRxcSettings = {
   mcpServers: MCPServersConfig;
 };
 
-export type LoadedRxcSettings = {
-  settings: ResolvedRxcSettings;
+export type LoadedJoeSettings = {
+  settings: ResolvedJoeSettings;
   sources: {
     user?: string;
     project?: string;
@@ -112,13 +132,13 @@ export type LoadedRxcSettings = {
   userConfigDir: string;
 };
 
-export const DEFAULT_RXC_SETTINGS: ResolvedRxcSettings = {
+export const DEFAULT_JOE_SETTINGS: ResolvedJoeSettings = {
   defaultProvider: "local",
   providers: {},
   models: {},
-  roles: {},
+  subAgents: {},
   runtime: {
-    defaultRole: undefined,
+    defaultRole: "immortan-joe",
     permissionMode: "default",
     maxStepsPerTurn: 8,
     maxTurns: 20,

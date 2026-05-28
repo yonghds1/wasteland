@@ -5,14 +5,14 @@ import type { PermissionMode } from "../runtime/permission-gate.js";
 import {
   type AuthSettings,
   type AuthRef,
-  DEFAULT_RXC_SETTINGS,
-  type LoadedRxcSettings,
+  DEFAULT_JOE_SETTINGS,
+  type LoadedJoeSettings,
   type MCPServerConfig,
   type MCPServersConfig,
   type ModelSettings,
   type ProviderSettings,
-  type RawRxcSettings,
-  type ResolvedRxcSettings,
+  type RawJoeSettings,
+  type ResolvedJoeSettings,
   type RoleSettings,
 } from "./settings-types.js";
 import {
@@ -109,25 +109,25 @@ function validateRoleSettings(
   sourcePath: string,
 ): Record<string, RoleSettings> {
   if (!isRecord(value)) {
-    throw new Error(`配置文件 ${sourcePath} 中 roles 必须是对象。`);
+    throw new Error(`配置文件 ${sourcePath} 中 subAgents 必须是对象。`);
   }
 
   const roles: Record<string, RoleSettings> = {};
 
   for (const [roleId, roleSettings] of Object.entries(value)) {
     if (!isRecord(roleSettings)) {
-      throw new Error(`配置文件 ${sourcePath} 中 roles.${roleId} 必须是对象。`);
+      throw new Error(`配置文件 ${sourcePath} 中 subAgents.${roleId} 必须是对象。`);
     }
 
     if (typeof roleSettings.model !== "string" || roleSettings.model.trim().length === 0) {
-      throw new Error(`配置文件 ${sourcePath} 中 roles.${roleId}.model 必须是非空字符串。`);
+      throw new Error(`配置文件 ${sourcePath} 中 subAgents.${roleId}.model 必须是非空字符串。`);
     }
 
     if (
       "permissionMode" in roleSettings
       && roleSettings.permissionMode !== undefined
     ) {
-      validatePermissionMode(roleSettings.permissionMode, `${sourcePath}:roles.${roleId}.permissionMode`);
+      validatePermissionMode(roleSettings.permissionMode, `${sourcePath}:subAgents.${roleId}.permissionMode`);
     }
 
     if (
@@ -135,14 +135,14 @@ function validateRoleSettings(
       && roleSettings.prompt !== undefined
       && (typeof roleSettings.prompt !== "string" || roleSettings.prompt.trim().length === 0)
     ) {
-      throw new Error(`配置文件 ${sourcePath} 中 roles.${roleId}.prompt 必须是非空字符串。`);
+      throw new Error(`配置文件 ${sourcePath} 中 subAgents.${roleId}.prompt 必须是非空字符串。`);
     }
 
     roles[roleId] = {
       ...roleSettings,
       model: roleSettings.model.trim(),
       permissionMode: typeof roleSettings.permissionMode === "string"
-        ? validatePermissionMode(roleSettings.permissionMode, `${sourcePath}:roles.${roleId}.permissionMode`)
+        ? validatePermissionMode(roleSettings.permissionMode, `${sourcePath}:subAgents.${roleId}.permissionMode`)
         : undefined,
       prompt: typeof roleSettings.prompt === "string"
         ? roleSettings.prompt.trim()
@@ -153,12 +153,12 @@ function validateRoleSettings(
   return roles;
 }
 
-function parseSettings(raw: unknown, sourcePath: string): RawRxcSettings {
+function parseSettings(raw: unknown, sourcePath: string): RawJoeSettings {
   if (!isRecord(raw)) {
     throw new Error(`配置文件 ${sourcePath} 的根节点必须是对象。`);
   }
 
-  const settings: RawRxcSettings = {};
+  const settings: RawJoeSettings = {};
 
   if ("defaultProvider" in raw) {
     if (typeof raw.defaultProvider !== "string" || raw.defaultProvider.trim().length === 0) {
@@ -176,8 +176,8 @@ function parseSettings(raw: unknown, sourcePath: string): RawRxcSettings {
     settings.models = validateModelSettings(raw.models, sourcePath);
   }
 
-  if ("roles" in raw && raw.roles !== undefined) {
-    settings.roles = validateRoleSettings(raw.roles, sourcePath);
+  if ("subAgents" in raw && raw.subAgents !== undefined) {
+    settings.subAgents = validateRoleSettings(raw.subAgents, sourcePath);
   }
 
   if ("runtime" in raw && raw.runtime !== undefined) {
@@ -185,7 +185,7 @@ function parseSettings(raw: unknown, sourcePath: string): RawRxcSettings {
       throw new Error(`配置文件 ${sourcePath} 中 runtime 必须是对象。`);
     }
 
-    const runtime: RawRxcSettings["runtime"] = {};
+    const runtime: RawJoeSettings["runtime"] = {};
 
     if ("defaultRole" in raw.runtime && raw.runtime.defaultRole !== undefined) {
       if (typeof raw.runtime.defaultRole !== "string" || raw.runtime.defaultRole.trim().length === 0) {
@@ -193,6 +193,14 @@ function parseSettings(raw: unknown, sourcePath: string): RawRxcSettings {
       }
 
       runtime.defaultRole = raw.runtime.defaultRole.trim();
+    }
+
+    if ("defaultModel" in raw.runtime && raw.runtime.defaultModel !== undefined) {
+      if (typeof raw.runtime.defaultModel !== "string" || raw.runtime.defaultModel.trim().length === 0) {
+        throw new Error(`配置文件 ${sourcePath} 中 runtime.defaultModel 必须是非空字符串。`);
+      }
+
+      runtime.defaultModel = raw.runtime.defaultModel.trim();
     }
 
     if ("permissionMode" in raw.runtime && raw.runtime.permissionMode !== undefined) {
@@ -249,7 +257,7 @@ function parseSettings(raw: unknown, sourcePath: string): RawRxcSettings {
   return settings;
 }
 
-async function readSettingsFile(filePath: string): Promise<RawRxcSettings | null> {
+async function readSettingsFile(filePath: string): Promise<RawJoeSettings | null> {
   try {
     const content = await readFile(filePath, "utf8");
     return parseSettings(JSON.parse(content), filePath);
@@ -302,16 +310,16 @@ async function readAuthFile(filePath: string): Promise<AuthSettings | null> {
 }
 
 function mergeSettings(
-  base: ResolvedRxcSettings,
-  next: RawRxcSettings | null,
-): ResolvedRxcSettings {
+  base: ResolvedJoeSettings,
+  next: RawJoeSettings | null,
+): ResolvedJoeSettings {
   if (!next) {
     return base;
   }
 
   const mergedProviders = { ...base.providers };
   const mergedModels = { ...base.models };
-  const mergedRoles = { ...base.roles };
+  const mergedSubAgents = { ...base.subAgents };
 
   if (next.providers) {
     for (const [providerId, providerSettings] of Object.entries(next.providers)) {
@@ -331,11 +339,11 @@ function mergeSettings(
     }
   }
 
-  if (next.roles) {
-    for (const [roleId, roleSettings] of Object.entries(next.roles)) {
-      mergedRoles[roleId] = {
-        ...(mergedRoles[roleId] ?? {}),
-        ...roleSettings,
+  if (next.subAgents) {
+    for (const [agentId, agentSettings] of Object.entries(next.subAgents)) {
+      mergedSubAgents[agentId] = {
+        ...(mergedSubAgents[agentId] ?? {}),
+        ...agentSettings,
       };
     }
   }
@@ -355,9 +363,10 @@ function mergeSettings(
     defaultProvider: next.defaultProvider ?? base.defaultProvider,
     providers: mergedProviders,
     models: mergedModels,
-    roles: mergedRoles,
+    subAgents: mergedSubAgents,
     runtime: {
       defaultRole: next.runtime?.defaultRole ?? base.runtime.defaultRole,
+      defaultModel: next.runtime?.defaultModel ?? base.runtime.defaultModel,
       permissionMode: next.runtime?.permissionMode ?? base.runtime.permissionMode,
       maxStepsPerTurn: next.runtime?.maxStepsPerTurn ?? base.runtime.maxStepsPerTurn,
       maxTurns: next.runtime?.maxTurns ?? base.runtime.maxTurns,
@@ -454,10 +463,10 @@ function resolveAuthRefsInValue(params: {
 }
 
 function resolveSettingsAuthRefs(
-  settings: ResolvedRxcSettings,
+  settings: ResolvedJoeSettings,
   auth: AuthSettings,
   env: NodeJS.ProcessEnv,
-): ResolvedRxcSettings {
+): ResolvedJoeSettings {
   // 解析 mcpServers 中的 auth refs
   const resolvedMCPServers: Record<string, MCPServerConfig> = {};
   for (const [name, config] of Object.entries(settings.mcpServers)) {
@@ -483,8 +492,8 @@ function resolveSettingsAuthRefs(
       auth,
       env,
     }) as Record<string, ModelSettings>,
-    roles: resolveAuthRefsInValue({
-      value: settings.roles,
+    subAgents: resolveAuthRefsInValue({
+      value: settings.subAgents,
       auth,
       env,
     }) as Record<string, RoleSettings>,
@@ -496,16 +505,17 @@ function resolveSettingsAuthRefs(
 }
 
 function applyEnvironmentOverrides(
-  settings: ResolvedRxcSettings,
+  settings: ResolvedJoeSettings,
   env: NodeJS.ProcessEnv,
-): ResolvedRxcSettings {
+): ResolvedJoeSettings {
   const resolved = {
     defaultProvider: settings.defaultProvider,
     providers: { ...settings.providers },
     models: { ...settings.models },
-    roles: { ...settings.roles },
+    subAgents: { ...settings.subAgents },
     runtime: {
       defaultRole: settings.runtime.defaultRole,
+      defaultModel: settings.runtime.defaultModel,
       permissionMode: settings.runtime.permissionMode,
       maxStepsPerTurn: settings.runtime.maxStepsPerTurn,
       maxTurns: settings.runtime.maxTurns,
@@ -513,37 +523,37 @@ function applyEnvironmentOverrides(
       debug: settings.runtime.debug,
     },
     mcpServers: { ...settings.mcpServers },
-  } satisfies ResolvedRxcSettings;
+  } satisfies ResolvedJoeSettings;
 
-  if (typeof env.RXC_PROVIDER === "string" && env.RXC_PROVIDER.trim().length > 0) {
-    resolved.defaultProvider = env.RXC_PROVIDER.trim();
+  if (typeof env.JOE_PROVIDER === "string" && env.JOE_PROVIDER.trim().length > 0) {
+    resolved.defaultProvider = env.JOE_PROVIDER.trim();
   }
 
-  if (typeof env.RXC_PERMISSION_MODE === "string" && env.RXC_PERMISSION_MODE.trim().length > 0) {
-    resolved.runtime.permissionMode = validatePermissionMode(env.RXC_PERMISSION_MODE, "env:RXC_PERMISSION_MODE");
+  if (typeof env.JOE_PERMISSION_MODE === "string" && env.JOE_PERMISSION_MODE.trim().length > 0) {
+    resolved.runtime.permissionMode = validatePermissionMode(env.JOE_PERMISSION_MODE, "env:JOE_PERMISSION_MODE");
   }
 
-  if (typeof env.RXC_MAX_STEPS_PER_TURN === "string" && env.RXC_MAX_STEPS_PER_TURN.trim().length > 0) {
-    const parsed = Number.parseInt(env.RXC_MAX_STEPS_PER_TURN, 10);
+  if (typeof env.JOE_MAX_STEPS_PER_TURN === "string" && env.JOE_MAX_STEPS_PER_TURN.trim().length > 0) {
+    const parsed = Number.parseInt(env.JOE_MAX_STEPS_PER_TURN, 10);
 
     if (!Number.isInteger(parsed) || parsed <= 0) {
-      throw new Error("环境变量 RXC_MAX_STEPS_PER_TURN 必须是正整数。");
+      throw new Error("环境变量 JOE_MAX_STEPS_PER_TURN 必须是正整数。");
     }
 
     resolved.runtime.maxStepsPerTurn = parsed;
   }
 
-  if (typeof env.RXC_DEBUG === "string" && env.RXC_DEBUG.trim().length > 0) {
-    resolved.runtime.debug = parseBooleanOverride(env.RXC_DEBUG, "RXC_DEBUG");
+  if (typeof env.JOE_DEBUG === "string" && env.JOE_DEBUG.trim().length > 0) {
+    resolved.runtime.debug = parseBooleanOverride(env.JOE_DEBUG, "JOE_DEBUG");
   }
 
   return resolved;
 }
 
-export async function loadRxcSettings(params?: {
+export async function loadJoeSettings(params?: {
   cwd?: string;
   env?: NodeJS.ProcessEnv;
-}): Promise<LoadedRxcSettings> {
+}): Promise<LoadedJoeSettings> {
   const cwd = resolve(params?.cwd ?? process.cwd());
   const processEnv = params?.env ?? process.env;
   const userConfigDir = resolveUserConfigDir(processEnv);
@@ -570,7 +580,7 @@ export async function loadRxcSettings(params?: {
   const merged = applyEnvironmentOverrides(
     resolveSettingsAuthRefs(
       mergeSettings(
-        mergeSettings(DEFAULT_RXC_SETTINGS, userSettings),
+        mergeSettings(DEFAULT_JOE_SETTINGS, userSettings),
         projectSettings,
       ),
       mergedAuth,

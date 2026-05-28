@@ -1,7 +1,7 @@
 import type { Observable } from "rxjs";
 import { Command } from "commander";
 
-import { loadRxcSettings } from "../config/load-settings.js";
+import { loadJoeSettings } from "../config/load-settings.js";
 import { resolveDefaultSessionDir, resolveDefaultTraceDir } from "../config/paths.js";
 import { resolveChatRuntime } from "../config/resolve-chat-runtime.js";
 import type { AgentProvider } from "../providers/provider-types.js";
@@ -80,7 +80,7 @@ async function runChatSession(params: {
   // 创建技能注册表（包含内置技能和用户自定义技能）
   const skillRegistry = await createSkillRegistry({
     projectSkillsDir: params.projectConfigDir ? `${params.projectConfigDir}/skills` : undefined,
-    userSkillsDir: `${homedir()}/.rxc/skills`,
+    userSkillsDir: `${homedir()}/.wasteland/skills`,
   });
 
   // 创建技能执行器
@@ -166,7 +166,7 @@ export function createChatCommand(): Command {
     )
     .action(async (options: ChatOptions) => {
       const cwd = process.cwd();
-      const loadedSettings = await loadRxcSettings({
+      const loadedSettings = await loadJoeSettings({
         cwd,
         env: process.env,
       });

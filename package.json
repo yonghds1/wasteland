@@ -1,11 +1,11 @@
 {
-  "name": "rxc",
+  "name": "wasteland",
   "version": "0.1.0",
-  "description": "An RxJS-first TypeScript agent CLI scaffold.",
+  "description": "Wasteland CLI - A multi-agent CLI with Immortan Joe as the main character",
   "type": "module",
   "main": "./dist/cli.js",
   "bin": {
-    "rxc": "./bin/rxc.js"
+    "wasteland": "./bin/wasteland.js"
   },
   "files": [
     "bin",
@@ -19,9 +19,12 @@
     "test": "npm run build && node --test --experimental-test-isolation=none test/**/*.test.js",
     "check": "npm run typecheck && npm test",
     "cli": "tsx src/cli.ts chat",
-    "cli:build": "npm run build && node ./bin/rxc.js chat",
+    "cli:build": "npm run build && node ./bin/wasteland.js chat",
     "tui": "tsx src/cli.ts tui",
-    "tui:build": "npm run build && node ./bin/rxc.js tui"
+    "tui:build": "npm run build && node ./bin/wasteland.js tui",
+    "postinstall": "npm run build && ./scripts/create-aliases.sh",
+    "aliases": "./scripts/create-aliases.sh",
+    "aliases:switch": "./scripts/create-aliases.sh"
   },
   "keywords": [
     "cli",

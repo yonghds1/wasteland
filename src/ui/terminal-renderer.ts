@@ -358,7 +358,7 @@ export async function renderRuntimeEvents(
 
               if (!chunkedTurns.has(event.turn)) {
                 writeInteractiveLabel(stdout, {
-                  label: "rxc",
+                  label: "joe",
                   depth: currentDepth,
                   name: currentName,
                 });
@@ -394,7 +394,7 @@ export async function renderRuntimeEvents(
                 chunkWriter.close(event.turn);
               } else {
                 writeInteractiveBlock(stdout, {
-                  label: "rxc",
+                  label: "joe",
                   content: event.content,
                   depth: currentDepth,
                   name: currentName,

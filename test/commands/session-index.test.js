@@ -15,7 +15,7 @@ describe("SessionIndex", () => {
   let SessionIndex;
 
   before(async () => {
-    tempDir = await mkdtemp(join(tmpdir(), "rxc-test-sessions-"));
+    tempDir = await mkdtemp(join(tmpdir(), "joe-test-sessions-"));
 
     const mod = await import("../../dist/runtime/session-index.js");
     SessionIndex = mod.SessionIndex;
@@ -40,7 +40,7 @@ describe("SessionIndex", () => {
 
   describe("listSessions", () => {
     test("空目录返回空数组", async () => {
-      const emptyDir = await mkdtemp(join(tmpdir(), "rxc-empty-"));
+      const emptyDir = await mkdtemp(join(tmpdir(), "joe-empty-"));
       try {
         const index = new SessionIndex(emptyDir);
         const sessions = await index.listSessions();
@@ -51,7 +51,7 @@ describe("SessionIndex", () => {
     });
 
     test("列出单个 session", async () => {
-      const testDir = await mkdtemp(join(tmpdir(), "rxc-single-"));
+      const testDir = await mkdtemp(join(tmpdir(), "joe-single-"));
       try {
         const id = "2026-05-27T10-00-00_abc123";
         await createMockSessionInDir(testDir, id, [
@@ -75,7 +75,7 @@ describe("SessionIndex", () => {
     });
 
     test("列出多个 session 并按时间排序", async () => {
-      const testDir = await mkdtemp(join(tmpdir(), "rxc-multi-"));
+      const testDir = await mkdtemp(join(tmpdir(), "joe-multi-"));
       try {
         // 创建多个 session 并设置不同的 mtime
         const id1 = "2026-05-27T08-00-00_aaa111";
@@ -115,7 +115,7 @@ describe("SessionIndex", () => {
     });
 
     test("忽略子 Agent session 文件", async () => {
-      const testDir = await mkdtemp(join(tmpdir(), "rxc-child-"));
+      const testDir = await mkdtemp(join(tmpdir(), "joe-child-"));
       try {
         const parentId = "2026-05-27T10-00-00_abc123";
         const childId = "2026-05-27T10-00-00_abc123-child-agent1";
@@ -143,7 +143,7 @@ describe("SessionIndex", () => {
     });
 
     test("按 provider 过滤", async () => {
-      const testDir = await mkdtemp(join(tmpdir(), "rxc-filter-"));
+      const testDir = await mkdtemp(join(tmpdir(), "joe-filter-"));
       try {
         await createMockSessionInDir(testDir, "2026-05-27T10-00-00_aaa111", [
           { type: "session", timestamp: "2026-05-27T10:00:00Z", provider: "local" },
@@ -165,7 +165,7 @@ describe("SessionIndex", () => {
     });
 
     test("搜索消息内容", async () => {
-      const testDir = await mkdtemp(join(tmpdir(), "rxc-search-"));
+      const testDir = await mkdtemp(join(tmpdir(), "joe-search-"));
       try {
         await createMockSessionInDir(testDir, "2026-05-27T10-00-00_aaa111", [
           { type: "session", timestamp: "2026-05-27T10:00:00Z" },
@@ -187,7 +187,7 @@ describe("SessionIndex", () => {
     });
 
     test("分页功能", async () => {
-      const testDir = await mkdtemp(join(tmpdir(), "rxc-page-"));
+      const testDir = await mkdtemp(join(tmpdir(), "joe-page-"));
       try {
         // 创建 5 个 session
         for (let i = 1; i <= 5; i++) {
@@ -220,7 +220,7 @@ describe("SessionIndex", () => {
 
   describe("getSession", () => {
     test("获取 session 详情", async () => {
-      const testDir = await mkdtemp(join(tmpdir(), "rxc-detail-"));
+      const testDir = await mkdtemp(join(tmpdir(), "joe-detail-"));
       try {
         const id = "2026-05-27T10-00-00_abc123";
         await createMockSessionInDir(testDir, id, [
@@ -245,7 +245,7 @@ describe("SessionIndex", () => {
     });
 
     test("不存在的 session 返回 null", async () => {
-      const testDir = await mkdtemp(join(tmpdir(), "rxc-notfound-"));
+      const testDir = await mkdtemp(join(tmpdir(), "joe-notfound-"));
       try {
         const index = new SessionIndex(testDir);
         const session = await index.getSession("2026-05-27T10-00-00_nonexist");
@@ -258,7 +258,7 @@ describe("SessionIndex", () => {
 
   describe("getLatestSession", () => {
     test("获取最新 session", async () => {
-      const testDir = await mkdtemp(join(tmpdir(), "rxc-latest-"));
+      const testDir = await mkdtemp(join(tmpdir(), "joe-latest-"));
       try {
         const id1 = "2026-05-27T08-00-00_aaa111";
         const id2 = "2026-05-27T10-00-00_bbb222";
@@ -288,7 +288,7 @@ describe("SessionIndex", () => {
     });
 
     test("空目录返回 null", async () => {
-      const testDir = await mkdtemp(join(tmpdir(), "rxc-latest-empty-"));
+      const testDir = await mkdtemp(join(tmpdir(), "joe-latest-empty-"));
       try {
         const index = new SessionIndex(testDir);
         const session = await index.getLatestSession();
@@ -301,7 +301,7 @@ describe("SessionIndex", () => {
 
   describe("deleteSession", () => {
     test("删除 session 及其子 Agent", async () => {
-      const testDir = await mkdtemp(join(tmpdir(), "rxc-delete-"));
+      const testDir = await mkdtemp(join(tmpdir(), "joe-delete-"));
       try {
         const parentId = "2026-05-27T10-00-00_abc123";
         const childId = "2026-05-27T10-00-00_abc123-child-agent1";
@@ -329,7 +329,7 @@ describe("SessionIndex", () => {
     });
 
     test("删除不存在的 session 返回 false", async () => {
-      const testDir = await mkdtemp(join(tmpdir(), "rxc-delete-notfound-"));
+      const testDir = await mkdtemp(join(tmpdir(), "joe-delete-notfound-"));
       try {
         const index = new SessionIndex(testDir);
         const success = await index.deleteSession("2026-05-27T10-00-00_nonexist");
@@ -342,7 +342,7 @@ describe("SessionIndex", () => {
 
   describe("getStats", () => {
     test("统计信息正确", async () => {
-      const testDir = await mkdtemp(join(tmpdir(), "rxc-stats-"));
+      const testDir = await mkdtemp(join(tmpdir(), "joe-stats-"));
       try {
         await createMockSessionInDir(testDir, "2026-05-27T08-00-00_aaa111", [
           { type: "session", timestamp: "2026-05-27T08:00:00Z" },

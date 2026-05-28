@@ -34,7 +34,7 @@
 
 ```
 ┌──────────────┐                    ┌──────────────┐
-│   rxc        │  JSON-RPC/stdio    │  MCP Server  │
+│   joe        │  JSON-RPC/stdio    │  MCP Server  │
 │  (Client)    │ ←────────────────→ │  (Claude)    │
 ├──────────────┤                    ├──────────────┤
 │              │  1. initialize     │              │
@@ -56,12 +56,12 @@
 ### 1. 复制配置文件
 
 ```bash
-cp .rxc/settings.example.json .rxc/settings.json
+cp .joe/settings.example.json .joe/settings.json
 ```
 
 ### 2. 配置 MCP Servers
 
-在 `.rxc/settings.json` 中：
+在 `.joe/settings.json` 中：
 
 ```json
 {
@@ -140,7 +140,7 @@ MCP 工具名称支持两种格式：
 
 ```bash
 # 使用 Architect 角色启动
-rxc chat --role architect --message "实现用户登录功能"
+joe chat --role architect --message "实现用户登录功能"
 ```
 
 ### 方式二：使用 MCP API
@@ -221,11 +221,11 @@ await stopMCP();
 用户请求: "实现用户登录功能"
     ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│  rxc CLI (src/commands/chat.ts)                                 │
+│  joe CLI (src/commands/chat.ts)                                 │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
 │  1. loadRxcSettings({ cwd, env })                               │
-│     └─ 读取 .rxc/settings.json                                  │
+│     └─ 读取 .joe/settings.json                                  │
 │     └─ 返回 { mcpServers: { "claude-code": {...}, "codex": {...} } }
 │                                                                 │
 │  2. createDefaultToolRegistry(mcpServers)                       │
@@ -298,7 +298,7 @@ await stopMCP();
 
 ### 1. 配置定义
 
-在 `.rxc/settings.json` 中定义 MCP Servers：
+在 `.joe/settings.json` 中定义 MCP Servers：
 
 ```json
 {

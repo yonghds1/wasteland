@@ -2,7 +2,7 @@
 
 ## 目标
 
-在 Phase 2 已经具备工具合同、权限闸门和最小工具执行路径之后，把 `rxc` 从“单步工具演示 CLI”推进到“真正的多步 agent CLI”。
+在 Phase 2 已经具备工具合同、权限闸门和最小工具执行路径之后，把 `joe` 从“单步工具演示 CLI”推进到“真正的多步 agent CLI”。
 
 这一阶段要解决的核心问题不是再多加几个工具，而是补齐下面这个闭环：
 
@@ -332,8 +332,8 @@ trace step=2 provider.event type=assistant_message
 
 建议把 debug trace 和 transcript 分开：
 
-- transcript：`.rxc/sessions/<sessionId>.jsonl`
-- trace：`.rxc/traces/<sessionId>.jsonl`
+- transcript：`.joe/sessions/<sessionId>.jsonl`
+- trace：`.joe/traces/<sessionId>.jsonl`
 
 原因：
 

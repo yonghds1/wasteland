@@ -48,7 +48,7 @@ Phase 1 **暂不**引入：
 ### Sessions
 
 - `src/runtime/session-manager.ts`
-- 位于项目自有数据目录下的本地 transcript 格式（当前默认目录为 `.rxc/sessions/`）
+- 位于项目自有数据目录下的本地 transcript 格式（当前默认目录为 `.joe/sessions/`）
 
 ---
 

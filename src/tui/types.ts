@@ -18,6 +18,7 @@ import type {
   RoleSettings,
 } from "../config/settings-types.js";
 import type { PermissionMode } from "../runtime/permission-gate.js";
+import type { Skin } from "../skins/index.js";
 
 /**
  * TUI 运行时上下文
@@ -39,6 +40,8 @@ export interface TuiRuntimeContext {
   providerId: string;
   /** 完整配置信息（用于配置页面） */
   fullConfig: TuiFullConfig;
+  /** 皮肤配置 */
+  skin: Skin | null;
 }
 
 /**
@@ -74,7 +77,7 @@ export interface TuiConfigSources {
 export interface TuiFullConfig {
   providers: Record<string, ProviderSettings>;
   models: Record<string, ModelSettings>;
-  roles: Record<string, RoleSettings>;
+  subAgents: Record<string, RoleSettings>;
   sources: TuiConfigSources;
   defaultProvider: string;
 }

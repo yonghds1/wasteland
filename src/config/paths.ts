@@ -2,13 +2,13 @@ import { access } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
-export const RXC_DIRNAME = ".rxc";
+export const JOE_DIRNAME = ".wasteland";
 export const SETTINGS_FILENAME = "settings.json";
 export const AUTH_FILENAME = "auth.json";
 export const SESSIONS_DIRNAME = "sessions";
-export const RXC_HOME_ENV = "RXC_HOME";
-export const RXC_SESSION_DIR_ENV = "RXC_SESSION_DIR";
-export const LEGACY_RX_CLI_SESSION_DIR_ENV = "RX_CLI_SESSION_DIR";
+export const JOE_HOME_ENV = "JOE_HOME";
+export const JOE_SESSION_DIR_ENV = "JOE_SESSION_DIR";
+export const LEGACY_JOE_SESSION_DIR_ENV = "RX_CLI_SESSION_DIR";
 
 async function pathExists(targetPath: string): Promise<boolean> {
   try {
@@ -28,13 +28,13 @@ function resolveEnvPath(env: NodeJS.ProcessEnv, key: string): string | null {
 }
 
 export function resolveUserConfigDir(env: NodeJS.ProcessEnv = process.env): string {
-  const configuredHome = resolveEnvPath(env, RXC_HOME_ENV);
+  const configuredHome = resolveEnvPath(env, JOE_HOME_ENV);
 
   if (configuredHome) {
     return configuredHome;
   }
 
-  return resolve(homedir(), RXC_DIRNAME);
+  return resolve(homedir(), JOE_DIRNAME);
 }
 
 export function resolveUserSettingsPath(env: NodeJS.ProcessEnv = process.env): string {
@@ -57,7 +57,7 @@ export async function findProjectConfigDir(startCwd: string): Promise<string | n
   let currentDir = resolve(startCwd);
 
   while (true) {
-    const candidateDir = join(currentDir, RXC_DIRNAME);
+    const candidateDir = join(currentDir, JOE_DIRNAME);
     const settingsPath = resolveProjectSettingsPath(candidateDir);
     const authPath = resolveProjectAuthPath(candidateDir);
 
@@ -92,12 +92,12 @@ export function resolveDefaultSessionDir(params: {
     return join(params.projectConfigDir, SESSIONS_DIRNAME);
   }
 
-  return join(resolve(params.cwd), RXC_DIRNAME, SESSIONS_DIRNAME);
+  return join(resolve(params.cwd), JOE_DIRNAME, SESSIONS_DIRNAME);
 }
 
 export function resolveSessionDirOverride(env: NodeJS.ProcessEnv = process.env): string | null {
-  return resolveEnvPath(env, RXC_SESSION_DIR_ENV)
-    ?? resolveEnvPath(env, LEGACY_RX_CLI_SESSION_DIR_ENV);
+  return resolveEnvPath(env, JOE_SESSION_DIR_ENV)
+    ?? resolveEnvPath(env, LEGACY_JOE_SESSION_DIR_ENV);
 }
 
 export const TRACES_DIRNAME = "traces";
@@ -111,5 +111,5 @@ export function resolveDefaultTraceDir(params: {
     return join(params.projectConfigDir, TRACES_DIRNAME);
   }
 
-  return join(resolve(params.cwd), RXC_DIRNAME, TRACES_DIRNAME);
+  return join(resolve(params.cwd), JOE_DIRNAME, TRACES_DIRNAME);
 }

@@ -9,8 +9,8 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
-const cliPath = fileURLToPath(new URL("../bin/rxc.js", import.meta.url));
-const isolatedHomeDir = path.join(os.tmpdir(), `rxc-test-home-${process.pid}`);
+const cliPath = fileURLToPath(new URL("../bin/joe.js", import.meta.url));
+const isolatedHomeDir = path.join(os.tmpdir(), `joe-test-home-${process.pid}`);
 
 function createCleanEnv(overrides = {}) {
   const env = {
@@ -18,12 +18,12 @@ function createCleanEnv(overrides = {}) {
     ...overrides,
   };
 
-  delete env.RXC_PROVIDER;
-  delete env.RXC_PERMISSION_MODE;
-  delete env.RXC_MAX_STEPS_PER_TURN;
-  delete env.RXC_DEBUG;
-  delete env.RXC_HOME;
-  delete env.RXC_SESSION_DIR;
+  delete env.JOE_PROVIDER;
+  delete env.JOE_PERMISSION_MODE;
+  delete env.JOE_MAX_STEPS_PER_TURN;
+  delete env.JOE_DEBUG;
+  delete env.JOE_HOME;
+  delete env.JOE_SESSION_DIR;
   delete env.RX_CLI_SESSION_DIR;
   delete env.OPENAI_API_KEY;
 
@@ -129,7 +129,7 @@ function runCliWithInput(args, input, env = process.env) {
 test("shows help output", async () => {
   const { stdout } = await execFileAsync(process.execPath, [cliPath, "--help"]);
 
-  assert.match(stdout, /Usage: rxc/);
+  assert.match(stdout, /Usage: joe/);
   assert.match(stdout, /chat/);
   assert.match(stdout, /config/);
   assert.match(stdout, /current/);
@@ -155,10 +155,10 @@ test("reads stdin through the same runtime path", async () => {
 });
 
 test("persists a local session transcript for one-shot chat", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-session-"));
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-session-"));
   const sessionDir = path.join(tempRoot, "sessions");
   const env = createCleanEnv({
-    RXC_SESSION_DIR: sessionDir,
+    JOE_SESSION_DIR: sessionDir,
   });
 
   const { stdout } = await execFileAsync(process.execPath, [cliPath, "chat", "--provider", "local", "--message", "你好"], {
@@ -180,7 +180,7 @@ test("persists a local session transcript for one-shot chat", async () => {
 });
 
 test("supports legacy RX_CLI_SESSION_DIR for session transcript output", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-session-legacy-"));
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-session-legacy-"));
   const sessionDir = path.join(tempRoot, "sessions");
   const env = createCleanEnv({
     RX_CLI_SESSION_DIR: sessionDir,
@@ -197,10 +197,10 @@ test("supports legacy RX_CLI_SESSION_DIR for session transcript output", async (
 });
 
 test("routes a local tool call through the main chat runtime path", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-read-file-"));
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-read-file-"));
   const sessionDir = path.join(tempRoot, "sessions");
   const env = createCleanEnv({
-    RXC_SESSION_DIR: sessionDir,
+    JOE_SESSION_DIR: sessionDir,
   });
 
   await writeFile(path.join(tempRoot, "note.txt"), "hello from tool\n", "utf8");
@@ -237,10 +237,10 @@ test("blocks execute-risk tools in default permission mode", async () => {
 });
 
 test("allows execute-risk tools in bypass_permissions mode", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-bash-tool-"));
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-bash-tool-"));
   const sessionDir = path.join(tempRoot, "sessions");
   const env = createCleanEnv({
-    RXC_SESSION_DIR: sessionDir,
+    JOE_SESSION_DIR: sessionDir,
   });
 
   const { stdout } = await execFileAsync(
@@ -266,10 +266,10 @@ test("allows execute-risk tools in bypass_permissions mode", async () => {
 });
 
 test("renders debug trace to stderr without polluting stdout", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-debug-trace-"));
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-debug-trace-"));
   const sessionDir = path.join(tempRoot, "sessions");
   const env = createCleanEnv({
-    RXC_SESSION_DIR: sessionDir,
+    JOE_SESSION_DIR: sessionDir,
   });
 
   await writeFile(path.join(tempRoot, "note.txt"), "hello from tool\n", "utf8");
@@ -291,9 +291,9 @@ test("renders debug trace to stderr without polluting stdout", async () => {
   assert.match(stderr, /trace turn=1 step=2 turn\.complete contentLength=/);
 });
 
-test("loads project .rxc/settings.json for runtime defaults", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-project-config-"));
-  await writeJsonFile(path.join(tempRoot, ".rxc", "settings.json"), {
+test("loads project .wasteland/settings.json for runtime defaults", async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-project-config-"));
+  await writeJsonFile(path.join(tempRoot, ".wasteland", "settings.json"), {
     runtime: {
       permissionMode: "bypass_permissions",
     },
@@ -312,16 +312,16 @@ test("loads project .rxc/settings.json for runtime defaults", async () => {
   assert.match(stdout, /assistant\[1\]> 工具 bash 已完成。/);
 });
 
-test("loads project .rxc/settings.json above user ~/.rxc/settings.json", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-project-over-user-config-"));
-  const tempHome = await mkdtemp(path.join(os.tmpdir(), "rxc-project-over-user-home-"));
+test("loads project .wasteland/settings.json above user ~/.wasteland/settings.json", async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-project-over-user-config-"));
+  const tempHome = await mkdtemp(path.join(os.tmpdir(), "joe-project-over-user-home-"));
 
-  await writeJsonFile(path.join(tempHome, ".rxc", "settings.json"), {
+  await writeJsonFile(path.join(tempHome, ".wasteland", "settings.json"), {
     runtime: {
       permissionMode: "bypass_permissions",
     },
   });
-  await writeJsonFile(path.join(tempRoot, ".rxc", "settings.json"), {
+  await writeJsonFile(path.join(tempRoot, ".wasteland", "settings.json"), {
     runtime: {
       permissionMode: "default",
     },
@@ -343,11 +343,11 @@ test("loads project .rxc/settings.json above user ~/.rxc/settings.json", async (
   assert.match(stdout, /assistant\[1\]> 工具 bash 未执行：模式 default 对 execute 工具要求确认。/);
 });
 
-test("loads user ~/.rxc/settings.json when project config is absent", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-user-config-project-"));
-  const tempHome = await mkdtemp(path.join(os.tmpdir(), "rxc-user-config-home-"));
+test("loads user ~/.wasteland/settings.json when project config is absent", async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-user-config-project-"));
+  const tempHome = await mkdtemp(path.join(os.tmpdir(), "joe-user-config-home-"));
 
-  await writeJsonFile(path.join(tempHome, ".rxc", "settings.json"), {
+  await writeJsonFile(path.join(tempHome, ".wasteland", "settings.json"), {
     runtime: {
       permissionMode: "bypass_permissions",
     },
@@ -368,8 +368,8 @@ test("loads user ~/.rxc/settings.json when project config is absent", async () =
   assert.match(stdout, /permission\[1\]> bash: allow \(bypass_permissions\)/);
 });
 
-test("loads qwen api key from project .rxc/auth.json via generic $auth ref", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-project-auth-qwen-"));
+test("loads qwen api key from project .wasteland/auth.json via generic $auth ref", async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-project-auth-qwen-"));
   const server = await createJsonServer(async (request, body, response) => {
     assert.equal(request.method, "POST");
     assert.equal(request.url, "/compatible-mode/v1/chat/completions");
@@ -406,7 +406,7 @@ test("loads qwen api key from project .rxc/auth.json via generic $auth ref", asy
   });
 
   try {
-    await writeJsonFile(path.join(tempRoot, ".rxc", "settings.json"), {
+    await writeJsonFile(path.join(tempRoot, ".wasteland", "settings.json"), {
       defaultProvider: "qwen",
       providers: {
         qwen: {
@@ -418,7 +418,7 @@ test("loads qwen api key from project .rxc/auth.json via generic $auth ref", asy
         },
       },
     });
-    await writeJsonFile(path.join(tempRoot, ".rxc", "auth.json"), {
+    await writeJsonFile(path.join(tempRoot, ".wasteland", "auth.json"), {
       OPENAI_API_KEY: "project-auth-secret",
     });
 
@@ -437,13 +437,13 @@ test("loads qwen api key from project .rxc/auth.json via generic $auth ref", asy
   }
 });
 
-test("finds project config dir from .rxc/auth.json even when settings.json is absent", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-project-auth-only-"));
+test("finds project config dir from .wasteland/auth.json even when settings.json is absent", async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-project-auth-only-"));
   const nestedDir = path.join(tempRoot, "packages", "demo");
-  const tempHome = await mkdtemp(path.join(os.tmpdir(), "rxc-project-auth-only-home-"));
+  const tempHome = await mkdtemp(path.join(os.tmpdir(), "joe-project-auth-only-home-"));
 
   await mkdir(nestedDir, { recursive: true });
-  await writeJsonFile(path.join(tempHome, ".rxc", "settings.json"), {
+  await writeJsonFile(path.join(tempHome, ".wasteland", "settings.json"), {
     defaultProvider: "qwen",
     providers: {
       qwen: {
@@ -455,7 +455,7 @@ test("finds project config dir from .rxc/auth.json even when settings.json is ab
       },
     },
   });
-  await writeJsonFile(path.join(tempRoot, ".rxc", "auth.json"), {
+  await writeJsonFile(path.join(tempRoot, ".wasteland", "auth.json"), {
     OPENAI_API_KEY: "project-secret",
   });
 
@@ -474,16 +474,16 @@ test("finds project config dir from .rxc/auth.json even when settings.json is ab
   const payload = JSON.parse(stdout);
 
   assert.equal(payload.cwd, nestedDir);
-  assert.equal(payload.sources.user, path.join(tempHome, ".rxc", "settings.json"));
-  assert.equal(payload.sources.projectAuth, path.join(tempRoot, ".rxc", "auth.json"));
+  assert.equal(payload.sources.user, path.join(tempHome, ".wasteland", "settings.json"));
+  assert.equal(payload.sources.projectAuth, path.join(tempRoot, ".wasteland", "auth.json"));
   assert.equal(payload.resolved.provider.settings.apiKey, "***");
 });
 
 test("config current reports auth.json sources and redacts secrets", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-config-auth-sources-"));
-  const tempHome = await mkdtemp(path.join(os.tmpdir(), "rxc-config-auth-home-"));
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-config-auth-sources-"));
+  const tempHome = await mkdtemp(path.join(os.tmpdir(), "joe-config-auth-home-"));
 
-  await writeJsonFile(path.join(tempRoot, ".rxc", "settings.json"), {
+  await writeJsonFile(path.join(tempRoot, ".wasteland", "settings.json"), {
     defaultProvider: "qwen",
     providers: {
       qwen: {
@@ -495,10 +495,10 @@ test("config current reports auth.json sources and redacts secrets", async () =>
       },
     },
   });
-  await writeJsonFile(path.join(tempHome, ".rxc", "auth.json"), {
+  await writeJsonFile(path.join(tempHome, ".wasteland", "auth.json"), {
     OPENAI_API_KEY: "user-secret",
   });
-  await writeJsonFile(path.join(tempRoot, ".rxc", "auth.json"), {
+  await writeJsonFile(path.join(tempRoot, ".wasteland", "auth.json"), {
     OPENAI_API_KEY: "project-secret",
   });
 
@@ -516,16 +516,16 @@ test("config current reports auth.json sources and redacts secrets", async () =>
 
   const payload = JSON.parse(stdout);
 
-  assert.equal(payload.sources.userAuth, path.join(tempHome, ".rxc", "auth.json"));
-  assert.equal(payload.sources.projectAuth, path.join(tempRoot, ".rxc", "auth.json"));
+  assert.equal(payload.sources.userAuth, path.join(tempHome, ".wasteland", "auth.json"));
+  assert.equal(payload.sources.projectAuth, path.join(tempRoot, ".wasteland", "auth.json"));
   assert.equal(payload.resolved.provider.name, "qwen");
   assert.equal(payload.resolved.provider.settings.apiKey, "***");
 });
 
 test("chat --role resolves model provider and role permission mode", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-role-explicit-"));
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-role-explicit-"));
 
-  await writeJsonFile(path.join(tempRoot, ".rxc", "settings.json"), {
+  await writeJsonFile(path.join(tempRoot, ".wasteland", "settings.json"), {
     runtime: {
       defaultRole: "reviewer",
     },
@@ -568,9 +568,9 @@ test("chat --role resolves model provider and role permission mode", async () =>
 });
 
 test("chat uses runtime.defaultRole when role is not passed", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-role-default-"));
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-role-default-"));
 
-  await writeJsonFile(path.join(tempRoot, ".rxc", "settings.json"), {
+  await writeJsonFile(path.join(tempRoot, ".wasteland", "settings.json"), {
     runtime: {
       defaultRole: "coder",
     },
@@ -605,9 +605,9 @@ test("chat uses runtime.defaultRole when role is not passed", async () => {
 });
 
 test("config current prints resolved role model provider and redacts secrets", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-config-current-"));
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-config-current-"));
 
-  await writeJsonFile(path.join(tempRoot, ".rxc", "settings.json"), {
+  await writeJsonFile(path.join(tempRoot, ".wasteland", "settings.json"), {
     runtime: {
       defaultRole: "chat",
       debug: true,
@@ -657,9 +657,9 @@ test("config current prints resolved role model provider and redacts secrets", a
 });
 
 test("top-level current aliases config current", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-current-alias-"));
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-current-alias-"));
 
-  await writeJsonFile(path.join(tempRoot, ".rxc", "settings.json"), {
+  await writeJsonFile(path.join(tempRoot, ".wasteland", "settings.json"), {
     runtime: {
       defaultRole: "chat",
     },
@@ -694,10 +694,10 @@ test("top-level current aliases config current", async () => {
   assert.equal(payload.resolved.model.name, "chat_model");
 });
 
-test("dev shim accepts nested rxc current form", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-dev-shim-current-"));
+test("dev shim accepts nested joe current form", async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-dev-shim-current-"));
 
-  await writeJsonFile(path.join(tempRoot, ".rxc", "settings.json"), {
+  await writeJsonFile(path.join(tempRoot, ".wasteland", "settings.json"), {
     providers: {
       local: {},
     },
@@ -705,7 +705,7 @@ test("dev shim accepts nested rxc current form", async () => {
 
   const { stdout } = await execFileAsync(
     process.execPath,
-    [cliPath, "rxc", "current"],
+    [cliPath, "joe", "current"],
     {
       cwd: tempRoot,
       env: createCleanEnv(),
@@ -717,8 +717,8 @@ test("dev shim accepts nested rxc current form", async () => {
   assert.equal(payload.resolved.provider.name, "local");
 });
 
-test("persists default session transcripts under .rxc/sessions", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-session-default-"));
+test("persists default session transcripts under .wasteland/sessions", async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-session-default-"));
 
   const { stdout } = await execFileAsync(
     process.execPath,
@@ -731,7 +731,7 @@ test("persists default session transcripts under .rxc/sessions", async () => {
 
   assert.equal(stdout.trim(), "assistant[1]> 你好，我已经收到你的输入：你好");
 
-  const sessionDir = path.join(tempRoot, ".rxc", "sessions");
+  const sessionDir = path.join(tempRoot, ".wasteland", "sessions");
   const files = await readdir(sessionDir);
 
   assert.equal(files.length, 1);
@@ -775,9 +775,9 @@ test("resolves generic $auth ref from process env before auth.json", async () =>
   });
 
   try {
-    const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-process-env-auth-"));
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-process-env-auth-"));
 
-    await writeJsonFile(path.join(tempRoot, ".rxc", "settings.json"), {
+    await writeJsonFile(path.join(tempRoot, ".wasteland", "settings.json"), {
       defaultProvider: "qwen",
       providers: {
         qwen: {
@@ -789,7 +789,7 @@ test("resolves generic $auth ref from process env before auth.json", async () =>
         },
       },
     });
-    await writeJsonFile(path.join(tempRoot, ".rxc", "auth.json"), {
+    await writeJsonFile(path.join(tempRoot, ".wasteland", "auth.json"), {
       OPENAI_API_KEY: "project-secret",
     });
 
@@ -811,7 +811,7 @@ test("resolves generic $auth ref from process env before auth.json", async () =>
 });
 
 test("renders JSONL debug format to stderr with --debug --debug-format jsonl", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-debug-jsonl-"));
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-debug-jsonl-"));
 
   const { stdout, stderr } = await execFileAsync(
     process.execPath,
@@ -838,8 +838,8 @@ test("renders JSONL debug format to stderr with --debug --debug-format jsonl", a
   }
 });
 
-test("persists JSONL trace file in .rxc/traces directory", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-debug-jsonl-file-"));
+test("persists JSONL trace file in .wasteland/traces directory", async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-debug-jsonl-file-"));
 
   const { stdout, stderr } = await execFileAsync(
     process.execPath,
@@ -853,7 +853,7 @@ test("persists JSONL trace file in .rxc/traces directory", async () => {
   assert.equal(stdout.trim(), "assistant[1]> 你好，我已经收到你的输入：你好");
 
   // Check trace file was created
-  const traceDir = path.join(tempRoot, ".rxc", "traces");
+  const traceDir = path.join(tempRoot, ".wasteland", "traces");
   const traceFiles = await readdir(traceDir);
 
   assert.equal(traceFiles.length, 1, "should have one trace file");
@@ -875,10 +875,10 @@ test("persists JSONL trace file in .rxc/traces directory", async () => {
 });
 
 test("session ID uses timestamp prefix format", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-session-id-format-"));
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-session-id-format-"));
   const sessionDir = path.join(tempRoot, "sessions");
   const env = createCleanEnv({
-    RXC_SESSION_DIR: sessionDir,
+    JOE_SESSION_DIR: sessionDir,
   });
 
   await execFileAsync(process.execPath, [cliPath, "chat", "--message", "你好"], {
@@ -899,7 +899,7 @@ test("session ID uses timestamp prefix format", async () => {
 });
 
 test("JSONL output can be piped to jq for parsing", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-debug-jsonl-jq-"));
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-debug-jsonl-jq-"));
 
   const { stdout, stderr } = await execFileAsync(
     process.execPath,
@@ -922,7 +922,7 @@ test("JSONL output can be piped to jq for parsing", async () => {
 });
 
 test("pretty debug format is default when --debug is used without --debug-format", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-debug-pretty-default-"));
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-debug-pretty-default-"));
 
   const { stdout, stderr } = await execFileAsync(
     process.execPath,
@@ -945,7 +945,7 @@ test("pretty debug format is default when --debug is used without --debug-format
 // ============================================================
 
 test("glob tool finds files matching pattern", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-glob-tool-"));
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-glob-tool-"));
   const sessionDir = path.join(tempRoot, "sessions");
 
   // 创建测试文件结构
@@ -956,7 +956,7 @@ test("glob tool finds files matching pattern", async () => {
   await writeFile(path.join(tempRoot, "README.md"), "# test\n", "utf8");
 
   const env = createCleanEnv({
-    RXC_SESSION_DIR: sessionDir,
+    JOE_SESSION_DIR: sessionDir,
   });
 
   const { stdout } = await execFileAsync(
@@ -975,7 +975,7 @@ test("glob tool finds files matching pattern", async () => {
 });
 
 test("glob tool finds files in subdirectory", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-glob-subdir-"));
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-glob-subdir-"));
   const sessionDir = path.join(tempRoot, "sessions");
 
   await mkdir(path.join(tempRoot, "src"), { recursive: true });
@@ -983,7 +983,7 @@ test("glob tool finds files in subdirectory", async () => {
   await writeFile(path.join(tempRoot, "src", "utils.ts"), "export {};\n", "utf8");
 
   const env = createCleanEnv({
-    RXC_SESSION_DIR: sessionDir,
+    JOE_SESSION_DIR: sessionDir,
   });
 
   const { stdout } = await execFileAsync(
@@ -1003,7 +1003,7 @@ test("glob tool finds files in subdirectory", async () => {
 });
 
 test("grep tool searches text in files", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-grep-tool-"));
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-grep-tool-"));
   const sessionDir = path.join(tempRoot, "sessions");
 
   await mkdir(path.join(tempRoot, "src"), { recursive: true });
@@ -1011,7 +1011,7 @@ test("grep tool searches text in files", async () => {
   await writeFile(path.join(tempRoot, "src", "utils.ts"), "export function utils() {}\n// TODO: refactor\n", "utf8");
 
   const env = createCleanEnv({
-    RXC_SESSION_DIR: sessionDir,
+    JOE_SESSION_DIR: sessionDir,
   });
 
   const { stdout } = await execFileAsync(
@@ -1030,14 +1030,14 @@ test("grep tool searches text in files", async () => {
 });
 
 test("grep tool filters by include pattern", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-grep-include-"));
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-grep-include-"));
   const sessionDir = path.join(tempRoot, "sessions");
 
   await writeFile(path.join(tempRoot, "code.ts"), "export const x = 1;\n", "utf8");
   await writeFile(path.join(tempRoot, "note.txt"), "This is a note\n", "utf8");
 
   const env = createCleanEnv({
-    RXC_SESSION_DIR: sessionDir,
+    JOE_SESSION_DIR: sessionDir,
   });
 
   const { stdout } = await execFileAsync(
@@ -1055,7 +1055,7 @@ test("grep tool filters by include pattern", async () => {
 });
 
 test("list-directory tool lists directory contents", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-listdir-tool-"));
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-listdir-tool-"));
   const sessionDir = path.join(tempRoot, "sessions");
 
   await mkdir(path.join(tempRoot, "src"), { recursive: true });
@@ -1063,7 +1063,7 @@ test("list-directory tool lists directory contents", async () => {
   await writeFile(path.join(tempRoot, "README.md"), "# test\n", "utf8");
 
   const env = createCleanEnv({
-    RXC_SESSION_DIR: sessionDir,
+    JOE_SESSION_DIR: sessionDir,
   });
 
   const { stdout } = await execFileAsync(
@@ -1085,14 +1085,14 @@ test("list-directory tool lists directory contents", async () => {
 });
 
 test("list-directory tool shows hidden files when requested", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-listdir-hidden-"));
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-listdir-hidden-"));
   const sessionDir = path.join(tempRoot, "sessions");
 
   await writeFile(path.join(tempRoot, ".gitignore"), "node_modules\n", "utf8");
   await writeFile(path.join(tempRoot, "visible.txt"), "hello\n", "utf8");
 
   const env = createCleanEnv({
-    RXC_SESSION_DIR: sessionDir,
+    JOE_SESSION_DIR: sessionDir,
   });
 
   // 不显示隐藏文件
@@ -1125,11 +1125,11 @@ test("web-fetch tool fetches HTTP content", async () => {
   });
 
   try {
-    const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-webfetch-tool-"));
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-webfetch-tool-"));
     const sessionDir = path.join(tempRoot, "sessions");
 
     const env = createCleanEnv({
-      RXC_SESSION_DIR: sessionDir,
+      JOE_SESSION_DIR: sessionDir,
     });
 
     const { stdout } = await execFileAsync(
@@ -1167,11 +1167,11 @@ test("web-fetch tool handles POST requests", async () => {
   });
 
   try {
-    const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-webfetch-post-"));
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-webfetch-post-"));
     const sessionDir = path.join(tempRoot, "sessions");
 
     const env = createCleanEnv({
-      RXC_SESSION_DIR: sessionDir,
+      JOE_SESSION_DIR: sessionDir,
     });
 
     const { stdout } = await execFileAsync(
@@ -1192,11 +1192,11 @@ test("web-fetch tool handles POST requests", async () => {
 });
 
 test("web-fetch tool rejects invalid URLs", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "rxc-webfetch-invalid-"));
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-webfetch-invalid-"));
   const sessionDir = path.join(tempRoot, "sessions");
 
   const env = createCleanEnv({
-    RXC_SESSION_DIR: sessionDir,
+    JOE_SESSION_DIR: sessionDir,
   });
 
   const { stdout } = await execFileAsync(

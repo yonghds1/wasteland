@@ -2,8 +2,8 @@
  * skill-discovery.ts - 技能发现
  *
  * 从文件系统自动发现和加载技能：
- * - 项目级: .rxc/skills/
- * - 用户级: ~/.rxc/skills/
+ * - 项目级: .wasteland/skills/
+ * - 用户级: ~/.wasteland/skills/
  *
  * 支持格式：
  * - JSON: skill.json 或 *.json

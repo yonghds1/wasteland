@@ -44,7 +44,7 @@ test("interactive input handles local slash commands without sending them to run
 
   assert.equal(turns.length, 1);
   assert.equal(turns[0].content, "/read README.md");
-  assert.match(rendered, /Prompt: >\s+Replies: rxc/);
+  assert.match(rendered, /Prompt: >\s+Replies: joe/);
   assert.match(rendered, /\n> /);
   assert.match(rendered, /local/);
   assert.match(rendered, /│  Session commands/);
@@ -96,7 +96,7 @@ test("interactive renderer uses codex-like layout", async () => {
 
   // Hermes 风格: ┊ {emoji} {verb:9} {detail}
   assert.match(rendered, /read/);
-  assert.match(rendered, /rxc/);
+  assert.match(rendered, /joe/);
   assert.match(rendered, /│  done/);
   assert.match(rendered, /│  done\n\n$/);
   assert.doesNotMatch(rendered, /assistant\[1\]/);
@@ -133,6 +133,6 @@ test("interactive renderer wraps streamed assistant output to panel width", asyn
 
   const rendered = stripAnsi(getStdout());
 
-  // 新格式包含时间戳: rxc HH:MM:SS.mmm
-  assert.match(rendered, /rxc \d{2}:\d{2}:\d{2}\.\d{3}\n│  abcdefghijklmnopqrstuvwx\n│  yz1234\n\n$/);
+  // 新格式包含时间戳: joe HH:MM:SS.mmm
+  assert.match(rendered, /joe \d{2}:\d{2}:\d{2}\.\d{3}\n│  abcdefghijklmnopqrstuvwx\n│  yz1234\n\n$/);
 });

@@ -1,10 +1,10 @@
 # 多Agent协作架构文档
 
-本文档描述 rxc (RxJS-first TypeScript Agent CLI) 的多Agent协作架构设计。
+本文档描述 joe (RxJS-first TypeScript Agent CLI) 的多Agent协作架构设计。
 
 ## 概述
 
-rxc 采用 **Agents-as-Tools** 模式实现多Agent协作，核心思想是将子Agent作为一个工具（spawn_agent）注册到工具注册表中，主Agent通过调用该工具来创建和管理子Agent。
+joe 采用 **Agents-as-Tools** 模式实现多Agent协作，核心思想是将子Agent作为一个工具（spawn_agent）注册到工具注册表中，主Agent通过调用该工具来创建和管理子Agent。
 
 ---
 
@@ -20,7 +20,7 @@ rxc 采用 **Agents-as-Tools** 模式实现多Agent协作，核心思想是将�
 │                           runAgentLoop (主循环)                              │
 │  ┌─────────────────────────────────────────────────────────────────────┐    │
 │  │                         SessionManager                               │    │
-│  │              创建/管理 Session (.rxc/sessions/*.jsonl)               │    │
+│  │              创建/管理 Session (.joe/sessions/*.jsonl)               │    │
 │  └─────────────────────────────────────────────────────────────────────┘    │
 │                                      │                                       │
 │                                      ▼                                       │
@@ -49,7 +49,7 @@ rxc 采用 **Agents-as-Tools** 模式实现多Agent协作，核心思想是将�
 │                      runAgentLoop (子Agent循环)                              │
 │  ┌─────────────────────────────────────────────────────────────────────┐    │
 │  │                    ChildSession (独立session)                         │    │
-│  │           .rxc/sessions/{parentId}-child-{name}.jsonl                │    │
+│  │           .joe/sessions/{parentId}-child-{name}.jsonl                │    │
 │  └─────────────────────────────────────────────────────────────────────┘    │
 │                                      │                                       │
 │                                      ▼                                       │
@@ -324,21 +324,21 @@ RuntimeEvent$ ──▶ UI渲染
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │   1. CLI 参数                                                               │
-│      rxc chat --provider qwen --model qwen-max --role coder                │
+│      joe chat --provider qwen --model qwen-max --role coder                │
 │                                                                             │
 │                           ▼                                                 │
 │                                                                             │
-│   2. 环境变量 (RXC_*)                                                       │
-│      RXC_PROVIDER=qwen RXC_PERMISSION_MODE=bypass_permissions              │
+│   2. 环境变量 (JOE_*)                                                       │
+│      JOE_PROVIDER=qwen JOE_PERMISSION_MODE=bypass_permissions              │
 │                                                                             │
 │                           ▼                                                 │
 │                                                                             │
-│   3. 项目配置 (.rxc/settings.json)                                          │
+│   3. 项目配置 (.joe/settings.json)                                          │
 │      { "runtime": { "defaultRole": "coder" }, "roles": {...} }             │
 │                                                                             │
 │                           ▼                                                 │
 │                                                                             │
-│   4. 用户全局配置 (~/.rxc/settings.json)                                    │
+│   4. 用户全局配置 (~/.joe/settings.json)                                    │
 │      { "providers": { "qwen": { "apiKey": "$auth:qwen" } } }               │
 │                                                                             │
 │                           ▼                                                 │
@@ -353,12 +353,12 @@ RuntimeEvent$ ──▶ UI渲染
 
 | 变量名 | 说明 |
 |--------|------|
-| `RXC_HOME` | 全局配置根目录 |
-| `RXC_PROVIDER` | 默认 provider |
-| `RXC_PERMISSION_MODE` | 权限模式 |
-| `RXC_MAX_STEPS_PER_TURN` | 单轮最大 step 数 |
-| `RXC_DEBUG` | 调试追踪 |
-| `RXC_SESSION_DIR` | Session 目录 |
+| `JOE_HOME` | 全局配置根目录 |
+| `JOE_PROVIDER` | 默认 provider |
+| `JOE_PERMISSION_MODE` | 权限模式 |
+| `JOE_MAX_STEPS_PER_TURN` | 单轮最大 step 数 |
+| `JOE_DEBUG` | 调试追踪 |
+| `JOE_SESSION_DIR` | Session 目录 |
 
 ---
 
@@ -428,7 +428,7 @@ spawn_agent({
 ### Session 文件结构
 
 ```
-.rxc/
+.joe/
 ├── sessions/
 │   ├── 2026-05-26T14-30-00_abc123.jsonl          # 主会话
 │   ├── 2026-05-26T14-30-00_abc123-child-coder.jsonl   # 子Agent会话

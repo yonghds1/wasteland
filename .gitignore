@@ -1,6 +1,6 @@
 node_modules/
 dist/
-.rxc/
+.wasteland/
 .rx-cli/
 .idea/
 .agents

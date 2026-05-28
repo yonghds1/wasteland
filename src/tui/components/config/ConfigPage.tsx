@@ -12,7 +12,7 @@
 import React, { useState, useEffect } from "react";
 import { Text, Box, useInput } from "ink";
 import { useAppContext } from "../../context/AppContext.js";
-import { loadRxcSettings } from "../../../config/load-settings.js";
+import { loadJoeSettings } from "../../../config/load-settings.js";
 import { resolveUserSettingsPath, resolveProjectSettingsPath, findProjectConfigDir } from "../../../config/paths.js";
 import { resolveChatRuntime } from "../../../config/resolve-chat-runtime.js";
 import type { PermissionMode } from "../../../runtime/permission-gate.js";
@@ -25,14 +25,14 @@ import {
   SEPARATORS,
 } from "../../utils/colors.js";
 
-type ConfigSection = "sources" | "runtime" | "providers" | "models" | "roles";
+type ConfigSection = "sources" | "runtime" | "providers" | "models" | "subAgents";
 
 const SECTIONS: { key: ConfigSection; label: string; color: string; editable: boolean }[] = [
   { key: "sources", label: "配置源", color: "gray", editable: false },
   { key: "runtime", label: "Runtime", color: "green", editable: true },
   { key: "providers", label: "Providers", color: "cyan", editable: false },
   { key: "models", label: "Models", color: "yellow", editable: false },
-  { key: "roles", label: "Roles", color: "magenta", editable: false },
+  { key: "subAgents", label: "Roles", color: "magenta", editable: false },
 ];
 
 const PERMISSION_MODE_OPTIONS: PermissionMode[] = ["default", "accept_edits", "bypass_permissions"];
@@ -54,7 +54,7 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
   useEffect(() => {
     async function loadProviders() {
       try {
-        const loaded = await loadRxcSettings({ cwd: process.cwd(), env: process.env });
+        const loaded = await loadJoeSettings({ cwd: process.cwd(), env: process.env });
         const providerNames = Object.keys(loaded.settings.providers);
         if (providerNames.length > 0) {
           setProviderOptions(providerNames);
@@ -118,7 +118,7 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
       }
     } else if (focusedField === "defaultRole") {
       // 循环切换 role
-      const roleNames = Object.keys(state.fullConfig.roles);
+      const roleNames = Object.keys(state.fullConfig.subAgents);
       if (roleNames.length > 0) {
         const idx = roleNames.indexOf(state.config.defaultRole);
         const nextIdx = key.leftArrow
@@ -203,7 +203,7 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
         const projectConfigDir = await findProjectConfigDir(cwd);
         settingsPath = projectConfigDir
           ? resolveProjectSettingsPath(projectConfigDir)
-          : resolveProjectSettingsPath(`${cwd}/.rxc`);
+          : resolveProjectSettingsPath(`${cwd}/.wasteland`);
       } else {
         settingsPath = resolveUserSettingsPath(process.env);
       }
@@ -253,7 +253,7 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
   // 重置
   const handleReset = async () => {
     try {
-      const loaded = await loadRxcSettings();
+      const loaded = await loadJoeSettings();
       const resolved = resolveChatRuntime({ settings: loaded.settings });
       setState((prev) => ({
         ...prev,
@@ -271,7 +271,7 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
           ...prev.fullConfig,
           providers: loaded.settings.providers,
           models: loaded.settings.models,
-          roles: loaded.settings.roles,
+          subAgents: loaded.settings.subAgents,
           sources: loaded.sources,
           defaultProvider: loaded.settings.defaultProvider,
         },
@@ -465,16 +465,16 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
       {/* Roles 区域 */}
       <Box
         flexDirection="column"
-        borderStyle={focusedSection === "roles" ? "double" : "single"}
-        borderColor={focusedSection === "roles" ? "cyan" : "gray"}
+        borderStyle={focusedSection === "subAgents" ? "double" : "single"}
+        borderColor={focusedSection === "subAgents" ? "cyan" : "gray"}
         paddingX={1}
         height={sectionHeight}
       >
-        {renderSectionHeader("roles", "Roles", "magenta", false)}
-        {Object.entries(state.fullConfig.roles).length === 0 ? (
+        {renderSectionHeader("subAgents", "Roles", "magenta", false)}
+        {Object.entries(state.fullConfig.subAgents).length === 0 ? (
           <Text dimColor>  无已配置的 Role</Text>
         ) : (
-          Object.entries(state.fullConfig.roles).map(([name, cfg]) => (
+          Object.entries(state.fullConfig.subAgents).map(([name, cfg]) => (
             <Box key={name} flexDirection="row" gap={1}>
               <Text bold color="magenta">{name}</Text>
               <Text dimColor>→</Text>

@@ -36,7 +36,7 @@ export {
   isBuiltinRoleId,
   listBuiltinRoles,
   ROLE_WORKER,
-  ROLE_ORCHESTRATOR,
+  ROLE_IMMORTAN_JOE,
   // 兼容旧 API (deprecated)
   getBuiltinTemplate,
   isBuiltinTemplateId,

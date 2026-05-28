@@ -247,7 +247,7 @@ export function formatToolCompleteLine(params: {
 export function formatWelcomeMessage(): string {
   const lines = [
     `${ANSI.dim}╭${"─".repeat(48)}╮${ANSI.reset}`,
-    `${ANSI.dim}│${ANSI.reset} ${ANSI.bold}${ANSI.cyan}✦ rxc - AI CLI Assistant${" ".repeat(24)}${ANSI.reset}${ANSI.dim}│${ANSI.reset}`,
+    `${ANSI.dim}│${ANSI.reset} ${ANSI.bold}${ANSI.cyan}✦ joe - Immortan Joe's War Machine${" ".repeat(16)}${ANSI.reset}${ANSI.dim}│${ANSI.reset}`,
     `${ANSI.dim}│${ANSI.reset}   输入消息开始对话，/help 查看命令${" ".repeat(12)}${ANSI.dim}│${ANSI.reset}`,
     `${ANSI.dim}╰${"─".repeat(48)}╯${ANSI.reset}`,
   ];

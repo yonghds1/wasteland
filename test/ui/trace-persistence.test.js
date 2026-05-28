@@ -11,7 +11,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { from } from "rxjs";
 
-const TEST_TRACE_DIR = join(tmpdir(), `rxc-trace-test-${Date.now()}`);
+const TEST_TRACE_DIR = join(tmpdir(), `joe-trace-test-${Date.now()}`);
 
 let renderDebugTrace;
 

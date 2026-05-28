@@ -22,7 +22,7 @@
  * {
  *   status: "success",
  *   output: "分析结果...",
- *   sessionPath: ".rxc/sessions/xxx-child-analyzer.jsonl"
+ *   sessionPath: ".wasteland/sessions/xxx-child-analyzer.jsonl"
  * }
  * ```
  */

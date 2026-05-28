@@ -1,6 +1,6 @@
 import { Command } from "commander";
 
-import { loadRxcSettings } from "../config/load-settings.js";
+import { loadJoeSettings } from "../config/load-settings.js";
 import {
   redactSensitiveConfig,
   resolveChatRuntime,
@@ -12,7 +12,7 @@ type ConfigCurrentOptions = {
 
 async function runCurrentConfig(options: ConfigCurrentOptions): Promise<void> {
   const cwd = process.cwd();
-  const loadedSettings = await loadRxcSettings({
+  const loadedSettings = await loadJoeSettings({
     cwd,
     env: process.env,
   });
@@ -32,7 +32,7 @@ async function runCurrentConfig(options: ConfigCurrentOptions): Promise<void> {
     available: {
       providers: Object.keys(loadedSettings.settings.providers).sort(),
       models: Object.keys(loadedSettings.settings.models).sort(),
-      roles: Object.keys(loadedSettings.settings.roles).sort(),
+      subAgents: Object.keys(loadedSettings.settings.subAgents).sort(),
     },
     resolved: {
       role: resolved.role

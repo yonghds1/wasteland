@@ -4,7 +4,7 @@
  * 测试内容：
  * 1. listBuiltinRoles 返回 2 个角色
  * 2. role-worker 的 prompt 组装
- * 3. role-orchestrator 的 prompt 组装（含 delegation 变量）
+ * 3. role-immortan-joe 的 prompt 组装（含 delegation 变量）
  * 4. promptVariables 覆盖默认值
  */
 
@@ -18,90 +18,6 @@ function assert(condition: boolean, message: string) {
   console.log(`  ✔ ${message}`);
 }
 
-// 委托策略模板
-const DELEGATION_STRATEGIES: Record<string, string> = {
-  route: `## 委托策略
-
-### 路由模式
-1. 将用户任务分类为以下类别之一：coding, review, research, planning, chat
-2. 选择最合适的 agent
-3. 使用 spawn_agent 委托任务：
-\`\`\`
-spawn_agent({
-  name: "selected-agent",
-  task: "detailed task description with full context"
-})
-\`\`\`
-4. 直接返回 agent 的结果，不要修改或补充
-
-如果无法确定使用哪个 agent，默认使用最通用的 agent。`,
-
-  sequential: `## 委托策略
-
-### 顺序编排模式
-1. 分析复杂任务，分解为多个子任务
-2. 识别子任务之间的依赖关系
-3. 按依赖顺序逐个委托执行：
-\`\`\`
-spawn_agent({
-  name: "agent-name",
-  task: "detailed task description with context from previous steps"
-})
-\`\`\`
-4. 等待每个 agent 完成后再执行下一个依赖任务
-5. 收集所有结果`,
-
-  parallel: `## 委托策略
-
-### 并行编排模式
-1. 分析任务，识别可以并行执行的独立子任务
-2. 在同一个 response 中同时启动多个 agent：
-\`\`\`
-spawn_agent({ name: "agent1", task: "independent task 1" })
-spawn_agent({ name: "agent2", task: "independent task 2" })
-spawn_agent({ name: "agent3", task: "independent task 3" })
-\`\`\`
-3. 等待所有 agent 完成
-4. 聚合结果`,
-
-  loop: `## 委托策略
-
-### 循环迭代模式（Plan-Code-Verify-Review）
-
-按以下步骤循环执行，直到审查通过或达到最大迭代次数（{{maxIterations}} 次）：
-
-**阶段 1：规划**
-- 分析任务需求，读取相关代码
-- 制定详细的实施计划
-
-**阶段 2：编码委托**
-- 使用 spawn_agent 委托编码任务：
-\`\`\`
-spawn_agent({
-  name: "coder",
-  task: "implement the following plan: [plan details]"
-})
-\`\`\`
-
-**阶段 3：验证**
-- 检查编码结果是否符合预期
-- 如果有明显错误，直接修正或重新委托
-
-**阶段 4：审查委托**
-- 使用 spawn_agent 委托代码审查：
-\`\`\`
-spawn_agent({
-  name: "reviewer",
-  task: "review the following changes: [changes]"
-})
-\`\`\`
-
-**阶段 5：决策**
-- 如果审查通过 → 输出最终结果
-- 如果审查不通过 → 分析问题，更新计划，返回阶段 2
-- 当前迭代: {{currentIteration}} / {{maxIterations}}`,
-};
-
 async function main() {
   console.log("=== 重构后角色系统验证 ===\n");
 
@@ -110,7 +26,7 @@ async function main() {
   const roles = listBuiltinRoles();
   assert(roles.length === 2, `应有 2 个角色，实际 ${roles.length} 个`);
   assert(roles.some(r => r.id === "role-worker"), "包含 role-worker");
-  assert(roles.some(r => r.id === "role-orchestrator"), "包含 role-orchestrator");
+  assert(roles.some(r => r.id === "role-immortan-joe"), "包含 role-immortan-joe");
   console.log();
 
   // 2. 验证旧角色 ID 不再存在
@@ -123,6 +39,7 @@ async function main() {
   assert(!isBuiltinRoleId("role-architect"), "role-architect 已移除");
   assert(!isBuiltinRoleId("role-router"), "role-router 已移除");
   assert(!isBuiltinRoleId("role-supervisor"), "role-supervisor 已移除");
+  assert(!isBuiltinRoleId("role-orchestrator"), "role-orchestrator 已移除");
   console.log();
 
   // 3. 测试 role-worker prompt 组装
@@ -153,55 +70,56 @@ async function main() {
   console.log(`  ${customWorkerResult.slice(0, 200)}...`);
   console.log();
 
-  // 5. 测试 role-orchestrator prompt 组装（默认 sequential 模式）
-  console.log("5. role-orchestrator prompt 组装（sequential 模式）:");
-  const orchResult = assemblePrompt(
-    "role-orchestrator",
+  // 5. 测试 role-immortan-joe prompt 组装
+  console.log("5. role-immortan-joe prompt 组装:");
+  const joeResult = assemblePrompt(
+    "role-immortan-joe",
     { cwd: "/tmp", variables: {} },
-    { delegation: DELEGATION_STRATEGIES.sequential },
+    {},
   );
-  assert(orchResult.includes("顺序编排模式"), "包含 sequential 策略");
-  assert(orchResult.includes("spawn_agent"), "包含 spawn_agent 工具");
-  console.log("  Orchestrator prompt (前 300 字符):");
-  console.log(`  ${orchResult.slice(0, 300)}...`);
+  assert(joeResult.includes("Immortan Joe"), "包含角色名");
+  assert(joeResult.includes("WITNESS ME"), "包含 War Cry");
+  assert(joeResult.includes("spawn_agent"), "包含 spawn_agent 工具");
+  assert(joeResult.includes("Your War Boys"), "包含子 Agent 列表");
+  console.log("  Joe prompt (前 300 字符):");
+  console.log(`  ${joeResult.slice(0, 300)}...`);
   console.log();
 
-  // 6. 测试 role-orchestrator loop 模式
-  console.log("6. role-orchestrator prompt 组装（loop 模式）:");
-  const loopResult = assemblePrompt(
-    "role-orchestrator",
+  // 6. 测试 role-immortan-joe 带 delegation 变量
+  console.log("6. role-immortan-joe 带 delegation 变量:");
+  const customDelegation = `## Custom Deployment Protocol
+1. Analyze the task
+2. Deploy specialists`;
+  const joeCustomResult = assemblePrompt(
+    "role-immortan-joe",
     { cwd: "/tmp", variables: {} },
-    {
-      mode: "loop",
-      maxIterations: 3,
-      delegation: DELEGATION_STRATEGIES.loop,
-    },
+    { delegation: customDelegation },
   );
-  assert(loopResult.includes("循环迭代模式"), "包含 loop 策略");
-  assert(loopResult.includes("Plan-Code-Verify-Review"), "包含迭代工作流");
-  assert(loopResult.includes("3"), "最大迭代次数被覆盖");
-  console.log("  Loop Orchestrator prompt (前 300 字符):");
-  console.log(`  ${loopResult.slice(0, 300)}...`);
+  assert(joeCustomResult.includes("Custom Deployment Protocol"), "委托策略被覆盖");
+  console.log("  Custom Joe prompt (前 300 字符):");
+  console.log(`  ${joeCustomResult.slice(0, 300)}...`);
   console.log();
 
-  // 7. 测试 role-orchestrator parallel 模式
-  console.log("7. role-orchestrator prompt 组装（parallel 模式）:");
-  const parallelResult = assemblePrompt(
-    "role-orchestrator",
+  // 7. 测试 role-immortan-joe 带 backstory 变量
+  console.log("7. role-immortan-joe 带 backstory 变量:");
+  const customBackstory = "You are the ruler of a different wasteland.";
+  const joeBackstoryResult = assemblePrompt(
+    "role-immortan-joe",
     { cwd: "/tmp", variables: {} },
-    { delegation: DELEGATION_STRATEGIES.parallel },
+    { backstory: customBackstory },
   );
-  assert(parallelResult.includes("并行编排模式"), "包含 parallel 策略");
+  assert(joeBackstoryResult.includes("different wasteland"), "背景故事被覆盖");
   console.log();
 
-  // 8. 测试 role-orchestrator route 模式
-  console.log("8. role-orchestrator prompt 组装（route 模式）:");
-  const routeResult = assemblePrompt(
-    "role-orchestrator",
-    { cwd: "/tmp", variables: {} },
-    { delegation: DELEGATION_STRATEGIES.route },
-  );
-  assert(routeResult.includes("路由模式"), "包含 route 策略");
+  // 8. 验证 getBuiltinRole 返回正确的模板
+  console.log("8. getBuiltinRole 验证:");
+  const joeTemplate = getBuiltinRole("role-immortan-joe");
+  assert(joeTemplate !== undefined, "role-immortan-joe 模板存在");
+  assert(joeTemplate?.id === "role-immortan-joe", "模板 ID 正确");
+  assert(joeTemplate?.name === "Immortan Joe", "模板名称正确");
+  const workerTemplate = getBuiltinRole("role-worker");
+  assert(workerTemplate !== undefined, "role-worker 模板存在");
+  assert(workerTemplate?.id === "role-worker", "模板 ID 正确");
   console.log();
 
   console.log("=== 所有验证通过 ===");

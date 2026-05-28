@@ -2,7 +2,7 @@
  * Theme Manager
  *
  * Manages theme selection and provides access to the current theme.
- * Supports environment variable RXC_THEME for theme selection.
+ * Supports environment variable JOE_THEME for theme selection.
  */
 
 import type { Theme } from "./types.js";
@@ -39,11 +39,11 @@ export function getTheme(name: string): Theme {
  * Get current theme from environment variable
  *
  * Priority:
- * 1. RXC_THEME environment variable
+ * 1. JOE_THEME environment variable
  * 2. Default theme
  */
 export function getCurrentTheme(): Theme {
-  const themeName = process.env.RXC_THEME ?? "default";
+  const themeName = process.env.JOE_THEME ?? "default";
   return getTheme(themeName);
 }
 

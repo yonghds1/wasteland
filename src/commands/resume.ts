@@ -7,7 +7,7 @@
 import { Command } from "commander";
 import { Subject } from "rxjs";
 
-import { loadRxcSettings } from "../config/load-settings.js";
+import { loadJoeSettings } from "../config/load-settings.js";
 import { resolveDefaultSessionDir, resolveDefaultTraceDir } from "../config/paths.js";
 import { resolveChatRuntime } from "../config/resolve-chat-runtime.js";
 import { createSessionIndex, type SessionDetail } from "../runtime/session-index.js";
@@ -84,7 +84,7 @@ export function createResumeCommand(): Command {
       const cwd = process.cwd();
 
       // 加载配置
-      const loadedSettings = await loadRxcSettings({
+      const loadedSettings = await loadJoeSettings({
         cwd,
         env: process.env,
       });
@@ -157,7 +157,7 @@ export function createResumeCommand(): Command {
         projectSkillsDir: loadedSettings.projectConfigDir
           ? `${loadedSettings.projectConfigDir}/skills`
           : undefined,
-        userSkillsDir: `${homedir()}/.rxc/skills`,
+        userSkillsDir: `${homedir()}/.wasteland/skills`,
       });
       const skillExecutor = new SkillExecutor(skillRegistry);
 

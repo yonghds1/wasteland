@@ -4,10 +4,10 @@ import type { PermissionMode } from "../runtime/permission-gate.js";
 import type {
   ModelSettings,
   ProviderSettings,
-  ResolvedRxcSettings,
+  ResolvedJoeSettings,
   RoleSettings,
 } from "./settings-types.js";
-import { assemblePrompt, isBuiltinRoleId, ROLE_WORKER } from "../prompts/index.js";
+import { assemblePrompt, isBuiltinRoleId, ROLE_WORKER, ROLE_IMMORTAN_JOE } from "../prompts/index.js";
 import type { PromptTemplateRef } from "../prompts/prompt-types.js";
 
 export type ResolvedRoleRef = {
@@ -128,49 +128,67 @@ function resolveRolePrompt(
   throw new Error(`无法解析 promptTemplate: ${JSON.stringify(role.promptTemplate)}`);
 }
 
+/**
+ * 内置主角色配置
+ * 完全内置，不可被用户覆盖
+ */
+const BUILTIN_MAIN_ROLE_CONFIG: RoleSettings = {
+  promptTemplate: "role-immortan-joe",
+};
+
 function resolveRole(
-  settings: ResolvedRxcSettings,
+  settings: ResolvedJoeSettings,
   requestedRoleName: string | undefined,
 ): ResolvedRoleRef | undefined {
   if (!requestedRoleName) {
     return undefined;
   }
 
-  const role = settings.roles[requestedRoleName];
-
-  if (!role) {
-    throw new Error(`当前未定义 role: ${requestedRoleName}`);
+  // 内置主角色 immortan-joe，完全内置不可覆盖
+  if (requestedRoleName === "immortan-joe") {
+    return {
+      name: "immortan-joe",
+      config: BUILTIN_MAIN_ROLE_CONFIG,
+    };
   }
 
-  return {
-    name: requestedRoleName,
-    config: role,
-  };
+  // 查找子角色配置（可被用户覆盖）
+  const subAgent = settings.subAgents[requestedRoleName];
+
+  if (subAgent) {
+    return {
+      name: requestedRoleName,
+      config: subAgent,
+    };
+  }
+
+  throw new Error(`当前未定义角色: ${requestedRoleName}。可用的子角色: ${Object.keys(settings.subAgents).join(", ")}`);
 }
 
 function resolveModel(
-  settings: ResolvedRxcSettings,
+  settings: ResolvedJoeSettings,
   role: ResolvedRoleRef | undefined,
 ): ResolvedModelRef | undefined {
   if (!role) {
     return undefined;
   }
 
-  const modelName = role.config.model;
-  const model = settings.models[modelName];
+  // 优先使用角色配置的 model，然后 fallback 到 runtime.defaultModel
+  const modelName = role.config.model ?? settings.runtime.defaultModel;
+  const model = modelName ? settings.models[modelName] : undefined;
 
   if (!model) {
-    throw new Error(`role ${role.name} 引用了未定义的 model: ${modelName}`);
+    throw new Error(`role ${role.name} 引用了未定义的 model: ${modelName ?? "(未设置)"}。可用的 models: ${Object.keys(settings.models).join(", ")}`);
   }
 
   return {
-    name: modelName,
+    name: modelName!,
     config: model,
   };
 }
 
 export function resolveChatRuntime(params: {
-  settings: ResolvedRxcSettings;
+  settings: ResolvedJoeSettings;
   roleName?: string;
   providerName?: string;
   cwd?: string;

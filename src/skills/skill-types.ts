@@ -4,7 +4,7 @@
  * 技能（Skills）是高级工作流，可以编排多个工具（Tools）。
  * 与工具不同，技能：
  * - 可以编排多个工具调用
- * - 可以被用户在 .rxc/skills/ 中自定义
+ * - 可以被用户在 .wasteland/skills/ 中自定义
  * - 通过 /skill-name 斜杠命令调用
  * - 支持参数和别名
  */
@@ -260,7 +260,7 @@ export type JsonSkillStep = {
 /**
  * JSON 技能定义
  *
- * 用于 .rxc/skills/*.json 中定义的技能。
+ * 用于 .wasteland/skills/*.json 中定义的技能。
  * 支持模板执行模式。
  */
 export type JsonSkillDefinition = SkillDefinition & {
