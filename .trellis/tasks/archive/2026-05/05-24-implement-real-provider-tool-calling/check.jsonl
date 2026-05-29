@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/backend/tool-runtime-contracts.md", "reason": "检查工具合同、ToolCall 类型是否正确扩展"}
+{"file": ".trellis/spec/backend/runtime-contracts.md", "reason": "检查 ProviderStreamEvent、tool_call 事件是否符合规范"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "检查 RxJS 规范、类型注释、测试覆盖是否符合质量要求"}
+{"file": ".trellis/tasks/05-24-implement-real-provider-tool-calling/prd.md", "reason": "对照验收标准检查实现是否完整"}

@@ -1,0 +1,9 @@
+{"file":".trellis/spec/backend/index.md","reason":"校验 backend 规则、文档同步要求和 spec 优先原则"}
+{"file":".trellis/spec/backend/directory-structure.md","reason":"校验 Phase 2 目录边界和模块落位"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"校验 RxJS、测试和 runtime contract 约束"}
+{"file":".trellis/spec/backend/runtime-contracts.md","reason":"校验对 Phase 1 runtime contract 的扩展是否一致"}
+{"file":".trellis/spec/backend/tool-runtime-contracts.md","reason":"校验 Phase 2 工具合同、权限模式和生命周期约束"}
+{"file":".trellis/spec/guides/communication-language-policy.md","reason":"校验用户面说明与规范文本的语言一致性"}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"校验工具、权限、runtime、transcript 的跨层一致性"}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"校验类型与常量抽象是否重复"}
+{"file":".trellis/tasks/05-23-phase-2-agent-tool-runtime/research/common-practices.md","reason":"校验实现是否符合已记录的通用做法边界"}

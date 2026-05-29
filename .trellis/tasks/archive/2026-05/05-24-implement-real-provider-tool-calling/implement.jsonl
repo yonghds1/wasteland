@@ -1,0 +1,5 @@
+{"file": ".trellis/spec/backend/tool-runtime-contracts.md", "reason": "工具合同、ToolRegistry、ToolCall 类型定义的规范真源"}
+{"file": ".trellis/spec/backend/runtime-contracts.md", "reason": "ProviderStreamEvent、TurnState、RuntimeEvent 的规范真源"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "RxJS 代码可读性规范、类型注释规范、测试要求"}
+{"file": ".trellis/tasks/05-24-implement-real-provider-tool-calling/prd.md", "reason": "本任务的 PRD，包含需求、验收标准、技术方案"}
+{"file": ".trellis/tasks/05-24-implement-real-provider-tool-calling/research/tool-calling-api-patterns.md", "reason": "OpenAI tool calling API 格式参考"}

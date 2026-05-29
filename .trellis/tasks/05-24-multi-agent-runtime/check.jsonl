@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/backend/runtime-contracts.md", "reason": "验证 Runtime 层契约未被破坏"}
+{"file": ".trellis/spec/backend/tool-runtime-contracts.md", "reason": "验证 Tool 层契约未被破坏"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "代码质量检查标准"}
+{"file": ".trellis/tasks/05-24-multi-agent-runtime/prd.md", "reason": "验收标准参考"}

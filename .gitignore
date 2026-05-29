@@ -1,10 +1,23 @@
 node_modules/
 dist/
 .wasteland/
-.rx-cli/
 .idea/
-.agents
-.trellis
 .claude
 .cursor
 .gemini
+
+# Trellis local data
+.trellis/workspace/*/
+.trellis/.runtime/
+.trellis/.developer
+.trellis/.current-task
+.trellis/.ralph-state.json
+.trellis/.agents/
+.trellis/.agent-log
+.trellis/.session-id
+.trellis/.plan-log
+.trellis/.backup-*
+
+# Python
+**/__pycache__/
+**/*.pyc

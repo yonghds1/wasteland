@@ -1,0 +1,9 @@
+{"file": ".trellis/spec/backend/runtime-contracts.md", "reason": "Runtime 层契约，理解 runAgentLoop 和 TurnState"}
+{"file": ".trellis/spec/backend/tool-runtime-contracts.md", "reason": "Tool 层契约，理解 ToolRegistry 和 ToolRunner"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "代码质量标准"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "错误处理规范"}
+{"file": ".trellis/tasks/05-24-multi-agent-runtime/prd.md", "reason": "任务需求文档"}
+{"file": ".trellis/tasks/05-24-multi-agent-runtime/research/multi-agent-patterns.md", "reason": "多 Agent 框架模式研究"}
+{"file": ".trellis/tasks/05-24-multi-agent-runtime/research/claude-code-codex-patterns.md", "reason": "Claude Code 和 Codex 多 Agent 模式研究"}
+{"file": "docs/rxjs-guide.md", "reason": "RxJS 模式指南"}
+{"file": "docs/architecture/runtime-boundaries.md", "reason": "运行时边界设计"}

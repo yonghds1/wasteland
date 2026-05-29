@@ -1,0 +1,6 @@
+{"file":".trellis/spec/guides/index.md","reason":"Shared thinking guidance for reviewing architecture-level changes."}
+{"file":".trellis/spec/guides/communication-language-policy.md","reason":"Ensure planning and spec changes remain aligned with the project's language policy."}
+{"file":".trellis/spec/backend/index.md","reason":"Verify backend architecture spec stays consistent with the new plan."}
+{"file":".trellis/spec/backend/directory-structure.md","reason":"Review structural changes against the intended CLI directory evolution."}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Keep the architecture plan aligned with the current quality baseline."}
+{"file":".trellis/tasks/05-23-plan-agent-cli-architecture/research/agent-cli-common-practice.md","reason":"Review the final plan against the common-practice research baseline."}
