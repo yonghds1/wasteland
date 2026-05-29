@@ -248,7 +248,7 @@ export function formatToolCompleteLine(params: {
 export function formatWelcomeMessage(): string {
   const lines = [
     `${ANSI.dim}╭${"─".repeat(48)}╮${ANSI.reset}`,
-    `${ANSI.dim}│${ANSI.reset} ${ANSI.bold}${ANSI.cyan}✦ joe - Immortan Joe's War Machine${" ".repeat(16)}${ANSI.reset}${ANSI.dim}│${ANSI.reset}`,
+    `${ANSI.dim}│${ANSI.reset} ${ANSI.bold}${ANSI.cyan}✦ wasteland - Immortan Joe's War Machine${" ".repeat(12)}${ANSI.reset}${ANSI.dim}│${ANSI.reset}`,
     `${ANSI.dim}│${ANSI.reset}   ${t("ui.spinner.welcome")}${" ".repeat(12)}${ANSI.dim}│${ANSI.reset}`,
     `${ANSI.dim}╰${"─".repeat(48)}╯${ANSI.reset}`,
   ];

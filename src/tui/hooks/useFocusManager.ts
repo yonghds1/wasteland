@@ -51,7 +51,6 @@ export const PAGE_CONFIGS: Record<PageName, PageConfig> = {
   config: {
     areas: [
       { id: "header", label: "顶部导航", capabilities: { navigable: true } },
-      { id: "configList", label: "配置列表", capabilities: { interactive: true } },
     ],
   },
 };

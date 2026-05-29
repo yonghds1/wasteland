@@ -143,7 +143,8 @@ done
 echo "安装完成！"
 echo "现在可以使用以下命令:"
 echo "  wasteland --help"
-echo "  joe --help"
+echo "  wasteland --help"
+echo "  joe --help (兼容别名)"
 EOF
 chmod +x "$INSTALL_SCRIPT"
 

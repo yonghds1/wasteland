@@ -1,12 +1,18 @@
 /**
  * ExitConfirm - 退出确认提示
  *
- * 简单的退出确认提示组件
+ * 使用主题系统颜色的退出确认模态框
  */
 
 import React from "react";
 import { Text, Box } from "ink";
-import { WARNING, SUCCESS, ERROR } from "../../utils/colors.js";
+import {
+  PRIMARY,
+  SUCCESS,
+  ERROR,
+  BORDER,
+  SEPARATORS,
+} from "../../utils/colors.js";
 import { t } from "../../../locales/index.js";
 
 interface ExitConfirmProps {
@@ -21,31 +27,34 @@ export function ExitConfirm({ width }: ExitConfirmProps): React.ReactElement {
       flexDirection="column"
       width={modalWidth}
       borderStyle="double"
-      borderColor={WARNING}
+      borderColor={PRIMARY}
       paddingX={2}
       paddingY={1}
     >
       {/* 警告图标和消息 */}
       <Box justifyContent="center" marginBottom={1}>
-        <Text bold color={WARNING}>
+        <Text bold color={PRIMARY}>
           ⚠ {t("tui.exit.title")}
         </Text>
       </Box>
 
       {/* 分隔线 */}
       <Box marginBottom={1}>
-        <Text dimColor>{"─".repeat(modalWidth - 6)}</Text>
+        <Text dimColor color={BORDER}>{"─".repeat(modalWidth - 6)}</Text>
       </Box>
 
       {/* 确认提示 */}
       <Box justifyContent="center">
         <Text>
-          按 <Text bold color={SUCCESS}>y</Text> 确认退出
+          {t("tui.exit.pressY")}{" "}
+          <Text bold color={SUCCESS}>y</Text>{" "}
+          {t("tui.exit.toConfirm")}
         </Text>
       </Box>
       <Box justifyContent="center">
         <Text>
-          按 <Text bold color={ERROR}>n</Text> {t("tui.exit.cancel")}
+          {t("tui.exit.cancel")}{" "}
+          <Text bold color={ERROR}>n</Text>
         </Text>
       </Box>
     </Box>

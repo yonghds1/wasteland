@@ -2,7 +2,7 @@
 
 ## 目的
 
-本文档定义 `joe` 从简单 CLI 演进为智能体 CLI 时，近期应采用的源码布局。
+本文档定义 `wasteland` 从简单 CLI 演进为智能体 CLI 时，近期应采用的源码布局。
 
 ---
 
@@ -28,7 +28,7 @@ dist/
 Phase 2 第一批骨架之后，目录边界已经被建出来，但不同目录的成熟度并不相同：
 
 - `src/runtime/`、`src/providers/`、`src/ui/` 已经有可运行的最小实现
-- `src/config/` 已统一承载 `.joe` 目录相关路径与配置加载
+- `src/config/` 已统一承载 `.wasteland` 目录相关路径与配置加载
 - `src/runtime/turn-state.ts` 与 `src/runtime/debug-events.ts` 已把多步 loop 和 trace 合同独立出来
 - `src/providers/provider-registry.ts` 已把 provider 解析从命令层抽离
 - `src/tools/` 已经有工具合同、registry 和 runner 骨架
@@ -89,7 +89,7 @@ src/
 
 ```text
 bin/
-  joe.js
+  wasteland.js
 
 docs/
   architecture/

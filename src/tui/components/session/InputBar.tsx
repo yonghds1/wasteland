@@ -72,20 +72,6 @@ export function InputBar({ width, sendMessage }: InputBarProps): React.ReactElem
 
   return (
     <Box flexDirection="column" width={width}>
-      {/* 模式指示器 - 输入模式时显示 */}
-      {state.inputMode && (
-        <Box paddingX={1} flexDirection="row" gap={1}>
-          <Text bold color={SECONDARY}>
-            {t("tui.session.input.mode")}
-          </Text>
-          <Text dimColor>{t("tui.session.input.escCancel")}</Text>
-          <Text dimColor>{SEPARATORS.item.trim()}</Text>
-          <Text color={SUCCESS}>{t("tui.session.input.enterSend")}</Text>
-          <Text dimColor>{SEPARATORS.item.trim()}</Text>
-          <Text dimColor>{t("tui.session.input.tabSwitch")}</Text>
-        </Box>
-      )}
-
       {/* 输入框 */}
       <Box flexDirection="row" paddingX={1} width={width}>
         <Text bold color={state.inputMode ? SUCCESS : isFocused ? "cyan" : PRIMARY}>

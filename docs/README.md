@@ -19,7 +19,7 @@
 ## 文档列表
 
 - [智能体 CLI 架构](./architecture/agent-cli.md)
-- [配置层与 `.joe` 目录](./architecture/configuration.md)
+- [配置层与 `.wasteland` 目录](./architecture/configuration.md)
 - [多角色配置方案](./architecture/multi-role-configuration.md)
 - [运行时分层与契约](./architecture/runtime-boundaries.md)
 - [多Agent协作架构](./architecture/multi-agent-architecture.md)

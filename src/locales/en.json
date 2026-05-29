@@ -149,7 +149,7 @@
       "show": {
         "title": "Current skin",
         "empty": "No skin loaded.",
-        "emptyHint": "Use 'joe skin list' to view available skins."
+        "emptyHint": "Use 'wasteland skin list' to view available skins."
       },
       "load": {
         "success": "Loaded skin: {{name}} ({{id}})",
@@ -295,9 +295,10 @@
   },
   "tui": {
     "header": {
+      "title": "wasteland",
       "session": "Session",
       "debug": "Debug",
-      "config": "Config"
+      "guide": "Guide"
     },
     "footer": {
       "inputMode": "[Input Mode]",
@@ -330,7 +331,7 @@
       "reset": "Ctrl+R Reset",
       "sessionPage": "Session Page",
       "debugPage": "Debug Page",
-      "configPage": "Config Page"
+      "guidePage": "Guide Page"
     },
     "help": {
       "title": "Keyboard Shortcuts Help",
@@ -347,6 +348,7 @@
         "globalExit": "Global exit (requires confirmation)",
         "sessionPage": "Session page",
         "scrollMessages": "Scroll messages",
+        "enterInputMode": "Enter input mode",
         "debugPage": "Debug page",
         "enterFilter": "Enter filter mode",
         "clearLogs": "Clear logs",
@@ -361,9 +363,14 @@
     "exit": {
       "title": "Confirm Exit",
       "confirm": "Confirm Exit",
+      "pressY": "Press",
+      "toConfirm": "to confirm exit",
       "cancel": "or other key to cancel"
     },
     "session": {
+      "agentTree": {
+        "main": "wasteland (main)"
+      },
       "input": {
         "mode": "[Input Mode]",
         "escCancel": "Esc Cancel",
@@ -376,6 +383,7 @@
         "assistant": "Assistant",
         "tool": "Tool",
         "system": "System",
+        "welcome": "◆ wasteland - Immortan Joe's War Machine",
         "startHint": "Type a message below to start conversation",
         "tabHint": "Tab Switch Page ┊ h Help ┊ q Exit",
         "title": "Messages",
@@ -389,36 +397,32 @@
       }
     },
     "config": {
-      "title": "Config",
-      "source": "Config Source",
-      "project": "Project:",
-      "user": "User:",
-      "unconfigured": "(Unconfigured)",
-      "priority": "Priority:",
-      "permission": "Permission:",
-      "stepsPerTurn": "Steps/Turn:",
-      "turns": "Turns:",
-      "defaultRole": "Default Role:",
-      "unset": "(Unset)",
-      "timeout": "Timeout:",
-      "noProviders": "No configured Providers",
-      "default": "Default:",
-      "noModels": "No configured Models",
-      "current": "Current:",
-      "noRoles": "No configured Roles",
-      "switch": "↑/↓ Switch",
-      "edit": "Enter Edit",
-      "saveProject": "Ctrl+S Save Project",
-      "saveUser": "Ctrl+U Save User",
-      "reset": "Ctrl+R Reset",
-      "unsaved": "(Unsaved)",
-      "focus": "[Focus]",
-      "noChanges": "No changes to save",
-      "saving": "Saving...",
-      "saved": "Saved to project/user config:",
-      "saveFailed": "Save failed:",
-      "resetDone": "Reset done",
-      "resetFailed": "Reset failed"
+      "title": "Guide",
+      "docs": {
+        "location": {
+          "title": "Config File Location",
+          "project": "Project:",
+          "user": "User:",
+          "priority": "Priority: CLI args > Env vars > Project config > User config > Defaults"
+        },
+        "structure": {
+          "title": "settings.json Structure"
+        },
+        "fields": {
+          "title": "Field Descriptions",
+          "defaultRole": "Default agent role (e.g. immortan-joe)",
+          "permissionMode": "Permission mode: default | accept_edits | bypass_permissions",
+          "maxStepsPerTurn": "Max tool steps per turn (default: 8)",
+          "language": "UI language: en | zh",
+          "providerType": "API protocol: openai-compatible | anthropic | local"
+        },
+        "env": {
+          "title": "Environment Variables",
+          "home": "Override config home directory",
+          "provider": "Override default provider",
+          "debug": "Enable debug mode (true/false)"
+        }
+      }
     },
     "debug": {
       "count": "{{count}}",
@@ -437,6 +441,7 @@
       "receiveResponse": "Receive Response",
       "waitingTrace": "Waiting for trace data...",
       "useDebugHint": "Use --debug to start with detailed tracing",
+      "usageExample": "wasteland chat --debug --message \"your message\"",
       "details": "Details:",
       "rawData": "Raw Data:",
       "filterCondition": "Filter Condition:",

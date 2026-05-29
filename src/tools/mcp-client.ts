@@ -285,7 +285,7 @@ export class MCPClient extends EventEmitter {
           tools: {},
         },
         clientInfo: {
-          name: "joe",
+          name: "wasteland",
           version: "0.1.0",
         },
       },

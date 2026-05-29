@@ -1,42 +1,20 @@
 /**
- * ConfigPage - 配置页面
+ * ConfigPage - 配置说明页面
  *
- * 完整配置编辑器，支持：
- * - Sources：显示配置源和优先级
- * - Runtime：defaultRole, permissionMode, maxStepsPerTurn, maxTurns, childAgentTimeout, debug
- * - Providers：只读展示
- * - Models：只读展示
- * - Roles：只读展示
+ * 只读文档视图，展示 settings.json 的配置说明
  */
 
-import React, { useState, useEffect } from "react";
-import { Text, Box, useInput } from "ink";
+import React from "react";
+import { Text, Box } from "ink";
 import { useAppContext } from "../../context/AppContext.js";
 import { t } from "../../../locales/index.js";
-import { loadJoeSettings } from "../../../config/load-settings.js";
-import { resolveUserSettingsPath, resolveProjectSettingsPath, findProjectConfigDir } from "../../../config/paths.js";
-import { resolveChatRuntime } from "../../../config/resolve-chat-runtime.js";
-import type { PermissionMode } from "../../../runtime/permission-gate.js";
-import { mkdir, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
 import {
   PRIMARY,
   SUCCESS,
   WARNING,
-  SEPARATORS,
+  MUTED,
+  BORDER,
 } from "../../utils/colors.js";
-
-type ConfigSection = "sources" | "runtime" | "providers" | "models" | "subAgents";
-
-const SECTIONS: { key: ConfigSection; label: string; color: string; editable: boolean }[] = [
-  { key: "sources", label: t("tui.config.source"), color: "gray", editable: false },
-  { key: "runtime", label: "Runtime", color: "green", editable: true },
-  { key: "providers", label: "Providers", color: "cyan", editable: false },
-  { key: "models", label: "Models", color: "yellow", editable: false },
-  { key: "subAgents", label: "Roles", color: "magenta", editable: false },
-];
-
-const PERMISSION_MODE_OPTIONS: PermissionMode[] = ["default", "accept_edits", "bypass_permissions"];
 
 interface ConfigPageProps {
   height?: number;
@@ -44,463 +22,123 @@ interface ConfigPageProps {
 }
 
 export function ConfigPage({ height, width }: ConfigPageProps): React.ReactElement {
-  const { state, setState, setEditMode, updateConfig } = useAppContext();
-  const [focusedSection, setFocusedSection] = useState<ConfigSection>("sources");
-  const [focusedField, setFocusedField] = useState<string | null>(null);
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const [saveMessage, setSaveMessage] = useState<string>("");
-  const [providerOptions, setProviderOptions] = useState<string[]>([]);
-
-  // 加载可用的 Provider 列表
-  useEffect(() => {
-    async function loadProviders() {
-      try {
-        const loaded = await loadJoeSettings({ cwd: process.cwd(), env: process.env });
-        const providerNames = Object.keys(loaded.settings.providers);
-        if (providerNames.length > 0) {
-          setProviderOptions(providerNames);
-        }
-      } catch {
-        // 使用默认选项
-      }
-    }
-    loadProviders();
-  }, []);
-
-  // 监听编辑模式变化
-  useEffect(() => {
-    setEditMode(focusedField !== null);
-  }, [focusedField, setEditMode]);
-
-  // 获取当前 section 配置
-  const sectionKeys = SECTIONS.map((s) => s.key);
-
-  // 处理编辑模式下的输入
-  const handleEditModeInput = (input: string, key: { return: boolean; escape: boolean; upArrow: boolean; downArrow: boolean; leftArrow: boolean; rightArrow: boolean }) => {
-    if (key.escape) {
-      setFocusedField(null);
-      return;
-    }
-
-    if (key.return) {
-      // 在 runtime 区域内移动
-      if (focusedSection === "runtime") {
-        const runtimeFields = ["permissionMode", "maxSteps", "maxTurns", "defaultRole", "childAgentTimeout", "debug"];
-        const idx = runtimeFields.indexOf(focusedField ?? "");
-        if (idx < runtimeFields.length - 1) {
-          setFocusedField(runtimeFields[idx + 1]);
-        } else {
-          setFocusedField(null);
-        }
-      } else {
-        setFocusedField(null);
-      }
-      return;
-    }
-
-    // 字段特定编辑
-    if (focusedField === "permissionMode") {
-      const idx = PERMISSION_MODE_OPTIONS.indexOf(state.config.permissionMode as PermissionMode);
-      const nextIdx = key.leftArrow
-        ? (idx - 1 + PERMISSION_MODE_OPTIONS.length) % PERMISSION_MODE_OPTIONS.length
-        : (idx + 1) % PERMISSION_MODE_OPTIONS.length;
-      updateConfig({ permissionMode: PERMISSION_MODE_OPTIONS[nextIdx] });
-    } else if (focusedField === "maxSteps") {
-      if (key.upArrow) {
-        updateConfig({ maxSteps: Math.min(50, state.config.maxSteps + 1) });
-      } else if (key.downArrow) {
-        updateConfig({ maxSteps: Math.max(1, state.config.maxSteps - 1) });
-      }
-    } else if (focusedField === "maxTurns") {
-      if (key.upArrow) {
-        updateConfig({ maxTurns: Math.min(200, state.config.maxTurns + 1) });
-      } else if (key.downArrow) {
-        updateConfig({ maxTurns: Math.max(1, state.config.maxTurns - 1) });
-      }
-    } else if (focusedField === "defaultRole") {
-      // 循环切换 role
-      const roleNames = Object.keys(state.fullConfig.subAgents);
-      if (roleNames.length > 0) {
-        const idx = roleNames.indexOf(state.config.defaultRole);
-        const nextIdx = key.leftArrow
-          ? (idx - 1 + roleNames.length) % roleNames.length
-          : (idx + 1) % roleNames.length;
-        updateConfig({ defaultRole: roleNames[nextIdx] });
-      }
-    } else if (focusedField === "childAgentTimeout") {
-      if (key.upArrow) {
-        updateConfig({ childAgentTimeout: Math.min(600000, state.config.childAgentTimeout + 10000) });
-      } else if (key.downArrow) {
-        updateConfig({ childAgentTimeout: Math.max(10000, state.config.childAgentTimeout - 10000) });
-      }
-    } else if (focusedField === "debug") {
-      updateConfig({ debug: !state.config.debug });
-    }
-  };
-
-  // 键盘导航
-  useInput(
-    (input, key) => {
-      if (focusedField) {
-        handleEditModeInput(input, key);
-        return;
-      }
-
-      // 上下切换 section
-      if (key.upArrow) {
-        const idx = sectionKeys.indexOf(focusedSection);
-        if (idx > 0) setFocusedSection(sectionKeys[idx - 1]);
-      }
-      if (key.downArrow) {
-        const idx = sectionKeys.indexOf(focusedSection);
-        if (idx < sectionKeys.length - 1) setFocusedSection(sectionKeys[idx + 1]);
-      }
-
-      // Enter 进入编辑模式
-      if (key.return) {
-        const section = SECTIONS.find((s) => s.key === focusedSection);
-        if (section?.editable) {
-          if (focusedSection === "runtime") {
-            setFocusedField("permissionMode");
-          }
-        }
-      }
-
-      // Ctrl+S 保存到 project config
-      if (input === "s" && key.ctrl) {
-        handleSave("project");
-      }
-
-      // Ctrl+U 保存到 user config
-      if (input === "u" && key.ctrl) {
-        handleSave("user");
-      }
-
-      // Ctrl+R 重置
-      if (input === "r" && key.ctrl) {
-        handleReset();
-      }
-    },
-    { isActive: state.currentPage === "config" && state.focusArea === "configList" && !state.inputMode && !state.filterMode && !state.exitConfirmPending && !state.showHelp }
-  );
-
-  // 保存配置
-  const handleSave = async (target: "project" | "user") => {
-    if (!state.configHasChanges && target === "project") {
-      setSaveMessage(t("tui.config.noChanges"));
-      setSaveStatus("error");
-      setTimeout(() => setSaveStatus("idle"), 2000);
-      return;
-    }
-
-    setSaveStatus("saving");
-    setSaveMessage(t("tui.config.saving"));
-
-    try {
-      const cwd = process.cwd();
-      let settingsPath: string;
-
-      if (target === "project") {
-        const projectConfigDir = await findProjectConfigDir(cwd);
-        settingsPath = projectConfigDir
-          ? resolveProjectSettingsPath(projectConfigDir)
-          : resolveProjectSettingsPath(`${cwd}/.wasteland`);
-      } else {
-        settingsPath = resolveUserSettingsPath(process.env);
-      }
-
-      // 读取现有配置
-      let existingSettings: Record<string, unknown> = {};
-      try {
-        const content = await import("node:fs/promises").then((fs) => fs.readFile(settingsPath, "utf8"));
-        existingSettings = JSON.parse(content);
-      } catch {
-        // 文件不存在
-      }
-
-      // 合并更改
-      const newSettings = {
-        ...existingSettings,
-        defaultProvider: state.config.provider,
-        runtime: {
-          ...(existingSettings.runtime as Record<string, unknown> | undefined) as Record<string, unknown> | undefined,
-          defaultRole: state.config.defaultRole || undefined,
-          permissionMode: state.config.permissionMode,
-          maxStepsPerTurn: state.config.maxSteps,
-          maxTurns: state.config.maxTurns,
-          childAgentTimeout: state.config.childAgentTimeout,
-          debug: state.config.debug,
-        },
-      };
-
-      // 确保目录存在
-      await mkdir(dirname(settingsPath), { recursive: true });
-
-      // 写入文件
-      await writeFile(settingsPath, JSON.stringify(newSettings, null, 2), "utf8");
-
-      setSaveStatus("saved");
-      setSaveMessage(`${t("tui.config.saved")} ${settingsPath}`);
-      setState((prev) => ({ ...prev, configHasChanges: false }));
-
-      setTimeout(() => setSaveStatus("idle"), 3000);
-    } catch (error) {
-      setSaveStatus("error");
-      setSaveMessage(`${t("tui.config.saveFailed")}: ${error instanceof Error ? error.message : "未知错误"}`);
-      setTimeout(() => setSaveStatus("idle"), 3000);
-    }
-  };
-
-  // 重置
-  const handleReset = async () => {
-    try {
-      const loaded = await loadJoeSettings();
-      const resolved = resolveChatRuntime({ settings: loaded.settings });
-      setState((prev) => ({
-        ...prev,
-        config: {
-          provider: resolved.providerName,
-          model: resolved.model?.name ?? "",
-          permissionMode: resolved.permissionMode,
-          maxTurns: loaded.settings.runtime.maxTurns,
-          maxSteps: loaded.settings.runtime.maxStepsPerTurn,
-          defaultRole: loaded.settings.runtime.defaultRole ?? "",
-          childAgentTimeout: loaded.settings.runtime.childAgentTimeout,
-          debug: loaded.settings.runtime.debug,
-        },
-        fullConfig: {
-          ...prev.fullConfig,
-          providers: loaded.settings.providers,
-          models: loaded.settings.models,
-          subAgents: loaded.settings.subAgents,
-          sources: loaded.sources,
-          defaultProvider: loaded.settings.defaultProvider,
-        },
-        configHasChanges: false,
-      }));
-      setSaveMessage(t("tui.config.resetDone"));
-      setSaveStatus("saved");
-      setTimeout(() => setSaveStatus("idle"), 2000);
-    } catch {
-      setSaveMessage(t("tui.config.resetFailed"));
-      setSaveStatus("error");
-      setTimeout(() => setSaveStatus("idle"), 2000);
-    }
-  };
-
-  // 计算可用高度
-  const sectionHeight = height ? Math.floor((height - 8) / SECTIONS.length) : 4;
-
-  const renderSectionHeader = (key: ConfigSection, label: string, color: string, editable: boolean) => {
-    const isFocused = focusedSection === key;
-    return (
-      <Box flexDirection="row" gap={1}>
-        <Text bold color={isFocused ? color : "gray"}>
-          {isFocused ? "▸ " : "  "}{label}
-        </Text>
-        {editable && isFocused && !focusedField && (
-          <Text dimColor>{t("tui.config.edit")}</Text>
-        )}
-        {focusedField && key === "runtime" && (
-          <Text dimColor>Enter 下一字段 | Esc 退出编辑</Text>
-        )}
-      </Box>
-    );
-  };
+  const { state } = useAppContext();
 
   return (
     <Box flexDirection="column" height={height} width={width} paddingX={1}>
       {/* 标题 */}
       <Box marginBottom={1}>
         <Text bold underline color={state.focusArea === "configList" ? "cyan" : undefined}>
-          配置
+          {t("tui.config.title")}
         </Text>
-        {state.configHasChanges && (
-          <Text color="yellow"> {t("tui.config.unsaved")}</Text>
-        )}
-        {state.focusArea === "configList" && (
-          <Text dimColor color="cyan"> {t("tui.config.focus")}</Text>
-        )}
-        {saveStatus !== "idle" && (
-          <Text color={saveStatus === "saved" ? "green" : saveStatus === "error" ? "red" : "yellow"}>
-            {" "} - {saveMessage}
+      </Box>
+
+      {/* 配置文件位置 */}
+      <Box flexDirection="column" marginBottom={1}>
+        <Text bold color={PRIMARY}>
+          {t("tui.config.docs.location.title")}
+        </Text>
+        <Box paddingLeft={2} flexDirection="column">
+          <Text>
+            <Text bold color={SUCCESS}>{t("tui.config.docs.location.project")}</Text>{" "}
+            <Text>.wasteland/settings.json</Text>
           </Text>
-        )}
-      </Box>
-
-      {/* Sources 区域 */}
-      <Box
-        flexDirection="column"
-        borderStyle={focusedSection === "sources" ? "double" : "single"}
-        borderColor={focusedSection === "sources" ? "cyan" : "gray"}
-        paddingX={1}
-        marginBottom={1}
-        height={sectionHeight}
-      >
-        {renderSectionHeader("sources", t("tui.config.source"), "gray", false)}
-        <Box flexDirection="row" gap={2}>
-          <Box flexDirection="row">
-            <Text dimColor>{t("tui.config.project")} </Text>
-            <Text color={state.fullConfig.sources.project ? "green" : "gray"}>
-              {state.fullConfig.sources.project ?? t("tui.config.unconfigured")}
-            </Text>
-          </Box>
-          <Box flexDirection="row">
-            <Text dimColor>{t("tui.config.user")} </Text>
-            <Text color={state.fullConfig.sources.user ? "green" : "gray"}>
-              {state.fullConfig.sources.user ?? t("tui.config.unconfigured")}
-            </Text>
-          </Box>
-        </Box>
-        <Text dimColor>{t("tui.config.priority")} 项目 &gt; 用户 &gt; 默认值</Text>
-      </Box>
-
-      {/* Runtime 区域 */}
-      <Box
-        flexDirection="column"
-        borderStyle={focusedSection === "runtime" ? "double" : "single"}
-        borderColor={focusedSection === "runtime" ? "cyan" : "gray"}
-        paddingX={1}
-        marginBottom={1}
-        height={sectionHeight}
-      >
-        {renderSectionHeader("runtime", "Runtime", "green", true)}
-        <Box flexDirection="row" gap={2}>
-          <Box flexDirection="row">
-            <Text dimColor>{t("tui.config.permission")} </Text>
-            <Text bold color={focusedField === "permissionMode" ? "yellow" : "green"}>
-              {state.config.permissionMode}
-            </Text>
-            {focusedField === "permissionMode" && <Text color="yellow"> ◀</Text>}
-          </Box>
-          <Box flexDirection="row">
-            <Text dimColor>{t("tui.config.stepsPerTurn")} </Text>
-            <Text bold color={focusedField === "maxSteps" ? "yellow" : undefined}>
-              {state.config.maxSteps}
-            </Text>
-            {focusedField === "maxSteps" && <Text color="yellow"> ◀ ↑/↓</Text>}
-          </Box>
-          <Box flexDirection="row">
-            <Text dimColor>{t("tui.config.turns")} </Text>
-            <Text bold color={focusedField === "maxTurns" ? "yellow" : undefined}>
-              {state.config.maxTurns}
-            </Text>
-            {focusedField === "maxTurns" && <Text color="yellow"> ◀ ↑/↓</Text>}
-          </Box>
-        </Box>
-        <Box flexDirection="row" gap={2}>
-          <Box flexDirection="row">
-            <Text dimColor>{t("tui.config.defaultRole")} </Text>
-            <Text bold color={focusedField === "defaultRole" ? "yellow" : undefined}>
-              {state.config.defaultRole || t("tui.config.unset")}
-            </Text>
-            {focusedField === "defaultRole" && <Text color="yellow"> ◀ ←/→</Text>}
-          </Box>
-          <Box flexDirection="row">
-            <Text dimColor>{t("tui.config.timeout")} </Text>
-            <Text bold color={focusedField === "childAgentTimeout" ? "yellow" : undefined}>
-              {state.config.childAgentTimeout}ms
-            </Text>
-            {focusedField === "childAgentTimeout" && <Text color="yellow"> ◀ ↑/↓</Text>}
-          </Box>
-          <Box flexDirection="row">
-            <Text dimColor>Debug: </Text>
-            <Text bold color={focusedField === "debug" ? "yellow" : state.config.debug ? "green" : "gray"}>
-              {state.config.debug ? "ON" : "OFF"}
-            </Text>
-            {focusedField === "debug" && <Text color="yellow"> ◀ Enter</Text>}
-          </Box>
+          <Text>
+            <Text bold color={SUCCESS}>{t("tui.config.docs.location.user")}</Text>{" "}
+            <Text>~/.wasteland/settings.json</Text>
+          </Text>
+          <Text dimColor>{t("tui.config.docs.location.priority")}</Text>
         </Box>
       </Box>
 
-      {/* Providers 区域 */}
-      <Box
-        flexDirection="column"
-        borderStyle={focusedSection === "providers" ? "double" : "single"}
-        borderColor={focusedSection === "providers" ? "cyan" : "gray"}
-        paddingX={1}
-        marginBottom={1}
-        height={sectionHeight}
-      >
-        {renderSectionHeader("providers", "Providers", "cyan", false)}
-        {Object.entries(state.fullConfig.providers).length === 0 ? (
-          <Text dimColor>  {t("tui.config.noProviders")}</Text>
-        ) : (
-          Object.entries(state.fullConfig.providers).map(([name, cfg]) => (
-            <Box key={name} flexDirection="row" gap={1}>
-              <Text bold color={name === state.config.provider ? "green" : "cyan"}>{name}</Text>
-              <Text dimColor>({cfg.type ?? "unknown"})</Text>
-              {cfg.baseUrl && <Text dimColor>{cfg.baseUrl.slice(0, 40)}</Text>}
-              {cfg.model && <Text dimColor>model={cfg.model}</Text>}
-            </Box>
-          ))
-        )}
-        <Text dimColor>  {t("tui.config.default")} {state.config.provider}</Text>
+      {/* 配置结构 */}
+      <Box flexDirection="column" marginBottom={1}>
+        <Text bold color={PRIMARY}>
+          {t("tui.config.docs.structure.title")}
+        </Text>
+        <Box paddingLeft={2} flexDirection="column">
+          <Text dimColor>{"{"}</Text>
+          <Text>  <Text color={WARNING}>"runtime"</Text>: {"{"}</Text>
+          <Text>    <Text color={WARNING}>"defaultRole"</Text>: <Text color={SUCCESS}>"immortan-joe"</Text>,</Text>
+          <Text>    <Text color={WARNING}>"permissionMode"</Text>: <Text color={SUCCESS}>"default"</Text>,</Text>
+          <Text>    <Text color={WARNING}>"maxStepsPerTurn"</Text>: <Text color={MUTED}>8</Text>,</Text>
+          <Text>    <Text color={WARNING}>"maxTurns"</Text>: <Text color={MUTED}>20</Text>,</Text>
+          <Text>    <Text color={WARNING}>"debug"</Text>: <Text color={MUTED}>false</Text>,</Text>
+          <Text>    <Text color={WARNING}>"language"</Text>: <Text color={SUCCESS}>"en"</Text></Text>
+          <Text>  {"}"},</Text>
+          <Text>  <Text color={WARNING}>"providers"</Text>: {"{"}</Text>
+          <Text>    <Text color={SUCCESS}>"provider-name"</Text>: {"{"}</Text>
+          <Text>      <Text color={WARNING}>"type"</Text>: <Text color={SUCCESS}>"openai-compatible"</Text>,</Text>
+          <Text>      <Text color={WARNING}>"baseUrl"</Text>: <Text color={SUCCESS}>"https://..."</Text>,</Text>
+          <Text>      <Text color={WARNING}>"apiKey"</Text>: <Text color={SUCCESS}>"sk-..."</Text></Text>
+          <Text>    {"}"}</Text>
+          <Text>  {"}"},</Text>
+          <Text>  <Text color={WARNING}>"models"</Text>: {"{"}</Text>
+          <Text>    <Text color={SUCCESS}>"model-name"</Text>: {"{"}</Text>
+          <Text>      <Text color={WARNING}>"provider"</Text>: <Text color={SUCCESS}>"provider-name"</Text>,</Text>
+          <Text>      <Text color={WARNING}>"model"</Text>: <Text color={SUCCESS}>"model-id"</Text></Text>
+          <Text>    {"}"}</Text>
+          <Text>  {"}"}</Text>
+          <Text dimColor>{"}"}</Text>
+        </Box>
       </Box>
 
-      {/* Models 区域 */}
-      <Box
-        flexDirection="column"
-        borderStyle={focusedSection === "models" ? "double" : "single"}
-        borderColor={focusedSection === "models" ? "cyan" : "gray"}
-        paddingX={1}
-        marginBottom={1}
-        height={sectionHeight}
-      >
-        {renderSectionHeader("models", "Models", "yellow", false)}
-        {Object.entries(state.fullConfig.models).length === 0 ? (
-          <Text dimColor>  {t("tui.config.noModels")}</Text>
-        ) : (
-          Object.entries(state.fullConfig.models).map(([name, cfg]) => (
-            <Box key={name} flexDirection="row" gap={1}>
-              <Text bold color="yellow">{name}</Text>
-              <Text dimColor>→</Text>
-              <Text>{cfg.model}</Text>
-              <Text dimColor>({cfg.provider})</Text>
-            </Box>
-          ))
-        )}
-        <Text dimColor>  {t("tui.config.current")} {state.config.model}</Text>
+      {/* 配置项说明 */}
+      <Box flexDirection="column" marginBottom={1}>
+        <Text bold color={PRIMARY}>
+          {t("tui.config.docs.fields.title")}
+        </Text>
+        <Box paddingLeft={2} flexDirection="column">
+          <Text>
+            <Text bold color={WARNING}>runtime.defaultRole</Text>{" "}
+            <Text dimColor>-</Text>{" "}
+            {t("tui.config.docs.fields.defaultRole")}
+          </Text>
+          <Text>
+            <Text bold color={WARNING}>runtime.permissionMode</Text>{" "}
+            <Text dimColor>-</Text>{" "}
+            {t("tui.config.docs.fields.permissionMode")}
+          </Text>
+          <Text>
+            <Text bold color={WARNING}>runtime.maxStepsPerTurn</Text>{" "}
+            <Text dimColor>-</Text>{" "}
+            {t("tui.config.docs.fields.maxStepsPerTurn")}
+          </Text>
+          <Text>
+            <Text bold color={WARNING}>runtime.language</Text>{" "}
+            <Text dimColor>-</Text>{" "}
+            {t("tui.config.docs.fields.language")}
+          </Text>
+          <Text>
+            <Text bold color={WARNING}>providers.*.type</Text>{" "}
+            <Text dimColor>-</Text>{" "}
+            {t("tui.config.docs.fields.providerType")}
+          </Text>
+        </Box>
       </Box>
 
-      {/* Roles 区域 */}
-      <Box
-        flexDirection="column"
-        borderStyle={focusedSection === "subAgents" ? "double" : "single"}
-        borderColor={focusedSection === "subAgents" ? "cyan" : "gray"}
-        paddingX={1}
-        height={sectionHeight}
-      >
-        {renderSectionHeader("subAgents", "Roles", "magenta", false)}
-        {Object.entries(state.fullConfig.subAgents).length === 0 ? (
-          <Text dimColor>  {t("tui.config.noRoles")}</Text>
-        ) : (
-          Object.entries(state.fullConfig.subAgents).map(([name, cfg]) => (
-            <Box key={name} flexDirection="row" gap={1}>
-              <Text bold color="magenta">{name}</Text>
-              <Text dimColor>→</Text>
-              <Text>{cfg.model}</Text>
-              {cfg.permissionMode && <Text dimColor>({cfg.permissionMode})</Text>}
-            </Box>
-          ))
-        )}
-        <Text dimColor>  {t("tui.config.default")} {state.config.defaultRole || t("tui.config.unset")}</Text>
-      </Box>
-
-      {/* 底部操作提示 */}
-      <Box flexDirection="row" justifyContent="center" marginTop={1}>
-        <Text dimColor>{t("tui.config.switch")} | </Text>
-        {SECTIONS.find((s) => s.key === focusedSection)?.editable && (
-          <>
-            <Text color={PRIMARY}>{t("tui.config.edit")}</Text>
-            <Text dimColor> | </Text>
-          </>
-        )}
-        <Text bold color="green">{t("tui.config.saveProject")}</Text>
-        <Text dimColor> | </Text>
-        <Text bold color="cyan">{t("tui.config.saveUser")}</Text>
-        <Text dimColor> | </Text>
-        <Text dimColor>{t("tui.config.reset")}</Text>
+      {/* 环境变量 */}
+      <Box flexDirection="column">
+        <Text bold color={PRIMARY}>
+          {t("tui.config.docs.env.title")}
+        </Text>
+        <Box paddingLeft={2} flexDirection="column">
+          <Text>
+            <Text bold color={SUCCESS}>WASTELAND_HOME</Text>{" "}
+            <Text dimColor>-</Text>{" "}
+            {t("tui.config.docs.env.home")}
+          </Text>
+          <Text>
+            <Text bold color={SUCCESS}>WASTELAND_PROVIDER</Text>{" "}
+            <Text dimColor>-</Text>{" "}
+            {t("tui.config.docs.env.provider")}
+          </Text>
+          <Text>
+            <Text bold color={SUCCESS}>WASTELAND_DEBUG</Text>{" "}
+            <Text dimColor>-</Text>{" "}
+            {t("tui.config.docs.env.debug")}
+          </Text>
+        </Box>
       </Box>
     </Box>
   );

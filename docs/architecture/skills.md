@@ -5,7 +5,7 @@
 技能(Skills)是 RxCLI 中的高级工作流抽象,用于编排多个工具调用和复杂操作。与工具(Tools)不同,技能:
 
 - 可以编排多个工具调用
-- 可以被用户在 `.joe/skills/` 中自定义
+- 可以被用户在 `.wasteland/skills/` 中自定义
 - 通过 `/skill-name` 斜杠命令调用
 - 支持参数、别名和分类
 
@@ -74,16 +74,16 @@ interface Skill {
 
 从文件系统自动发现和加载技能:
 
-- 项目级: `.joe/skills/`
-- 用户级: `~/.joe/skills/`
+- 项目级: `.wasteland/skills/`
+- 用户级: `~/.wasteland/skills/`
 
 ## 技能来源
 
 技能可以来自三个来源:
 
 1. **内置技能** (`builtin`): 随 RxCLI 发布的默认技能
-2. **项目技能** (`project`): 项目 `.joe/skills/` 目录中的技能
-3. **用户技能** (`user`): 用户全局 `~/.joe/skills/` 目录中的技能
+2. **项目技能** (`project`): 项目 `.wasteland/skills/` 目录中的技能
+3. **用户技能** (`user`): 用户全局 `~/.wasteland/skills/` 目录中的技能
 
 ## 内置技能
 
@@ -148,7 +148,7 @@ export default {
 ### 目录格式
 
 ```
-.joe/skills/my-skill/
+.wasteland/skills/my-skill/
 ├── skill.json        # 技能定义
 └── handler.ts        # 可选的处理器
 ```
@@ -280,7 +280,7 @@ type skill_result = {
 
 ### 添加自定义技能
 
-1. 在项目 `.joe/skills/` 创建技能文件
+1. 在项目 `.wasteland/skills/` 创建技能文件
 2. 使用 JSON 或 TypeScript 格式
 3. 重启 RxCLI 自动加载
 
@@ -289,7 +289,7 @@ type skill_result = {
 使用 `--debug` 标志查看技能执行详情:
 
 ```bash
-joe chat --debug --message "/init"
+wasteland chat --debug --message "/init"
 ```
 
 在 TUI 的调试页面可以看到:

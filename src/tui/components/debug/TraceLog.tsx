@@ -214,7 +214,7 @@ export function TraceLog({ height }: TraceLogProps): React.ReactElement {
       <Box flexDirection="column" flexGrow={1} justifyContent="center" alignItems="center">
         <Text color={PRIMARY}>◆ {t("tui.debug.waitingTrace")}</Text>
         <Text dimColor>{t("tui.debug.useDebugHint")}</Text>
-        <Text dimColor color="gray">rxc chat --debug --message "你的消息"</Text>
+        <Text dimColor color="gray">{t("tui.debug.usageExample")}</Text>
       </Box>
     );
   }

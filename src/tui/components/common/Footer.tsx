@@ -169,7 +169,7 @@ export function Footer({ width }: FooterProps): React.ReactElement {
       case "debug":
         return t("tui.footer.debugPage");
       case "config":
-        return t("tui.footer.configPage");
+        return t("tui.footer.guidePage");
     }
   };
 

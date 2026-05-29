@@ -89,7 +89,7 @@ export function getDepthColor(depth: number): string {
 /** 根据深度获取标签前缀 */
 export function getDepthPrefix(depth: number, name?: string): string {
   if (depth === 0) {
-    return "joe";
+    return "wasteland";
   }
   const indent = "  ".repeat(depth - 1);
   const arrow = depth === 1 ? "└─" : "  └─";

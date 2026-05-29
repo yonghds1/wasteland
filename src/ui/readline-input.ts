@@ -66,8 +66,8 @@ const LOCAL_COMMANDS = new Set(["/help", "/tools", "/clear", "/skills"]);
  */
 function createInteractiveIntro(): string {
   return [
-    paint("joe interactive", ANSI.bold, ANSI.cyan),
-    paint("Prompt: >    Replies: joe", ANSI.bold, ANSI.brightWhite),
+    paint("wasteland interactive", ANSI.bold, ANSI.cyan),
+    paint("Prompt: >    Replies: wasteland", ANSI.bold, ANSI.brightWhite),
     paint("Commands: /help /tools /clear /exit", ANSI.brightWhite),
   ].join("\n");
 }

@@ -7,7 +7,7 @@
 import { Command } from "commander";
 import { listSkins, loadSkin, getCurrentSkin } from "../skins/index.js";
 import { switchSkin } from "../utils/symlink-manager.js";
-import { loadJoeSettings } from "../config/load-settings.js";
+import { loadWastelandSettings } from "../config/load-settings.js";
 import { initI18n, t } from "../locales/index.js";
 
 /**
@@ -23,7 +23,7 @@ export function createSkinCommand(): Command {
     .description(t("commands.skin.list.description"))
     .action(async () => {
       // 初始化 i18n
-      const loadedSettings = await loadJoeSettings({ cwd: process.cwd(), env: process.env });
+      const loadedSettings = await loadWastelandSettings({ cwd: process.cwd(), env: process.env });
       const language = loadedSettings.settings.runtime.language;
       await initI18n(language);
 
@@ -55,7 +55,7 @@ export function createSkinCommand(): Command {
     .description(t("commands.skin.show.title"))
     .action(async () => {
       // 初始化 i18n
-      const loadedSettings = await loadJoeSettings({ cwd: process.cwd(), env: process.env });
+      const loadedSettings = await loadWastelandSettings({ cwd: process.cwd(), env: process.env });
       const language = loadedSettings.settings.runtime.language;
       await initI18n(language);
 
@@ -78,7 +78,7 @@ export function createSkinCommand(): Command {
     .action(async (skinId: string) => {
       try {
         // 获取当前语言设置
-        const loadedSettings = await loadJoeSettings({ cwd: process.cwd(), env: process.env });
+        const loadedSettings = await loadWastelandSettings({ cwd: process.cwd(), env: process.env });
         const language = loadedSettings.settings.runtime.language;
         await initI18n(language);
 
@@ -102,7 +102,7 @@ export function createSkinCommand(): Command {
     .action(async (skinId: string) => {
       try {
         // 获取当前语言设置
-        const loadedSettings = await loadJoeSettings({ cwd: process.cwd(), env: process.env });
+        const loadedSettings = await loadWastelandSettings({ cwd: process.cwd(), env: process.env });
         const language = loadedSettings.settings.runtime.language;
         await initI18n(language);
 

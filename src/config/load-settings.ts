@@ -6,14 +6,14 @@ import type { PermissionMode } from "../runtime/permission-gate.js";
 import {
   type AuthSettings,
   type AuthRef,
-  DEFAULT_JOE_SETTINGS,
-  type LoadedJoeSettings,
+  DEFAULT_WASTELAND_SETTINGS,
+  type LoadedWastelandSettings,
   type MCPServerConfig,
   type MCPServersConfig,
   type ModelSettings,
   type ProviderSettings,
-  type RawJoeSettings,
-  type ResolvedJoeSettings,
+  type RawWastelandSettings,
+  type ResolvedWastelandSettings,
   type RoleSettings,
 } from "./settings-types.js";
 import {
@@ -172,12 +172,12 @@ function validateRoleSettings(
   return roles;
 }
 
-async function parseSettings(raw: unknown, sourcePath: string): Promise<RawJoeSettings> {
+async function parseSettings(raw: unknown, sourcePath: string): Promise<RawWastelandSettings> {
   if (!isRecord(raw)) {
     throw new Error(`配置文件 ${sourcePath} 的根节点必须是对象。`);
   }
 
-  const settings: RawJoeSettings = {};
+  const settings: RawWastelandSettings = {};
 
   if ("defaultProvider" in raw) {
     if (typeof raw.defaultProvider !== "string" || raw.defaultProvider.trim().length === 0) {
@@ -204,7 +204,7 @@ async function parseSettings(raw: unknown, sourcePath: string): Promise<RawJoeSe
       throw new Error(`配置文件 ${sourcePath} 中 runtime 必须是对象。`);
     }
 
-    const runtime: RawJoeSettings["runtime"] = {};
+    const runtime: RawWastelandSettings["runtime"] = {};
 
     if ("defaultRole" in raw.runtime && raw.runtime.defaultRole !== undefined) {
       if (typeof raw.runtime.defaultRole !== "string" || raw.runtime.defaultRole.trim().length === 0) {
@@ -289,7 +289,7 @@ async function parseSettings(raw: unknown, sourcePath: string): Promise<RawJoeSe
   return settings;
 }
 
-async function readSettingsFile(filePath: string): Promise<RawJoeSettings | null> {
+async function readSettingsFile(filePath: string): Promise<RawWastelandSettings | null> {
   try {
     const content = await readFile(filePath, "utf8");
     return await parseSettings(JSON.parse(content), filePath);
@@ -342,9 +342,9 @@ async function readAuthFile(filePath: string): Promise<AuthSettings | null> {
 }
 
 function mergeSettings(
-  base: ResolvedJoeSettings,
-  next: RawJoeSettings | null,
-): ResolvedJoeSettings {
+  base: ResolvedWastelandSettings,
+  next: RawWastelandSettings | null,
+): ResolvedWastelandSettings {
   if (!next) {
     return base;
   }
@@ -496,10 +496,10 @@ function resolveAuthRefsInValue(params: {
 }
 
 function resolveSettingsAuthRefs(
-  settings: ResolvedJoeSettings,
+  settings: ResolvedWastelandSettings,
   auth: AuthSettings,
   env: NodeJS.ProcessEnv,
-): ResolvedJoeSettings {
+): ResolvedWastelandSettings {
   // 解析 mcpServers 中的 auth refs
   const resolvedMCPServers: Record<string, MCPServerConfig> = {};
   for (const [name, config] of Object.entries(settings.mcpServers)) {
@@ -538,9 +538,9 @@ function resolveSettingsAuthRefs(
 }
 
 function applyEnvironmentOverrides(
-  settings: ResolvedJoeSettings,
+  settings: ResolvedWastelandSettings,
   env: NodeJS.ProcessEnv,
-): ResolvedJoeSettings {
+): ResolvedWastelandSettings {
   const resolved = {
     defaultProvider: settings.defaultProvider,
     providers: { ...settings.providers },
@@ -557,34 +557,39 @@ function applyEnvironmentOverrides(
       language: settings.runtime.language,
     },
     mcpServers: { ...settings.mcpServers },
-  } satisfies ResolvedJoeSettings;
+  } satisfies ResolvedWastelandSettings;
 
-  if (typeof env.JOE_PROVIDER === "string" && env.JOE_PROVIDER.trim().length > 0) {
-    resolved.defaultProvider = env.JOE_PROVIDER.trim();
+  const providerEnv = env.WASTELAND_PROVIDER ?? env.JOE_PROVIDER;
+  if (typeof providerEnv === "string" && providerEnv.trim().length > 0) {
+    resolved.defaultProvider = providerEnv.trim();
   }
 
-  if (typeof env.JOE_PERMISSION_MODE === "string" && env.JOE_PERMISSION_MODE.trim().length > 0) {
-    resolved.runtime.permissionMode = validatePermissionMode(env.JOE_PERMISSION_MODE, "env:JOE_PERMISSION_MODE");
+  const permModeEnv = env.WASTELAND_PERMISSION_MODE ?? env.JOE_PERMISSION_MODE;
+  if (typeof permModeEnv === "string" && permModeEnv.trim().length > 0) {
+    resolved.runtime.permissionMode = validatePermissionMode(permModeEnv, "env:WASTELAND_PERMISSION_MODE");
   }
 
-  if (typeof env.JOE_MAX_STEPS_PER_TURN === "string" && env.JOE_MAX_STEPS_PER_TURN.trim().length > 0) {
-    const parsed = Number.parseInt(env.JOE_MAX_STEPS_PER_TURN, 10);
+  const maxStepsEnv = env.WASTELAND_MAX_STEPS_PER_TURN ?? env.JOE_MAX_STEPS_PER_TURN;
+  if (typeof maxStepsEnv === "string" && maxStepsEnv.trim().length > 0) {
+    const parsed = Number.parseInt(maxStepsEnv, 10);
 
     if (!Number.isInteger(parsed) || parsed <= 0) {
-      throw new Error("环境变量 JOE_MAX_STEPS_PER_TURN 必须是正整数。");
+      throw new Error("环境变量 WASTELAND_MAX_STEPS_PER_TURN 必须是正整数。");
     }
 
     resolved.runtime.maxStepsPerTurn = parsed;
   }
 
-  if (typeof env.JOE_DEBUG === "string" && env.JOE_DEBUG.trim().length > 0) {
-    resolved.runtime.debug = parseBooleanOverride(env.JOE_DEBUG, "JOE_DEBUG");
+  const debugEnv = env.WASTELAND_DEBUG ?? env.JOE_DEBUG;
+  if (typeof debugEnv === "string" && debugEnv.trim().length > 0) {
+    resolved.runtime.debug = parseBooleanOverride(debugEnv, "WASTELAND_DEBUG");
   }
 
-  if (typeof env.JOE_LANGUAGE === "string" && env.JOE_LANGUAGE.trim().length > 0) {
-    const lang = env.JOE_LANGUAGE.trim();
+  const langEnv = env.WASTELAND_LANGUAGE ?? env.JOE_LANGUAGE;
+  if (typeof langEnv === "string" && langEnv.trim().length > 0) {
+    const lang = langEnv.trim();
     if (lang !== "en" && lang !== "zh") {
-      throw new Error("环境变量 JOE_LANGUAGE 必须是 \"en\" 或 \"zh\"。");
+      throw new Error("环境变量 WASTELAND_LANGUAGE 必须是 \"en\" 或 \"zh\"。");
     }
     resolved.runtime.language = lang;
   }
@@ -592,10 +597,10 @@ function applyEnvironmentOverrides(
   return resolved;
 }
 
-export async function loadJoeSettings(params?: {
+export async function loadWastelandSettings(params?: {
   cwd?: string;
   env?: NodeJS.ProcessEnv;
-}): Promise<LoadedJoeSettings> {
+}): Promise<LoadedWastelandSettings> {
   const cwd = resolve(params?.cwd ?? process.cwd());
   const processEnv = params?.env ?? process.env;
   const userConfigDir = resolveUserConfigDir(processEnv);
@@ -622,7 +627,7 @@ export async function loadJoeSettings(params?: {
   const merged = applyEnvironmentOverrides(
     resolveSettingsAuthRefs(
       mergeSettings(
-        mergeSettings(DEFAULT_JOE_SETTINGS, userSettings),
+        mergeSettings(DEFAULT_WASTELAND_SETTINGS, userSettings),
         projectSettings,
       ),
       mergedAuth,

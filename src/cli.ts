@@ -7,7 +7,7 @@ import { createSessionsCommand } from "./commands/sessions.js";
 import { createResumeCommand } from "./commands/resume.js";
 import { createSkinCommand } from "./commands/skin.js";
 import { ensureRoleAliases } from "./utils/symlink-manager.js";
-import { loadJoeSettings } from "./config/load-settings.js";
+import { loadWastelandSettings } from "./config/load-settings.js";
 import { initI18n, t } from "./locales/index.js";
 
 function registerRootCommands(program: Command): void {
@@ -24,13 +24,13 @@ export function createProgram(): Command {
   const program = new Command();
 
   program
-    .name("joe")
+    .name("wasteland")
     .description(t("cli.description"))
     .version("0.1.0");
 
   registerRootCommands(program);
 
-  const devShim = new Command("joe")
+  const devShim = new Command("wasteland")
     .description(t("cli.devDescription"));
 
   registerRootCommands(devShim);
@@ -45,7 +45,7 @@ export async function run(argv = process.argv): Promise<void> {
 
   // 初始化 i18n
   try {
-    const loadedSettings = await loadJoeSettings({ cwd: process.cwd(), env: process.env });
+    const loadedSettings = await loadWastelandSettings({ cwd: process.cwd(), env: process.env });
     const language = loadedSettings.settings.runtime.language;
     await initI18n(language);
   } catch {

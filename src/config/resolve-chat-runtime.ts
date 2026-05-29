@@ -4,7 +4,7 @@ import type { PermissionMode } from "../runtime/permission-gate.js";
 import type {
   ModelSettings,
   ProviderSettings,
-  ResolvedJoeSettings,
+  ResolvedWastelandSettings,
   RoleSettings,
 } from "./settings-types.js";
 import { assemblePrompt, isBuiltinRoleId, ROLE_WORKER, ROLE_IMMORTAN_JOE } from "../prompts/index.js";
@@ -178,7 +178,7 @@ const BUILTIN_MAIN_ROLE_CONFIG: RoleSettings = {
 };
 
 function resolveRole(
-  settings: ResolvedJoeSettings,
+  settings: ResolvedWastelandSettings,
   requestedRoleName: string | undefined,
 ): ResolvedRoleRef | undefined {
   if (!requestedRoleName) {
@@ -207,7 +207,7 @@ function resolveRole(
 }
 
 function resolveModel(
-  settings: ResolvedJoeSettings,
+  settings: ResolvedWastelandSettings,
   role: ResolvedRoleRef | undefined,
 ): ResolvedModelRef | undefined {
   if (!role) {
@@ -229,7 +229,7 @@ function resolveModel(
 }
 
 export function resolveChatRuntime(params: {
-  settings: ResolvedJoeSettings;
+  settings: ResolvedWastelandSettings;
   roleName?: string;
   providerName?: string;
   cwd?: string;

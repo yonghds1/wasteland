@@ -381,7 +381,7 @@ export function MessageList({ height = 20, width = 80 }: MessageListProps): Reac
   if (messages.length === 0) {
     return (
       <Box flexDirection="column" flexGrow={1} justifyContent="center" alignItems="center">
-        <Text color={PRIMARY}>◆ rxc - AI CLI Assistant</Text>
+        <Text color={PRIMARY}>{t("tui.session.messages.welcome")}</Text>
         <Text dimColor>{t("tui.session.messages.startHint")}</Text>
         <Text dimColor color="gray">{t("tui.session.messages.tabHint")}</Text>
       </Box>

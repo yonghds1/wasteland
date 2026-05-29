@@ -9,7 +9,7 @@ import { Command } from "commander";
 import { detectTTY } from "../ui/tty-detect.js";
 import { runTUI } from "../tui/index.js";
 import { createTuiRuntime, cleanupTuiRuntime } from "../tui/hooks/useRuntime.js";
-import { loadJoeSettings } from "../config/load-settings.js";
+import { loadWastelandSettings } from "../config/load-settings.js";
 import { initI18n, t } from "../locales/index.js";
 
 export function createTuiCommand(): Command {
@@ -18,7 +18,7 @@ export function createTuiCommand(): Command {
     .option("--attach <session>", t("commands.tui.options.attach"))
     .action(async (options) => {
       // 初始化 i18n
-      const loadedSettings = await loadJoeSettings({ cwd: process.cwd(), env: process.env });
+      const loadedSettings = await loadWastelandSettings({ cwd: process.cwd(), env: process.env });
       const language = loadedSettings.settings.runtime.language;
       await initI18n(language);
 
@@ -33,10 +33,10 @@ export function createTuiCommand(): Command {
         console.error(`  - stdout TTY: ${tty.stdoutIsTTY ? t("commands.tui.errors.yes") : t("commands.tui.errors.no")}`);
         console.error("");
         console.error(t("commands.tui.errors.runDirectly"));
-        console.error("  joe tui");
+        console.error("  wasteland tui");
         console.error("");
         console.error(t("commands.tui.errors.useCli"));
-        console.error("  joe chat --message 'your message'");
+        console.error("  wasteland chat --message 'your message'");
         process.exit(1);
       }
 

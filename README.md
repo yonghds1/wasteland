@@ -1,4 +1,4 @@
-# joe
+# wasteland
 
 Immortan Joe's War Machine - 一个基于 TypeScript、Commander 和 RxJS 的多智能体 CLI 系统。
 
@@ -47,20 +47,20 @@ npm run chat -- --multi --message "分析并重构 UserService"
 
 ## 多 Agent 模式
 
-joe 采用 **单主角色 + 多子Agent** 架构：
+wasteland 采用 **单主角色 + 多子Agent** 架构：
 
 ### 主角色（Immortan Joe）
 
 ```bash
 # 默认使用 Immortan Joe 主角色
-joe chat --message "分析代码"
+wasteland chat --message "分析代码"
 ```
 
 Immortan Joe 是唯一主角色，完全内置，不可覆盖。它会自动调度子Agent执行任务。
 
 ### 子Agent
 
-内置 4 个子Agent，可在 `.joe/settings.json` 的 `subAgents` 中配置或覆盖：
+内置 4 个子Agent，可在 `.wasteland/settings.json` 的 `subAgents` 中配置或覆盖：
 
 | 子Agent | 职责 | 说明 |
 |---------|------|------|
@@ -88,8 +88,8 @@ spawn_agent({
 ```
 
 **Session 文件**：
-- 主 Agent: `.joe/sessions/{sessionId}.jsonl`
-- 子 Agent: `.joe/sessions/{sessionId}-child-{name}.jsonl`
+- 主 Agent: `.wasteland/sessions/{sessionId}.jsonl`
+- 子 Agent: `.wasteland/sessions/{sessionId}-child-{name}.jsonl`
 
 **测试多 Agent（使用 Qwen）**：
 
@@ -129,17 +129,17 @@ npm run chat -- --multi --permission-mode bypass_permissions --message "..."
 
 这些命令在 UI 层直接处理，不会进入 runtime/provider。
 
-安装或链接到全局后，启动命令是 `joe`。
+安装或链接到全局后，启动命令是 `wasteland`（`joe` 为兼容别名）。
 
 如果要按真实全局命令的方式测试：
 
 ```bash
 npm link
-joe --help
-joe chat --message "你好"
+wasteland --help
+wasteland chat --message "你好"
 ```
 
-内置默认 provider 是 `local`，用于在不接真实模型时验证 runtime/provider/ui/session 边界；当前项目本地 `.joe/settings.json` 已把默认 provider 配成 `qwen`。
+内置默认 provider 是 `local`，用于在不接真实模型时验证 runtime/provider/ui/session 边界；当前项目本地 `.wasteland/settings.json` 已把默认 provider 配成 `qwen`。
 
 当前支持的 `chat` 输入语法表见：
 
@@ -147,24 +147,24 @@ joe chat --message "你好"
 
 ## 配置与数据目录
 
-当前统一使用 `.joe/` 作为项目级配置与运行数据目录。
+当前统一使用 `.wasteland/` 作为项目级配置与运行数据目录。
 
 配置优先级如下：
 
 1. CLI 参数
 2. 环境变量
-3. 项目配置 `.joe/settings.json`
-4. 用户全局配置 `~/.joe/settings.json`
+3. 项目配置 `.wasteland/settings.json`
+4. 用户全局配置 `~/.wasteland/settings.json`
 5. 内置默认值
 
 当前常用环境变量：
 
-- `JOE_HOME`：覆盖全局配置根目录，等价于把 `~/.joe/` 改到别处
-- `JOE_PROVIDER`：覆盖默认 provider
-- `JOE_PERMISSION_MODE`：覆盖默认权限模式
-- `JOE_MAX_STEPS_PER_TURN`：覆盖单轮最大 step 数
-- `JOE_DEBUG`：默认打开调试追踪
-- `JOE_SESSION_DIR`：覆盖 session transcript 输出目录
+- `WASTELAND_HOME`：覆盖全局配置根目录，等价于把 `~/.wasteland/` 改到别处
+- `WASTELAND_PROVIDER`：覆盖默认 provider
+- `WASTELAND_PERMISSION_MODE`：覆盖默认权限模式
+- `WASTELAND_MAX_STEPS_PER_TURN`：覆盖单轮最大 step 数
+- `WASTELAND_DEBUG`：默认打开调试追踪
+- `WASTELAND_SESSION_DIR`：覆盖 session transcript 输出目录
 
 当前还支持一组面向 Qwen 接入的环境变量桥接：
 
@@ -174,9 +174,9 @@ joe chat --message "你好"
 
 兼容策略：
 
-- 旧环境变量 `RX_CLI_SESSION_DIR` 仍可用，但只作为过渡兼容，主推荐值已经是 `JOE_SESSION_DIR`
-- 旧项目数据目录 `.rx-cli/` 不再作为默认路径；如有历史 transcript，请手动迁移到 `.joe/`
-- 如果未显式传 `--provider` 且未设置 `JOE_PROVIDER`，当 `APP_CHAT_API_KEY` 和 `APP_CHAT_MODEL` 同时存在时，默认 provider 会自动切到 `qwen`
+- 旧环境变量 `RX_CLI_SESSION_DIR` 仍可用，但只作为过渡兼容，主推荐值已经是 `WASTELAND_SESSION_DIR`
+- 旧项目数据目录 `.rx-cli/` 不再作为默认路径；如有历史 transcript，请手动迁移到 `.wasteland/`
+- 如果未显式传 `--provider` 且未设置 `WASTELAND_PROVIDER`，当 `APP_CHAT_API_KEY` 和 `APP_CHAT_MODEL` 同时存在时，默认 provider 会自动切到 `qwen`
 
 最小配置示例：
 
@@ -206,13 +206,13 @@ export APP_CHAT_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode"
 export APP_CHAT_API_KEY="<your-key>"
 export APP_CHAT_MODEL="qwen3-max"
 
-joe chat --message "你好"
+wasteland chat --message "你好"
 ```
 
 说明：
 
 - `APP_CHAT_BASE_URL` 即使不带 `/v1` 也可以，当前 provider 会自动补成兼容接口根路径
-- 这组三个值更适合放在本地 shell 配置或本地 `.joe/settings.json`，不要提交真实 key
+- 这组三个值更适合放在本地 shell 配置或本地 `.wasteland/settings.json`，不要提交真实 key
 
 当前第一版多角色配置已经支持：
 
@@ -222,7 +222,7 @@ joe chat --message "你好"
 - `chat --role <name>`
 - `config current`
 
-session transcript 默认写入 `.joe/sessions/`。
+session transcript 默认写入 `.wasteland/sessions/`。
 
 ## 技能系统
 
@@ -234,14 +234,14 @@ RxCLI 内置技能系统，支持高级工作流和自动化操作。
 
 ```bash
 # 系统技能
-joe chat --message "/help"              # 显示帮助
-joe chat --message "/status"            # 查看会话状态
-joe chat --message "/tools"             # 列出可用工具
+wasteland chat --message "/help"              # 显示帮助
+wasteland chat --message "/status"            # 查看会话状态
+wasteland chat --message "/tools"             # 列出可用工具
 
 # 项目技能
-joe chat --message "/init"              # 初始化项目上下文
-joe chat --message "/ctx"               # 显示项目概览
-joe chat --message "/init --template minimal"  # 使用最小模板
+wasteland chat --message "/init"              # 初始化项目上下文
+wasteland chat --message "/ctx"               # 显示项目概览
+wasteland chat --message "/init --template minimal"  # 使用最小模板
 ```
 
 ### 技能别名
@@ -256,7 +256,7 @@ joe chat --message "/init --template minimal"  # 使用最小模板
 
 ### 自定义技能
 
-在 `.joe/skills/` 目录创建自定义技能：
+在 `.wasteland/skills/` 目录创建自定义技能：
 
 **JSON 格式**：
 ```json
@@ -274,7 +274,7 @@ joe chat --message "/init --template minimal"  # 使用最小模板
 
 **TypeScript 格式**：
 ```typescript
-// .joe/skills/my-skill.ts
+// .wasteland/skills/my-skill.ts
 export default {
   definition: {
     name: "my-skill",
@@ -295,7 +295,7 @@ export default {
 
 ## 多 Agent 架构
 
-joe 采用 **Agents-as-Tools** 模式实现多 Agent 编排：
+wasteland 采用 **Agents-as-Tools** 模式实现多 Agent 编排：
 
 ```
 单 Agent 模式（默认）:
@@ -329,7 +329,7 @@ docs/           架构与实施文档
 src/            TypeScript 源码
 src/commands/   子命令
 src/chat/       RxJS 回复管线
-src/config/     统一配置加载与 `.joe` 路径规则
+src/config/     统一配置加载与 `.wasteland` 路径规则
 src/runtime/    当前已落地的 agent runtime 层
 src/providers/  当前已落地的 provider 抽象层
 src/tools/      当前已落地的工具合同与内建工具层
@@ -351,7 +351,7 @@ dist/           构建产物
 - `chat --role <name>` 已可按 role 解析模型、provider 和默认权限
 - `config current` 已可输出当前生效的 provider / model / role 配置，并对敏感字段脱敏
 - session transcript 会写入本地 JSONL
-- `src/config/` 已统一承载 `.joe/settings.json`、`~/.joe/settings.json` 与环境变量覆盖逻辑
+- `src/config/` 已统一承载 `.wasteland/settings.json`、`~/.wasteland/settings.json` 与环境变量覆盖逻辑
 
 当前也已经落下 Phase 2 第一批骨架：
 
@@ -375,7 +375,7 @@ dist/           构建产物
 - 内置技能：`/help`、`/status`、`/tools`、`/init`、`/context`
 - 技能注册表：支持名称和别名查找
 - 技能执行器：参数解析、验证和执行协调
-- 技能发现：自动加载 `.joe/skills/` 和 `~/.joe/skills/`
+- 技能发现：自动加载 `.wasteland/skills/` 和 `~/.wasteland/skills/`
 - JSON 和 TypeScript 格式支持
 - TUI 日志增强：显示技能调用详情
 
@@ -392,7 +392,7 @@ dist/           构建产物
 
 - [文档索引](./docs/README.md)
 - [智能体 CLI 架构](./docs/architecture/agent-cli.md)
-- [配置层与 `.joe` 目录](./docs/architecture/configuration.md)
+- [配置层与 `.wasteland` 目录](./docs/architecture/configuration.md)
 - [多角色配置方案](./docs/architecture/multi-role-configuration.md)
 - [运行时分层与契约](./docs/architecture/runtime-boundaries.md)
 - [技能系统架构](./docs/architecture/skills.md)

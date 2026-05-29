@@ -2,7 +2,7 @@
 
 ## 目的
 
-本文档描述 `joe` 如何从一个 CLI 原型演进为智能体 CLI 的目标架构。
+本文档描述 `wasteland` 如何从一个 CLI 原型演进为智能体 CLI 的目标架构。
 
 ---
 
@@ -22,8 +22,8 @@
 - `src/ui/` 下的终端输入/渲染边界
 - 位于 `bin/` 的轻量可执行包装层
 - 位于 `test/` 的进程级冒烟测试
-- 位于 `.joe/sessions/` 的最小本地 transcript 持久化
-- 位于 `.joe/settings.json` / `.joe/auth.json` / `~/.joe/settings.json` / `~/.joe/auth.json` 的统一配置入口
+- 位于 `.wasteland/sessions/` 的最小本地 transcript 持久化
+- 位于 `.wasteland/settings.json` / `.wasteland/auth.json` / `~/.wasteland/settings.json` / `~/.wasteland/auth.json` 的统一配置入口
 
 但它**还没有**：
 
@@ -92,7 +92,7 @@ runtime 应依赖 provider interface，而不是直接耦合 Anthropic/OpenAI SD
 
 职责：
 
-- 定位 `.joe/` 与用户全局配置目录
+- 定位 `.wasteland/` 与用户全局配置目录
 - 合并配置文件、环境变量和 CLI 默认值
 - 为命令层提供 provider/runtime/session 的默认参数
 

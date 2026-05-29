@@ -73,7 +73,7 @@ Phase 2 还额外落下了一组独立工具运行时骨架：
 
 职责：
 
-- 定位项目级 `.joe/` 和用户级 `~/.joe/` 配置目录
+- 定位项目级 `.wasteland/` 和用户级 `~/.wasteland/` 配置目录
 - 合并 `settings.json`、`auth.json`、个人配置、全局配置和环境变量
 - 为命令层提供 provider/runtime/session 的默认值
 
@@ -86,16 +86,16 @@ Phase 2 还额外落下了一组独立工具运行时骨架：
 当前结构配置优先级固定为：
 
 1. CLI 参数
-2. `JOE_*` 环境变量
-3. `.joe/settings.json`
-4. `~/.joe/settings.json`
+2. `WASTELAND_*` 环境变量
+3. `.wasteland/settings.json`
+4. `~/.wasteland/settings.json`
 5. 内置默认值
 
 当前 auth 引用优先级固定为：
 
 1. 进程环境变量同名 key
-2. `.joe/auth.json`
-3. `~/.joe/auth.json`
+2. `.wasteland/auth.json`
+3. `~/.wasteland/auth.json`
 
 当前已在配置层落地的多角色基线：
 
@@ -192,7 +192,7 @@ Phase 2 还额外落下了一组独立工具运行时骨架：
 
 当前环境变量合同：
 
-- `JOE_SESSION_DIR`：主推荐值；覆盖默认 `.joe/sessions/` 目录
+- `WASTELAND_SESSION_DIR`：主推荐值；覆盖默认 `.wasteland/sessions/` 目录
 - `RX_CLI_SESSION_DIR`：旧兼容别名；仅用于过渡期覆盖 session 输出目录
 
 ---

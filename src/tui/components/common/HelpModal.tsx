@@ -96,7 +96,7 @@ export function HelpModal({ width }: HelpModalProps): React.ReactElement {
             <Text bold>↑/↓</Text> {t("tui.help.actions.scrollMessages")}
           </Text>
           <Text>
-            <Text bold>Enter</Text> 进入输入模式
+            <Text bold>Enter</Text> {t("tui.help.actions.enterInputMode")}
           </Text>
         </Box>
       </Box>

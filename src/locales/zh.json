@@ -149,7 +149,7 @@
       "show": {
         "title": "当前皮肤",
         "empty": "当前没有加载皮肤。",
-        "emptyHint": "使用 'joe skin list' 查看可用皮肤。"
+        "emptyHint": "使用 'wasteland skin list' 查看可用皮肤。"
       },
       "load": {
         "success": "已加载皮肤: {{name}} ({{id}})",
@@ -295,9 +295,10 @@
   },
   "tui": {
     "header": {
+      "title": "wasteland",
       "session": "会话",
       "debug": "调试",
-      "config": "配置"
+      "guide": "指南"
     },
     "footer": {
       "inputMode": "[输入模式]",
@@ -330,7 +331,7 @@
       "reset": "Ctrl+R 重置",
       "sessionPage": "会话页面",
       "debugPage": "调试页面",
-      "configPage": "配置页面"
+      "guidePage": "指南页面"
     },
     "help": {
       "title": "快捷键帮助",
@@ -347,6 +348,7 @@
         "globalExit": "全局退出（需确认）",
         "sessionPage": "会话页面",
         "scrollMessages": "滚动消息",
+        "enterInputMode": "进入输入模式",
         "debugPage": "调试页面",
         "enterFilter": "进入过滤模式",
         "clearLogs": "清空日志",
@@ -361,9 +363,14 @@
     "exit": {
       "title": "确认退出",
       "confirm": "确认退出",
+      "pressY": "按",
+      "toConfirm": "确认退出",
       "cancel": "或其他键取消"
     },
     "session": {
+      "agentTree": {
+        "main": "wasteland (主)"
+      },
       "input": {
         "mode": "[输入模式]",
         "escCancel": "Esc 取消",
@@ -376,6 +383,7 @@
         "assistant": "助手",
         "tool": "工具",
         "system": "系统",
+        "welcome": "◆ wasteland - 不死老乔的战争机器",
         "startHint": "在下方输入框输入消息开始对话",
         "tabHint": "Tab 切换页面 ┊ h 帮助 ┊ q 退出",
         "title": "消息",
@@ -389,36 +397,32 @@
       }
     },
     "config": {
-      "title": "配置",
-      "source": "配置源",
-      "project": "项目:",
-      "user": "用户:",
-      "unconfigured": "(未配置)",
-      "priority": "优先级:",
-      "permission": "权限:",
-      "stepsPerTurn": "步骤/轮:",
-      "turns": "轮次:",
-      "defaultRole": "默认角色:",
-      "unset": "(未设置)",
-      "timeout": "超时:",
-      "noProviders": "无已配置的 Provider",
-      "default": "默认:",
-      "noModels": "无已配置的 Model",
-      "current": "当前:",
-      "noRoles": "无已配置的 Role",
-      "switch": "↑/↓ 切换",
-      "edit": "Enter 编辑",
-      "saveProject": "Ctrl+S 保存项目",
-      "saveUser": "Ctrl+U 保存用户",
-      "reset": "Ctrl+R 重置",
-      "unsaved": "(未保存)",
-      "focus": "[焦点]",
-      "noChanges": "没有更改需要保存",
-      "saving": "正在保存...",
-      "saved": "已保存到项目/用户配置:",
-      "saveFailed": "保存失败:",
-      "resetDone": "已重置",
-      "resetFailed": "重置失败"
+      "title": "指南",
+      "docs": {
+        "location": {
+          "title": "配置文件位置",
+          "project": "项目配置:",
+          "user": "用户配置:",
+          "priority": "优先级: CLI 参数 > 环境变量 > 项目配置 > 用户配置 > 默认值"
+        },
+        "structure": {
+          "title": "settings.json 结构"
+        },
+        "fields": {
+          "title": "配置项说明",
+          "defaultRole": "默认 Agent 角色 (如 immortan-joe)",
+          "permissionMode": "权限模式: default | accept_edits | bypass_permissions",
+          "maxStepsPerTurn": "单轮最大工具步数 (默认: 8)",
+          "language": "界面语言: en | zh",
+          "providerType": "API 协议: openai-compatible | anthropic | local"
+        },
+        "env": {
+          "title": "环境变量",
+          "home": "覆盖配置主目录",
+          "provider": "覆盖默认 provider",
+          "debug": "启用调试模式 (true/false)"
+        }
+      }
     },
     "debug": {
       "count": "{{count}} 条",
@@ -437,6 +441,7 @@
       "receiveResponse": "收到响应",
       "waitingTrace": "等待 trace 数据...",
       "useDebugHint": "使用 --debug 启动以查看详细追踪",
+      "usageExample": "wasteland chat --debug --message \"你的消息\"",
       "details": "详情:",
       "rawData": "原始数据:",
       "filterCondition": "过滤条件:",

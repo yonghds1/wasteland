@@ -1,7 +1,7 @@
 import type { Observable } from "rxjs";
 import { Command } from "commander";
 
-import { loadJoeSettings } from "../config/load-settings.js";
+import { loadWastelandSettings } from "../config/load-settings.js";
 import { resolveDefaultSessionDir, resolveDefaultTraceDir } from "../config/paths.js";
 import { resolveChatRuntime } from "../config/resolve-chat-runtime.js";
 import type { AgentProvider } from "../providers/provider-types.js";
@@ -167,7 +167,7 @@ export function createChatCommand(): Command {
     )
     .action(async (options: ChatOptions) => {
       const cwd = process.cwd();
-      const loadedSettings = await loadJoeSettings({
+      const loadedSettings = await loadWastelandSettings({
         cwd,
         env: process.env,
       });

@@ -18,18 +18,19 @@ import {
 } from "../../utils/colors.js";
 import { t } from "../../../locales/index.js";
 
-const TABS: { name: PageName; label: string; key: string }[] = [
-  { name: "session", label: t("tui.header.session"), key: "1" },
-  { name: "debug", label: t("tui.header.debug"), key: "2" },
-  { name: "config", label: t("tui.header.config"), key: "3" },
-];
-
 interface HeaderProps {
   width?: number;
 }
 
 export function Header({ width }: HeaderProps): React.ReactElement {
   const { state } = useAppContext();
+
+  // 在组件内部定义，确保 i18n 已初始化
+  const TABS: { name: PageName; label: string; key: string }[] = [
+    { name: "session", label: t("tui.header.session"), key: "1" },
+    { name: "debug", label: t("tui.header.debug"), key: "2" },
+    { name: "config", label: t("tui.header.guide"), key: "3" },
+  ];
 
   const now = new Date();
   const time = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}:${now.getSeconds().toString().padStart(2, "0")}`;
@@ -53,7 +54,7 @@ export function Header({ width }: HeaderProps): React.ReactElement {
       <Box flexDirection="row" gap={1}>
         {/* 标题 */}
         <Text bold color={PRIMARY}>
-          rxc
+          {t("tui.header.title")}
         </Text>
         <Text color={MUTED}>v0.1.0</Text>
 

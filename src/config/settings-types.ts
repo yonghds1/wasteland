@@ -76,7 +76,7 @@ export type SubAgentSettings = RoleSettings & {
   description?: string;
 };
 
-export type RawJoeSettings = {
+export type RawWastelandSettings = {
   defaultProvider?: string;
   providers?: Record<string, ProviderSettings>;
   models?: Record<string, ModelSettings>;
@@ -101,7 +101,7 @@ export type RawJoeSettings = {
   mcpServers?: MCPServersConfig;
 };
 
-export type ResolvedJoeSettings = {
+export type ResolvedWastelandSettings = {
   defaultProvider: string;
   providers: Record<string, ProviderSettings>;
   models: Record<string, ModelSettings>;
@@ -124,8 +124,8 @@ export type ResolvedJoeSettings = {
   mcpServers: MCPServersConfig;
 };
 
-export type LoadedJoeSettings = {
-  settings: ResolvedJoeSettings;
+export type LoadedWastelandSettings = {
+  settings: ResolvedWastelandSettings;
   sources: {
     user?: string;
     project?: string;
@@ -136,7 +136,7 @@ export type LoadedJoeSettings = {
   userConfigDir: string;
 };
 
-export const DEFAULT_JOE_SETTINGS: ResolvedJoeSettings = {
+export const DEFAULT_WASTELAND_SETTINGS: ResolvedWastelandSettings = {
   defaultProvider: "local",
   providers: {},
   models: {},

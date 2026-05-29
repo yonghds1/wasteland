@@ -7,7 +7,7 @@
 
 import { Subject } from "rxjs";
 
-import { loadJoeSettings } from "../../config/load-settings.js";
+import { loadWastelandSettings } from "../../config/load-settings.js";
 import {
   resolveDefaultSessionDir,
 } from "../../config/paths.js";
@@ -38,7 +38,7 @@ interface InternalTuiRuntimeContext extends TuiRuntimeContext {
  * 创建 TUI 运行时上下文
  *
  * 此函数执行以下步骤：
- * 1. 加载配置（复用 loadJoeSettings）
+ * 1. 加载配置（复用 loadWastelandSettings）
  * 2. 创建 SessionManager
  * 3. 创建 Provider（使用 resolveChatRuntime）
  * 4. 创建 PermissionGate
@@ -50,7 +50,7 @@ interface InternalTuiRuntimeContext extends TuiRuntimeContext {
  */
 export async function createTuiRuntime(cwd: string): Promise<TuiRuntimeContext> {
   // 1. 加载配置
-  const loadedSettings = await loadJoeSettings({
+  const loadedSettings = await loadWastelandSettings({
     cwd,
     env: process.env,
   });

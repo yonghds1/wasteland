@@ -128,8 +128,8 @@ const BUILTIN_DEFAULT_SKIN: Skin = {
   version: "1.0.0",
 
   cli: {
-    commandName: "joe",
-    aliases: [],
+    commandName: "wasteland",
+    aliases: ["wasteland", "joe"],
     version: "0.1.0",
     description: "不死老乔的战争机器 - 多智能体 CLI 系统",
   },
@@ -141,7 +141,7 @@ const BUILTIN_DEFAULT_SKIN: Skin = {
       style: "wasteland",
     },
     prompts: {
-      input: "joe>",
+      input: "wasteland>",
       assistant: "老乔",
       system: " 圣殿",
     },
@@ -169,7 +169,7 @@ const BUILTIN_DEFAULT_SKIN: Skin = {
       id: "immortan-joe",
       name: "不死老乔",
       title: "圣殿最高指挥官",
-      aliases: ["joe"],
+      aliases: ["wasteland", "joe"],
       personality: "威严、命令式、说话充满信念",
       greeting: "我是不死老乔！圣殿由我指挥！",
       catchphrases: [
@@ -264,8 +264,8 @@ function getSkinWithLanguage(lang?: Language): Skin {
     author: "Immortan Joe",
     version: "1.0.0",
     cli: {
-      commandName: "joe",
-      aliases: [],
+      commandName: "wasteland",
+      aliases: ["wasteland", "joe"],
       version: "0.1.0",
       description: t("skin.cli.description", undefined, language),
     },
@@ -276,7 +276,7 @@ function getSkinWithLanguage(lang?: Language): Skin {
         style: "wasteland",
       },
       prompts: {
-        input: "joe>",
+        input: "wasteland>",
         assistant: t("skin.ui.prompts.assistant", undefined, language),
         system: t("skin.ui.prompts.system", undefined, language),
       },
@@ -303,7 +303,7 @@ function getSkinWithLanguage(lang?: Language): Skin {
         id: "immortan-joe",
         name: t("skin.roles.main.name", undefined, language),
         title: t("skin.roles.main.title", undefined, language),
-        aliases: ["joe"],
+        aliases: ["wasteland", "joe"],
         personality: t("skin.roles.main.personality", undefined, language),
         greeting: t("skin.roles.main.greeting", undefined, language),
         catchphrases: tArray("skin.roles.main.catchphrases", language),
@@ -408,7 +408,7 @@ export async function loadSkin(
 ): Promise<Skin> {
   // 内置默认皮肤：优先使用外部文件，如果没有则使用内置的
   if (skinId === "immortan-joe") {
-    return loadImmortanJoeSkin(skinsDir, language);
+    return loadDefaultSkin(skinsDir, language);
   }
 
   // 其他皮肤：从外部目录加载
@@ -432,7 +432,7 @@ export async function loadSkin(
  *
  * 优先加载外部皮肤文件，如果没有则使用内置默认皮肤
  */
-async function loadImmortanJoeSkin(
+async function loadDefaultSkin(
   skinsDir?: string,
   language?: string,
 ): Promise<Skin> {
@@ -494,9 +494,9 @@ export async function listSkins(skinsDir?: string, language?: string): Promise<S
   // 1. 加载 Immortan Joe 皮肤（内置默认或外部）
   try {
     const dir = getSkinsDir(skinsDir);
-    const joeSkinPath = join(dir, "immortan-joe", "skin.json");
-    const joeSkin = await readSkinFromFile(joeSkinPath);
-    skins.push(joeSkin);
+    const skinPath = join(dir, "immortan-joe", "skin.json");
+    const skin = await readSkinFromFile(skinPath);
+    skins.push(skin);
   } catch {
     // 外部 immortan-joe 皮肤不存在，使用内置默认（根据 language 参数选择语言）
     const skin = getSkinWithLanguage(language);

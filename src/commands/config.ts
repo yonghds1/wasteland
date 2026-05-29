@@ -1,6 +1,6 @@
 import { Command } from "commander";
 
-import { loadJoeSettings } from "../config/load-settings.js";
+import { loadWastelandSettings } from "../config/load-settings.js";
 import {
   redactSensitiveConfig,
   resolveChatRuntime,
@@ -13,7 +13,7 @@ type ConfigCurrentOptions = {
 
 async function runCurrentConfig(options: ConfigCurrentOptions): Promise<void> {
   const cwd = process.cwd();
-  const loadedSettings = await loadJoeSettings({
+  const loadedSettings = await loadWastelandSettings({
     cwd,
     env: process.env,
   });

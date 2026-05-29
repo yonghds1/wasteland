@@ -2,7 +2,7 @@
 
 ## 目标
 
-在已经完成的 Phase 1 runtime 骨架之上，把 `joe` 从“能按统一路径聊天”的 CLI，推进到“能安全执行工具动作”的 agent runtime。
+在已经完成的 Phase 1 runtime 骨架之上，把 `wasteland` 从”能按统一路径聊天”的 CLI，推进到”能安全执行工具动作”的 agent runtime。
 
 ---
 
@@ -142,7 +142,7 @@ Phase 2 暂不引入：
 当前交互模式已经先做了一版更接近 Codex 的终端样式：
 
 - 输入区回退为普通聊天输入，使用标准 `> ` 提示符，避免自绘 prompt 带来的光标定位问题
-- assistant 回复在交互模式下显示为 `joe` 标签 + gutter 正文块，并按面板宽度自动换行
+- assistant 回复在交互模式下显示为 `wasteland` 标签 + gutter 正文块，并按面板宽度自动换行
 - `/help`、`/tools` 等本地命令显示为独立的 `local` 区块
 - tool 事件以更轻的单行状态条起始，结果/失败再展开为块
 - permission 事件显示为单行状态条，并对 `allow` / `ask` / `deny` 做颜色区分

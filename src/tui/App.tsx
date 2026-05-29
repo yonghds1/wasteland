@@ -120,7 +120,7 @@ export function App({ runtime }: AppProps): React.ReactElement {
   const pageAreas: Record<PageName, string[]> = {
     session: ["header", "agentTree", "messageList", "inputBar"],
     debug: ["header", "traceLog"],
-    config: ["header", "configList"],
+    config: ["header"],
   };
 
   // 全局键盘处理

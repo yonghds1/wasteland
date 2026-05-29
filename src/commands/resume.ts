@@ -9,7 +9,7 @@ import { Subject } from "rxjs";
 
 import { t } from "../locales/index.js";
 
-import { loadJoeSettings } from "../config/load-settings.js";
+import { loadWastelandSettings } from "../config/load-settings.js";
 import { resolveDefaultSessionDir, resolveDefaultTraceDir } from "../config/paths.js";
 import { resolveChatRuntime } from "../config/resolve-chat-runtime.js";
 import { createSessionIndex, type SessionDetail } from "../runtime/session-index.js";
@@ -86,7 +86,7 @@ export function createResumeCommand(): Command {
       const cwd = process.cwd();
 
       // 加载配置
-      const loadedSettings = await loadJoeSettings({
+      const loadedSettings = await loadWastelandSettings({
         cwd,
         env: process.env,
       });

@@ -73,7 +73,7 @@ export function AgentTree(): React.ReactElement {
           <Text bold color="green">
             {STATUS_ICONS.running}
           </Text>
-          <Text>rxc (main)</Text>
+          <Text>{t("tui.session.agentTree.main")}</Text>
         </Box>
       ) : (
         agents.map((agent) => {
