@@ -32,8 +32,6 @@ export function SessionPage({ height, width, sendMessage }: SessionPageProps): R
         <Box
           width={agentTreeWidth}
           flexShrink={0}
-          borderStyle="single"
-          borderColor={state.focusArea === "agentTree" ? "cyan" : "gray"}
           flexDirection="column"
         >
           <AgentTree />
@@ -43,11 +41,9 @@ export function SessionPage({ height, width, sendMessage }: SessionPageProps): R
         <Box
           flexGrow={1}
           flexShrink={1}
-          borderStyle="single"
-          borderColor={state.focusArea === "messageList" ? "cyan" : "gray"}
           flexDirection="column"
         >
-          <MessageList height={contentHeight - 2} width={messageWidth} />
+          <MessageList height={contentHeight} width={messageWidth} />
         </Box>
       </Box>
 

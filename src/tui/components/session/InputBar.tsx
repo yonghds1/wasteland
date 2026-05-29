@@ -25,28 +25,26 @@ interface InputBarProps {
 
 export function InputBar({ width, sendMessage }: InputBarProps): React.ReactElement {
   const [input, setInput] = useState("");
-  const { state, setInputMode } = useAppContext();
+  const { state, setInputMode, setFocusArea } = useAppContext();
   const isFocused = state.focusArea === "inputBar";
-
-  // 焦点切换到 inputBar 时自动进入输入模式
-  useEffect(() => {
-    if (isFocused && !state.inputMode) {
-      setInputMode(true);
-    }
-  }, [isFocused, state.inputMode, setInputMode]);
-
-  // 焦点离开 inputBar 时退出输入模式（但保留输入内容）
-  useEffect(() => {
-    if (!isFocused && state.inputMode) {
-      setInputMode(false);
-    }
-  }, [isFocused, state.inputMode, setInputMode]);
 
   // 输入模式下捕获按键（Tab 和 Esc 由 App.tsx 处理）
   useInput(
     (char, key) => {
-      // Enter 发送消息
+      // Ctrl+Enter 或 Enter 发送消息
       if (key.return) {
+        // 如果是输入模式，Ctrl+Enter 发送
+        if (key.ctrl || !input.trim()) {
+           if (input.trim() && sendMessage) {
+            sendMessage(input.trim());
+            setInput("");
+            // 发送后如果是 Ctrl+Enter 保持输入模式，普通 Enter (如果没内容) 退出？ 
+            // PRD: Ctrl+Enter 发送。
+          }
+          return;
+        }
+        
+        // 普通 Enter 在有内容时也发送
         if (input.trim() && sendMessage) {
           sendMessage(input.trim());
           setInput("");
@@ -67,11 +65,17 @@ export function InputBar({ width, sendMessage }: InputBarProps): React.ReactElem
         setInput((prev) => prev + char);
       }
     },
-    { isActive: state.inputMode }
+    { isActive: state.inputMode && isFocused }
   );
 
   return (
-    <Box flexDirection="column" width={width}>
+    <Box
+      flexDirection="column"
+      width={width}
+      borderStyle="single"
+      borderTop
+      borderColor={isFocused ? "cyan" : "gray"}
+    >
       {/* 输入框 */}
       <Box flexDirection="row" paddingX={1} width={width}>
         <Text bold color={state.inputMode ? SUCCESS : isFocused ? "cyan" : PRIMARY}>
@@ -79,8 +83,10 @@ export function InputBar({ width, sendMessage }: InputBarProps): React.ReactElem
         </Text>
         {input && <Text>{input}</Text>}
         {state.inputMode && <Text dimColor>{STREAMING_CURSOR}</Text>}
-        {!state.inputMode && !input && !isFocused && (
-          <Text dimColor>{t("tui.session.input.tabPlaceholder")}</Text>
+        {!state.inputMode && !input && (
+          <Text dimColor>
+            {isFocused ? t("tui.session.input.ctrlEnterHint") : t("tui.session.input.tabPlaceholder")}
+          </Text>
         )}
       </Box>
     </Box>

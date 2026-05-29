@@ -17,7 +17,14 @@ import type {
 // ============================================================
 
 export type PageName = "session" | "debug" | "config";
-export type FocusArea = string | null;
+export type FocusArea =
+  | "header"
+  | "agentTree"
+  | "messageList"
+  | "inputBar"
+  | "traceLog"
+  | "configList"
+  | null;
 
 export interface AgentNode {
   id: string;

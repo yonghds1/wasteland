@@ -23,6 +23,7 @@ import { t } from "../../../locales/index.js";
 
 interface TraceLogProps {
   height?: number;
+  width?: number;
 }
 
 /**
@@ -223,7 +224,12 @@ export function TraceLog({ height }: TraceLogProps): React.ReactElement {
   const hasFilter = Boolean(filter.scope || filter.phase);
 
   return (
-    <Box flexDirection="column" flexGrow={1}>
+    <Box
+      flexDirection="column"
+      flexGrow={1}
+      borderStyle="single"
+      borderColor={state.focusArea === "traceLog" ? "cyan" : "gray"}
+    >
       {/* 标题栏 */}
       <Box flexDirection="row" justifyContent="space-between" paddingX={1}>
         <Box flexDirection="row" gap={1}>

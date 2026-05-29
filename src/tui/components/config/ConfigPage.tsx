@@ -4,8 +4,8 @@
  * 只读文档视图，展示 settings.json 的配置说明
  */
 
-import React from "react";
-import { Text, Box } from "ink";
+import React, { useState } from "react";
+import { Text, Box, useInput } from "ink";
 import { useAppContext } from "../../context/AppContext.js";
 import { t } from "../../../locales/index.js";
 import {
@@ -23,19 +23,41 @@ interface ConfigPageProps {
 
 export function ConfigPage({ height, width }: ConfigPageProps): React.ReactElement {
   const { state } = useAppContext();
+  const [activeSection, setActiveSection] = useState(0);
+  const sectionsCount = 4;
+
+  useInput(
+    (input, key) => {
+      if (key.upArrow) {
+        setActiveSection((prev) => (prev - 1 + sectionsCount) % sectionsCount);
+      } else if (key.downArrow) {
+        setActiveSection((prev) => (prev + 1) % sectionsCount);
+      }
+    },
+    { isActive: state.focusArea === "configList" }
+  );
+
+  const isFocused = state.focusArea === "configList";
 
   return (
-    <Box flexDirection="column" height={height} width={width} paddingX={1}>
+    <Box
+      flexDirection="column"
+      height={height}
+      width={width}
+      paddingX={1}
+      borderStyle="single"
+      borderColor={isFocused ? "cyan" : "gray"}
+    >
       {/* 标题 */}
       <Box marginBottom={1}>
-        <Text bold underline color={state.focusArea === "configList" ? "cyan" : undefined}>
+        <Text bold underline color={isFocused ? "cyan" : PRIMARY}>
           {t("tui.config.title")}
         </Text>
       </Box>
 
       {/* 配置文件位置 */}
-      <Box flexDirection="column" marginBottom={1}>
-        <Text bold color={PRIMARY}>
+      <Box flexDirection="column" marginBottom={1} borderStyle={activeSection === 0 && isFocused ? "round" : undefined} borderColor="cyan">
+        <Text bold color={activeSection === 0 && isFocused ? "cyan" : PRIMARY}>
           {t("tui.config.docs.location.title")}
         </Text>
         <Box paddingLeft={2} flexDirection="column">
@@ -52,8 +74,8 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
       </Box>
 
       {/* 配置结构 */}
-      <Box flexDirection="column" marginBottom={1}>
-        <Text bold color={PRIMARY}>
+      <Box flexDirection="column" marginBottom={1} borderStyle={activeSection === 1 && isFocused ? "round" : undefined} borderColor="cyan">
+        <Text bold color={activeSection === 1 && isFocused ? "cyan" : PRIMARY}>
           {t("tui.config.docs.structure.title")}
         </Text>
         <Box paddingLeft={2} flexDirection="column">
@@ -84,8 +106,8 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
       </Box>
 
       {/* 配置项说明 */}
-      <Box flexDirection="column" marginBottom={1}>
-        <Text bold color={PRIMARY}>
+      <Box flexDirection="column" marginBottom={1} borderStyle={activeSection === 2 && isFocused ? "round" : undefined} borderColor="cyan">
+        <Text bold color={activeSection === 2 && isFocused ? "cyan" : PRIMARY}>
           {t("tui.config.docs.fields.title")}
         </Text>
         <Box paddingLeft={2} flexDirection="column">
@@ -118,8 +140,8 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
       </Box>
 
       {/* 环境变量 */}
-      <Box flexDirection="column">
-        <Text bold color={PRIMARY}>
+      <Box flexDirection="column" borderStyle={activeSection === 3 && isFocused ? "round" : undefined} borderColor="cyan">
+        <Text bold color={activeSection === 3 && isFocused ? "cyan" : PRIMARY}>
           {t("tui.config.docs.env.title")}
         </Text>
         <Box paddingLeft={2} flexDirection="column">

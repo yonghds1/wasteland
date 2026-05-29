@@ -376,7 +376,8 @@
         "escCancel": "Esc Cancel",
         "enterSend": "Enter Send",
         "tabSwitch": "Tab Switch Area",
-        "tabPlaceholder": "Tab to switch to input here..."
+        "tabPlaceholder": "Tab to switch to input here...",
+        "ctrlEnterHint": "Enter to start typing"
       },
       "messages": {
         "user": "User",

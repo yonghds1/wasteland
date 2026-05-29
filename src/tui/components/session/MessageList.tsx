@@ -389,7 +389,13 @@ export function MessageList({ height = 20, width = 80 }: MessageListProps): Reac
   }
 
   return (
-    <Box flexDirection="column" flexGrow={1} height={height}>
+    <Box
+      flexDirection="column"
+      flexGrow={1}
+      height={height}
+      borderStyle="single"
+      borderColor={state.focusArea === "messageList" ? "cyan" : "gray"}
+    >
       {/* 标题栏 */}
       <Box flexDirection="row" justifyContent="space-between" paddingX={1}>
         <Box flexDirection="row" gap={1}>

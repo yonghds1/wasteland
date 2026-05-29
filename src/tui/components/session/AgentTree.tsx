@@ -44,7 +44,11 @@ function formatDuration(startTime: number, endTime?: number): string {
   return `${(durationMs / 60000).toFixed(1)}m`;
 }
 
-export function AgentTree(): React.ReactElement {
+interface AgentTreeProps {
+  width?: number;
+}
+
+export function AgentTree({ width = 25 }: AgentTreeProps): React.ReactElement {
   const { state } = useAppContext();
   const { agents } = state.session;
 
@@ -55,7 +59,13 @@ export function AgentTree(): React.ReactElement {
     : "0ms";
 
   return (
-    <Box flexDirection="column" paddingX={1} width={21}>
+    <Box
+      flexDirection="column"
+      paddingX={1}
+      width={width}
+      borderStyle="single"
+      borderColor={state.focusArea === "agentTree" ? "cyan" : "gray"}
+    >
       {/* 标题 */}
       <Box flexDirection="row" gap={1}>
         <Text bold color={PRIMARY}>

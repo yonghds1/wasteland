@@ -376,7 +376,8 @@
         "escCancel": "Esc 取消",
         "enterSend": "Enter 发送",
         "tabSwitch": "Tab 切换区域",
-        "tabPlaceholder": "Tab 切换到此处输入..."
+        "tabPlaceholder": "Tab 切换到此处输入...",
+        "ctrlEnterHint": "Enter 进入输入模式"
       },
       "messages": {
         "user": "用户",

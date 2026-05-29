@@ -64,9 +64,9 @@ export function App({ runtime }: AppProps): React.ReactElement {
   // 用户输入处理
   const { sendMessage } = useUserInput(runtime.input$);
 
-  // 页面切换（保持焦点）
+  // 页面切换（重置焦点到 header）
   const setCurrentPage = useCallback((page: PageName) => {
-    setState((prev) => ({ ...prev, currentPage: page }));
+    setState((prev) => ({ ...prev, currentPage: page, focusArea: "header" }));
   }, []);
 
   // 焦点设置
@@ -117,10 +117,10 @@ export function App({ runtime }: AppProps): React.ReactElement {
   const contentHeight = Math.max(terminalRows - 6, 5);
 
   // 页面区域配置
-  const pageAreas: Record<PageName, string[]> = {
+  const pageAreas: Record<PageName, FocusArea[]> = {
     session: ["header", "agentTree", "messageList", "inputBar"],
     debug: ["header", "traceLog"],
-    config: ["header"],
+    config: ["header", "configList"],
   };
 
   // 全局键盘处理
@@ -172,23 +172,22 @@ export function App({ runtime }: AppProps): React.ReactElement {
       // Tab 切换焦点
       if (key.tab) {
         const areas = pageAreas[state.currentPage];
-        const currentIndex = state.focusArea ? areas.indexOf(state.focusArea) : -1;
+        const currentIndex = state.focusArea ? (areas as string[]).indexOf(state.focusArea) : -1;
         const nextIndex = key.shift
           ? (currentIndex - 1 + areas.length) % areas.length
           : (currentIndex + 1) % areas.length;
         const nextArea = areas[nextIndex];
 
-        // 如果不是输入区域，退出输入模式
+        // 切换焦点时退出输入模式
         if (nextArea !== "inputBar") {
           setInputMode(false);
         }
         setFocusArea(nextArea);
         return;
       }
-      // Esc 退出输入模式并失焦
+      // Esc 退出输入模式
       if (key.escape) {
         setInputMode(false);
-        setFocusArea(null);
         return;
       }
       return;
@@ -196,7 +195,7 @@ export function App({ runtime }: AppProps): React.ReactElement {
 
     // ===== 非输入模式下的处理 =====
 
-    // Esc 失焦
+    // Esc 清除焦点
     if (key.escape) {
       setFocusArea(null);
       return;
@@ -205,7 +204,7 @@ export function App({ runtime }: AppProps): React.ReactElement {
     // Tab 切换焦点
     if (key.tab) {
       const areas = pageAreas[state.currentPage];
-      const currentIndex = state.focusArea ? areas.indexOf(state.focusArea) : -1;
+      const currentIndex = state.focusArea ? (areas as string[]).indexOf(state.focusArea) : -1;
       // 无焦点时 Tab 进入第一个区域，有焦点时循环切换
       const nextIndex = state.focusArea === null
         ? 0
@@ -216,11 +215,27 @@ export function App({ runtime }: AppProps): React.ReactElement {
       return;
     }
 
-    // Enter 进入输入模式
-    if (key.return && state.currentPage === "session") {
-      if (state.focusArea === null || state.focusArea === "header") {
-        setFocusArea("inputBar");
+    // Ctrl+Enter 进入输入模式 (Session 页面)
+    if (key.return && key.ctrl && state.currentPage === "session") {
+      setFocusArea("inputBar");
+      setInputMode(true);
+      return;
+    }
+
+    // Enter 快捷进入
+    if (key.return && !key.ctrl) {
+      if (state.focusArea === "inputBar") {
         setInputMode(true);
+        return;
+      }
+      if (state.focusArea === null || state.focusArea === "header") {
+        if (state.currentPage === "session") {
+          setFocusArea("inputBar");
+        } else if (state.currentPage === "debug") {
+          setFocusArea("traceLog");
+        } else if (state.currentPage === "config") {
+          setFocusArea("configList");
+        }
         return;
       }
     }

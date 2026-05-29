@@ -74,8 +74,6 @@ export function DebugPage({ height, width }: DebugPageProps): React.ReactElement
       <Box
         flexGrow={1}
         flexShrink={1}
-        borderStyle="single"
-        borderColor={state.focusArea === "traceLog" ? "cyan" : "gray"}
         flexDirection="column"
       >
         <TraceLog height={height ? height - 3 : undefined} />
