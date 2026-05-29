@@ -615,6 +615,16 @@
     },
     "bash": {
       "needCommand": "bash 工具需要非空 command 字段。"
+    },
+    "spawnAgent": {
+      "noResponse": "子 Agent 未返回响应",
+      "roleUser": "用户",
+      "roleAssistant": "助手",
+      "historyHeader": "## 之前的对话历史",
+      "currentTaskHeader": "## 当前任务"
+    },
+    "grep": {
+      "needPattern": "grep 工具需要非空 pattern 字段。示例：{ \"pattern\": \"TODO\", \"include\": \"*.ts\" }"
     }
   },
   "runtime": {

@@ -28,6 +28,7 @@ npm run dev -- --help
 - `npm start -- <args>`：通过可执行包装层运行构建后的 CLI
 - `npm test`：先构建，再运行冒烟测试
 - `npm run check`：统一运行 typecheck 与测试
+- `./scripts/create-aliases.sh [skin-id]`：根据皮肤配置创建角色别名（如 `joe`），postinstall 时自动执行
 
 ## 示例
 
@@ -129,7 +130,7 @@ npm run chat -- --multi --permission-mode bypass_permissions --message "..."
 
 这些命令在 UI 层直接处理，不会进入 runtime/provider。
 
-安装或链接到全局后，启动命令是 `wasteland`（`joe` 为兼容别名）。
+安装或链接到全局后，启动命令是 `wasteland`。角色别名（如 `joe`）由 `scripts/create-aliases.sh` 根据皮肤配置动态创建。
 
 如果要按真实全局命令的方式测试：
 
@@ -390,8 +391,10 @@ dist/           构建产物
 
 ## 文档
 
+- [**wasteland 核心架构规范**](./docs/architecture/wasteland-spec.md) ⭐ 唯一事实来源
 - [文档索引](./docs/README.md)
 - [智能体 CLI 架构](./docs/architecture/agent-cli.md)
+- [多 Agent 协作架构](./docs/architecture/multi-agent-architecture.md)
 - [配置层与 `.wasteland` 目录](./docs/architecture/configuration.md)
 - [多角色配置方案](./docs/architecture/multi-role-configuration.md)
 - [运行时分层与契约](./docs/architecture/runtime-boundaries.md)
@@ -399,3 +402,4 @@ dist/           构建产物
 - [项目结构规划](./docs/project-structure.md)
 - [Phase 1：Agent Runtime 实施方案](./docs/implementation/phase-1-agent-runtime.md)
 - [Phase 2：工具运行时与权限闸门](./docs/implementation/phase-2-agent-tool-runtime.md)
+- [Phase 3：多步 Agent Loop 与调试追踪](./docs/implementation/phase-3-multi-step-agent-loop.md)

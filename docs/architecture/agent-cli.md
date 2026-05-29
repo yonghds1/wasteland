@@ -8,29 +8,30 @@
 
 ## 当前基线
 
+> **注意**: 本文档保留为架构原则参考。核心架构规范请参阅 [wasteland-spec.md](./wasteland-spec.md)。
+
 当前仓库已经具备：
 
-- 基于 Commander 的 CLI 外壳，入口在 `src/cli.ts`
-- 命令处理层位于 `src/commands/`
-- 基于 RxJS 的输入/回复原型位于 `src/chat/`
-- `src/runtime/` 下的 Phase 1 runtime 骨架
+- 基于 Commander 的 CLI 外壳（`wasteland` + `joe` 别名），入口在 `src/cli.ts`
+- 命令处理层位于 `src/commands/`（chat, tui, config, sessions, resume, skin）
+- 基于 RxJS 的输入/回复管线位于 `src/chat/`
+- `src/runtime/` 下的完整 agent loop（多步执行、turn 状态管理、事件流）
 - `src/config/` 下的统一配置加载层
-- `src/providers/` 下的 provider interface、`local` provider 和 `qwen` provider 适配器
-- `src/tools/` 下的 Phase 2 工具合同、registry/runner 骨架
-- `src/tools/read-file.ts` 和 `src/tools/bash.ts` 的真实内建工具
+- `src/providers/` 下的 provider 抽象（local, openai-compatible, anthropic）
+- `src/tools/` 下的 12+ 内建工具（read-file, write-file, edit-file, glob, grep, list-directory, bash, web-fetch, http-request, ask-user, spawn_agent, mcp-*）
 - `src/runtime/` 下的 permission gate 和 tool dispatch
 - `src/ui/` 下的终端输入/渲染边界
+- `src/tui/` 下的 Ink/React TUI 仪表板（session/debug/config 页面）
+- `src/skills/` 下的技能系统（内置技能 + 自定义技能发现）
+- `src/prompts/` 下的提示词模板系统
+- `src/locales/` 下的国际化系统（en, zh）
+- `src/skins/` 下的皮肤/主题系统
 - 位于 `bin/` 的轻量可执行包装层
-- 位于 `test/` 的进程级冒烟测试
-- 位于 `.wasteland/sessions/` 的最小本地 transcript 持久化
-- 位于 `.wasteland/settings.json` / `.wasteland/auth.json` / `~/.wasteland/settings.json` / `~/.wasteland/auth.json` 的统一配置入口
-
-但它**还没有**：
-
-- 通用的多工具对话循环
-- 跨进程 resume 能力
-- 通用的多外部模型 provider 能力
-- MCP 集成层
+- 位于 `test/` 的 19 个测试文件（89 个测试用例）
+- 位于 `.wasteland/sessions/` 的 session 持久化（JSONL 格式）
+- 位于 `.wasteland/settings.json` / `~/.wasteland/settings.json` 的统一配置入口
+- 跨进程 resume 能力（`sessions` / `resume` 命令）
+- MCP 集成层（`mcp-client.ts` + `mcp-registry.ts`）
 
 ---
 
@@ -144,6 +145,31 @@ runtime 应依赖 provider interface，而不是直接耦合 Anthropic/OpenAI SD
 - 外部工具发现
 - 外部工具调用边界
 - MCP server 配置
+
+### Skills 层
+
+职责：
+
+- 高层工作流抽象
+- 内置技能（/help, /status, /tools, /init, /context）
+- 自定义技能发现（项目级 + 用户级）
+- 技能参数解析和执行
+
+### Prompts 层
+
+职责：
+
+- 提示词模板管理
+- 角色模板定义
+- 变量插值
+
+### i18n 层
+
+职责：
+
+- 多语言支持（en, zh）
+- 动态语言切换
+- 所有用户可见文本的统一管理
 
 ---
 

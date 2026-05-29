@@ -20,7 +20,7 @@ export const statusSkill: Skill = {
     name: "status",
     description: t("skills.status.description"),
     riskLevel: "read",
-    aliases: ["stat", "info"],
+    aliases: ["stat"],
     category: "system",
     parameters: {
       format: {

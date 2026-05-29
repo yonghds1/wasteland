@@ -615,6 +615,16 @@
     },
     "bash": {
       "needCommand": "bash tool requires a non-empty command field."
+    },
+    "spawnAgent": {
+      "noResponse": "Child agent did not return a response.",
+      "roleUser": "User",
+      "roleAssistant": "Assistant",
+      "historyHeader": "## Previous Conversation History",
+      "currentTaskHeader": "## Current Task"
+    },
+    "grep": {
+      "needPattern": "grep tool requires a non-empty pattern field. Example: { \"pattern\": \"TODO\", \"include\": \"*.ts\" }"
     }
   },
   "runtime": {

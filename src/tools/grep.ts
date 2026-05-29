@@ -22,6 +22,7 @@
 import { readFile, stat } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 
+import { t } from "../locales/index.js";
 import type { AgentTool, ToolExecutionResult } from "./tool-types.js";
 
 // ============================================================
@@ -281,7 +282,7 @@ export function createGrepTool(): AgentTool {
       if (pattern === null) {
         return {
           status: "error",
-          error: "grep 工具需要非空 pattern 字段。示例：{ \"pattern\": \"TODO\", \"include\": \"*.ts\" }",
+          error: t("tools.grep.needPattern"),
         };
       }
 

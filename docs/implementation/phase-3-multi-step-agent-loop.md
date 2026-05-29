@@ -1,5 +1,8 @@
 # Phase 3 实施方案：多步 Agent Loop 与调试追踪
 
+> **状态**: Phase 3 已完成。多 Agent 编排（spawn_agent）已在此阶段后续实现。
+> **注意**: 本文档保留为实现记录。核心架构规范请参阅 [wasteland-spec.md](../architecture/wasteland-spec.md)。
+
 ## 目标
 
 在 Phase 2 已经具备工具合同、权限闸门和最小工具执行路径之后，把 `wasteland` 从”单步工具演示 CLI”推进到”真正的多步 agent CLI”。

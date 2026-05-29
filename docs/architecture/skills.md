@@ -2,7 +2,7 @@
 
 ## 概述
 
-技能(Skills)是 RxCLI 中的高级工作流抽象,用于编排多个工具调用和复杂操作。与工具(Tools)不同,技能:
+技能(Skills)是 wasteland 中的高级工作流抽象,用于编排多个工具调用和复杂操作。与工具(Tools)不同,技能:
 
 - 可以编排多个工具调用
 - 可以被用户在 `.wasteland/skills/` 中自定义
@@ -81,7 +81,7 @@ interface Skill {
 
 技能可以来自三个来源:
 
-1. **内置技能** (`builtin`): 随 RxCLI 发布的默认技能
+1. **内置技能** (`builtin`): 随 wasteland 发布的默认技能
 2. **项目技能** (`project`): 项目 `.wasteland/skills/` 目录中的技能
 3. **用户技能** (`user`): 用户全局 `~/.wasteland/skills/` 目录中的技能
 
@@ -90,7 +90,7 @@ interface Skill {
 ### 系统技能
 
 - `/help` (`/h`, `/?`): 显示帮助信息和可用命令列表
-- `/status` (`/stat`, `/info`): 显示当前会话状态和统计信息
+- `/status` (`/stat`): 显示当前会话状态和统计信息
 - `/tools` (`/tls`): 显示所有可用工具的详细信息
 
 ### 项目技能
@@ -130,7 +130,7 @@ interface Skill {
 ### TypeScript 格式
 
 ```typescript
-import type { Skill } from "rx-cli";
+import type { Skill } from "wasteland";
 
 export default {
   definition: {
@@ -282,7 +282,7 @@ type skill_result = {
 
 1. 在项目 `.wasteland/skills/` 创建技能文件
 2. 使用 JSON 或 TypeScript 格式
-3. 重启 RxCLI 自动加载
+3. 重启 wasteland 自动加载
 
 ## 调试技能
 

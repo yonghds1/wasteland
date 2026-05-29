@@ -6,6 +6,11 @@
 #
 # 根据皮肤配置中的角色别名，创建指向 wasteland.js 的符号链接
 # 切换皮肤时运行此脚本，更新符号链接
+#
+# 工作方式：
+#   1. 读取皮肤配置中的角色别名（默认: joe）
+#   2. 在 bin/links/ 目录创建本地软链（开发用）
+#   3. 将软链复制到 npm bin 目录（全局可用）
 
 set -e
 
@@ -51,64 +56,67 @@ if [ ! -f "$PROJECT_DIR/dist/cli.js" ]; then
     npm run build
 fi
 
-# 创建符号链接的目录
-LINK_DIR="$PROJECT_DIR/bin/links"
-mkdir -p "$LINK_DIR"
+# 创建符号链接的目录（本地开发用）
+LOCAL_LINK_DIR="$PROJECT_DIR/bin/links"
+mkdir -p "$LOCAL_LINK_DIR"
 
 # 清除旧的符号链接
 print_info "清除旧的符号链接..."
-rm -f "$LINK_DIR"/*
+rm -f "$LOCAL_LINK_DIR"/*
 
 # 创建主命令符号链接（wasteland）
-MAIN_LINK="$LINK_DIR/wasteland"
-ln -s "../wasteland.js" "$MAIN_LINK"
+ln -s "../wasteland.js" "$LOCAL_LINK_DIR/wasteland"
 print_info "创建主命令链接: wasteland"
 
-# 读取皮肤配置中的角色别名
-# 通过 Node.js 脚本从皮肤配置动态读取
+# 获取角色别名
 ROLE_ALIASES=()
-
-# 获取角色别名的脚本
 GET_ALIASES_SCRIPT="$SCRIPT_DIR/get-role-aliases.js"
 
 if [ -f "$GET_ALIASES_SCRIPT" ] && command -v node &> /dev/null; then
     print_info "从皮肤配置读取角色别名..."
-
-    # 调用 Node.js 脚本获取别名
     ALIASES_JSON=$(node "$GET_ALIASES_SCRIPT" "$SKIN_ID" 2>/dev/null || echo '["joe"]')
 
-    # 解析 JSON 数组
     if command -v jq &> /dev/null; then
-        # 使用 jq 解析
         mapfile -t ROLE_ALIASES < <(echo "$ALIASES_JSON" | jq -r '.[]')
     else
-        # 手动解析简单的 JSON 数组 ["joe"]
         ROLE_ALIASES=($(echo "$ALIASES_JSON" | tr -d '[]",' | tr ' ' '\n'))
     fi
 else
-    print_warn "无法读取皮肤配置，使用默认角色别名"
+    print_info "使用默认角色别名"
     ROLE_ALIASES=("joe")
 fi
 
 print_info "角色别名: ${ROLE_ALIASES[*]}"
 
-# 创建角色别名符号链接
+# 创建角色别名符号链接（本地 + npm bin）
+NPM_BIN_DIR="$(npm prefix -g 2>/dev/null)/bin"
+if [ ! -d "$NPM_BIN_DIR" ]; then
+    NPM_BIN_DIR="/usr/local/bin"
+fi
+
 for alias in "${ROLE_ALIASES[@]}"; do
-    ALIAS_LINK="$LINK_DIR/$alias"
-    ln -s "../wasteland.js" "$ALIAS_LINK"
-    print_info "创建角色别名链接: $alias -> wasteland.js"
+    # 本地软链
+    ln -s "../wasteland.js" "$LOCAL_LINK_DIR/$alias"
+    print_info "创建本地链接: $alias -> wasteland.js"
+
+    # 复制到 npm bin 目录（使全局可用）
+    if [ -d "$NPM_BIN_DIR" ] && [ -w "$NPM_BIN_DIR" ]; then
+        ln -sf "$ENTRY_FILE" "$NPM_BIN_DIR/$alias"
+        print_info "安装到 npm bin: $alias -> wasteland.js"
+    else
+        print_warn "无法写入 npm bin 目录 ($NPM_BIN_DIR)，跳过全局安装"
+        print_warn "手动安装: sudo ln -s $ENTRY_FILE /usr/local/bin/$alias"
+    fi
 done
 
-# 创建安装脚本
-INSTALL_SCRIPT="$LINK_DIR/install.sh"
-cat > "$INSTALL_SCRIPT" << 'EOF'
+# 创建安装脚本（供无 sudo 权限时使用）
+INSTALL_SCRIPT="$LOCAL_LINK_DIR/install.sh"
+cat > "$INSTALL_SCRIPT" << 'INSTALL_EOF'
 #!/bin/bash
 
 # install.sh - 将符号链接安装到系统 PATH
 #
 # 用法: sudo ./bin/links/install.sh
-#
-# 或者手动复制链接到 /usr/local/bin
 
 set -e
 
@@ -118,18 +126,15 @@ INSTALL_DIR="/usr/local/bin"
 
 echo "将符号链接安装到 $INSTALL_DIR..."
 
-# 检查权限
 if [ ! -w "$INSTALL_DIR" ]; then
     echo "需要管理员权限来安装到 $INSTALL_DIR"
     echo "请使用: sudo $0"
     exit 1
 fi
 
-# 先复制 wasteland.js 入口文件
 cp -f "$PROJECT_DIR/bin/wasteland.js" "$INSTALL_DIR/"
 echo "已安装: wasteland.js"
 
-# 复制所有符号链接（使用绝对路径）
 for link in "$SCRIPT_DIR"/*; do
     if [ -L "$link" ]; then
         LINK_NAME=$(basename "$link")
@@ -140,25 +145,25 @@ for link in "$SCRIPT_DIR"/*; do
     fi
 done
 
-echo "安装完成！"
-echo "现在可以使用以下命令:"
+echo ""
+echo "安装完成！可用命令:"
 echo "  wasteland --help"
-echo "  wasteland --help"
-echo "  joe --help (兼容别名)"
-EOF
+for link in "$SCRIPT_DIR"/*; do
+    if [ -L "$link" ]; then
+        LINK_NAME=$(basename "$link")
+        if [ "$LINK_NAME" != "install.sh" ] && [ "$LINK_NAME" != "wasteland" ]; then
+            echo "  $LINK_NAME --help"
+        fi
+    fi
+done
+INSTALL_EOF
 chmod +x "$INSTALL_SCRIPT"
-
-print_info "创建安装脚本: $INSTALL_SCRIPT"
 
 # 显示结果
 echo ""
 print_info "符号链接创建完成！"
 echo ""
-echo "链接位置: $LINK_DIR"
-echo ""
-echo "使用方法:"
-echo "  1. 直接使用: $LINK_DIR/wasteland --help"
-echo "  2. 或安装到系统: sudo $LINK_DIR/install.sh"
+echo "本地链接: $LOCAL_LINK_DIR"
 echo ""
 echo "可用命令:"
 echo "  wasteland"

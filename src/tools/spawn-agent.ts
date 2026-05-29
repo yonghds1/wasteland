@@ -30,6 +30,7 @@
 import { catchError, defaultIfEmpty, filter, map, take, timeout } from "rxjs/operators";
 import { forkJoin, from, lastValueFrom, of } from "rxjs";
 
+import { t } from "../locales/index.js";
 import { runAgentLoop } from "../runtime/agent-loop.js";
 import type { SessionMetadata } from "../runtime/session-manager.js";
 import type { SessionMessageRecord } from "../runtime/event-types.js";
@@ -150,13 +151,13 @@ export function createSpawnAgentTool(context: SpawnAgentContext): AgentTool {
           const historySummary = context.history
             .filter((record) => record.type === "message")
             .map((record) => {
-              const role = record.role === "user" ? "用户" : "助手";
+              const role = record.role === "user" ? t("tools.spawnAgent.roleUser") : t("tools.spawnAgent.roleAssistant");
               return `【${role}】\n${record.content}`;
             })
             .join("\n\n");
 
           if (historySummary) {
-            taskContent = `## 之前的对话历史\n\n${historySummary}\n\n## 当前任务\n\n${task}`;
+            taskContent = `${t("tools.spawnAgent.historyHeader")}\n\n${historySummary}\n\n${t("tools.spawnAgent.currentTaskHeader")}\n\n${task}`;
           }
         }
 
@@ -217,7 +218,7 @@ export function createSpawnAgentTool(context: SpawnAgentContext): AgentTool {
         // 6. 等待子 Agent 完成
         let result: { success: boolean; content?: string; error?: string } = {
           success: false,
-          error: "子 Agent 未返回响应",
+          error: t("tools.spawnAgent.noResponse"),
         };
 
         try {

@@ -320,9 +320,11 @@ function createChildSession(parent: SessionMetadata, name: string): SessionMetad
 
 ## Out of Scope (explicit)
 
-- 真实模型 provider 的 tool calling（Phase 2 已规划）
-- MCP 集成
-- resume / sessions 命令
+> **注意**: 以下部分项目已在后续迭代中实现（MCP 集成、resume/sessions 命令）。本文档保留为历史记录。
+> 核心架构规范请参阅 [wasteland-spec.md](../../docs/architecture/wasteland-spec.md)。
+
+- ~~MCP 集成~~ ✅ 已实现（`src/tools/mcp-client.ts`, `src/tools/mcp-registry.ts`）
+- ~~resume / sessions 命令~~ ✅ 已实现（`src/commands/resume.ts`, `src/commands/sessions.ts`）
 - 子 Agent 的嵌套深度限制（后续优化）
 - 子 Agent 的资源配额管理（后续优化）
 - Markdown 流式渲染 + 语法高亮（需引入 marked/highlight.js 依赖，建议独立 task）
