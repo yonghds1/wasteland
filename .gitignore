@@ -17,6 +17,10 @@ dist/
 .trellis/.plan-log
 .trellis/.backup-*
 
+# Claude local settings
+.claude/settings.local.json
+.claude/plans/
+
 # Python
 **/__pycache__/
 **/*.pyc
