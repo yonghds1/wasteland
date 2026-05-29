@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
+import { t } from "../locales/index.js";
 import type { AgentTool } from "./tool-types.js";
 
 const execFileAsync = promisify(execFile);
@@ -15,7 +16,7 @@ export function createBashTool(): AgentTool {
       if (command.length === 0) {
         return {
           status: "error",
-          error: "bash 工具需要非空 command 字段。",
+          error: t("tools.bash.needCommand"),
         };
       }
 

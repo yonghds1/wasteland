@@ -29,6 +29,7 @@ import {
   TOOL_VERBS,
   SEPARATORS,
 } from "../../utils/colors.js";
+import { t } from "../../../locales/index.js";
 
 const TYPE_COLORS: Record<string, string> = {
   user: USER_MSG,
@@ -37,12 +38,15 @@ const TYPE_COLORS: Record<string, string> = {
   system: SYSTEM_MSG,
 };
 
-const TYPE_LABELS: Record<string, string> = {
-  user: "用户",
-  assistant: "助手",
-  tool: "工具",
-  system: "系统",
-};
+function getTypeLabel(type: string): string {
+  switch (type) {
+    case "user": return t("tui.session.messages.user");
+    case "assistant": return t("tui.session.messages.assistant");
+    case "tool": return t("tui.session.messages.tool");
+    case "system": return t("tui.session.messages.system");
+    default: return type;
+  }
+}
 
 const TYPE_PREFIXES: Record<string, string> = {
   user: USER_PREFIX,
@@ -173,7 +177,7 @@ function messagesToLines(
     } else {
       // 普通消息：标题行 + 内容行
       // 格式: [timestamp] prefix label
-      const label = TYPE_LABELS[msg.type];
+      const label = getTypeLabel(msg.type);
       const isStreaming = msg.id === streamingMessageId;
       lines.push({
         type: "header",
@@ -214,7 +218,7 @@ function messagesToLines(
       // 新的流式消息
       lines.push({
         type: "header",
-        content: `[${new Date().toISOString().slice(11, 19)}] ${ASSISTANT_PREFIX} ${TYPE_LABELS.assistant}`,
+        content: `[${new Date().toISOString().slice(11, 19)}] ${ASSISTANT_PREFIX} ${t("tui.session.messages.assistant")}`,
         color: TYPE_COLORS.assistant,
         messageId: streamingMessageId,
         isStreaming: true,
@@ -378,8 +382,8 @@ export function MessageList({ height = 20, width = 80 }: MessageListProps): Reac
     return (
       <Box flexDirection="column" flexGrow={1} justifyContent="center" alignItems="center">
         <Text color={PRIMARY}>◆ rxc - AI CLI Assistant</Text>
-        <Text dimColor>在下方输入框输入消息开始对话</Text>
-        <Text dimColor color="gray">Tab 切换页面 ┊ h 帮助 ┊ q 退出</Text>
+        <Text dimColor>{t("tui.session.messages.startHint")}</Text>
+        <Text dimColor color="gray">{t("tui.session.messages.tabHint")}</Text>
       </Box>
     );
   }
@@ -390,21 +394,21 @@ export function MessageList({ height = 20, width = 80 }: MessageListProps): Reac
       <Box flexDirection="row" justifyContent="space-between" paddingX={1}>
         <Box flexDirection="row" gap={1}>
           <Text bold color={PRIMARY}>
-            消息
+            {t("tui.session.messages.title")}
           </Text>
-          <Text dimColor>{messages.length} 条</Text>
+          <Text dimColor>{t("tui.session.messages.count", { count: String(messages.length) })}</Text>
         </Box>
         <Box flexDirection="row" gap={1}>
           {state.session.isThinking && (
             <>
               <Text bold color="yellow">●</Text>
-              <Text color="yellow">思考中...</Text>
+              <Text color="yellow">{t("tui.session.messages.thinking")}</Text>
             </>
           )}
           {state.session.isStreaming && !state.session.isThinking && (
             <>
               <Text bold color="green">●</Text>
-              <Text color="green">流式中</Text>
+              <Text color="green">{t("tui.session.messages.streaming")}</Text>
             </>
           )}
         </Box>
@@ -462,7 +466,7 @@ export function MessageList({ height = 20, width = 80 }: MessageListProps): Reac
       {scrollInfo && (
         <Box flexDirection="row" justifyContent="center" gap={1}>
           <Text dimColor>{scrollInfo}</Text>
-          {!autoScroll && <Text color="yellow">(已暂停自动滚动)</Text>}
+          {!autoScroll && <Text color="yellow">{t("tui.session.messages.autoScrollPaused")}</Text>}
         </Box>
       )}
     </Box>

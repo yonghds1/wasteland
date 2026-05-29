@@ -2,6 +2,7 @@ import { createLocalProvider } from "./local.js";
 import { createOpenAIProvider } from "./openai.js";
 import type { AgentProvider } from "./provider-types.js";
 import type { ProviderSettings } from "../config/settings-types.js";
+import { t } from "../locales/index.js";
 
 export type ProviderFactory = (config?: ProviderSettings) => AgentProvider;
 
@@ -37,11 +38,11 @@ export class ProviderRegistry {
     const normalizedType = type.trim();
 
     if (normalizedType.length === 0) {
-      throw new Error("provider type 不能为空。");
+      throw new Error(t("providers.typeEmpty"));
     }
 
     if (this.factories.has(normalizedType)) {
-      throw new Error(`provider type 已注册: ${normalizedType}`);
+      throw new Error(`${t("providers.typeRegistered")} ${normalizedType}`);
     }
 
     this.factories.set(normalizedType, factory);
@@ -56,11 +57,11 @@ export class ProviderRegistry {
     const normalizedId = id.trim();
 
     if (normalizedId.length === 0) {
-      throw new Error("provider id 不能为空。");
+      throw new Error(t("providers.idEmpty"));
     }
 
     if (this.legacyFactories.has(normalizedId)) {
-      throw new Error(`provider 已注册: ${normalizedId}`);
+      throw new Error(`${t("providers.alreadyRegistered")} ${normalizedId}`);
     }
 
     this.legacyFactories.set(normalizedId, factory);
@@ -82,7 +83,7 @@ export class ProviderRegistry {
       if (factory) {
         return factory(config);
       }
-      throw new Error(`当前不支持的 API 协议类型: ${type}`);
+      throw new Error(`${t("providers.unsupportedProtocol")} ${type}`);
     }
 
     // 向后兼容：检查 legacyFactories
@@ -97,7 +98,7 @@ export class ProviderRegistry {
       return factory(config);
     }
 
-    throw new Error(`当前不支持的 provider: ${id}（未配置 type 字段）`);
+    throw new Error(`${t("providers.unsupportedProvider")} ${id}`);
   }
 
   /**

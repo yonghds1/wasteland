@@ -7,37 +7,44 @@
 import { Command } from "commander";
 import { listSkins, loadSkin, getCurrentSkin } from "../skins/index.js";
 import { switchSkin } from "../utils/symlink-manager.js";
+import { loadJoeSettings } from "../config/load-settings.js";
+import { initI18n, t } from "../locales/index.js";
 
 /**
  * 创建 skin 命令
  */
 export function createSkinCommand(): Command {
   const skinCommand = new Command("skin")
-    .description("管理 CLI 皮肤");
+    .description(t("commands.skin.list.description"));
 
   // skin list - 列出所有皮肤
   skinCommand
     .command("list")
-    .description("列出所有可用皮肤")
+    .description(t("commands.skin.list.description"))
     .action(async () => {
-      const skins = await listSkins();
+      // 初始化 i18n
+      const loadedSettings = await loadJoeSettings({ cwd: process.cwd(), env: process.env });
+      const language = loadedSettings.settings.runtime.language;
+      await initI18n(language);
+
+      const skins = await listSkins(undefined, language);
 
       if (skins.length === 0) {
-        console.log("没有找到皮肤。");
-        console.log("请在 .wasteland/.skins/immortan-joe/ 目录中创建皮肤配置文件。");
+        console.log(t("commands.skin.list.empty"));
+        console.log(t("commands.skin.list.emptyHint"));
         return;
       }
 
-      console.log("\n可用皮肤:\n");
+      console.log(`\n${t("commands.skin.list.title")}:\n`);
       for (const skin of skins) {
         const current = getCurrentSkin();
         const isCurrent = current?.id === skin.id;
         console.log(`  ${isCurrent ? "●" : "○"} ${skin.id}`);
-        console.log(`    名称: ${skin.name}`);
-        console.log(`    描述: ${skin.description}`);
-        console.log(`    版本: ${skin.version}`);
-        console.log(`    命令: ${skin.cli.commandName}`);
-        console.log(`    别名: ${skin.cli.aliases.join(", ")}`);
+        console.log(`    ${t("commands.skin.list.name")}: ${skin.name}`);
+        console.log(`    ${t("commands.skin.list.description")}: ${skin.description}`);
+        console.log(`    ${t("commands.skin.list.version")}: ${skin.version}`);
+        console.log(`    ${t("commands.skin.list.command")}: ${skin.cli.commandName}`);
+        console.log(`    ${t("commands.skin.list.aliases")}: ${skin.cli.aliases.join(", ")}`);
         console.log("");
       }
     });
@@ -45,71 +52,86 @@ export function createSkinCommand(): Command {
   // skin show - 显示当前皮肤
   skinCommand
     .command("show")
-    .description("显示当前皮肤配置")
+    .description(t("commands.skin.show.title"))
     .action(async () => {
+      // 初始化 i18n
+      const loadedSettings = await loadJoeSettings({ cwd: process.cwd(), env: process.env });
+      const language = loadedSettings.settings.runtime.language;
+      await initI18n(language);
+
       const skin = getCurrentSkin();
 
       if (!skin) {
-        console.log("当前没有加载皮肤。");
-        console.log("使用 'joe skin list' 查看可用皮肤。");
+        console.log(t("commands.skin.show.empty"));
+        console.log(t("commands.skin.show.emptyHint"));
         return;
       }
 
-      console.log("\n当前皮肤:\n");
+      console.log(`\n${t("commands.skin.show.title")}:\n`);
       console.log(JSON.stringify(skin, null, 2));
     });
 
   // skin load - 加载指定皮肤
   skinCommand
     .command("load <skinId>")
-    .description("加载指定皮肤")
+    .description(t("commands.skin.load.success", { name: "", id: "" }).replace("Loaded skin:  ()", "Load skin"))
     .action(async (skinId: string) => {
       try {
-        const skin = await loadSkin(skinId);
-        console.log(`已加载皮肤: ${skin.name} (${skin.id})`);
-        console.log(`命令名: ${skin.cli.commandName}`);
-        console.log(`别名: ${skin.cli.aliases.join(", ")}`);
+        // 获取当前语言设置
+        const loadedSettings = await loadJoeSettings({ cwd: process.cwd(), env: process.env });
+        const language = loadedSettings.settings.runtime.language;
+        await initI18n(language);
+
+        const skin = await loadSkin(skinId, undefined, language);
+        console.log(t("commands.skin.load.success", { name: skin.name, id: skin.id }));
+        console.log(t("commands.skin.load.command", { command: skin.cli.commandName }));
+        console.log(t("commands.skin.load.aliases", { aliases: skin.cli.aliases.join(", ") }));
 
         // 切换皮肤时更新符号链接
         await switchSkin(skinId);
-        console.log(`已更新角色别名符号链接`);
+        console.log(t("commands.skin.load.symlinks"));
       } catch (error) {
-        console.error(`加载皮肤失败: ${error instanceof Error ? error.message : String(error)}`);
+        console.error(t("commands.skin.load.error", { error: error instanceof Error ? error.message : String(error) }));
       }
     });
 
   // skin info - 显示皮肤详细信息
   skinCommand
     .command("info <skinId>")
-    .description("显示指定皮肤的详细信息")
+    .description(t("commands.skin.info.title", { name: "" }).replace("Skin details: ", "Show skin details"))
     .action(async (skinId: string) => {
       try {
-        const skin = await loadSkin(skinId);
+        // 获取当前语言设置
+        const loadedSettings = await loadJoeSettings({ cwd: process.cwd(), env: process.env });
+        const language = loadedSettings.settings.runtime.language;
+        await initI18n(language);
 
-        console.log(`\n皮肤详情: ${skin.name}\n`);
-        console.log(`ID: ${skin.id}`);
-        console.log(`描述: ${skin.description}`);
-        console.log(`作者: ${skin.author}`);
-        console.log(`版本: ${skin.version}`);
+        const skin = await loadSkin(skinId, undefined, language);
+
+        console.log(`\n${t("commands.skin.info.title", { name: skin.name })}\n`);
+        console.log(`${t("commands.skin.info.id")}: ${skin.id}`);
+        console.log(`${t("commands.skin.info.description")}: ${skin.description}`);
+        console.log(`${t("commands.skin.info.author")}: ${skin.author}`);
+        console.log(`${t("commands.skin.info.version")}: ${skin.version}`);
         console.log("");
-        console.log("CLI 配置:");
-        console.log(`  命令名: ${skin.cli.commandName}`);
-        console.log(`  别名: ${skin.cli.aliases.join(", ")}`);
-        console.log(`  版本: ${skin.cli.version}`);
-        console.log(`  描述: ${skin.cli.description}`);
+        console.log(`${t("commands.skin.info.cliConfig")}:`);
+        console.log(`  ${t("commands.skin.info.commandName")}: ${skin.cli.commandName}`);
+        console.log(`  ${t("commands.skin.info.aliases")}: ${skin.cli.aliases.join(", ")}`);
+        console.log(`  ${t("commands.skin.info.cliVersion")}: ${skin.cli.version}`);
+        console.log(`  ${t("commands.skin.info.cliDescription")}: ${skin.cli.description}`);
         console.log("");
-        console.log("角色配置:");
+        console.log(`${t("commands.skin.info.roleConfig")}:`);
         const mainName = skin.roles.main.name ?? skin.roles.main.id ?? "Unknown";
         const mainTitle = skin.roles.main.title ?? "";
-        console.log(`  主角色: ${mainName} ${mainTitle ? `(${mainTitle})` : ""}`);
-        console.log(`  子角色: ${Object.keys(skin.roles.workers).join(", ")}`);
+        console.log(`  ${t("commands.skin.info.mainRole")}: ${mainName} ${mainTitle ? `(${mainTitle})` : ""}`);
+        console.log(`  ${t("commands.skin.info.subRoles")}: ${Object.keys(skin.roles.workers).join(", ")}`);
         console.log("");
-        console.log("元数据:");
-        console.log(`  创建时间: ${skin.metadata.createdAt}`);
-        console.log(`  更新时间: ${skin.metadata.updatedAt}`);
-        console.log(`  标签: ${skin.metadata.tags.join(", ")}`);
+        console.log(`${t("commands.skin.info.metadata")}:`);
+        console.log(`  ${t("commands.skin.info.createdAt")}: ${skin.metadata.createdAt}`);
+        console.log(`  ${t("commands.skin.info.updatedAt")}: ${skin.metadata.updatedAt}`);
+        console.log(`  ${t("commands.skin.info.tags")}: ${skin.metadata.tags.join(", ")}`);
       } catch (error) {
-        console.error(`获取皮肤信息失败: ${error instanceof Error ? error.message : String(error)}`);
+        console.error(t("commands.skin.info.error", { error: error instanceof Error ? error.message : String(error) }));
       }
     });
 

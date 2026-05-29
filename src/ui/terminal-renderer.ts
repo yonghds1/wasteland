@@ -2,6 +2,7 @@ import type { Writable } from "node:stream";
 
 import type { Observable } from "rxjs";
 
+import { t } from "../locales/index.js";
 import type { RuntimeEvent } from "../runtime/event-types.js";
 import type { PermissionDecisionKind } from "../runtime/permission-gate.js";
 import {
@@ -515,7 +516,7 @@ export async function renderRuntimeEvents(
           }
           case "session_started": {
             if (style === "interactive") {
-              stdout.write(`${paint("●", ANSI.bold, ANSI.yellow)} ${paint("思考中...", ANSI.yellow)}\n`);
+              stdout.write(`${paint("●", ANSI.bold, ANSI.yellow)} ${paint(t("ui.terminal.thinking"), ANSI.yellow)}\n`);
               isShowingThinking = true;
             }
             break;
@@ -568,7 +569,7 @@ export async function renderRuntimeEvents(
             break;
           }
           default: {
-            stderr.write(`未处理的运行时事件：${JSON.stringify(event)}\n`);
+            stderr.write(`${t("ui.terminal.unhandledEvent")}${JSON.stringify(event)}\n`);
           }
         }
       },

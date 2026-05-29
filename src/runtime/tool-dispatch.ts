@@ -1,5 +1,7 @@
 import { concat, concatMap, defer, from, map, of, type Observable } from "rxjs";
 
+import { t } from "../locales/index.js";
+
 import { executeToolCall } from "../tools/tool-runner.js";
 import { ToolRegistry } from "../tools/tool-registry.js";
 import type { ToolCall, ToolRunStatus } from "../tools/tool-types.js";
@@ -124,7 +126,7 @@ export function dispatchToolCall(params: {
             callId: params.call.id,
             toolName: params.call.toolName,
             status: "error",
-            error: check.error ?? "read-before-edit 检查未通过。",
+            error: check.error ?? t("runtime.readBeforeEdit"),
           }),
         ),
       );
@@ -299,7 +301,7 @@ export function dispatchToolCall(params: {
       turn: params.turn,
       call: params.call,
       status: "error",
-      error: `未找到工具：${params.call.toolName}`,
+      error: `${t("runtime.toolNotFound")} ${params.call.toolName}`,
     });
 
     const failed$ = from(params.sessionManager.appendRecord(params.session, failedRecord)).pipe(
@@ -311,7 +313,7 @@ export function dispatchToolCall(params: {
           callId: params.call.id,
           toolName: params.call.toolName,
           status: "error",
-          error: failedRecord.error ?? "工具执行失败。",
+          error: failedRecord.error ?? t("runtime.toolFailed"),
         }),
       ),
     );

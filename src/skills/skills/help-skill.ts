@@ -4,6 +4,7 @@
  * 显示系统帮助信息，包括可用命令、工具和技能列表。
  */
 
+import { t } from "../../locales/index.js";
 import type {
   Skill,
   SkillArgs,
@@ -17,7 +18,7 @@ import type {
 export const helpSkill: Skill = {
   definition: {
     name: "help",
-    description: "显示帮助信息和可用命令列表",
+    description: t("skills.help.description"),
     riskLevel: "read",
     aliases: ["h", "?"],
     category: "system",
@@ -44,29 +45,29 @@ export const helpSkill: Skill = {
     const topic = (args.named.topic as string) ?? "all";
     const lines: string[] = [];
 
-    lines.push("# RxCLI 帮助");
+    lines.push(`# ${t("skills.help.title")}`);
     lines.push("");
 
     if (topic === "all" || topic === "commands") {
-      lines.push("## 可用命令");
+      lines.push(`## ${t("skills.help.commands")}`);
       lines.push("");
-      lines.push("### 会话命令");
-      lines.push("- `/help`, `/h`, `/?` - 显示帮助");
-      lines.push("- `/tools` - 显示可用工具列表");
-      lines.push("- `/skills` - 显示可用技能列表");
-      lines.push("- `/clear` - 清除会话历史");
-      lines.push("- `/exit`, `/quit` - 退出交互模式");
+      lines.push(`### ${t("skills.help.sessionCommands")}`);
+      lines.push(`- \`/help\`, \`/h\`, \`/?\` - ${t("skills.help.showHelp")}`);
+      lines.push(`- \`/tools\` - ${t("skills.help.showTools")}`);
+      lines.push(`- \`/skills\` - ${t("skills.help.showSkills")}`);
+      lines.push(`- \`/clear\` - ${t("skills.help.clearHistory")}`);
+      lines.push(`- \`/exit\`, \`/quit\` - ${t("skills.help.exitSession")}`);
       lines.push("");
-      lines.push("### 快捷键");
-      lines.push("- `Tab` - 切换焦点区域");
-      lines.push("- `Enter` - 发送消息");
-      lines.push("- `Esc` - 取消输入/返回");
-      lines.push("- `Ctrl+C` - 退出");
+      lines.push(`### ${t("skills.help.shortcuts")}`);
+      lines.push(`- \`Tab\` - ${t("skills.help.switchFocus")}`);
+      lines.push(`- \`Enter\` - ${t("skills.help.sendMessage")}`);
+      lines.push(`- \`Esc\` - ${t("skills.help.cancelInput")}`);
+      lines.push(`- \`Ctrl+C\` - ${t("skills.help.exit")}`);
       lines.push("");
     }
 
     if (topic === "all" || topic === "tools") {
-      lines.push("## 内置工具");
+      lines.push(`## ${t("skills.help.builtInTools")}`);
       lines.push("");
       const toolNames = context.toolRegistry.list();
 
@@ -93,7 +94,7 @@ export const helpSkill: Skill = {
       }
 
       if (readTools.length > 0) {
-        lines.push("### 只读工具");
+        lines.push(`### ${t("skills.help.readOnlyTools")}`);
         for (const name of readTools) {
           lines.push(`- \`${name}\``);
         }
@@ -101,7 +102,7 @@ export const helpSkill: Skill = {
       }
 
       if (writeTools.length > 0) {
-        lines.push("### 写入工具");
+        lines.push(`### ${t("skills.help.writeTools")}`);
         for (const name of writeTools) {
           lines.push(`- \`${name}\``);
         }
@@ -109,7 +110,7 @@ export const helpSkill: Skill = {
       }
 
       if (executeTools.length > 0) {
-        lines.push("### 执行工具");
+        lines.push(`### ${t("skills.help.executeTools")}`);
         for (const name of executeTools) {
           lines.push(`- \`${name}\``);
         }
@@ -118,29 +119,29 @@ export const helpSkill: Skill = {
     }
 
     if (topic === "all" || topic === "skills") {
-      lines.push("## 技能系统");
+      lines.push(`## ${t("skills.help.skillSystem")}`);
       lines.push("");
-      lines.push("技能是高级工作流，可以编排多个工具调用。");
+      lines.push(t("skills.help.skillDescription"));
       lines.push("");
-      lines.push("使用方法:");
+      lines.push(t("skills.help.usage"));
       lines.push("```");
       lines.push("/<技能名> [参数] [选项]");
       lines.push("```");
       lines.push("");
-      lines.push("示例:");
+      lines.push(t("skills.help.example"));
       lines.push("```");
       lines.push("/init              # 初始化项目上下文");
       lines.push("/ctx               # 显示项目概览");
       lines.push("/help              # 显示帮助");
       lines.push("```");
       lines.push("");
-      lines.push("运行 `/skills` 查看所有可用技能。");
+      lines.push(t("skills.help.runSkillsHint"));
       lines.push("");
     }
 
     lines.push("---");
-    lines.push(`当前会话: ${context.sessionId}`);
-    lines.push(`工作目录: ${context.cwd}`);
+    lines.push(`${t("skills.help.currentSession")} ${context.sessionId}`);
+    lines.push(`${t("skills.help.workDir")} ${context.cwd}`);
 
     return {
       status: "success",

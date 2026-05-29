@@ -53,6 +53,7 @@
 import { defer, concatMap, from, type Observable } from "rxjs";
 
 import type { ProviderSettings } from "../config/settings-types.js";
+import { t } from "../locales/index.js";
 import { createAssistantTextEvents } from "./assistant-events.js";
 import type { AgentProvider, ProviderStreamEvent } from "./provider-types.js";
 import type { ProviderStepInput } from "./provider-types.js";
@@ -130,8 +131,8 @@ function resolveOpenAIConfig(settings?: ProviderSettings): OpenAIProviderConfig 
   const model = readNonEmptyString(settings, "model");
   const baseUrl = readNonEmptyString(settings, "baseUrl");
 
-  if (!model) throw new Error("provider openai-compatible 缺少 model 配置。");
-  if (!baseUrl) throw new Error("provider openai-compatible 缺少 baseUrl 配置。");
+  if (!model) throw new Error(t("providers.openai.missingModel"));
+  if (!baseUrl) throw new Error(t("providers.openai.missingBaseUrl"));
 
   return {
     baseUrl: baseUrl.replace(/\/+$/, ""),
@@ -185,17 +186,17 @@ async function requestOpenAICompletion(
     payload = await response.json() as OpenAIChatResponse;
   } catch {
     if (!response.ok) {
-      throw new Error(`openai-compatible 请求失败：HTTP ${response.status}`);
+      throw new Error(`${t("providers.openai.requestFailed")} HTTP ${response.status}`);
     }
-    throw new Error("openai-compatible 返回了无法解析的 JSON。");
+    throw new Error(t("providers.openai.invalidJson"));
   }
 
   if (!response.ok) {
     const errorMessage = payload?.error?.message;
     throw new Error(
       errorMessage
-        ? `openai-compatible 请求失败：${errorMessage}`
-        : `openai-compatible 请求失败：HTTP ${response.status}`,
+        ? `${t("providers.openai.requestFailed")}${errorMessage}`
+        : `${t("providers.openai.requestFailed")} HTTP ${response.status}`,
     );
   }
 
@@ -209,7 +210,7 @@ function handleOpenAIResponse(payload: OpenAIChatResponse): Observable<ProviderS
   const choice = payload.choices?.[0];
 
   if (!choice) {
-    throw new Error("openai-compatible 返回结果缺少 choices[0]。");
+    throw new Error(t("providers.openai.missingChoices"));
   }
 
   const finishReason = choice.finish_reason;
@@ -229,7 +230,7 @@ function handleOpenAIResponse(payload: OpenAIChatResponse): Observable<ProviderS
     return createAssistantTextEvents(text);
   }
 
-  throw new Error(`openai-compatible 返回了意外的响应：finish_reason=${finishReason}`);
+  throw new Error(`${t("providers.openai.unexpectedResponse")}finish_reason=${finishReason}`);
 }
 
 /**
@@ -241,7 +242,7 @@ function extractTextContent(content: unknown): string {
   }
 
   if (!Array.isArray(content)) {
-    throw new Error("openai-compatible 返回的 assistant content 不是字符串。");
+    throw new Error(t("providers.openai.contentNotString"));
   }
 
   const text = content
@@ -253,7 +254,7 @@ function extractTextContent(content: unknown): string {
     .join("");
 
   if (text.length === 0) {
-    throw new Error("openai-compatible 返回的 assistant content 为空。");
+    throw new Error(t("providers.openai.contentEmpty"));
   }
 
   return text;

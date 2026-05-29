@@ -8,6 +8,7 @@ import React from "react";
 import { Text, Box } from "ink";
 import { useAppContext } from "../../context/AppContext.js";
 import { SEPARATORS } from "../../utils/colors.js";
+import { t } from "../../../locales/index.js";
 
 export function SessionInfo(): React.ReactElement {
   const { state } = useAppContext();
@@ -21,7 +22,7 @@ export function SessionInfo(): React.ReactElement {
     ? (firstUserMessage.content.length > 40
         ? firstUserMessage.content.slice(0, 40) + "..."
         : firstUserMessage.content)
-    : "(无消息)";
+    : t("tui.debug.noMessages");
 
   return (
     <Box flexDirection="row" paddingX={1} gap={1}>
@@ -30,7 +31,7 @@ export function SessionInfo(): React.ReactElement {
       <Text dimColor>ID:</Text>
       <Text>{sessionId}</Text>
       <Text dimColor>{SEPARATORS.item.trim()}</Text>
-      <Text dimColor>摘要:</Text>
+      <Text dimColor>{t("tui.debug.summary")}</Text>
       <Text>{summary}</Text>
     </Box>
   );

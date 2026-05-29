@@ -1,5 +1,7 @@
 import type { ToolCall, ToolRiskLevel } from "../tools/tool-types.js";
 
+import { t } from "../locales/index.js";
+
 export type PermissionMode = "default" | "accept_edits" | "bypass_permissions";
 export type PermissionDecisionKind = "allow" | "ask" | "deny";
 
@@ -37,7 +39,7 @@ function decideByMode(mode: PermissionMode, riskLevel: ToolRiskLevel): Permissio
     return {
       decision: "allow",
       mode,
-      reason: "模式 bypass_permissions 允许所有工具调用。",
+      reason: t("runtime.permissionBypass"),
     };
   }
 
@@ -46,14 +48,14 @@ function decideByMode(mode: PermissionMode, riskLevel: ToolRiskLevel): Permissio
       return {
         decision: "ask",
         mode,
-        reason: "模式 accept_edits 对 execute 工具要求确认。",
+        reason: t("runtime.permissionAcceptEdits"),
       };
     }
 
     return {
       decision: "allow",
       mode,
-      reason: `模式 accept_edits 允许 ${riskLevel} 工具。`,
+      reason: t("runtime.permissionAcceptEditsAllows", { count: riskLevel }),
     };
   }
 
@@ -61,14 +63,14 @@ function decideByMode(mode: PermissionMode, riskLevel: ToolRiskLevel): Permissio
     return {
       decision: "allow",
       mode,
-      reason: "模式 default 允许 read 工具。",
+      reason: t("runtime.permissionDefault"),
     };
   }
 
   return {
     decision: "ask",
     mode,
-    reason: `模式 default 对 ${riskLevel} 工具要求确认。`,
+    reason: t("runtime.permissionDefaultRequires", { count: riskLevel }),
   };
 }
 
@@ -87,7 +89,7 @@ export function createPermissionGate(params?: {
         return {
           decision: matchedRule.decision,
           mode,
-          reason: matchedRule.reason ?? `工具规则命中：${call.toolName}`,
+          reason: matchedRule.reason ?? `${t("runtime.permissionRuleHit")}${call.toolName}`,
         };
       }
 

@@ -7,6 +7,7 @@
 import React, { useState } from "react";
 import { Text, Box, useInput } from "ink";
 import { useAppContext } from "../../context/AppContext.js";
+import { t } from "../../../locales/index.js";
 
 const SCOPE_OPTIONS = ["all", "session", "turn", "provider", "tool", "ui"];
 const PHASE_OPTIONS = ["all", "start", "end", "step", "call", "result"];
@@ -98,9 +99,9 @@ export function TraceFilter({ onExit }: TraceFilterProps): React.ReactElement {
       {/* 标题 */}
       <Box marginBottom={1}>
         <Text bold color="cyan">
-          过滤器
+          {t("tui.debug.filterTitle")}
         </Text>
-        <Text dimColor> (Tab 切换字段 | ←/→ 切换值 | Esc 关闭)</Text>
+        <Text dimColor> ({t("tui.debug.filterHint")})</Text>
       </Box>
 
       {/* Scope 字段 */}
@@ -157,9 +158,9 @@ export function TraceFilter({ onExit }: TraceFilterProps): React.ReactElement {
 
       {/* 当前过滤状态 */}
       <Box marginTop={1}>
-        <Text dimColor>当前过滤: </Text>
+        <Text dimColor>{t("tui.debug.currentFilter")} </Text>
         {currentScope === "all" && currentPhase === "all" ? (
-          <Text dimColor>无</Text>
+          <Text dimColor>{t("tui.debug.none")}</Text>
         ) : (
           <>
             {currentScope !== "all" && <Text color="green">scope={currentScope}</Text>}

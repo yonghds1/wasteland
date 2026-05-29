@@ -1,6 +1,7 @@
 import { of } from "rxjs";
 
 import { buildLocalReplyText } from "../chat/reply-pipeline.js";
+import { t } from "../locales/index.js";
 import type { TurnToolResult } from "../runtime/turn-state.js";
 import { createAssistantTextEvents } from "./assistant-events.js";
 import type { AgentProvider, ProviderStreamEvent } from "./provider-types.js";
@@ -172,16 +173,16 @@ function createToolCallFromInput(input: string, turn: number): ProviderStreamEve
 function buildToolResultReply(result: TurnToolResult): string {
   if (result.status === "success") {
     return [
-      `工具 ${result.toolName} 已完成。`,
+      t("providers.local.toolCompleted", { tool: result.toolName }),
       result.output && result.output.length > 0 ? result.output : "(no output)",
     ].join("\n");
   }
 
   if (result.status === "blocked") {
-    return `工具 ${result.toolName} 未执行：${result.error ?? "权限未通过。"}`;
+    return t("providers.local.toolNoPermission", { tool: result.toolName });
   }
 
-  return `工具 ${result.toolName} 执行失败：${result.error ?? "未知错误。"}`;
+  return t("providers.local.toolFailed", { tool: result.toolName });
 }
 
 export function createLocalProvider(): AgentProvider {

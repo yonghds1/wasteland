@@ -19,6 +19,7 @@ import {
   WARNING,
   SEPARATORS,
 } from "../../utils/colors.js";
+import { t } from "../../../locales/index.js";
 
 interface DebugPageProps {
   height?: number;
@@ -56,16 +57,16 @@ export function DebugPage({ height, width }: DebugPageProps): React.ReactElement
         <Box flexDirection="row" gap={1}>
           <Text bold color={PRIMARY}>Trace</Text>
           <Text dimColor>{SEPARATORS.item.trim()}</Text>
-          <Text>{filteredCount}/{traces.length} 条</Text>
+          <Text>{filteredCount}/{traces.length} {t("tui.debug.count", { count: "" })}</Text>
           {hasFilter && (
-            <Text color={WARNING}> ⚑ 过滤中</Text>
+            <Text color={WARNING}> ⚑ {t("tui.debug.filtering")}</Text>
           )}
         </Box>
         <Box flexDirection="row" gap={1}>
           <Text dimColor>Provider: </Text>
           <Text color="green">{state.config.provider}</Text>
           <Text dimColor>{SEPARATORS.item.trim()}</Text>
-          <Text dimColor>↑/↓ 滚动 | f 过滤 | c 清空</Text>
+          <Text dimColor>{t("tui.debug.hint")}</Text>
         </Box>
       </Box>
 

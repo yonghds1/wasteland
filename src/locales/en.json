@@ -1,0 +1,638 @@
+{
+  "skin": {
+    "name": "Wasteland Style",
+    "description": "Post-apocalyptic aesthetics based on Mad Max: Fury Road",
+    "cli": {
+      "description": "Immortan Joe's War Machine - Multi-agent CLI system"
+    },
+    "ui": {
+      "banner": {
+        "title": "Immortan Joe's War Machine",
+        "subtitle": "Command System of the Wasteland Tyrant"
+      },
+      "prompts": {
+        "assistant": "Joe",
+        "system": " Citadel"
+      },
+      "labels": {
+        "user": "Wasteland Survivor",
+        "assistant": "Immortan Joe",
+        "system": "The Citadel"
+      },
+      "messages": {
+        "welcome": "Welcome to the Citadel! I am Immortan Joe, what are your orders?",
+        "thinking": "Joe is analyzing the battlefield...",
+        "success": "Mission complete! The Citadel endures!",
+        "error": "A war boy has failed! There will be consequences."
+      }
+    },
+    "roles": {
+      "main": {
+        "name": "Immortan Joe",
+        "title": "Supreme Commander of the Citadel",
+        "personality": "Authoritative, commanding, speaks with conviction",
+        "greeting": "I am Immortan Joe! The Citadel is under my command!",
+        "catchphrases": [
+          "Witness me!",
+          "I am the command!",
+          "The Citadel endures!",
+          "By my will, the wasteland bows!"
+        ]
+      },
+      "workers": {
+        "researcher": {
+          "personality": "Meticulous, focused, reports findings with precision",
+          "greeting": "I shall search the wasteland for the information you require.",
+          "catchphrases": [
+            "I have found what Immortan Joe demands!",
+            "The wasteland reveals its secrets!"
+          ]
+        },
+        "developer": {
+          "personality": "Efficient, precise, forges code with ruthless efficiency",
+          "greeting": "I shall forge code in the Citadel's furnace!",
+          "catchphrases": [
+            "Code is law!",
+            "Forged in the Citadel's furnace!",
+            "Code is victory!"
+          ]
+        },
+        "analyst": {
+          "personality": "Observant, analytical, deciphers code patterns",
+          "greeting": "I shall analyze the patterns of the wasteland.",
+          "catchphrases": [
+            "The pattern is clear!",
+            "I see the architecture!",
+            "The wasteland speaks to me!"
+          ]
+        },
+        "tester": {
+          "personality": "Ruthless, thorough, tests with extreme prejudice",
+          "greeting": "I shall test through combat!",
+          "catchphrases": [
+            "Victory is the only acceptable outcome!",
+            "Tested in the fires of battle!",
+            "Code either survives or dies!"
+          ]
+        }
+      }
+    },
+    "workflow": {
+      "delegation": {
+        "description": "Deploy experts sequentially, consolidate results"
+      },
+      "aggregation": {
+        "description": "Merge all expert reports into unified response"
+      },
+      "errorHandling": {
+        "description": "Retry with alternative experts or adjusted strategy"
+      }
+    }
+  },
+  "commands": {
+    "skin": {
+      "list": {
+        "title": "Available skins",
+        "empty": "No skins found.",
+        "emptyHint": "Create a skin configuration file in .wasteland/.skins/immortan-joe/ directory.",
+        "name": "Name",
+        "description": "Description",
+        "version": "Version",
+        "command": "Command",
+        "aliases": "Aliases"
+      },
+      "show": {
+        "title": "Current skin",
+        "empty": "No skin loaded.",
+        "emptyHint": "Use 'joe skin list' to view available skins."
+      },
+      "load": {
+        "success": "Loaded skin: {{name}} ({{id}})",
+        "command": "Command name: {{command}}",
+        "aliases": "Aliases: {{aliases}}",
+        "symlinks": "Updated role alias symlinks",
+        "error": "Failed to load skin: {{error}}"
+      },
+      "info": {
+        "title": "Skin details: {{name}}",
+        "id": "ID",
+        "description": "Description",
+        "author": "Author",
+        "version": "Version",
+        "cliConfig": "CLI Configuration",
+        "commandName": "Command name",
+        "aliases": "Aliases",
+        "cliVersion": "Version",
+        "cliDescription": "Description",
+        "roleConfig": "Role Configuration",
+        "mainRole": "Main role",
+        "subRoles": "Sub roles",
+        "metadata": "Metadata",
+        "createdAt": "Created at",
+        "updatedAt": "Updated at",
+        "tags": "Tags",
+        "error": "Failed to get skin info: {{error}}"
+      }
+    },
+    "sessions": {
+      "list": {
+        "description": "List local sessions",
+        "options": {
+          "limit": "Max number of results",
+          "search": "Search keyword",
+          "provider": "Filter by Provider",
+          "mode": "Filter by mode",
+          "sort": "Sort order",
+          "json": "Output as JSON"
+        },
+        "found": "Found {{count}} sessions:",
+        "error": "Failed to list sessions: {{error}}"
+      },
+      "show": {
+        "description": "Show session details",
+        "options": {
+          "json": "Output as JSON"
+        },
+        "notFound": "Session not found: {{id}}",
+        "error": "Failed to show session: {{error}}",
+        "title": "Session details: {{id}}",
+        "provider": "Provider",
+        "mode": "Mode",
+        "cwd": "Working directory",
+        "messages": "Messages",
+        "role": "Role",
+        "user": "User",
+        "assistant": "Assistant",
+        "preview": "Preview",
+        "subAgent": "Sub Agent",
+        "noMessages": "(no messages)"
+      },
+      "delete": {
+        "description": "Delete session",
+        "options": {
+          "confirm": "Confirm deletion"
+        },
+        "confirmRequired": "To delete session, add --confirm parameter.",
+        "deleted": "Deleted: {{id}}",
+        "error": "Failed to delete session: {{error}}"
+      },
+      "stats": {
+        "description": "Show session statistics",
+        "options": {
+          "json": "Output as JSON"
+        },
+        "title": "Session statistics:",
+        "totalSessions": "Total sessions:",
+        "totalMessages": "Total messages:",
+        "earliest": "Earliest session:",
+        "latest": "Latest session:",
+        "error": "Failed to get statistics: {{error}}"
+      },
+      "unknown": "Unknown"
+    },
+    "chat": {
+      "description": "Start interactive chat session",
+      "options": {
+        "once": "Single input, suitable for scripts or testing",
+        "provider": "Provider name, currently registered:",
+        "role": "Parse model and default permissions by specified role",
+        "debug": "Output debug trace to stderr",
+        "debugFormat": "Debug output format: pretty (default) or jsonl",
+        "permissionMode": "Permission mode: default | accept_edits | bypass_permissions",
+        "multiAgent": "Enable multi-agent mode"
+      },
+      "errors": {
+        "permissionMode": "Permission mode not supported:",
+        "emptyStdin": "stdin input is empty, cannot start session."
+      }
+    },
+    "resume": {
+      "description": "Resume previous session",
+      "options": {
+        "sessionId": "Session ID (if not specified, resume the latest session)",
+        "message": "Message to send after resuming",
+        "provider": "Specify Provider",
+        "role": "Parse model and default permissions by specified role",
+        "multiAgent": "Enable multi-agent mode",
+        "debug": "Enable debug mode",
+        "debugFormat": "Debug output format: pretty (default) or jsonl",
+        "permissionMode": "Permission mode: default | accept_edits | bypass_permissions"
+      },
+      "notFound": "Session not found:",
+      "noSession": "No session to resume.",
+      "resuming": "Resuming session:",
+      "time": "Time:",
+      "messageCount": "Messages:"
+    },
+    "tui": {
+      "description": "Start interactive TUI Dashboard",
+      "options": {
+        "attach": "Attach to existing session"
+      },
+      "errors": {
+        "noTty": "Error: TUI requires interactive terminal (TTY) environment.",
+        "currentEnv": "Current environment:",
+        "yes": "Yes",
+        "no": "No",
+        "runDirectly": "Please run directly in terminal:",
+        "useCli": "Or use CLI mode:",
+        "failed": "TUI startup failed:"
+      }
+    },
+    "config": {
+      "current": {
+        "description": "Show current effective runtime configuration.",
+        "options": {
+          "role": "Parse current effective configuration by specified role"
+        }
+      }
+    }
+  },
+  "tui": {
+    "header": {
+      "session": "Session",
+      "debug": "Debug",
+      "config": "Config"
+    },
+    "footer": {
+      "inputMode": "[Input Mode]",
+      "filterMode": "[Filter Mode]",
+      "editMode": "[Edit Mode]",
+      "exitConfirm": "[Exit Confirm]",
+      "helpMode": "[Help]",
+      "escCancel": "Esc Cancel",
+      "enterSend": "Enter Send",
+      "ctrlCExit": "Ctrl+C Exit",
+      "tabSwitchField": "Tab Switch Field",
+      "arrowSwitchValue": "←/→ Switch Value",
+      "escClose": "Esc Close",
+      "enterConfirm": "Enter Confirm",
+      "yConfirmExit": "y Confirm Exit",
+      "nCancel": "n or other key Cancel",
+      "hOrEscClose": "h or Esc Close Help",
+      "help": "Help",
+      "switchPage": "Switch Page",
+      "exit": "Exit",
+      "scroll": "↑/↓ Scroll",
+      "enterInput": "Enter Input",
+      "expand": "Expand",
+      "filter": "Filter",
+      "clear": "Clear",
+      "switch": "↑/↓ Switch",
+      "edit": "Edit",
+      "saveProject": "Ctrl+S Project",
+      "saveUser": "Ctrl+U User",
+      "reset": "Ctrl+R Reset",
+      "sessionPage": "Session Page",
+      "debugPage": "Debug Page",
+      "configPage": "Config Page"
+    },
+    "help": {
+      "title": "Keyboard Shortcuts Help",
+      "navMode": "Navigation Mode (Default)",
+      "actions": {
+        "showHelp": "Show this help",
+        "exit": "Exit (requires confirmation)",
+        "switchPage": "Switch page",
+        "enterInput": "Enter input mode (Session page)",
+        "scroll": "Scroll list",
+        "inputMode": "Input Mode",
+        "cancelInput": "Cancel input, return to navigation mode",
+        "sendMessage": "Send message, return to navigation mode",
+        "globalExit": "Global exit (requires confirmation)",
+        "sessionPage": "Session page",
+        "scrollMessages": "Scroll messages",
+        "debugPage": "Debug page",
+        "enterFilter": "Enter filter mode",
+        "clearLogs": "Clear logs",
+        "configPage": "Config page",
+        "switchConfig": "Switch config area",
+        "enterEdit": "Enter edit mode",
+        "saveConfig": "Save config",
+        "resetConfig": "Reset config"
+      },
+      "closeHint": "Press h or Esc to close"
+    },
+    "exit": {
+      "title": "Confirm Exit",
+      "confirm": "Confirm Exit",
+      "cancel": "or other key to cancel"
+    },
+    "session": {
+      "input": {
+        "mode": "[Input Mode]",
+        "escCancel": "Esc Cancel",
+        "enterSend": "Enter Send",
+        "tabSwitch": "Tab Switch Area",
+        "tabPlaceholder": "Tab to switch to input here..."
+      },
+      "messages": {
+        "user": "User",
+        "assistant": "Assistant",
+        "tool": "Tool",
+        "system": "System",
+        "startHint": "Type a message below to start conversation",
+        "tabHint": "Tab Switch Page ┊ h Help ┊ q Exit",
+        "title": "Messages",
+        "count": "{{count}}",
+        "thinking": "Thinking...",
+        "streaming": "Streaming",
+        "autoScrollPaused": "(Auto-scroll paused)"
+      },
+      "agentTree": {
+        "running": "Running:"
+      }
+    },
+    "config": {
+      "title": "Config",
+      "source": "Config Source",
+      "project": "Project:",
+      "user": "User:",
+      "unconfigured": "(Unconfigured)",
+      "priority": "Priority:",
+      "permission": "Permission:",
+      "stepsPerTurn": "Steps/Turn:",
+      "turns": "Turns:",
+      "defaultRole": "Default Role:",
+      "unset": "(Unset)",
+      "timeout": "Timeout:",
+      "noProviders": "No configured Providers",
+      "default": "Default:",
+      "noModels": "No configured Models",
+      "current": "Current:",
+      "noRoles": "No configured Roles",
+      "switch": "↑/↓ Switch",
+      "edit": "Enter Edit",
+      "saveProject": "Ctrl+S Save Project",
+      "saveUser": "Ctrl+U Save User",
+      "reset": "Ctrl+R Reset",
+      "unsaved": "(Unsaved)",
+      "focus": "[Focus]",
+      "noChanges": "No changes to save",
+      "saving": "Saving...",
+      "saved": "Saved to project/user config:",
+      "saveFailed": "Save failed:",
+      "resetDone": "Reset done",
+      "resetFailed": "Reset failed"
+    },
+    "debug": {
+      "count": "{{count}}",
+      "filtering": "Filtering",
+      "hint": "↑/↓ Scroll | f Filter | c Clear",
+      "traceLog": "Trace Log",
+      "filter": "Filter",
+      "call": "Call",
+      "success": "Success",
+      "failed": "Failed",
+      "permission": "Permission:",
+      "createSubAgent": "Create SubAgent:",
+      "agentDone": "Agent Done:",
+      "executeSkill": "Execute Skill:",
+      "sendRequest": "Send Request",
+      "receiveResponse": "Receive Response",
+      "waitingTrace": "Waiting for trace data...",
+      "useDebugHint": "Use --debug to start with detailed tracing",
+      "details": "Details:",
+      "rawData": "Raw Data:",
+      "filterCondition": "Filter Condition:",
+      "none": "None",
+      "modifyFilter": "f Modify",
+      "filterTitle": "Filter",
+      "filterHint": "Tab Switch Field | ←/→ Switch Value | Esc Close",
+      "currentFilter": "Current Filter:",
+      "noMessages": "(No messages)",
+      "summary": "Summary:"
+    }
+  },
+  "skills": {
+    "help": {
+      "description": "Show help information and available command list",
+      "title": "CLI Help",
+      "commands": "Available Commands",
+      "sessionCommands": "Session Commands",
+      "showHelp": "Show help",
+      "showTools": "Show available tool list",
+      "showSkills": "Show available skill list",
+      "clearHistory": "Clear session history",
+      "exitSession": "Exit interactive mode",
+      "shortcuts": "Shortcuts",
+      "switchFocus": "Switch focus area",
+      "sendMessage": "Send message",
+      "cancelInput": "Cancel input/return",
+      "exit": "Exit",
+      "builtInTools": "Built-in Tools",
+      "readOnlyTools": "Read-only Tools",
+      "writeTools": "Write Tools",
+      "executeTools": "Execute Tools",
+      "skillSystem": "Skill System",
+      "skillDescription": "Skills are advanced workflows that can orchestrate multiple tool calls.",
+      "usage": "Usage:",
+      "example": "Example:",
+      "initContext": "Initialize project context",
+      "showOverview": "Show project overview",
+      "runSkillsHint": "Run /skills to see all available skills.",
+      "currentSession": "Current Session:",
+      "workDir": "Working Directory:"
+    },
+    "status": {
+      "description": "Show current session status and statistics",
+      "title": "Session Status",
+      "basicInfo": "Basic Info",
+      "sessionId": "Session ID:",
+      "currentTurn": "Current Turn:",
+      "workDir": "Working Directory:",
+      "messageHistory": "Message History",
+      "userMessages": "User Messages:",
+      "assistantMessages": "Assistant Messages:",
+      "total": "Total:",
+      "toolStatus": "Tool Status",
+      "permissionSettings": "Permission Settings",
+      "mode": "Mode:",
+      "session": "Session:",
+      "turn": "Turn:",
+      "history": "History:",
+      "tools": "Tools:",
+      "directory": "Directory:"
+    },
+    "context": {
+      "description": "Show project context and structure overview",
+      "collecting": "Collecting project info...",
+      "project": "Project:",
+      "directory": "Directory:",
+      "files": "Files:",
+      "overview": "Project Overview",
+      "name": "Name:",
+      "version": "Version:",
+      "description": "Description:",
+      "structure": "Directory Structure",
+      "keyFiles": "Key Files",
+      "otherFiles": "and {{count}} other files",
+      "commonCommands": "Common Commands"
+    },
+    "tools": {
+      "description": "Show detailed information of all available tools",
+      "noMatch": "No matching tools",
+      "noTools": "No available tools",
+      "availableTools": "Available Tools",
+      "readOnly": "Read-only Tools",
+      "write": "Write Tools",
+      "execute": "Execute Tools",
+      "riskLevel": "Risk Level:",
+      "params": "Parameters:",
+      "required": "(Required)",
+      "example": "Example:",
+      "hint": "Hint: Use --detailed to view parameter info"
+    },
+    "init": {
+      "description": "Initialize CLAUDE.md project context file",
+      "templateType": "Template type: default, minimal, full",
+      "force": "Override existing file",
+      "initContext": "Initialize project context:",
+      "alreadyExists": "CLAUDE.md already exists. Use --force to override.",
+      "project": "Project",
+      "gettingStructure": "Getting project structure...",
+      "autoGenerated": "Auto-generated project context",
+      "toDo": "To be added",
+      "writeFileNotAvailable": "write-file tool not available",
+      "writing": "Writing file...",
+      "writeFailed": "Write failed:",
+      "created": "Created CLAUDE.md:",
+      "cannotGetStructure": "Cannot get project structure"
+    },
+    "common": {
+      "unknownSkill": "Unknown skill:",
+      "paramError": "Parameter error:",
+      "alias": "Alias:",
+      "params": "Parameters:",
+      "example": "Example:",
+      "noSkills": "No available skills.",
+      "availableSkills": "Available Skills",
+      "missingRequiredParam": "Missing required parameter:",
+      "mustBeString": "Must be a string",
+      "mustBeOneOf": "Must be one of:",
+      "mustBeNumber": "Must be a number",
+      "mustBeBoolean": "Must be a boolean",
+      "mustBeArray": "Must be an array",
+      "mustBeObject": "Must be an object",
+      "noParams": "No parameters",
+      "optionalValues": "Optional values:",
+      "default": "Default:",
+      "toolNotExist": "Tool not found:",
+      "executing": "Executing:",
+      "stepFailed": "Step failed:",
+      "skillExecComplete": "Skill execution completed",
+      "skillMissingName": "Skill {{path}} missing 'name' field",
+      "skillMissingDescription": "Skill {{path}} missing 'description' field",
+      "skillModuleDefaultExport": "Skill module {{path}} must have a default export",
+      "skillModuleSkillObject": "Skill module {{path}} must export a Skill object",
+      "loadSkillFailed": "Failed to load skill {{path}}:"
+    }
+  },
+  "tools": {
+    "editFile": {
+      "needRelativePath": "edit-file requires a relative path within the current working directory.",
+      "needOldString": "edit-file requires a non-empty old_string parameter.",
+      "noMatch": "No matching string found. Ensure old_string exactly matches file content...",
+      "multipleMatches": "Found {{count}} matches, but replace_all is false...",
+      "success": "File edited successfully (replaced {{count}} times)."
+    },
+    "readFile": {
+      "offsetOutOfRange": "offset {{offset}} exceeds file range (file has {{total}} lines).",
+      "needRelativePath": "read-file requires a relative path within the current working directory."
+    },
+    "askUser": {
+      "missingQuestion": "Missing question parameter",
+      "options": "Options:"
+    },
+    "bash": {
+      "needCommand": "bash tool requires a non-empty command field."
+    }
+  },
+  "runtime": {
+    "noFinalMessage": "Current provider did not return a final message.",
+    "maxStepsReached": "Current turn has reached the maximum tool steps limit...",
+    "noToolRegistry": "Current runtime is not configured with tool registry or permission gate.",
+    "readBeforeEdit": "read-before-edit check failed.",
+    "toolNotFound": "Tool not found:",
+    "toolFailed": "Tool execution failed.",
+    "mustReadBeforeEdit": "Must read file before editing. Use /read command first.",
+    "permissionBypass": "Mode bypass_permissions allows all tool calls.",
+    "permissionAcceptEdits": "Mode accept_edits requires confirmation for execute tools.",
+    "permissionAcceptEditsAllows": "Mode accept_edits allows {{count}} tools.",
+    "permissionDefault": "Mode default allows read tools.",
+    "permissionDefaultRequires": "Mode default requires confirmation for {{count}} tools.",
+    "permissionRuleHit": "Tool rule hit:"
+  },
+  "providers": {
+    "typeEmpty": "provider type cannot be empty.",
+    "typeRegistered": "provider type already registered:",
+    "idEmpty": "provider id cannot be empty.",
+    "alreadyRegistered": "provider already registered:",
+    "unsupportedProtocol": "Unsupported API protocol type:",
+    "unsupportedProvider": "Unsupported provider:",
+    "openai": {
+      "missingModel": "provider openai-compatible missing model configuration.",
+      "missingBaseUrl": "provider openai-compatible missing baseUrl configuration.",
+      "requestFailed": "openai-compatible request failed:",
+      "invalidJson": "openai-compatible returned unparseable JSON.",
+      "missingChoices": "openai-compatible response missing choices[0].",
+      "unexpectedResponse": "openai-compatible returned unexpected response:",
+      "contentNotString": "openai-compatible assistant content is not a string.",
+      "contentEmpty": "openai-compatible assistant content is empty."
+    },
+    "claude": {
+      "missingApiKey": "provider claude missing apiKey configuration.",
+      "missingModel": "provider claude missing model configuration.",
+      "requestFailed": "claude request failed:",
+      "unexpectedResponse": "claude returned unexpected response:"
+    },
+    "local": {
+      "toolCompleted": "Tool {{tool}} completed.",
+      "toolNoPermission": "Tool {{tool}} not executed: permission denied.",
+      "toolFailed": "Tool {{tool}} execution failed: unknown error."
+    },
+    "toolAdapter": {
+      "readFile": "Read file content",
+      "editFile": "Precisely edit file",
+      "writeFile": "Create or overwrite file",
+      "bash": "Execute shell command",
+      "createSubAgent": "Create and run sub Agent",
+      "filePath": "File path to read",
+      "startLine": "Starting line number",
+      "oldString": "Original string to replace",
+      "newString": "New string to replace with",
+      "writePath": "File path to write",
+      "content": "Complete file content",
+      "command": "Shell command to execute",
+      "subAgentId": "Unique identifier for sub Agent",
+      "invalidJson": "Cannot parse tool parameters: invalid JSON format. Raw parameters:",
+      "unknownParseError": "Unknown parse error."
+    },
+    "messageBuilder": {
+      "noOutput": "(No output)",
+      "toolFailed": "Tool execution failed."
+    }
+  },
+  "ui": {
+    "spinner": {
+      "thinking": "Thinking",
+      "analyzing": "Analyzing",
+      "processing": "Processing",
+      "generating": "Generating",
+      "reasoning": "Reasoning",
+      "computing": "Computing",
+      "understanding": "Understanding",
+      "preparing": "Preparing",
+      "welcome": "Type a message to start conversation, /help to view commands",
+      "goodbye": "Goodbye!"
+    },
+    "terminal": {
+      "thinking": "Thinking...",
+      "unhandledEvent": "Unhandled runtime event:"
+    },
+    "streaming": {
+      "thinking": "Thinking...",
+      "streaming": "Streaming"
+    }
+  }
+}

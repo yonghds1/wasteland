@@ -5,6 +5,7 @@ import {
   redactSensitiveConfig,
   resolveChatRuntime,
 } from "../config/resolve-chat-runtime.js";
+import { initI18n, t } from "../locales/index.js";
 
 type ConfigCurrentOptions = {
   role?: string;
@@ -16,6 +17,11 @@ async function runCurrentConfig(options: ConfigCurrentOptions): Promise<void> {
     cwd,
     env: process.env,
   });
+
+  // 初始化 i18n
+  const language = loadedSettings.settings.runtime.language;
+  await initI18n(language);
+
   const resolved = resolveChatRuntime({
     settings: loadedSettings.settings,
     roleName: options.role,
@@ -64,13 +70,13 @@ async function runCurrentConfig(options: ConfigCurrentOptions): Promise<void> {
 
 export function createCurrentConfigCommand(name = "current"): Command {
   return new Command(name)
-    .description("输出当前生效的运行时配置。")
-    .option("-r, --role <name>", "按指定 role 解析当前生效配置")
+    .description(t("commands.config.current.description"))
+    .option("-r, --role <name>", t("commands.config.current.options.role"))
     .action(runCurrentConfig);
 }
 
 export function createConfigCommand(): Command {
   return new Command("config")
-    .description("查看当前生效配置。")
+    .description(t("commands.config.current.description"))
     .addCommand(createCurrentConfigCommand());
 }

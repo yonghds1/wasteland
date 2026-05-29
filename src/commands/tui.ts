@@ -9,27 +9,34 @@ import { Command } from "commander";
 import { detectTTY } from "../ui/tty-detect.js";
 import { runTUI } from "../tui/index.js";
 import { createTuiRuntime, cleanupTuiRuntime } from "../tui/hooks/useRuntime.js";
+import { loadJoeSettings } from "../config/load-settings.js";
+import { initI18n, t } from "../locales/index.js";
 
 export function createTuiCommand(): Command {
   return new Command("tui")
-    .description("启动交互式 TUI Dashboard")
-    .option("--attach <session>", "附加到已有 session")
+    .description(t("commands.tui.description"))
+    .option("--attach <session>", t("commands.tui.options.attach"))
     .action(async (options) => {
+      // 初始化 i18n
+      const loadedSettings = await loadJoeSettings({ cwd: process.cwd(), env: process.env });
+      const language = loadedSettings.settings.runtime.language;
+      await initI18n(language);
+
       // TTY 检测
       const tty = detectTTY();
 
       if (!tty.isInteractive) {
-        console.error("错误: TUI 需要交互式终端 (TTY) 环境。");
+        console.error(t("commands.tui.errors.noTty"));
         console.error("");
-        console.error("当前环境:");
-        console.error(`  - stdin TTY:  ${tty.stdinIsTTY ? "是" : "否"}`);
-        console.error(`  - stdout TTY: ${tty.stdoutIsTTY ? "是" : "否"}`);
+        console.error(t("commands.tui.errors.currentEnv"));
+        console.error(`  - stdin TTY:  ${tty.stdinIsTTY ? t("commands.tui.errors.yes") : t("commands.tui.errors.no")}`);
+        console.error(`  - stdout TTY: ${tty.stdoutIsTTY ? t("commands.tui.errors.yes") : t("commands.tui.errors.no")}`);
         console.error("");
-        console.error("请在终端中直接运行:");
+        console.error(t("commands.tui.errors.runDirectly"));
         console.error("  joe tui");
         console.error("");
-        console.error("或使用 CLI 模式:");
-        console.error("  joe chat --message '你的消息'");
+        console.error(t("commands.tui.errors.useCli"));
+        console.error("  joe chat --message 'your message'");
         process.exit(1);
       }
 
@@ -45,7 +52,7 @@ export function createTuiCommand(): Command {
           await cleanupTuiRuntime(runtime);
         }
       } catch (error) {
-        console.error("TUI 启动失败:", error instanceof Error ? error.message : error);
+        console.error(t("commands.tui.errors.failed"), error instanceof Error ? error.message : error);
         process.exit(1);
       }
     });

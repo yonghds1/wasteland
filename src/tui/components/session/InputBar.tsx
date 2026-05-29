@@ -16,6 +16,7 @@ import {
   STREAMING_CURSOR,
   SEPARATORS,
 } from "../../utils/colors.js";
+import { t } from "../../../locales/index.js";
 
 interface InputBarProps {
   width?: number;
@@ -75,13 +76,13 @@ export function InputBar({ width, sendMessage }: InputBarProps): React.ReactElem
       {state.inputMode && (
         <Box paddingX={1} flexDirection="row" gap={1}>
           <Text bold color={SECONDARY}>
-            [输入模式]
+            {t("tui.session.input.mode")}
           </Text>
-          <Text dimColor>Esc 取消</Text>
+          <Text dimColor>{t("tui.session.input.escCancel")}</Text>
           <Text dimColor>{SEPARATORS.item.trim()}</Text>
-          <Text color={SUCCESS}>Enter 发送</Text>
+          <Text color={SUCCESS}>{t("tui.session.input.enterSend")}</Text>
           <Text dimColor>{SEPARATORS.item.trim()}</Text>
-          <Text dimColor>Tab 切换区域</Text>
+          <Text dimColor>{t("tui.session.input.tabSwitch")}</Text>
         </Box>
       )}
 
@@ -93,7 +94,7 @@ export function InputBar({ width, sendMessage }: InputBarProps): React.ReactElem
         {input && <Text>{input}</Text>}
         {state.inputMode && <Text dimColor>{STREAMING_CURSOR}</Text>}
         {!state.inputMode && !input && !isFocused && (
-          <Text dimColor>Tab 切换到此处输入...</Text>
+          <Text dimColor>{t("tui.session.input.tabPlaceholder")}</Text>
         )}
       </Box>
     </Box>

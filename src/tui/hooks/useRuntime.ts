@@ -18,6 +18,7 @@ import { SessionManager } from "../../runtime/session-manager.js";
 import { createDefaultProviderRegistry } from "../../providers/provider-registry.js";
 import { createDefaultToolRegistry } from "../../tools/default-registry.js";
 import { loadSkin } from "../../skins/index.js";
+import { initI18n } from "../../locales/index.js";
 import type { TuiRuntimeContext, TuiConfig, TuiFullConfig } from "../types.js";
 import type { ChatInputTurn } from "../../runtime/event-types.js";
 import type { ProviderRegistry } from "../../providers/provider-registry.js";
@@ -53,6 +54,10 @@ export async function createTuiRuntime(cwd: string): Promise<TuiRuntimeContext> 
     cwd,
     env: process.env,
   });
+
+  // 2. 初始化 i18n
+  const language = loadedSettings.settings.runtime.language;
+  await initI18n(language);
 
   // 2. 解析运行时配置
   const resolvedRuntime = resolveChatRuntime({
@@ -141,11 +146,12 @@ export async function createTuiRuntime(cwd: string): Promise<TuiRuntimeContext> 
     defaultProvider: loadedSettings.settings.defaultProvider,
   };
 
-  // 12. 加载皮肤配置（从 defaultRole 推导）
+  // 12. 加载皮肤配置（从 defaultRole 推导，根据 language 参数选择语言）
   let skin: Skin | null = null;
   try {
     const skinId = loadedSettings.settings.runtime.defaultRole ?? "immortan-joe";
-    skin = await loadSkin(skinId);
+    const language = loadedSettings.settings.runtime.language;
+    skin = await loadSkin(skinId, undefined, language);
   } catch (error) {
     console.warn("Failed to load skin:", error instanceof Error ? error.message : String(error));
   }

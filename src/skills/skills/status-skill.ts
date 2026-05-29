@@ -4,6 +4,7 @@
  * 显示当前会话状态、配置和统计信息。
  */
 
+import { t } from "../../locales/index.js";
 import type {
   Skill,
   SkillArgs,
@@ -17,7 +18,7 @@ import type {
 export const statusSkill: Skill = {
   definition: {
     name: "status",
-    description: "显示当前会话状态和统计信息",
+    description: t("skills.status.description"),
     riskLevel: "read",
     aliases: ["stat", "info"],
     category: "system",
@@ -58,32 +59,32 @@ export const statusSkill: Skill = {
     const lines: string[] = [];
 
     if (format === "simple") {
-      lines.push(`会话: ${context.sessionId}`);
-      lines.push(`轮次: ${context.turn}`);
-      lines.push(`历史: ${context.history.length} 条消息`);
-      lines.push(`工具: ${context.toolRegistry.list().length} 个可用`);
-      lines.push(`目录: ${context.cwd}`);
+      lines.push(`${t("skills.status.session")} ${context.sessionId}`);
+      lines.push(`${t("skills.status.turn")} ${context.turn}`);
+      lines.push(`${t("skills.status.history")} ${context.history.length} 条消息`);
+      lines.push(`${t("skills.status.tools")} ${context.toolRegistry.list().length} 个可用`);
+      lines.push(`${t("skills.status.directory")} ${context.cwd}`);
     } else {
       // detailed
-      lines.push("# 会话状态");
+      lines.push(`# ${t("skills.status.title")}`);
       lines.push("");
-      lines.push("## 基本信息");
-      lines.push(`- 会话 ID: \`${context.sessionId}\``);
-      lines.push(`- 当前轮次: ${context.turn}`);
-      lines.push(`- 工作目录: \`${context.cwd}\``);
+      lines.push(`## ${t("skills.status.basicInfo")}`);
+      lines.push(`- ${t("skills.status.sessionId")} \`${context.sessionId}\``);
+      lines.push(`- ${t("skills.status.currentTurn")} ${context.turn}`);
+      lines.push(`- ${t("skills.status.workDir")} \`${context.cwd}\``);
       lines.push("");
 
       // 历史统计
-      lines.push("## 消息历史");
+      lines.push(`## ${t("skills.status.messageHistory")}`);
       const userMsgs = context.history.filter(m => m.role === "user").length;
       const assistantMsgs = context.history.filter(m => m.role === "assistant").length;
-      lines.push(`- 用户消息: ${userMsgs} 条`);
-      lines.push(`- 助手消息: ${assistantMsgs} 条`);
-      lines.push(`- 总计: ${context.history.length} 条`);
+      lines.push(`- ${t("skills.status.userMessages")} ${userMsgs} 条`);
+      lines.push(`- ${t("skills.status.assistantMessages")} ${assistantMsgs} 条`);
+      lines.push(`- ${t("skills.status.total")} ${context.history.length} 条`);
       lines.push("");
 
       // 工具状态
-      lines.push("## 工具状态");
+      lines.push(`## ${t("skills.status.toolStatus")}`);
       const toolNames = context.toolRegistry.list();
       const byRisk = new Map<string, number>();
 
@@ -101,8 +102,8 @@ export const statusSkill: Skill = {
       lines.push("");
 
       // 权限模式
-      lines.push("## 权限设置");
-      lines.push(`- 模式: ${context.session.mode}`);
+      lines.push(`## ${t("skills.status.permissionSettings")}`);
+      lines.push(`- ${t("skills.status.mode")} ${context.session.mode}`);
     }
 
     return {

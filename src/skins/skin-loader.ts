@@ -7,6 +7,7 @@
 
 import { readFile, readdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { t, tObject, tArray, type Language } from "../locales/index.js";
 
 // ============================================================
 // 皮肤类型定义
@@ -246,6 +247,120 @@ const BUILTIN_DEFAULT_SKIN: Skin = {
   },
 };
 
+/**
+ * 根据语言获取皮肤配置
+ *
+ * @param lang - 语言代码
+ * @returns 皮肤配置
+ */
+function getSkinWithLanguage(lang?: Language): Skin {
+  const language = lang ?? "en";
+
+  // 基础皮肤配置（非翻译部分）
+  const baseSkin: Skin = {
+    id: "immortan-joe",
+    name: t("skin.name", undefined, language),
+    description: t("skin.description", undefined, language),
+    author: "Immortan Joe",
+    version: "1.0.0",
+    cli: {
+      commandName: "joe",
+      aliases: [],
+      version: "0.1.0",
+      description: t("skin.cli.description", undefined, language),
+    },
+    ui: {
+      banner: {
+        title: t("skin.ui.banner.title", undefined, language),
+        subtitle: t("skin.ui.banner.subtitle", undefined, language),
+        style: "wasteland",
+      },
+      prompts: {
+        input: "joe>",
+        assistant: t("skin.ui.prompts.assistant", undefined, language),
+        system: t("skin.ui.prompts.system", undefined, language),
+      },
+      labels: {
+        user: t("skin.ui.labels.user", undefined, language),
+        assistant: t("skin.ui.labels.assistant", undefined, language),
+        system: t("skin.ui.labels.system", undefined, language),
+      },
+      messages: {
+        welcome: t("skin.ui.messages.welcome", undefined, language),
+        thinking: t("skin.ui.messages.thinking", undefined, language),
+        success: t("skin.ui.messages.success", undefined, language),
+        error: t("skin.ui.messages.error", undefined, language),
+      },
+      colors: {
+        primary: "cyan",
+        secondary: "yellow",
+        accent: "red",
+        muted: "gray",
+      },
+    },
+    roles: {
+      main: {
+        id: "immortan-joe",
+        name: t("skin.roles.main.name", undefined, language),
+        title: t("skin.roles.main.title", undefined, language),
+        aliases: ["joe"],
+        personality: t("skin.roles.main.personality", undefined, language),
+        greeting: t("skin.roles.main.greeting", undefined, language),
+        catchphrases: tArray("skin.roles.main.catchphrases", language),
+      },
+      workers: {
+        researcher: {
+          personality: t("skin.roles.workers.researcher.personality", undefined, language),
+          greeting: t("skin.roles.workers.researcher.greeting", undefined, language),
+          catchphrases: tArray("skin.roles.workers.researcher.catchphrases", language),
+        },
+        developer: {
+          personality: t("skin.roles.workers.developer.personality", undefined, language),
+          greeting: t("skin.roles.workers.developer.greeting", undefined, language),
+          catchphrases: tArray("skin.roles.workers.developer.catchphrases", language),
+        },
+        analyst: {
+          personality: t("skin.roles.workers.analyst.personality", undefined, language),
+          greeting: t("skin.roles.workers.analyst.greeting", undefined, language),
+          catchphrases: tArray("skin.roles.workers.analyst.catchphrases", language),
+        },
+        tester: {
+          personality: t("skin.roles.workers.tester.personality", undefined, language),
+          greeting: t("skin.roles.workers.tester.greeting", undefined, language),
+          catchphrases: tArray("skin.roles.workers.tester.catchphrases", language),
+        },
+      },
+    },
+    templates: {
+      identity: "你是 {{role}}。",
+      goal: "你的目标是：{{goal}}",
+      backstory: "{{backstory}}",
+      constraints: "约束条件：\n{{constraints}}",
+    },
+    workflow: {
+      delegation: {
+        strategy: "sequential",
+        description: t("skin.workflow.delegation.description", undefined, language),
+      },
+      aggregation: {
+        strategy: "merge",
+        description: t("skin.workflow.aggregation.description", undefined, language),
+      },
+      errorHandling: {
+        strategy: "retry",
+        description: t("skin.workflow.errorHandling.description", undefined, language),
+      },
+    },
+    metadata: {
+      createdAt: "2026-05-28",
+      updatedAt: "2026-05-28",
+      tags: ["wasteland", "mad-max", "immortan-joe", "default"],
+    },
+  };
+
+  return baseSkin;
+}
+
 // ============================================================
 // 皮肤加载器
 // ============================================================
@@ -281,7 +396,7 @@ async function readSkinFromFile(skinPath: string): Promise<Skin> {
  * 加载逻辑：
  * 1. 如果 skinId 是 "immortan-joe"（内置默认皮肤）：
  *    - 优先尝试加载外部皮肤文件
- *    - 如果外部皮肤不存在，使用内置默认皮肤
+ *    - 如果外部皮肤不存在，使用内置默认皮肤（根据 language 参数选择中文或英文）
  * 2. 其他 skinId：
  *    - 从外部皮肤目录加载
  *    - 如果不存在，抛出错误
@@ -289,10 +404,11 @@ async function readSkinFromFile(skinPath: string): Promise<Skin> {
 export async function loadSkin(
   skinId: string = DEFAULT_SKIN_ID,
   skinsDir?: string,
+  language?: "en" | "zh",
 ): Promise<Skin> {
   // 内置默认皮肤：优先使用外部文件，如果没有则使用内置的
   if (skinId === "immortan-joe") {
-    return loadImmortanJoeSkin(skinsDir);
+    return loadImmortanJoeSkin(skinsDir, language);
   }
 
   // 其他皮肤：从外部目录加载
@@ -316,7 +432,10 @@ export async function loadSkin(
  *
  * 优先加载外部皮肤文件，如果没有则使用内置默认皮肤
  */
-async function loadImmortanJoeSkin(skinsDir?: string): Promise<Skin> {
+async function loadImmortanJoeSkin(
+  skinsDir?: string,
+  language?: "en" | "zh",
+): Promise<Skin> {
   const dir = getSkinsDir(skinsDir);
   const skinPath = join(dir, "immortan-joe", "skin.json");
 
@@ -325,10 +444,11 @@ async function loadImmortanJoeSkin(skinsDir?: string): Promise<Skin> {
     currentSkin = skin;
     return skin;
   } catch (error) {
-    // 外部皮肤不存在，使用内置默认皮肤
+    // 外部皮肤不存在，使用内置默认皮肤（根据 language 参数选择语言）
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      currentSkin = BUILTIN_DEFAULT_SKIN;
-      return BUILTIN_DEFAULT_SKIN;
+      const skin = getSkinWithLanguage(language);
+      currentSkin = skin;
+      return skin;
     }
     throw error;
   }
@@ -368,7 +488,7 @@ export async function getDefaultSkin(skinsDir?: string): Promise<Skin> {
 /**
  * 列出所有可用皮肤
  */
-export async function listSkins(skinsDir?: string): Promise<Skin[]> {
+export async function listSkins(skinsDir?: string, language?: "en" | "zh"): Promise<Skin[]> {
   const skins: Skin[] = [];
 
   // 1. 加载 Immortan Joe 皮肤（内置默认或外部）
@@ -378,8 +498,9 @@ export async function listSkins(skinsDir?: string): Promise<Skin[]> {
     const joeSkin = await readSkinFromFile(joeSkinPath);
     skins.push(joeSkin);
   } catch {
-    // 外部 immortan-joe 皮肤不存在，使用内置默认
-    skins.push(BUILTIN_DEFAULT_SKIN);
+    // 外部 immortan-joe 皮肤不存在，使用内置默认（根据 language 参数选择语言）
+    const skin = getSkinWithLanguage(language);
+    skins.push(skin);
   }
 
   // 2. 加载 .wasteland/.skins/ 目录下的其他皮肤目录

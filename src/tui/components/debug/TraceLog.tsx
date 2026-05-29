@@ -19,6 +19,7 @@ import {
   WARNING,
   SEPARATORS,
 } from "../../utils/colors.js";
+import { t } from "../../../locales/index.js";
 
 interface TraceLogProps {
   height?: number;
@@ -106,11 +107,11 @@ function renderTraceMessage(trace: TraceEvent): { icon: string; content: string;
 
     switch (trace.phase) {
       case "call":
-        return { icon: "🔧", content: `调用 ${toolName}`, detail: params ? `(${params})` : undefined, phaseLabel: "call" };
+        return { icon: "🔧", content: `${t("tui.debug.call")} ${toolName}`, detail: params ? `(${params})` : undefined, phaseLabel: "call" };
       case "success":
-        return { icon: "✓", content: `${toolName} 成功`, phaseLabel: "success" };
+        return { icon: "✓", content: `${toolName} ${t("tui.debug.success")}`, phaseLabel: "success" };
       case "error":
-        return { icon: "✗", content: `${toolName} 失败`, detail: trace.data?.error as string, phaseLabel: "error" };
+        return { icon: "✗", content: `${toolName} ${t("tui.debug.failed")}`, detail: trace.data?.error as string, phaseLabel: "error" };
     }
   }
 
@@ -119,7 +120,7 @@ function renderTraceMessage(trace: TraceEvent): { icon: string; content: string;
     const decision = trace.data?.decision as string;
     const toolName = trace.data?.toolName as string;
     const icon = decision === "allow" ? "✓" : decision === "deny" ? "✗" : "?";
-    return { icon, content: `权限: ${toolName}`, detail: decision, phaseLabel: "permission" };
+    return { icon, content: `${t("tui.debug.permission")} ${toolName}`, detail: decision, phaseLabel: "permission" };
   }
 
   // Agent 事件
@@ -129,14 +130,14 @@ function renderTraceMessage(trace: TraceEvent): { icon: string; content: string;
       const task = trace.data?.task as string;
       const depth = trace.data?.depth as number ?? 0;
       const indent = "  ".repeat(depth);
-      return { icon: "🤖", content: `${indent}创建子Agent: ${name}`, detail: task?.slice(0, 35), phaseLabel: "spawn" };
+      return { icon: "🤖", content: `${indent}${t("tui.debug.createSubAgent")} ${name}`, detail: task?.slice(0, 35), phaseLabel: "spawn" };
     }
     if (trace.phase === "agent_completed") {
       const name = trace.data?.name as string;
       const status = trace.data?.status as string;
       const depth = trace.data?.depth as number ?? 0;
       const indent = "  ".repeat(depth);
-      return { icon: status === "success" ? "✓" : "✗", content: `${indent}Agent完成: ${name}`, phaseLabel: "complete" };
+      return { icon: status === "success" ? "✓" : "✗", content: `${indent}${t("tui.debug.agentDone")} ${name}`, phaseLabel: "complete" };
     }
   }
 
@@ -147,21 +148,21 @@ function renderTraceMessage(trace: TraceEvent): { icon: string; content: string;
 
     switch (trace.phase) {
       case "started":
-        return { icon: "⚡", content: `执行技能: /${skillName}`, detail: formatSkillArgs(args), phaseLabel: "started" };
+        return { icon: "⚡", content: `${t("tui.debug.executeSkill")} /${skillName}`, detail: formatSkillArgs(args), phaseLabel: "started" };
       case "success":
-        return { icon: "✓", content: `/${skillName} 完成`, phaseLabel: "success" };
+        return { icon: "✓", content: `/${skillName} ${t("tui.debug.success")}`, phaseLabel: "success" };
       case "error":
-        return { icon: "✗", content: `/${skillName} 失败`, phaseLabel: "error" };
+        return { icon: "✗", content: `/${skillName} ${t("tui.debug.failed")}`, phaseLabel: "error" };
     }
   }
 
   // Provider 事件
   if (trace.scope === "provider") {
     if (trace.phase === "request") {
-      return { icon: "→", content: "发送请求", phaseLabel: "request" };
+      return { icon: "→", content: t("tui.debug.sendRequest"), phaseLabel: "request" };
     }
     if (trace.phase === "response") {
-      return { icon: "←", content: "收到响应", phaseLabel: "response" };
+      return { icon: "←", content: t("tui.debug.receiveResponse"), phaseLabel: "response" };
     }
   }
 
@@ -211,8 +212,8 @@ export function TraceLog({ height }: TraceLogProps): React.ReactElement {
   if (traces.length === 0) {
     return (
       <Box flexDirection="column" flexGrow={1} justifyContent="center" alignItems="center">
-        <Text color={PRIMARY}>◆ 等待 trace 数据...</Text>
-        <Text dimColor>使用 --debug 启动以查看详细追踪</Text>
+        <Text color={PRIMARY}>◆ {t("tui.debug.waitingTrace")}</Text>
+        <Text dimColor>{t("tui.debug.useDebugHint")}</Text>
         <Text dimColor color="gray">rxc chat --debug --message "你的消息"</Text>
       </Box>
     );
@@ -227,16 +228,16 @@ export function TraceLog({ height }: TraceLogProps): React.ReactElement {
       <Box flexDirection="row" justifyContent="space-between" paddingX={1}>
         <Box flexDirection="row" gap={1}>
           <Text bold color={PRIMARY}>
-            Trace 日志
+            {t("tui.debug.traceLog")}
           </Text>
           {hasFilter && (
-            <Text color={WARNING}>⚑ 过滤</Text>
+            <Text color={WARNING}>⚑ {t("tui.debug.filter")}</Text>
           )}
         </Box>
         <Box flexDirection="row" gap={1}>
-          <Text dimColor>{filteredTraces.length}/{traces.length} 条</Text>
+          <Text dimColor>{filteredTraces.length}/{traces.length} {t("tui.debug.count", { count: "" })}</Text>
           <Text dimColor>{SEPARATORS.item.trim()}</Text>
-          <Text dimColor>↑/↓ 滚动</Text>
+          <Text dimColor>{t("tui.footer.scroll")}</Text>
         </Box>
       </Box>
 
@@ -283,12 +284,12 @@ export function TraceLog({ height }: TraceLogProps): React.ReactElement {
                 <Box flexDirection="column" paddingLeft={4}>
                   {detail && (
                     <Box flexDirection="row">
-                      <Text dimColor>详情: </Text>
+                      <Text dimColor>{t("tui.debug.details")} </Text>
                       <Text>{detail}</Text>
                     </Box>
                   )}
                   <Box flexDirection="row">
-                    <Text dimColor>原始数据: </Text>
+                    <Text dimColor>{t("tui.debug.rawData")} </Text>
                     <Text dimColor color="gray">{JSON.stringify(trace.data ?? {}).slice(0, 80)}</Text>
                   </Box>
                 </Box>
@@ -312,7 +313,7 @@ export function TraceLog({ height }: TraceLogProps): React.ReactElement {
       {/* 过滤器状态 */}
       {hasFilter && (
         <Box flexDirection="row" justifyContent="center" gap={1}>
-          <Text dimColor>过滤条件:</Text>
+          <Text dimColor>{t("tui.debug.filterCondition")}</Text>
           {filter.scope && (
             <Text color="cyan">scope={filter.scope}</Text>
           )}
@@ -320,7 +321,7 @@ export function TraceLog({ height }: TraceLogProps): React.ReactElement {
             <Text color={SECONDARY}>phase={filter.phase}</Text>
           )}
           <Text dimColor>{SEPARATORS.item.trim()}</Text>
-          <Text color={WARNING}>f 修改</Text>
+          <Text color={WARNING}>{t("tui.debug.modifyFilter")}</Text>
         </Box>
       )}
     </Box>

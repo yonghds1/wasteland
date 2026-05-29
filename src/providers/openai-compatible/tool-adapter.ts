@@ -17,6 +17,7 @@
 
 import type { ToolCall } from "../../tools/tool-types.js";
 import { ToolRegistry } from "../../tools/tool-registry.js";
+import { t } from "../../locales/index.js";
 import type { JsonSchema, OpenAIFunctionTool, OpenAIToolCall } from "./types.js";
 
 // ============================================================
@@ -76,13 +77,11 @@ export function buildOpenAITools(registry: ToolRegistry): OpenAIFunctionTool[] {
  */
 function getToolDescription(name: string, riskLevel: string): string {
   const descriptions: Record<string, string> = {
-    "read-file": "读取文件内容。参数：path（文件路径）。",
-    "edit-file":
-      "精确编辑文件。参数：path（文件路径）、old_string（要替换的字符串）、new_string（替换后的字符串）、replace_all（可选，是否替换所有匹配）。",
-    "write-file": "创建或覆写文件。参数：path（文件路径）、content（文件内容）。",
-    bash: "执行 shell 命令。参数：command（命令字符串）。",
-    "spawn_agent":
-      "创建并运行子 Agent。参数：name（子 Agent 标识）、task（任务描述）、model（可选，模型选择）、tools（可选，限定工具集）。用于并行执行或委派子任务。",
+    "read-file": t("providers.toolAdapter.readFile"),
+    "edit-file": t("providers.toolAdapter.editFile"),
+    "write-file": t("providers.toolAdapter.writeFile"),
+    bash: t("providers.toolAdapter.bash"),
+    "spawn_agent": t("providers.toolAdapter.createSubAgent"),
   };
 
   return descriptions[name] ?? `${name} 工具（风险等级：${riskLevel}）。`;
@@ -100,11 +99,11 @@ function getToolParameters(name: string): JsonSchema {
       properties: {
         path: {
           type: "string",
-          description: "要读取的文件路径（相对于工作目录）",
+          description: t("providers.toolAdapter.filePath"),
         },
         offset: {
           type: "integer",
-          description: "起始行号（从 1 开始，可选）",
+          description: t("providers.toolAdapter.startLine"),
         },
         limit: {
           type: "integer",
@@ -122,11 +121,11 @@ function getToolParameters(name: string): JsonSchema {
         },
         old_string: {
           type: "string",
-          description: "要替换的原始字符串（必须精确匹配）",
+          description: t("providers.toolAdapter.oldString"),
         },
         new_string: {
           type: "string",
-          description: "替换后的新字符串",
+          description: t("providers.toolAdapter.newString"),
         },
         replace_all: {
           type: "boolean",
@@ -140,11 +139,11 @@ function getToolParameters(name: string): JsonSchema {
       properties: {
         path: {
           type: "string",
-          description: "要写入的文件路径（相对于工作目录）",
+          description: t("providers.toolAdapter.writePath"),
         },
         content: {
           type: "string",
-          description: "文件的完整内容",
+          description: t("providers.toolAdapter.content"),
         },
       },
       required: ["path", "content"],
@@ -154,7 +153,7 @@ function getToolParameters(name: string): JsonSchema {
       properties: {
         command: {
           type: "string",
-          description: "要执行的 shell 命令",
+          description: t("providers.toolAdapter.command"),
         },
       },
       required: ["command"],
@@ -164,7 +163,7 @@ function getToolParameters(name: string): JsonSchema {
       properties: {
         name: {
           type: "string",
-          description: "子 Agent 的唯一标识符",
+          description: t("providers.toolAdapter.subAgentId"),
         },
         task: {
           type: "string",
@@ -235,7 +234,7 @@ export function parseToolCalls(toolCalls: OpenAIToolCall[]): ToolCall[] {
       input = {
         _parseError: true,
         _rawArguments: tc.function.arguments,
-        _errorMessage: `无法解析工具参数：无效的 JSON 格式。原始参数：${tc.function.arguments}`,
+        _errorMessage: `${t("providers.toolAdapter.invalidJson")}${tc.function.arguments}`,
       };
     }
 
@@ -265,5 +264,5 @@ export function hasParseError(call: ToolCall): boolean {
  */
 export function getParseErrorMessage(call: ToolCall): string {
   const msg = call.input._errorMessage;
-  return typeof msg === "string" ? msg : "未知解析错误。";
+  return typeof msg === "string" ? msg : t("providers.toolAdapter.unknownParseError");
 }

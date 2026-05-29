@@ -7,6 +7,8 @@ import { createSessionsCommand } from "./commands/sessions.js";
 import { createResumeCommand } from "./commands/resume.js";
 import { createSkinCommand } from "./commands/skin.js";
 import { ensureRoleAliases } from "./utils/symlink-manager.js";
+import { loadJoeSettings } from "./config/load-settings.js";
+import { initI18n } from "./locales/index.js";
 
 function registerRootCommands(program: Command): void {
   program.addCommand(createChatCommand());
@@ -40,6 +42,16 @@ export function createProgram(): Command {
 export async function run(argv = process.argv): Promise<void> {
   // 确保角色别名符号链接存在
   await ensureRoleAliases();
+
+  // 初始化 i18n
+  try {
+    const loadedSettings = await loadJoeSettings({ cwd: process.cwd(), env: process.env });
+    const language = loadedSettings.settings.runtime.language;
+    await initI18n(language);
+  } catch {
+    // 如果加载配置失败，使用默认语言
+    await initI18n("en");
+  }
 
   await createProgram().parseAsync(argv);
 }

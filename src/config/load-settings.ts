@@ -251,6 +251,14 @@ function parseSettings(raw: unknown, sourcePath: string): RawJoeSettings {
       runtime.debug = raw.runtime.debug;
     }
 
+    if ("language" in raw.runtime && raw.runtime.language !== undefined) {
+      if (raw.runtime.language !== "en" && raw.runtime.language !== "zh") {
+        throw new Error(`配置文件 ${sourcePath} 中 runtime.language 必须是 "en" 或 "zh"。`);
+      }
+
+      runtime.language = raw.runtime.language;
+    }
+
     settings.runtime = runtime;
   }
 
@@ -372,6 +380,7 @@ function mergeSettings(
       maxTurns: next.runtime?.maxTurns ?? base.runtime.maxTurns,
       childAgentTimeout: next.runtime?.childAgentTimeout ?? base.runtime.childAgentTimeout,
       debug: next.runtime?.debug ?? base.runtime.debug,
+      language: next.runtime?.language ?? base.runtime.language,
     },
     mcpServers: mergedMCPServers,
   };
@@ -521,6 +530,7 @@ function applyEnvironmentOverrides(
       maxTurns: settings.runtime.maxTurns,
       childAgentTimeout: settings.runtime.childAgentTimeout,
       debug: settings.runtime.debug,
+      language: settings.runtime.language,
     },
     mcpServers: { ...settings.mcpServers },
   } satisfies ResolvedJoeSettings;
@@ -545,6 +555,14 @@ function applyEnvironmentOverrides(
 
   if (typeof env.JOE_DEBUG === "string" && env.JOE_DEBUG.trim().length > 0) {
     resolved.runtime.debug = parseBooleanOverride(env.JOE_DEBUG, "JOE_DEBUG");
+  }
+
+  if (typeof env.JOE_LANGUAGE === "string" && env.JOE_LANGUAGE.trim().length > 0) {
+    const lang = env.JOE_LANGUAGE.trim();
+    if (lang !== "en" && lang !== "zh") {
+      throw new Error("环境变量 JOE_LANGUAGE 必须是 \"en\" 或 \"zh\"。");
+    }
+    resolved.runtime.language = lang;
   }
 
   return resolved;

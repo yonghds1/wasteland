@@ -1,6 +1,7 @@
 import { readFile, stat } from "node:fs/promises";
 import { relative, resolve } from "node:path";
 
+import { t } from "../locales/index.js";
 import type { AgentTool, ToolExecutionResult } from "./tool-types.js";
 
 // ============================================================
@@ -131,7 +132,7 @@ function processFileContent(
     if (startLine > totalLines) {
       return {
         status: "error",
-        error: `offset ${startLine} 超出文件范围（文件共 ${totalLines} 行）。`,
+        error: t("tools.readFile.offsetOutOfRange", { offset: String(startLine), total: String(totalLines) }),
       };
     }
 
@@ -245,7 +246,7 @@ export function createReadFileTool(): AgentTool {
       if (!targetPath) {
         return {
           status: "error",
-          error: "read-file 需要一个位于当前工作目录内的相对路径。",
+          error: t("tools.readFile.needRelativePath"),
         };
       }
 

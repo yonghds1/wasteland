@@ -4,6 +4,7 @@
  * 允许 Agent 在需要澄清时向用户提问。
  */
 
+import { t } from "../locales/index.js";
 import type { AgentTool, ToolRiskLevel, ToolExecutionResult } from "./tool-types.js";
 
 type AskUserInput = {
@@ -22,7 +23,7 @@ export function createAskUserTool(): AgentTool {
       if (!question || typeof question !== "string") {
         return {
           status: "error",
-          error: "缺少 question 参数",
+          error: t("tools.askUser.missingQuestion"),
         };
       }
 
@@ -31,7 +32,7 @@ export function createAskUserTool(): AgentTool {
       return {
         status: "success",
         output: options
-          ? `${question}\n选项: ${options.join(", ")}`
+          ? `${question}\n${t("tools.askUser.options")} ${options.join(", ")}`
           : question,
         data: { pendingUserInput: true },
       };

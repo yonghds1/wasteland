@@ -7,6 +7,8 @@
 import { Command } from "commander";
 import { Subject } from "rxjs";
 
+import { t } from "../locales/index.js";
+
 import { loadJoeSettings } from "../config/load-settings.js";
 import { resolveDefaultSessionDir, resolveDefaultTraceDir } from "../config/paths.js";
 import { resolveChatRuntime } from "../config/resolve-chat-runtime.js";
@@ -71,15 +73,15 @@ export function createResumeCommand(): Command {
   const providerRegistry = createDefaultProviderRegistry();
 
   return new Command("resume")
-    .description("恢复之前的会话")
-    .argument("[session-id]", "Session ID（如果不指定，恢复最新的 session）")
-    .option("-m, --message <text>", "恢复后发送的消息")
-    .option("-p, --provider <name>", "指定 Provider")
-    .option("-r, --role <name>", "按指定 role 解析模型与默认权限")
-    .option("--multi", "使用多 Agent 模式")
-    .option("--debug", "启用调试模式")
-    .option("--debug-format <format>", "调试输出格式：pretty（默认）或 jsonl")
-    .option("--permission-mode <mode>", "权限模式 (default/accept_edits/bypass_permissions)")
+    .description(t("commands.resume.description"))
+    .argument("[session-id]", t("commands.resume.options.sessionId"))
+    .option("-m, --message <text>", t("commands.resume.options.message"))
+    .option("-p, --provider <name>", t("commands.resume.options.provider"))
+    .option("-r, --role <name>", t("commands.resume.options.role"))
+    .option("--multi", t("commands.resume.options.multiAgent"))
+    .option("--debug", t("commands.resume.options.debug"))
+    .option("--debug-format <format>", t("commands.resume.options.debugFormat"))
+    .option("--permission-mode <mode>", t("commands.resume.options.permissionMode"))
     .action(async (sessionId: string | undefined, options: any) => {
       const cwd = process.cwd();
 
@@ -98,20 +100,20 @@ export function createResumeCommand(): Command {
       if (sessionId) {
         sessionToResume = await sessionIndex.getSession(sessionId);
         if (!sessionToResume) {
-          console.error(`Session 不存在: ${sessionId}`);
+          console.error(`${t("commands.resume.notFound")} ${sessionId}`);
           process.exit(1);
         }
       } else {
         sessionToResume = await sessionIndex.getLatestSession();
         if (!sessionToResume) {
-          console.error("没有可恢复的 session。");
+          console.error(t("commands.resume.noSession"));
           process.exit(1);
         }
       }
 
-      console.log(`\n恢复 session: ${sessionToResume.id}`);
-      console.log(`时间: ${sessionToResume.createdAt}`);
-      console.log(`消息数: ${sessionToResume.messageCount}`);
+      console.log(`\n${t("commands.resume.resuming")} ${sessionToResume.id}`);
+      console.log(`${t("commands.resume.time")} ${sessionToResume.createdAt}`);
+      console.log(`${t("commands.resume.messageCount")} ${sessionToResume.messageCount}`);
       console.log("");
 
       // 恢复历史消息

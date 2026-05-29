@@ -22,6 +22,8 @@
 
 import { EMPTY, Observable, ReplaySubject, Subject, concat, concatMap, defer, from, map, of, tap } from "rxjs";
 
+import { t } from "../locales/index.js";
+
 import { createDebugTraceEvent, type DebugTraceEvent } from "./debug-events.js";
 import type { AgentProvider } from "../providers/provider-types.js";
 import type { ToolRegistry } from "../tools/tool-registry.js";
@@ -216,7 +218,7 @@ function buildProviderFallbackMessage(state: TurnState): string {
   }
 
   // 否则返回默认消息
-  return "当前 provider 未返回最终消息。";
+  return t("runtime.noFinalMessage");
 }
 
 /**
@@ -224,8 +226,8 @@ function buildProviderFallbackMessage(state: TurnState): string {
  * @param maxStepsPerTurn - 单轮最大步数
  * @returns 提示消息
  */
-function buildMaxStepsMessage(maxStepsPerTurn: number): string {
-  return `当前单轮已达到最大工具步数限制（${maxStepsPerTurn}）。`;
+function buildMaxStepsMessage(_maxStepsPerTurn: number): string {
+  return t("runtime.maxStepsReached");
 }
 
 // ============================================================
@@ -494,7 +496,7 @@ function runTurnLoop(params: {
 
         // 检查是否配置了工具执行所需的基础设施
         if (!params.toolRegistry || !params.permissionGate) {
-          const error = "当前运行时未配置 tool registry 或 permission gate。";
+          const error = t("runtime.noToolRegistry");
 
           // 记录错误结果
           state = recordToolResult(state, {

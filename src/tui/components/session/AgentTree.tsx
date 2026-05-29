@@ -18,6 +18,7 @@ import {
   STATUS_ICONS,
   SEPARATORS,
 } from "../../utils/colors.js";
+import { t } from "../../../locales/index.js";
 
 const STATUS_COLORS: Record<string, string> = {
   running: "green",
@@ -127,7 +128,7 @@ export function AgentTree(): React.ReactElement {
       <Box flexDirection="column" marginTop={1}>
         <Text dimColor>─────────────</Text>
         <Box flexDirection="row" gap={1}>
-          <Text dimColor>运行:</Text>
+          <Text dimColor>{t("tui.session.agentTree.running")}</Text>
           <Text color={MUTED}>{totalDuration}</Text>
         </Box>
       </Box>

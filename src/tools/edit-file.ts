@@ -21,6 +21,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { relative, resolve } from "node:path";
 
+import { t } from "../locales/index.js";
 import type { AgentTool } from "./tool-types.js";
 
 /**
@@ -65,7 +66,7 @@ export function createEditFileTool(): AgentTool {
       if (!targetPath) {
         return {
           status: "error",
-          error: "edit-file 需要一个位于当前工作目录内的相对路径。",
+          error: t("tools.editFile.needRelativePath"),
         };
       }
 
@@ -77,7 +78,7 @@ export function createEditFileTool(): AgentTool {
       if (oldString.length === 0) {
         return {
           status: "error",
-          error: "edit-file 需要非空的 old_string 参数。",
+          error: t("tools.editFile.needOldString"),
         };
       }
 
@@ -91,14 +92,14 @@ export function createEditFileTool(): AgentTool {
         if (matchCount === 0) {
           return {
             status: "error",
-            error: `未找到匹配的字符串。请确保 old_string 与文件内容完全一致（包括空格和缩进）。`,
+            error: t("tools.editFile.noMatch"),
           };
         }
 
         if (matchCount > 1 && !replaceAll) {
           return {
             status: "error",
-            error: `找到 ${matchCount} 处匹配，但 replace_all 为 false。请扩大 old_string 的上下文使其唯一，或设置 replace_all: true。`,
+            error: t("tools.editFile.multipleMatches", { count: String(matchCount) }),
           };
         }
 
@@ -112,7 +113,7 @@ export function createEditFileTool(): AgentTool {
 
         return {
           status: "success",
-          output: `成功编辑文件 ${targetPath}（替换了 ${replaceAll ? matchCount : 1} 处）。`,
+          output: t("tools.editFile.success", { count: String(replaceAll ? matchCount : 1) }),
         };
       } catch (error) {
         return {

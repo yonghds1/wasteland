@@ -19,6 +19,7 @@ import type { ProviderSettings, MCPServersConfig } from "../config/settings-type
 import { createSkillRegistry } from "../skills/skill-discovery.js";
 import { SkillExecutor } from "../skills/skill-executor.js";
 import { homedir } from "node:os";
+import { t } from "../locales/index.js";
 
 type ChatOptions = {
   debug?: boolean;
@@ -38,7 +39,7 @@ function resolvePermissionMode(value: string | undefined) {
     return mode;
   }
 
-  throw new Error(`当前不支持 permission mode: ${mode}`);
+  throw new Error(`${t("commands.chat.errors.permissionMode")} ${mode}`);
 }
 
 function resolveDebugFormat(value: string | undefined): DebugFormat {
@@ -144,25 +145,25 @@ export function createChatCommand(): Command {
   const providerRegistry = createDefaultProviderRegistry();
 
   return new Command("chat")
-    .description("通过 runtime/provider/ui 边界按 RxJS 流式处理用户输入并生成回复。")
-    .option("-m, --message <text>", "单次输入，适合脚本或测试")
+    .description(t("commands.chat.description"))
+    .option("-m, --message <text>", t("commands.chat.options.once"))
     .option(
       "-p, --provider <name>",
-      `provider 名称，当前已注册: ${providerRegistry.list().join(", ")}`,
+      `${t("commands.chat.options.provider")} ${providerRegistry.list().join(", ")}`,
     )
-    .option("-r, --role <name>", "按指定 role 解析模型与默认权限")
-    .option("--debug", "输出调试追踪到 stderr")
+    .option("-r, --role <name>", t("commands.chat.options.role"))
+    .option("--debug", t("commands.chat.options.debug"))
     .option(
       "--debug-format <format>",
-      "调试输出格式：pretty（默认）或 jsonl",
+      t("commands.chat.options.debugFormat"),
     )
     .option(
       "--permission-mode <mode>",
-      "权限模式：default | accept_edits | bypass_permissions",
+      t("commands.chat.options.permissionMode"),
     )
     .option(
       "--multi",
-      "提示系统使用多 Agent 模式（实际由 Agent 决定是否 spawn 子 Agent）",
+      t("commands.chat.options.multiAgent"),
     )
     .action(async (options: ChatOptions) => {
       const cwd = process.cwd();
@@ -246,7 +247,7 @@ export function createChatCommand(): Command {
       }
 
       if (!process.stdin.isTTY) {
-        throw new Error("stdin 输入为空，无法启动会话。");
+        throw new Error(t("commands.chat.errors.emptyStdin"));
       }
 
       const interactive = createInteractiveTurnStream();

@@ -16,11 +16,12 @@ import {
   TUI_COLORS,
   SEPARATORS,
 } from "../../utils/colors.js";
+import { t } from "../../../locales/index.js";
 
 const TABS: { name: PageName; label: string; key: string }[] = [
-  { name: "session", label: "会话", key: "1" },
-  { name: "debug", label: "调试", key: "2" },
-  { name: "config", label: "配置", key: "3" },
+  { name: "session", label: t("tui.header.session"), key: "1" },
+  { name: "debug", label: t("tui.header.debug"), key: "2" },
+  { name: "config", label: t("tui.header.config"), key: "3" },
 ];
 
 interface HeaderProps {

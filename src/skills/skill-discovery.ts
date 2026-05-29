@@ -12,6 +12,7 @@
  */
 
 import { readdir, readFile, stat } from "node:fs/promises";
+import { t } from "../locales/index.js";
 import { join, extname, basename } from "node:path";
 import type {
   Skill,
@@ -54,10 +55,10 @@ async function parseJsonSkill(filePath: string): Promise<Skill> {
 
   // 验证必需字段
   if (!raw.name || typeof raw.name !== "string") {
-    throw new Error(`技能 ${filePath} 缺少 'name' 字段`);
+    throw new Error(t("skills.common.skillMissingName", { path: filePath }));
   }
   if (!raw.description || typeof raw.description !== "string") {
-    throw new Error(`技能 ${filePath} 缺少 'description' 字段`);
+    throw new Error(t("skills.common.skillMissingDescription", { path: filePath }));
   }
 
   const definition: SkillDefinition = {
@@ -108,11 +109,11 @@ async function executeJsonSkill(
       if (!tool) {
         return {
           status: "error",
-          output: `工具不存在: ${step.tool}`,
+          output: `${t("skills.common.toolNotExist")} ${step.tool}`,
         };
       }
 
-      context.output(`执行: ${step.tool}\n`);
+      context.output(`${t("skills.common.executing")} ${step.tool}\n`);
 
       // 执行工具
       const result = await tool.execute(resolvedInput, {
@@ -124,7 +125,7 @@ async function executeJsonSkill(
       if (result.status === "error") {
         return {
           status: "error",
-          output: `步骤失败: ${result.error}`,
+          output: `${t("skills.common.stepFailed")} ${result.error}`,
         };
       }
 
@@ -153,7 +154,7 @@ async function executeJsonSkill(
 
   return {
     status: "success",
-    output: "技能执行完成",
+    output: t("skills.common.skillExecComplete"),
   };
 }
 
@@ -216,14 +217,14 @@ async function loadTypeScriptSkill(filePath: string): Promise<Skill> {
   const module = await import(filePath);
 
   if (!module.default || typeof module.default !== "object") {
-    throw new Error(`技能模块 ${filePath} 必须有默认导出`);
+    throw new Error(t("skills.common.skillModuleDefaultExport", { path: filePath }));
   }
 
   const skill = module.default as Skill;
 
   // 验证
   if (!skill.definition || !skill.execute) {
-    throw new Error(`技能模块 ${filePath} 必须导出 Skill 对象`);
+    throw new Error(t("skills.common.skillModuleSkillObject", { path: filePath }));
   }
 
   return skill;
@@ -309,7 +310,7 @@ export async function discoverSkills(
         });
       } catch (error) {
         console.error(
-          `加载技能失败 ${fullPath}:`,
+          `${t("skills.common.loadSkillFailed", { path: fullPath })}`,
           error instanceof Error ? error.message : error,
         );
       }

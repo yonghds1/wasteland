@@ -10,6 +10,7 @@
  */
 
 import type { SkillArgs, SkillDefinition, SkillParameterDef } from "./skill-types.js";
+import { t } from "../locales/index.js";
 
 // ============================================================
 // 参数解析
@@ -183,7 +184,7 @@ export function validateSkillArgs(
         !hasNamed;
 
       if (!hasNamed && !hasPositional) {
-        errors.push(`缺少必需参数: ${name}`);
+        errors.push(`${t("skills.common.missingRequiredParam")} ${name}`);
       }
     }
   }
@@ -216,34 +217,34 @@ function validateType(
   switch (param.type) {
     case "string":
       if (typeof value !== "string") {
-        return `${name} 必须是字符串`;
+        return `${name} ${t("skills.common.mustBeString")}`;
       }
       if (param.enum && !param.enum.includes(value)) {
-        return `${name} 必须是以下值之一: ${param.enum.join(", ")}`;
+        return `${name} ${t("skills.common.mustBeOneOf")} ${param.enum.join(", ")}`;
       }
       break;
 
     case "number":
       if (typeof value !== "number") {
-        return `${name} 必须是数字`;
+        return `${name} ${t("skills.common.mustBeNumber")}`;
       }
       break;
 
     case "boolean":
       if (typeof value !== "boolean") {
-        return `${name} 必须是布尔值`;
+        return `${name} ${t("skills.common.mustBeBoolean")}`;
       }
       break;
 
     case "array":
       if (!Array.isArray(value)) {
-        return `${name} 必须是数组`;
+        return `${name} ${t("skills.common.mustBeArray")}`;
       }
       break;
 
     case "object":
       if (typeof value !== "object" || Array.isArray(value)) {
-        return `${name} 必须是对象`;
+        return `${name} ${t("skills.common.mustBeObject")}`;
       }
       break;
   }
@@ -295,14 +296,14 @@ export function generateArgsHelp(definition: SkillDefinition): string {
   const lines: string[] = [];
 
   if (Object.keys(params).length === 0) {
-    return "无参数";
+    return t("skills.common.noParams");
   }
 
   for (const [name, param] of Object.entries(params)) {
-    const required = param.required ? " (必需)" : "";
+    const required = param.required ? ` ${t("skills.tools.required")}` : "";
     const defaultVal =
-      param.default !== undefined ? ` [默认: ${param.default}]` : "";
-    const enumVals = param.enum ? ` 可选值: ${param.enum.join("|")}` : "";
+      param.default !== undefined ? ` [${t("skills.common.default")} ${param.default}]` : "";
+    const enumVals = param.enum ? ` ${t("skills.common.optionalValues")} ${param.enum.join("|")}` : "";
 
     lines.push(`  --${name}${required}${defaultVal}${enumVals}`);
     if (param.description) {

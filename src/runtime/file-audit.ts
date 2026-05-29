@@ -17,6 +17,8 @@
  */
 
 import type { ToolCall } from "../tools/tool-types.js";
+
+import { t } from "../locales/index.js";
 import type { TurnState } from "./turn-state.js";
 
 /**
@@ -60,7 +62,7 @@ export function checkReadBeforeEdit(params: {
   // 未读取，返回错误
   return {
     ok: false,
-    error: `必须先读取文件 ${filePath} 才能编辑。请使用 /read 命令先读取文件。`,
+    error: `${t("runtime.mustReadBeforeEdit")} ${filePath}`,
   };
 }
 

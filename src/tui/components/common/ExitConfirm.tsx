@@ -7,6 +7,7 @@
 import React from "react";
 import { Text, Box } from "ink";
 import { WARNING, SUCCESS, ERROR } from "../../utils/colors.js";
+import { t } from "../../../locales/index.js";
 
 interface ExitConfirmProps {
   width?: number;
@@ -27,7 +28,7 @@ export function ExitConfirm({ width }: ExitConfirmProps): React.ReactElement {
       {/* 警告图标和消息 */}
       <Box justifyContent="center" marginBottom={1}>
         <Text bold color={WARNING}>
-          ⚠ 确认退出
+          ⚠ {t("tui.exit.title")}
         </Text>
       </Box>
 
@@ -44,7 +45,7 @@ export function ExitConfirm({ width }: ExitConfirmProps): React.ReactElement {
       </Box>
       <Box justifyContent="center">
         <Text>
-          按 <Text bold color={ERROR}>n</Text> 或其他键取消
+          按 <Text bold color={ERROR}>n</Text> {t("tui.exit.cancel")}
         </Text>
       </Box>
     </Box>

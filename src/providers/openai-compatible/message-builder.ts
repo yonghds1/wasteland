@@ -14,6 +14,7 @@
 
 import type { SessionMessageRecord } from "../../runtime/event-types.js";
 import type { TurnToolResult } from "../../runtime/turn-state.js";
+import { t } from "../../locales/index.js";
 import type { OpenAIMessage, OpenAIToolMessage } from "./types.js";
 
 // ============================================================
@@ -111,8 +112,8 @@ export function buildMessages(params: {
         tool_call_id: result.callId,
         content:
           result.status === "success"
-            ? result.output ?? "(无输出)"
-            : result.error ?? "工具执行失败。",
+            ? result.output ?? t("providers.messageBuilder.noOutput")
+            : result.error ?? t("providers.messageBuilder.toolFailed"),
       });
     }
   }
@@ -134,8 +135,8 @@ export function buildToolResultMessages(results: readonly TurnToolResult[]): Ope
     tool_call_id: result.callId,
     content:
       result.status === "success"
-        ? result.output ?? "(无输出)"
-        : result.error ?? "工具执行失败。",
+        ? result.output ?? t("providers.messageBuilder.noOutput")
+        : result.error ?? t("providers.messageBuilder.toolFailed"),
   }));
 }
 

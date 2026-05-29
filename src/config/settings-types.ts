@@ -94,6 +94,8 @@ export type RawJoeSettings = {
     maxTurns?: number;
     childAgentTimeout?: number;
     debug?: boolean;
+    /** 语言设置：en=英文，zh=中文，默认 en */
+    language?: "en" | "zh";
   };
   /** MCP 服务器配置 */
   mcpServers?: MCPServersConfig;
@@ -116,6 +118,8 @@ export type ResolvedJoeSettings = {
     maxTurns: number;
     childAgentTimeout: number;
     debug: boolean;
+    /** 语言设置：en=英文，zh=中文，默认 en */
+    language: "en" | "zh";
   };
   mcpServers: MCPServersConfig;
 };
@@ -144,6 +148,7 @@ export const DEFAULT_JOE_SETTINGS: ResolvedJoeSettings = {
     maxTurns: 20,
     childAgentTimeout: 120000,
     debug: false,
+    language: "en",
   },
   mcpServers: {},
 };

@@ -14,6 +14,7 @@ import {
   INFO,
   MUTED,
 } from "../../utils/colors.js";
+import { t } from "../../../locales/index.js";
 
 interface HelpModalProps {
   width?: number;
@@ -34,7 +35,7 @@ export function HelpModal({ width }: HelpModalProps): React.ReactElement {
       {/* 标题 */}
       <Box justifyContent="center" marginBottom={1}>
         <Text bold color={PRIMARY}>
-          快捷键帮助
+          {t("tui.help.title")}
         </Text>
       </Box>
 
@@ -46,23 +47,23 @@ export function HelpModal({ width }: HelpModalProps): React.ReactElement {
       {/* 导航模式 */}
       <Box flexDirection="column" marginBottom={1}>
         <Text bold color={SUCCESS}>
-          导航模式（默认）
+          {t("tui.help.navMode")}
         </Text>
         <Box flexDirection="column" paddingLeft={2}>
           <Text>
-            <Text bold>h</Text> 显示此帮助
+            <Text bold>h</Text> {t("tui.help.actions.showHelp")}
           </Text>
           <Text>
-            <Text bold>q</Text> 退出（需确认）
+            <Text bold>q</Text> {t("tui.help.actions.exit")}
           </Text>
           <Text>
-            <Text bold>Tab</Text> / <Text bold>Shift+Tab</Text> 切换页面
+            <Text bold>Tab</Text> / <Text bold>Shift+Tab</Text> {t("tui.help.actions.switchPage")}
           </Text>
           <Text>
-            <Text bold>Enter</Text> 进入输入模式（会话页面）
+            <Text bold>Enter</Text> {t("tui.help.actions.enterInput")}
           </Text>
           <Text>
-            <Text bold>↑/↓</Text> 滚动列表
+            <Text bold>↑/↓</Text> {t("tui.help.actions.scroll")}
           </Text>
         </Box>
       </Box>
@@ -70,17 +71,17 @@ export function HelpModal({ width }: HelpModalProps): React.ReactElement {
       {/* 输入模式 */}
       <Box flexDirection="column" marginBottom={1}>
         <Text bold color={WARNING}>
-          输入模式
+          {t("tui.help.actions.inputMode")}
         </Text>
         <Box flexDirection="column" paddingLeft={2}>
           <Text>
-            <Text bold>Esc</Text> 取消输入，回到导航模式
+            <Text bold>Esc</Text> {t("tui.help.actions.cancelInput")}
           </Text>
           <Text>
-            <Text bold>Enter</Text> 发送消息，回到导航模式
+            <Text bold>Enter</Text> {t("tui.help.actions.sendMessage")}
           </Text>
           <Text>
-            <Text bold>Ctrl+C</Text> 全局退出（需确认）
+            <Text bold>Ctrl+C</Text> {t("tui.help.actions.globalExit")}
           </Text>
         </Box>
       </Box>
@@ -88,11 +89,11 @@ export function HelpModal({ width }: HelpModalProps): React.ReactElement {
       {/* 页面特定快捷键 */}
       <Box flexDirection="column" marginBottom={1}>
         <Text bold color={SECONDARY}>
-          会话页面
+          {t("tui.help.actions.sessionPage")}
         </Text>
         <Box flexDirection="column" paddingLeft={2}>
           <Text>
-            <Text bold>↑/↓</Text> 滚动消息
+            <Text bold>↑/↓</Text> {t("tui.help.actions.scrollMessages")}
           </Text>
           <Text>
             <Text bold>Enter</Text> 进入输入模式
@@ -102,41 +103,41 @@ export function HelpModal({ width }: HelpModalProps): React.ReactElement {
 
       <Box flexDirection="column" marginBottom={1}>
         <Text bold color={INFO}>
-          调试页面
+          {t("tui.help.actions.debugPage")}
         </Text>
         <Box flexDirection="column" paddingLeft={2}>
           <Text>
-            <Text bold>f</Text> 进入过滤模式
+            <Text bold>f</Text> {t("tui.help.actions.enterFilter")}
           </Text>
           <Text>
-            <Text bold>c</Text> 清空日志
+            <Text bold>c</Text> {t("tui.help.actions.clearLogs")}
           </Text>
         </Box>
       </Box>
 
       <Box flexDirection="column" marginBottom={1}>
         <Text bold color={MUTED}>
-          配置页面
+          {t("tui.help.actions.configPage")}
         </Text>
         <Box flexDirection="column" paddingLeft={2}>
           <Text>
-            <Text bold>↑/↓</Text> 切换配置区域
+            <Text bold>↑/↓</Text> {t("tui.help.actions.switchConfig")}
           </Text>
           <Text>
-            <Text bold>Enter</Text> 进入编辑模式
+            <Text bold>Enter</Text> {t("tui.help.actions.enterEdit")}
           </Text>
           <Text>
-            <Text bold>Ctrl+S</Text> 保存配置
+            <Text bold>Ctrl+S</Text> {t("tui.help.actions.saveConfig")}
           </Text>
           <Text>
-            <Text bold>Ctrl+R</Text> 重置配置
+            <Text bold>Ctrl+R</Text> {t("tui.help.actions.resetConfig")}
           </Text>
         </Box>
       </Box>
 
       {/* 关闭提示 */}
       <Box justifyContent="center" marginTop={1}>
-        <Text dimColor>按 h 或 Esc 关闭</Text>
+        <Text dimColor>{t("tui.help.closeHint")}</Text>
       </Box>
     </Box>
   );

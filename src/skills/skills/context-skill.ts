@@ -5,6 +5,7 @@
  */
 
 import { join, relative } from "node:path";
+import { t } from "../../locales/index.js";
 import type {
   Skill,
   SkillArgs,
@@ -116,7 +117,7 @@ async function getKeyFiles(
 export const contextSkill: Skill = {
   definition: {
     name: "context",
-    description: "显示项目上下文和结构概览",
+    description: t("skills.context.description"),
     riskLevel: "read",
     aliases: ["ctx", "info"],
     category: "project",
@@ -140,37 +141,37 @@ export const contextSkill: Skill = {
   ): Promise<SkillResult> {
     const detailed = (args.named.detailed as boolean) ?? false;
 
-    context.output("收集项目信息...\n");
+    context.output(`${t("skills.context.collecting")}\n`);
 
     // 获取基本信息
     const info = await getProjectInfo(context);
-    context.output(`项目: ${info.name}\n`);
+    context.output(`${t("skills.context.project")} ${info.name}\n`);
 
     // 获取结构
     const structure = await getProjectStructure(context);
-    context.output(`目录: ${structure.length} 个\n`);
+    context.output(`${t("skills.context.directory")} ${structure.length} 个\n`);
 
     // 获取关键文件
     const keyFiles = await getKeyFiles(context);
-    context.output(`文件: ${keyFiles.length} 个\n`);
+    context.output(`${t("skills.context.files")} ${keyFiles.length} 个\n`);
 
     // 构建输出
     const lines: string[] = [];
 
     // 基本信息部分
-    lines.push("## 项目概览");
+    lines.push(`## ${t("skills.context.overview")}`);
     lines.push("");
-    lines.push(`**名称**: ${info.name}`);
+    lines.push(`**${t("skills.context.name")}**: ${info.name}`);
     if (info.version) {
-      lines.push(`**版本**: ${info.version}`);
+      lines.push(`**${t("skills.context.version")}**: ${info.version}`);
     }
     if (info.description) {
-      lines.push(`**描述**: ${info.description}`);
+      lines.push(`**${t("skills.context.description")}**: ${info.description}`);
     }
     lines.push("");
 
     // 目录结构部分
-    lines.push("## 目录结构");
+    lines.push(`## ${t("skills.context.structure")}`);
     lines.push("");
     if (detailed) {
       lines.push("```");
@@ -187,14 +188,14 @@ export const contextSkill: Skill = {
 
     // 关键文件部分
     if (keyFiles.length > 0) {
-      lines.push("## 关键文件");
+      lines.push(`## ${t("skills.context.keyFiles")}`);
       lines.push("");
       const displayFiles = detailed ? keyFiles : keyFiles.slice(0, 10);
       for (const file of displayFiles) {
         lines.push(`- ${file}`);
       }
       if (!detailed && keyFiles.length > 10) {
-        lines.push(`- ... 以及 ${keyFiles.length - 10} 个其他文件`);
+        lines.push(`- ... ${t("skills.context.otherFiles", { count: String(keyFiles.length - 10) })}`);
       }
     }
 
@@ -215,7 +216,7 @@ export const contextSkill: Skill = {
           const pkg = JSON.parse(pkgResult.output);
           if (pkg.scripts && Object.keys(pkg.scripts).length > 0) {
             lines.push("");
-            lines.push("## 常用命令");
+            lines.push(`## ${t("skills.context.commonCommands")}`);
             lines.push("");
             for (const [name, cmd] of Object.entries(pkg.scripts).slice(0, 6)) {
               lines.push(`- \`npm run ${name}\` - ${cmd}`);

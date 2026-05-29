@@ -7,6 +7,7 @@
  * - brain: 思考动画
  */
 
+import { t } from "../locales/index.js";
 import { ANSI } from "./terminal-theme.js";
 
 // ============================================================
@@ -46,14 +47,14 @@ export type SpinnerStyle = keyof typeof SPINNERS;
 // ============================================================
 
 export const THINKING_VERBS = [
-  "思考中",
-  "分析中",
-  "处理中",
-  "生成中",
-  "推理中",
-  "计算中",
-  "理解中",
-  "准备中",
+  t("ui.spinner.thinking"),
+  t("ui.spinner.analyzing"),
+  t("ui.spinner.processing"),
+  t("ui.spinner.generating"),
+  t("ui.spinner.reasoning"),
+  t("ui.spinner.computing"),
+  t("ui.spinner.understanding"),
+  t("ui.spinner.preparing"),
 ];
 
 // ============================================================
@@ -248,7 +249,7 @@ export function formatWelcomeMessage(): string {
   const lines = [
     `${ANSI.dim}╭${"─".repeat(48)}╮${ANSI.reset}`,
     `${ANSI.dim}│${ANSI.reset} ${ANSI.bold}${ANSI.cyan}✦ joe - Immortan Joe's War Machine${" ".repeat(16)}${ANSI.reset}${ANSI.dim}│${ANSI.reset}`,
-    `${ANSI.dim}│${ANSI.reset}   输入消息开始对话，/help 查看命令${" ".repeat(12)}${ANSI.dim}│${ANSI.reset}`,
+    `${ANSI.dim}│${ANSI.reset}   ${t("ui.spinner.welcome")}${" ".repeat(12)}${ANSI.dim}│${ANSI.reset}`,
     `${ANSI.dim}╰${"─".repeat(48)}╯${ANSI.reset}`,
   ];
   return lines.join("\n");
@@ -261,7 +262,7 @@ export function formatGoodbyeMessage(): string {
   const lines = [
     "",
     `${ANSI.dim}╭${"─".repeat(48)}╮${ANSI.reset}`,
-    `${ANSI.dim}│${ANSI.reset} ${ANSI.bold}${ANSI.green}再见! ✦${" ".repeat(38)}${ANSI.reset}${ANSI.dim}│${ANSI.reset}`,
+    `${ANSI.dim}│${ANSI.reset} ${ANSI.bold}${ANSI.green}${t("ui.spinner.goodbye")} ✦${" ".repeat(38)}${ANSI.reset}${ANSI.dim}│${ANSI.reset}`,
     `${ANSI.dim}╰${"─".repeat(48)}╯${ANSI.reset}`,
   ];
   return lines.join("\n");

@@ -24,6 +24,7 @@ import {
   validateSkillArgs,
   generateArgsHelp,
 } from "./skill-parser.js";
+import { t } from "../locales/index.js";
 import type { RuntimeEvent } from "../runtime/event-types.js";
 import type { ToolRegistry } from "../tools/tool-registry.js";
 import type { PermissionGate } from "../runtime/permission-gate.js";
@@ -119,7 +120,7 @@ export class SkillExecutor {
         skillName,
         result: {
           status: "error",
-          output: `未知技能: ${skillName}`,
+          output: `${t("skills.common.unknownSkill")} ${skillName}`,
         },
       });
     }
@@ -139,7 +140,7 @@ export class SkillExecutor {
         skillName,
         result: {
           status: "error",
-          output: `参数错误:\n${validation.errors.join("\n")}\n\n${this.createSkillHelp(skill)}`,
+          output: `${t("skills.common.paramError")}\n${validation.errors.join("\n")}\n\n${this.createSkillHelp(skill)}`,
         },
       });
     }
@@ -215,16 +216,16 @@ export class SkillExecutor {
     lines.push(`/${def.name} - ${def.description}`);
 
     if (def.aliases?.length) {
-      lines.push(`别名: ${def.aliases.map((a) => `/${a}`).join(", ")}`);
+      lines.push(`${t("skills.common.alias")} ${def.aliases.map((a) => `/${a}`).join(", ")}`);
     }
 
     lines.push("");
-    lines.push("参数:");
+    lines.push(t("skills.common.params"));
     lines.push(generateArgsHelp(def));
 
     if (def.examples?.length) {
       lines.push("");
-      lines.push("示例:");
+      lines.push(t("skills.common.example"));
       for (const example of def.examples) {
         lines.push(`  ${example}`);
       }
@@ -240,7 +241,7 @@ export class SkillExecutor {
     const skills = this.registry.list();
 
     if (skills.length === 0) {
-      return "没有可用的技能。";
+      return t("skills.common.noSkills");
     }
 
     // 按分类分组
@@ -252,7 +253,7 @@ export class SkillExecutor {
       byCategory.set(category, existing);
     }
 
-    const lines: string[] = ["可用技能:", ""];
+    const lines: string[] = [t("skills.common.availableSkills"), ""];
 
     for (const [category, categorySkills] of byCategory) {
       lines.push(`[${category}]`);
@@ -263,7 +264,7 @@ export class SkillExecutor {
         lines.push(`  /${skill.name}${aliases}`);
         lines.push(`    ${skill.description}`);
         if (skill.examples?.length) {
-          lines.push(`    示例: ${skill.examples[0]}`);
+          lines.push(`    ${t("skills.common.example")} ${skill.examples[0]}`);
         }
       }
       lines.push("");

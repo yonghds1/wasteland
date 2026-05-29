@@ -10,6 +10,7 @@
 import { defer, concatMap, from, type Observable } from "rxjs";
 
 import type { ProviderSettings } from "../config/settings-types.js";
+import { t } from "../locales/index.js";
 import { createAssistantTextEvents } from "./assistant-events.js";
 import type { AgentProvider, ProviderStreamEvent } from "./provider-types.js";
 import type { ProviderStepInput } from "./provider-types.js";
@@ -94,8 +95,8 @@ function resolveClaudeConfig(settings?: ProviderSettings): ClaudeProviderConfig 
   const apiKey = readNonEmptyString(settings, "apiKey");
   const model = readNonEmptyString(settings, "model");
 
-  if (!apiKey) throw new Error("provider claude 缺少 apiKey 配置。");
-  if (!model) throw new Error("provider claude 缺少 model 配置。");
+  if (!apiKey) throw new Error(t("providers.claude.missingApiKey"));
+  if (!model) throw new Error(t("providers.claude.missingModel"));
 
   return {
     baseUrl: normalizeBaseUrl(readNonEmptyString(settings, "baseUrl")),
@@ -214,7 +215,7 @@ async function requestClaudeCompletion(
 
   if (!response.ok) {
     const errorBody = await response.text();
-    throw new Error(`claude 请求失败 (${response.status}): ${errorBody}`);
+    throw new Error(`${t("providers.claude.requestFailed")} (${response.status}): ${errorBody}`);
   }
 
   return response.json() as Promise<ClaudeResponse>;
@@ -266,7 +267,7 @@ function handleClaudeResponse(response: ClaudeResponse): Observable<ProviderStre
     return createAssistantTextEvents(text);
   }
 
-  throw new Error("claude 返回了意外的响应");
+  throw new Error(t("providers.claude.unexpectedResponse"));
 }
 
 export function createClaudeProvider(settings?: ProviderSettings): AgentProvider {

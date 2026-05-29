@@ -12,6 +12,7 @@
 import React, { useState, useEffect } from "react";
 import { Text, Box, useInput } from "ink";
 import { useAppContext } from "../../context/AppContext.js";
+import { t } from "../../../locales/index.js";
 import { loadJoeSettings } from "../../../config/load-settings.js";
 import { resolveUserSettingsPath, resolveProjectSettingsPath, findProjectConfigDir } from "../../../config/paths.js";
 import { resolveChatRuntime } from "../../../config/resolve-chat-runtime.js";
@@ -28,7 +29,7 @@ import {
 type ConfigSection = "sources" | "runtime" | "providers" | "models" | "subAgents";
 
 const SECTIONS: { key: ConfigSection; label: string; color: string; editable: boolean }[] = [
-  { key: "sources", label: "配置源", color: "gray", editable: false },
+  { key: "sources", label: t("tui.config.source"), color: "gray", editable: false },
   { key: "runtime", label: "Runtime", color: "green", editable: true },
   { key: "providers", label: "Providers", color: "cyan", editable: false },
   { key: "models", label: "Models", color: "yellow", editable: false },
@@ -186,14 +187,14 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
   // 保存配置
   const handleSave = async (target: "project" | "user") => {
     if (!state.configHasChanges && target === "project") {
-      setSaveMessage("没有更改需要保存");
+      setSaveMessage(t("tui.config.noChanges"));
       setSaveStatus("error");
       setTimeout(() => setSaveStatus("idle"), 2000);
       return;
     }
 
     setSaveStatus("saving");
-    setSaveMessage("正在保存...");
+    setSaveMessage(t("tui.config.saving"));
 
     try {
       const cwd = process.cwd();
@@ -239,13 +240,13 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
       await writeFile(settingsPath, JSON.stringify(newSettings, null, 2), "utf8");
 
       setSaveStatus("saved");
-      setSaveMessage(`已保存到 ${target === "project" ? "项目" : "用户"}配置: ${settingsPath}`);
+      setSaveMessage(`${t("tui.config.saved")} ${settingsPath}`);
       setState((prev) => ({ ...prev, configHasChanges: false }));
 
       setTimeout(() => setSaveStatus("idle"), 3000);
     } catch (error) {
       setSaveStatus("error");
-      setSaveMessage(`保存失败: ${error instanceof Error ? error.message : "未知错误"}`);
+      setSaveMessage(`${t("tui.config.saveFailed")}: ${error instanceof Error ? error.message : "未知错误"}`);
       setTimeout(() => setSaveStatus("idle"), 3000);
     }
   };
@@ -277,11 +278,11 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
         },
         configHasChanges: false,
       }));
-      setSaveMessage("已重置");
+      setSaveMessage(t("tui.config.resetDone"));
       setSaveStatus("saved");
       setTimeout(() => setSaveStatus("idle"), 2000);
     } catch {
-      setSaveMessage("重置失败");
+      setSaveMessage(t("tui.config.resetFailed"));
       setSaveStatus("error");
       setTimeout(() => setSaveStatus("idle"), 2000);
     }
@@ -298,7 +299,7 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
           {isFocused ? "▸ " : "  "}{label}
         </Text>
         {editable && isFocused && !focusedField && (
-          <Text dimColor>Enter 编辑</Text>
+          <Text dimColor>{t("tui.config.edit")}</Text>
         )}
         {focusedField && key === "runtime" && (
           <Text dimColor>Enter 下一字段 | Esc 退出编辑</Text>
@@ -315,10 +316,10 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
           配置
         </Text>
         {state.configHasChanges && (
-          <Text color="yellow"> (未保存)</Text>
+          <Text color="yellow"> {t("tui.config.unsaved")}</Text>
         )}
         {state.focusArea === "configList" && (
-          <Text dimColor color="cyan"> [焦点]</Text>
+          <Text dimColor color="cyan"> {t("tui.config.focus")}</Text>
         )}
         {saveStatus !== "idle" && (
           <Text color={saveStatus === "saved" ? "green" : saveStatus === "error" ? "red" : "yellow"}>
@@ -336,22 +337,22 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
         marginBottom={1}
         height={sectionHeight}
       >
-        {renderSectionHeader("sources", "配置源", "gray", false)}
+        {renderSectionHeader("sources", t("tui.config.source"), "gray", false)}
         <Box flexDirection="row" gap={2}>
           <Box flexDirection="row">
-            <Text dimColor>项目: </Text>
+            <Text dimColor>{t("tui.config.project")} </Text>
             <Text color={state.fullConfig.sources.project ? "green" : "gray"}>
-              {state.fullConfig.sources.project ?? "(未配置)"}
+              {state.fullConfig.sources.project ?? t("tui.config.unconfigured")}
             </Text>
           </Box>
           <Box flexDirection="row">
-            <Text dimColor>用户: </Text>
+            <Text dimColor>{t("tui.config.user")} </Text>
             <Text color={state.fullConfig.sources.user ? "green" : "gray"}>
-              {state.fullConfig.sources.user ?? "(未配置)"}
+              {state.fullConfig.sources.user ?? t("tui.config.unconfigured")}
             </Text>
           </Box>
         </Box>
-        <Text dimColor>优先级: 项目 &gt; 用户 &gt; 默认值</Text>
+        <Text dimColor>{t("tui.config.priority")} 项目 &gt; 用户 &gt; 默认值</Text>
       </Box>
 
       {/* Runtime 区域 */}
@@ -366,21 +367,21 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
         {renderSectionHeader("runtime", "Runtime", "green", true)}
         <Box flexDirection="row" gap={2}>
           <Box flexDirection="row">
-            <Text dimColor>权限: </Text>
+            <Text dimColor>{t("tui.config.permission")} </Text>
             <Text bold color={focusedField === "permissionMode" ? "yellow" : "green"}>
               {state.config.permissionMode}
             </Text>
             {focusedField === "permissionMode" && <Text color="yellow"> ◀</Text>}
           </Box>
           <Box flexDirection="row">
-            <Text dimColor>步骤/轮: </Text>
+            <Text dimColor>{t("tui.config.stepsPerTurn")} </Text>
             <Text bold color={focusedField === "maxSteps" ? "yellow" : undefined}>
               {state.config.maxSteps}
             </Text>
             {focusedField === "maxSteps" && <Text color="yellow"> ◀ ↑/↓</Text>}
           </Box>
           <Box flexDirection="row">
-            <Text dimColor>轮次: </Text>
+            <Text dimColor>{t("tui.config.turns")} </Text>
             <Text bold color={focusedField === "maxTurns" ? "yellow" : undefined}>
               {state.config.maxTurns}
             </Text>
@@ -389,14 +390,14 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
         </Box>
         <Box flexDirection="row" gap={2}>
           <Box flexDirection="row">
-            <Text dimColor>默认角色: </Text>
+            <Text dimColor>{t("tui.config.defaultRole")} </Text>
             <Text bold color={focusedField === "defaultRole" ? "yellow" : undefined}>
-              {state.config.defaultRole || "(未设置)"}
+              {state.config.defaultRole || t("tui.config.unset")}
             </Text>
             {focusedField === "defaultRole" && <Text color="yellow"> ◀ ←/→</Text>}
           </Box>
           <Box flexDirection="row">
-            <Text dimColor>超时: </Text>
+            <Text dimColor>{t("tui.config.timeout")} </Text>
             <Text bold color={focusedField === "childAgentTimeout" ? "yellow" : undefined}>
               {state.config.childAgentTimeout}ms
             </Text>
@@ -423,7 +424,7 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
       >
         {renderSectionHeader("providers", "Providers", "cyan", false)}
         {Object.entries(state.fullConfig.providers).length === 0 ? (
-          <Text dimColor>  无已配置的 Provider</Text>
+          <Text dimColor>  {t("tui.config.noProviders")}</Text>
         ) : (
           Object.entries(state.fullConfig.providers).map(([name, cfg]) => (
             <Box key={name} flexDirection="row" gap={1}>
@@ -434,7 +435,7 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
             </Box>
           ))
         )}
-        <Text dimColor>  默认: {state.config.provider}</Text>
+        <Text dimColor>  {t("tui.config.default")} {state.config.provider}</Text>
       </Box>
 
       {/* Models 区域 */}
@@ -448,7 +449,7 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
       >
         {renderSectionHeader("models", "Models", "yellow", false)}
         {Object.entries(state.fullConfig.models).length === 0 ? (
-          <Text dimColor>  无已配置的 Model</Text>
+          <Text dimColor>  {t("tui.config.noModels")}</Text>
         ) : (
           Object.entries(state.fullConfig.models).map(([name, cfg]) => (
             <Box key={name} flexDirection="row" gap={1}>
@@ -459,7 +460,7 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
             </Box>
           ))
         )}
-        <Text dimColor>  当前: {state.config.model}</Text>
+        <Text dimColor>  {t("tui.config.current")} {state.config.model}</Text>
       </Box>
 
       {/* Roles 区域 */}
@@ -472,7 +473,7 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
       >
         {renderSectionHeader("subAgents", "Roles", "magenta", false)}
         {Object.entries(state.fullConfig.subAgents).length === 0 ? (
-          <Text dimColor>  无已配置的 Role</Text>
+          <Text dimColor>  {t("tui.config.noRoles")}</Text>
         ) : (
           Object.entries(state.fullConfig.subAgents).map(([name, cfg]) => (
             <Box key={name} flexDirection="row" gap={1}>
@@ -483,23 +484,23 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
             </Box>
           ))
         )}
-        <Text dimColor>  默认: {state.config.defaultRole || "(未设置)"}</Text>
+        <Text dimColor>  {t("tui.config.default")} {state.config.defaultRole || t("tui.config.unset")}</Text>
       </Box>
 
       {/* 底部操作提示 */}
       <Box flexDirection="row" justifyContent="center" marginTop={1}>
-        <Text dimColor>↑/↓ 切换 | </Text>
+        <Text dimColor>{t("tui.config.switch")} | </Text>
         {SECTIONS.find((s) => s.key === focusedSection)?.editable && (
           <>
-            <Text color={PRIMARY}>Enter 编辑</Text>
+            <Text color={PRIMARY}>{t("tui.config.edit")}</Text>
             <Text dimColor> | </Text>
           </>
         )}
-        <Text bold color="green">Ctrl+S 保存项目</Text>
+        <Text bold color="green">{t("tui.config.saveProject")}</Text>
         <Text dimColor> | </Text>
-        <Text bold color="cyan">Ctrl+U 保存用户</Text>
+        <Text bold color="cyan">{t("tui.config.saveUser")}</Text>
         <Text dimColor> | </Text>
-        <Text dimColor>Ctrl+R 重置</Text>
+        <Text dimColor>{t("tui.config.reset")}</Text>
       </Box>
     </Box>
   );

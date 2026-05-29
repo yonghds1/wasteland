@@ -6,6 +6,7 @@
 
 import { Command } from "commander";
 import { createSessionIndex, type SessionSummary } from "../runtime/session-index.js";
+import { t } from "../locales/index.js";
 
 // ============================================================
 // 辅助函数
@@ -16,7 +17,7 @@ import { createSessionIndex, type SessionSummary } from "../runtime/session-inde
  */
 function formatDateTime(dateStr: string): string {
   if (!dateStr) {
-    return "未知";
+    return t("commands.sessions.unknown");
   }
 
   try {
@@ -53,7 +54,7 @@ function truncate(text: string | undefined, maxLength: number): string {
  */
 function formatSessionList(sessions: SessionSummary[]): string {
   if (sessions.length === 0) {
-    return "没有找到 session。";
+    return t("commands.sessions.list.empty", { count: "0" });
   }
 
   const lines: string[] = [];
@@ -61,21 +62,21 @@ function formatSessionList(sessions: SessionSummary[]): string {
   for (const session of sessions) {
     const id = session.id;
     const date = formatDateTime(session.createdAt);
-    const messages = `${session.messageCount} 条消息`;
-    const provider = session.providerId || "未知";
+    const messages = `${session.messageCount} ${t("commands.sessions.show.messages")}`;
+    const provider = session.providerId || t("commands.sessions.unknown");
     const preview = truncate(session.firstUserMessage, 50);
 
     lines.push(`  ${id}`);
-    lines.push(`    时间: ${date}`);
-    lines.push(`    消息: ${messages}`);
+    lines.push(`    ${t("commands.sessions.show.time")} ${date}`);
+    lines.push(`    ${t("commands.sessions.show.messages")}: ${messages}`);
     lines.push(`    Provider: ${provider}`);
 
     if (preview) {
-      lines.push(`    预览: ${preview}`);
+      lines.push(`    ${t("commands.sessions.show.preview")}: ${preview}`);
     }
 
     if (session.hasChildren) {
-      lines.push(`    子 Agent: ${session.childNames.join(", ")}`);
+      lines.push(`    ${t("commands.sessions.show.subAgent")}: ${session.childNames.join(", ")}`);
     }
 
     lines.push("");
@@ -91,24 +92,24 @@ function formatSessionDetail(session: any): string {
   const lines: string[] = [];
 
   lines.push(`Session: ${session.id}`);
-  lines.push(`时间: ${formatDateTime(session.createdAt)}`);
-  lines.push(`消息数: ${session.messageCount}`);
-  lines.push(`Provider: ${session.providerId || "未知"}`);
-  lines.push(`模式: ${session.mode || "未知"}`);
-  lines.push(`工作目录: ${session.cwd || "未知"}`);
+  lines.push(`${t("commands.sessions.show.time")} ${formatDateTime(session.createdAt)}`);
+  lines.push(`${t("commands.sessions.stats.totalMessages")} ${session.messageCount}`);
+  lines.push(`Provider: ${session.providerId || t("commands.sessions.unknown")}`);
+  lines.push(`${t("commands.sessions.show.mode")}: ${session.mode || t("commands.sessions.unknown")}`);
+  lines.push(`${t("commands.sessions.show.cwd")}: ${session.cwd || t("commands.sessions.unknown")}`);
   lines.push("");
 
   if (session.hasChildren) {
-    lines.push(`子 Agent: ${session.childNames.join(", ")}`);
+    lines.push(`${t("commands.sessions.show.subAgent")}: ${session.childNames.join(", ")}`);
     lines.push("");
   }
 
-  lines.push("消息记录:");
+  lines.push(`${t("commands.sessions.show.messages")}:`);
   lines.push("─".repeat(60));
 
   for (const record of session.records) {
     if (record.type === "message") {
-      const role = record.role === "user" ? "用户" : "助手";
+      const role = record.role === "user" ? t("commands.sessions.show.user") : t("commands.sessions.show.assistant");
       const content = truncate(record.content, 200);
       lines.push(`[${role}] ${content}`);
       lines.push("");
@@ -127,13 +128,13 @@ function formatSessionDetail(session: any): string {
  */
 export function createSessionsCommand(): Command {
   const command = new Command("sessions")
-    .description("列出本地 session")
-    .option("-l, --limit <number>", "最大返回数量", "20")
-    .option("-s, --search <query>", "搜索关键词")
-    .option("-p, --provider <name>", "按 Provider 过滤")
-    .option("-m, --mode <name>", "按模式过滤")
-    .option("--sort <order>", "排序方式 (newest/oldest)", "newest")
-    .option("--json", "输出 JSON 格式")
+    .description(t("commands.sessions.list.description"))
+    .option("-l, --limit <number>", t("commands.sessions.list.options.limit"), "20")
+    .option("-s, --search <query>", t("commands.sessions.list.options.search"))
+    .option("-p, --provider <name>", t("commands.sessions.list.options.provider"))
+    .option("-m, --mode <name>", t("commands.sessions.list.options.mode"))
+    .option("--sort <order>", t("commands.sessions.list.options.sort") + " (newest/oldest)", "newest")
+    .option("--json", t("commands.sessions.list.options.json"))
     .action(async (options) => {
       try {
         const sessionIndex = createSessionIndex();
@@ -149,11 +150,11 @@ export function createSessionsCommand(): Command {
         if (options.json) {
           console.log(JSON.stringify(sessions, null, 2));
         } else {
-          console.log(`\n找到 ${sessions.length} 个 session:\n`);
+          console.log(`\n${t("commands.sessions.list.found", { count: String(sessions.length) })}\n`);
           console.log(formatSessionList(sessions));
         }
       } catch (error) {
-        console.error("列出 session 失败:", error instanceof Error ? error.message : String(error));
+        console.error(t("commands.sessions.list.error", { error: error instanceof Error ? error.message : String(error) }));
         process.exit(1);
       }
     });
@@ -161,15 +162,15 @@ export function createSessionsCommand(): Command {
   // 添加子命令：查看 session 详情
   command
     .command("show <session-id>")
-    .description("查看 session 详情")
-    .option("--json", "输出 JSON 格式")
+    .description(t("commands.sessions.show.description"))
+    .option("--json", t("commands.sessions.show.options.json"))
     .action(async (sessionId: string, options: any) => {
       try {
         const sessionIndex = createSessionIndex();
         const session = await sessionIndex.getSession(sessionId);
 
         if (!session) {
-          console.error(`Session 不存在: ${sessionId}`);
+          console.error(t("commands.sessions.show.notFound", { id: sessionId }));
           process.exit(1);
         }
 
@@ -179,7 +180,7 @@ export function createSessionsCommand(): Command {
           console.log(formatSessionDetail(session));
         }
       } catch (error) {
-        console.error("查看 session 失败:", error instanceof Error ? error.message : String(error));
+        console.error(t("commands.sessions.show.error", { error: error instanceof Error ? error.message : String(error) }));
         process.exit(1);
       }
     });
@@ -187,12 +188,12 @@ export function createSessionsCommand(): Command {
   // 添加子命令：删除 session
   command
     .command("delete <session-id>")
-    .description("删除 session")
-    .option("--confirm", "确认删除")
+    .description(t("commands.sessions.delete.description"))
+    .option("--confirm", t("commands.sessions.delete.options.confirm"))
     .action(async (sessionId: string, options: any) => {
       try {
         if (!options.confirm) {
-          console.log(`要删除 session ${sessionId}，请添加 --confirm 参数。`);
+          console.log(t("commands.sessions.delete.confirmRequired"));
           return;
         }
 
@@ -200,13 +201,13 @@ export function createSessionsCommand(): Command {
         const success = await sessionIndex.deleteSession(sessionId);
 
         if (success) {
-          console.log(`Session ${sessionId} 已删除。`);
+          console.log(t("commands.sessions.delete.deleted", { id: sessionId }));
         } else {
-          console.error(`删除 session 失败: ${sessionId}`);
+          console.error(t("commands.sessions.delete.error", { error: sessionId }));
           process.exit(1);
         }
       } catch (error) {
-        console.error("删除 session 失败:", error instanceof Error ? error.message : String(error));
+        console.error(t("commands.sessions.delete.error", { error: error instanceof Error ? error.message : String(error) }));
         process.exit(1);
       }
     });
@@ -214,8 +215,8 @@ export function createSessionsCommand(): Command {
   // 添加子命令：统计信息
   command
     .command("stats")
-    .description("显示 session 统计信息")
-    .option("--json", "输出 JSON 格式")
+    .description(t("commands.sessions.stats.description"))
+    .option("--json", t("commands.sessions.stats.options.json"))
     .action(async (options: any) => {
       try {
         const sessionIndex = createSessionIndex();
@@ -224,23 +225,23 @@ export function createSessionsCommand(): Command {
         if (options.json) {
           console.log(JSON.stringify(stats, null, 2));
         } else {
-          console.log("\nSession 统计信息:");
+          console.log(`\n${t("commands.sessions.stats.title")}`);
           console.log("─".repeat(40));
-          console.log(`总 session 数: ${stats.totalSessions}`);
-          console.log(`总消息数: ${stats.totalMessages}`);
+          console.log(`${t("commands.sessions.stats.totalSessions")} ${stats.totalSessions}`);
+          console.log(`${t("commands.sessions.stats.totalMessages")} ${stats.totalMessages}`);
 
           if (stats.oldestSession) {
-            console.log(`最早 session: ${formatDateTime(stats.oldestSession)}`);
+            console.log(`${t("commands.sessions.stats.earliest")} ${formatDateTime(stats.oldestSession)}`);
           }
 
           if (stats.newestSession) {
-            console.log(`最新 session: ${formatDateTime(stats.newestSession)}`);
+            console.log(`${t("commands.sessions.stats.latest")} ${formatDateTime(stats.newestSession)}`);
           }
 
           console.log("");
         }
       } catch (error) {
-        console.error("获取统计信息失败:", error instanceof Error ? error.message : String(error));
+        console.error(t("commands.sessions.stats.error", { error: error instanceof Error ? error.message : String(error) }));
         process.exit(1);
       }
     });

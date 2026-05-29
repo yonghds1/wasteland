@@ -1,3 +1,5 @@
+import { t } from "../locales/index.js";
+
 /**
  * 流式显示状态管理
  *
@@ -115,8 +117,8 @@ export function createStreamingStateManager(): StreamingStateManager {
  * 返回当前状态的文字描述，用于 UI 显示。
  */
 export function getStreamingStatusText(state: StreamingState): string | null {
-  if (state.isThinking) return "思考中...";
-  if (state.isStreaming) return "流式中";
+  if (state.isThinking) return t("ui.streaming.thinking");
+  if (state.isStreaming) return t("ui.streaming.streaming");
   return null;
 }
 

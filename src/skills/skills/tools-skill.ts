@@ -4,6 +4,7 @@
  * 显示所有可用工具的详细信息。
  */
 
+import { t } from "../../locales/index.js";
 import type {
   Skill,
   SkillArgs,
@@ -17,7 +18,7 @@ import type {
 export const toolsSkill: Skill = {
   definition: {
     name: "tools",
-    description: "显示所有可用工具的详细信息",
+    description: t("skills.tools.description"),
     riskLevel: "read",
     aliases: ["tls"],
     category: "system",
@@ -68,12 +69,12 @@ export const toolsSkill: Skill = {
     if (filteredNames.length === 0) {
       return {
         status: "success",
-        output: filter ? `没有匹配 "${filter}" 的工具` : "没有可用工具",
+        output: filter ? `${t("skills.tools.noMatch")}: ${filter}` : t("skills.tools.noTools"),
       };
     }
 
     const lines: string[] = [];
-    lines.push(`# 可用工具 (${filteredNames.length} 个)`);
+    lines.push(`# ${t("skills.tools.availableTools")} (${filteredNames.length} 个)`);
     lines.push("");
 
     // 按风险等级分组
@@ -90,9 +91,9 @@ export const toolsSkill: Skill = {
 
     const riskOrder = ["read", "write", "execute"];
     const riskLabels: Record<string, string> = {
-      read: "只读工具",
-      write: "写入工具",
-      execute: "执行工具",
+      read: t("skills.tools.readOnly"),
+      write: t("skills.tools.write"),
+      execute: t("skills.tools.execute"),
     };
 
     for (const level of riskOrder) {
@@ -108,7 +109,7 @@ export const toolsSkill: Skill = {
 
         if (detailed) {
           lines.push(`### \`${name}\``);
-          lines.push(`风险等级: ${tool.riskLevel}`);
+          lines.push(`${t("skills.tools.riskLevel")} ${tool.riskLevel}`);
           lines.push("");
 
           // 检查工具是否有额外属性
@@ -119,10 +120,10 @@ export const toolsSkill: Skill = {
           }
 
           if (toolAny.parameters) {
-            lines.push("**参数:**");
+            lines.push(`**${t("skills.tools.params")}**`);
             for (const [paramName, paramDef] of Object.entries(toolAny.parameters)) {
               const def = paramDef as any;
-              const required = def.required ? " (必需)" : "";
+              const required = def.required ? t("skills.tools.required") : "";
               const defVal = def.default !== undefined ? ` = ${def.default}` : "";
               lines.push(`- \`${paramName}\`${required}${defVal}: ${def.description ?? def.type ?? "unknown"}`);
             }
@@ -130,7 +131,7 @@ export const toolsSkill: Skill = {
           }
 
           if (toolAny.examples?.length) {
-            lines.push("**示例:**");
+            lines.push(`**${t("skills.tools.example")}**`);
             for (const example of toolAny.examples.slice(0, 3)) {
               lines.push(`- ${example}`);
             }
@@ -144,7 +145,7 @@ export const toolsSkill: Skill = {
     }
 
     if (!detailed) {
-      lines.push("提示: 使用 `--detailed` 查看参数信息");
+      lines.push(t("skills.tools.hint"));
     }
 
     return {
