@@ -1,4 +1,49 @@
 {
+  "cli": {
+    "description": "Immortan Joe's War Machine - 多智能体 CLI 系统",
+    "devDescription": "开发模式兼容入口。"
+  },
+  "skins": {
+    "notFound": "皮肤 \"{{skinId}}\" 不存在: {{skinPath}}",
+    "incomplete": "皮肤配置不完整: 缺少必要字段",
+    "missingCommandName": "皮肤配置不完整: cli.commandName 是必需的",
+    "missingGreeting": "皮肤配置不完整: roles.main.greeting 是必需的"
+  },
+  "prompts": {
+    "builtinRoleNotFound": "内置角色不存在: {{ref}}",
+    "invalidTemplateRef": "无效的模板引用: {{ref}}",
+    "templateFileNotFound": "模板文件不存在: {{filePath}}",
+    "sectionFileNotFound": "段落文件不存在: {{filePath}}"
+  },
+  "config": {
+    "cannotParsePromptTemplate": "无法解析 promptTemplate: {{template}}",
+    "roleNotDefined": "当前未定义角色: {{roleName}}。可用的子角色: {{availableRoles}}",
+    "modelNotDefined": "角色 {{roleName}} 引用了未定义的 model: {{modelName}}。可用的 models: {{availableModels}}"
+  },
+  "mcp": {
+    "serverStarted": "[MCP] 服务器 {{name}} 已启动: {{serverInfo}} v{{version}}",
+    "serverHasTools": "[MCP] 服务器 {{name}} 有 {{count}} 个工具",
+    "serversFailed": "[MCP] 以下服务器启动失败:",
+    "failedToParseMessage": "解析消息失败: {{line}}",
+    "serverAlreadyRegistered": "MCP 服务器已注册: {{name}}",
+    "serverNotFound": "MCP 服务器未找到: {{name}}",
+    "serverNotStarted": "MCP 服务器未启动: {{name}}",
+    "clientAlreadyStarted": "MCP 客户端已启动",
+    "failedToCreateStdio": "创建 stdio 流失败",
+    "clientNotInitialized": "MCP 客户端未初始化",
+    "spawnAgentHandled": "spawn_agent 应由 dispatchToolCall 处理",
+    "mcpToolRegistry": "MCP 工具 {{name}} 应通过 MCPToolRegistry 执行",
+    "startupFailed": "MCP 服务器启动失败:"
+  },
+  "tui": {
+    "failedToLoadSkin": "加载皮肤失败:",
+    "toolError": "错误: {{error}}",
+    "runtimeEventStreamError": "运行时事件流错误:",
+    "debugTraceStreamError": "调试跟踪流错误:"
+  },
+  "utils": {
+    "failedToRunScript": "运行 create-aliases.sh 失败:"
+  },
   "skin": {
     "name": "废土风格",
     "description": "基于《疯狂的麦克斯：狂暴之路》的废土美学",
@@ -432,7 +477,11 @@
       "showOverview": "显示项目概览",
       "runSkillsHint": "运行 /skills 查看所有可用技能。",
       "currentSession": "当前会话:",
-      "workDir": "工作目录:"
+      "workDir": "工作目录:",
+      "skillName": "技能名",
+      "params": "参数",
+      "options": "选项",
+      "topicDesc": "帮助主题: commands, tools, skills, all"
     },
     "status": {
       "description": "显示当前会话状态和统计信息",
@@ -452,7 +501,11 @@
       "turn": "轮次:",
       "history": "历史:",
       "tools": "工具:",
-      "directory": "目录:"
+      "directory": "目录:",
+      "items": "条",
+      "available": "个可用",
+      "levelTools": "级工具:",
+      "formatDesc": "输出格式: simple, detailed, json"
     },
     "context": {
       "description": "显示项目上下文和结构概览",
@@ -467,7 +520,9 @@
       "structure": "目录结构",
       "keyFiles": "关键文件",
       "otherFiles": "以及 {{count}} 个其他文件",
-      "commonCommands": "常用命令"
+      "commonCommands": "常用命令",
+      "items": "个",
+      "detailedDesc": "显示详细信息（包括文件树）"
     },
     "tools": {
       "description": "显示所有可用工具的详细信息",
@@ -481,7 +536,10 @@
       "params": "参数:",
       "required": "(必需)",
       "example": "示例:",
-      "hint": "提示: 使用 --detailed 查看参数信息"
+      "hint": "提示: 使用 --detailed 查看参数信息",
+      "filterDesc": "过滤条件: read, write, execute, 或工具名前缀",
+      "detailedDesc": "显示详细参数信息",
+      "items": "个"
     },
     "init": {
       "description": "初始化 CLAUDE.md 项目上下文文件",
@@ -497,7 +555,12 @@
       "writing": "写入文件...",
       "writeFailed": "写入失败:",
       "created": "已创建 CLAUDE.md:",
-      "cannotGetStructure": "无法获取项目结构"
+      "cannotGetStructure": "无法获取项目结构",
+      "templates": {
+        "default": "# 项目上下文\n\n## 概述\n{description}\n\n## 项目结构\n```\n{structure}\n```\n\n## 关键文件\n- `src/` - 源代码目录\n- `tests/` - 测试文件目录\n\n## 开发规范\n- 遵循现有代码风格\n- 提交前运行测试\n- 更新相关文档\n\n## 重要事项\n- 保持代码简洁清晰\n- 注释复杂逻辑\n- 处理边界情况",
+        "minimal": "# 项目上下文\n\n{description}\n\n## 关键约定\n- 遵循现有代码风格\n- 提交前运行测试",
+        "full": "# 项目上下文\n\n## 项目概述\n{description}\n\n## 技术栈\n- 运行时: Node.js\n- 语言: TypeScript\n- 包管理器: npm\n\n## 项目结构\n```\n{structure}\n```\n\n## 开发指南\n\n### 环境设置\n```bash\nnpm install\n```\n\n### 常用命令\n- `npm run build` - 构建项目\n- `npm run test` - 运行测试\n- `npm run lint` - 代码检查\n\n### 代码规范\n- 使用 TypeScript 编写所有新代码\n- 遵循现有命名约定\n- 为公共 API 编写文档注释\n\n### 提交规范\n- 编写清晰的提交信息\n- 提交前确保测试通过\n- 大型更改拆分为小提交\n\n## 架构说明\n{architecture}\n\n## 已知问题\n{issues}\n\n## 未来计划\n{future}"
+      }
     },
     "common": {
       "unknownSkill": "未知技能:",

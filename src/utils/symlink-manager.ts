@@ -10,6 +10,7 @@ import { access, mkdir, readdir, symlink, unlink } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { t } from "../locales/index.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -108,7 +109,7 @@ async function runCreateAliasesScript(projectRoot: string, skinId: string): Prom
     });
   } catch (error) {
     // 脚本执行失败，忽略
-    console.warn("Failed to run create-aliases.sh:", error);
+    console.warn(t("utils.failedToRunScript"), error);
   }
 }
 

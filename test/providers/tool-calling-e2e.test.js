@@ -357,7 +357,7 @@ test("错误处理: 缺少 model", () => {
         // model: "test-model", // 缺少
       });
     },
-    /缺少 model/
+    /missingModel|缺少 model/
   );
 });
 

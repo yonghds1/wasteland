@@ -6,7 +6,7 @@
 
 import { Command } from "commander";
 import { createSessionIndex, type SessionSummary } from "../runtime/session-index.js";
-import { t } from "../locales/index.js";
+import { t, getLanguage } from "../locales/index.js";
 
 // ============================================================
 // 辅助函数
@@ -22,7 +22,9 @@ function formatDateTime(dateStr: string): string {
 
   try {
     const date = new Date(dateStr);
-    return date.toLocaleString("zh-CN", {
+    const lang = getLanguage();
+    const locale = lang === "zh" ? "zh-CN" : "en-US";
+    return date.toLocaleString(locale, {
       year: "numeric",
       month: "2-digit",
       day: "2-digit",

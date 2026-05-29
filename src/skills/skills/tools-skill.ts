@@ -25,11 +25,11 @@ export const toolsSkill: Skill = {
     parameters: {
       filter: {
         type: "string",
-        description: "过滤条件: read, write, execute, 或工具名前缀",
+        description: t("skills.tools.filterDesc"),
       },
       detailed: {
         type: "boolean",
-        description: "显示详细参数信息",
+        description: t("skills.tools.detailedDesc"),
         default: false,
       },
     },
@@ -74,7 +74,7 @@ export const toolsSkill: Skill = {
     }
 
     const lines: string[] = [];
-    lines.push(`# ${t("skills.tools.availableTools")} (${filteredNames.length} 个)`);
+    lines.push(`# ${t("skills.tools.availableTools")} (${filteredNames.length} ${t("skills.tools.items")})`);
     lines.push("");
 
     // 按风险等级分组

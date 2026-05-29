@@ -91,7 +91,7 @@ async function runChatSession(params: {
   try {
     await startMCP();
   } catch (error) {
-    console.warn("MCP servers startup failed:", error instanceof Error ? error.message : String(error));
+    console.warn(t("mcp.startupFailed"), error instanceof Error ? error.message : String(error));
   }
 
   try {

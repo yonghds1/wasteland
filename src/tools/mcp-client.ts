@@ -42,6 +42,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
+import { t } from "../locales/index.js";
 
 // ============================================================
 // JSON-RPC 类型定义
@@ -240,7 +241,7 @@ export class MCPClient extends EventEmitter {
    */
   async start(): Promise<MCPInitializeResult> {
     if (this.process) {
-      throw new Error("MCP client already started");
+      throw new Error(t("mcp.clientAlreadyStarted"));
     }
 
     // 启动子进程
@@ -251,7 +252,7 @@ export class MCPClient extends EventEmitter {
     });
 
     if (!this.process.stdin || !this.process.stdout) {
-      throw new Error("Failed to create stdio streams");
+      throw new Error(t("mcp.failedToCreateStdio"));
     }
 
     // 处理 stdout（JSON-RPC 响应）
@@ -378,7 +379,7 @@ export class MCPClient extends EventEmitter {
 
   private ensureInitialized(): void {
     if (!this.initialized || !this.process) {
-      throw new Error("MCP client not initialized");
+      throw new Error(t("mcp.clientNotInitialized"));
     }
   }
 
@@ -398,7 +399,7 @@ export class MCPClient extends EventEmitter {
         const message = JSON.parse(line);
         this.handleMessage(message);
       } catch (error) {
-        this.emit("error", new Error(`Failed to parse message: ${line}`));
+        this.emit("error", new Error(t("mcp.failedToParseMessage", { line })));
       }
     }
   }

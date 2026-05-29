@@ -25,7 +25,7 @@ export const statusSkill: Skill = {
     parameters: {
       format: {
         type: "string",
-        description: "输出格式: simple, detailed, json",
+        description: t("skills.status.formatDesc"),
         default: "simple",
         enum: ["simple", "detailed", "json"],
       },
@@ -61,8 +61,8 @@ export const statusSkill: Skill = {
     if (format === "simple") {
       lines.push(`${t("skills.status.session")} ${context.sessionId}`);
       lines.push(`${t("skills.status.turn")} ${context.turn}`);
-      lines.push(`${t("skills.status.history")} ${context.history.length} 条消息`);
-      lines.push(`${t("skills.status.tools")} ${context.toolRegistry.list().length} 个可用`);
+      lines.push(`${t("skills.status.history")} ${context.history.length} ${t("skills.status.items")}`);
+      lines.push(`${t("skills.status.tools")} ${context.toolRegistry.list().length} ${t("skills.status.available")}`);
       lines.push(`${t("skills.status.directory")} ${context.cwd}`);
     } else {
       // detailed
@@ -78,9 +78,9 @@ export const statusSkill: Skill = {
       lines.push(`## ${t("skills.status.messageHistory")}`);
       const userMsgs = context.history.filter(m => m.role === "user").length;
       const assistantMsgs = context.history.filter(m => m.role === "assistant").length;
-      lines.push(`- ${t("skills.status.userMessages")} ${userMsgs} 条`);
-      lines.push(`- ${t("skills.status.assistantMessages")} ${assistantMsgs} 条`);
-      lines.push(`- ${t("skills.status.total")} ${context.history.length} 条`);
+      lines.push(`- ${t("skills.status.userMessages")} ${userMsgs} ${t("skills.status.items")}`);
+      lines.push(`- ${t("skills.status.assistantMessages")} ${assistantMsgs} ${t("skills.status.items")}`);
+      lines.push(`- ${t("skills.status.total")} ${context.history.length} ${t("skills.status.items")}`);
       lines.push("");
 
       // 工具状态
@@ -97,7 +97,7 @@ export const statusSkill: Skill = {
       }
 
       for (const [level, count] of byRisk) {
-        lines.push(`- ${level} 级工具: ${count} 个`);
+        lines.push(`- ${level} ${t("skills.status.levelTools")} ${count} ${t("skills.status.items")}`);
       }
       lines.push("");
 

@@ -25,7 +25,7 @@ export const helpSkill: Skill = {
     parameters: {
       topic: {
         type: "string",
-        description: "帮助主题: commands, tools, skills, all",
+        description: t("skills.help.topicDesc"),
         default: "all",
         enum: ["commands", "tools", "skills", "all"],
       },
@@ -125,14 +125,14 @@ export const helpSkill: Skill = {
       lines.push("");
       lines.push(t("skills.help.usage"));
       lines.push("```");
-      lines.push("/<技能名> [参数] [选项]");
+      lines.push(`/<${t("skills.help.skillName")}> [${t("skills.help.params")}] [${t("skills.help.options")}]`);
       lines.push("```");
       lines.push("");
       lines.push(t("skills.help.example"));
       lines.push("```");
-      lines.push("/init              # 初始化项目上下文");
-      lines.push("/ctx               # 显示项目概览");
-      lines.push("/help              # 显示帮助");
+      lines.push(`/init              # ${t("skills.help.initContext")}`);
+      lines.push(`/ctx               # ${t("skills.help.showOverview")}`);
+      lines.push(`/help              # ${t("skills.help.showHelp")}`);
       lines.push("```");
       lines.push("");
       lines.push(t("skills.help.runSkillsHint"));

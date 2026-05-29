@@ -94,8 +94,8 @@ export type RawJoeSettings = {
     maxTurns?: number;
     childAgentTimeout?: number;
     debug?: boolean;
-    /** 语言设置：en=英文，zh=中文，默认 en */
-    language?: "en" | "zh";
+    /** 语言设置，默认 en */
+    language?: string;
   };
   /** MCP 服务器配置 */
   mcpServers?: MCPServersConfig;
@@ -118,8 +118,8 @@ export type ResolvedJoeSettings = {
     maxTurns: number;
     childAgentTimeout: number;
     debug: boolean;
-    /** 语言设置：en=英文，zh=中文，默认 en */
-    language: "en" | "zh";
+    /** 语言设置，默认 en */
+    language: string;
   };
   mcpServers: MCPServersConfig;
 };

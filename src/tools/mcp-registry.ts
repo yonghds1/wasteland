@@ -48,6 +48,7 @@
 
 import type { AgentTool, ToolExecutionContext, ToolExecutionResult, ToolInput } from "./tool-types.js";
 import { MCPClient, createMCPToolAdapter, type MCPToolDefinition, type MCPToolResult, type MCPServerConfig } from "./mcp-client.js";
+import { t } from "../locales/index.js";
 
 // ============================================================
 // 类型定义
@@ -103,7 +104,7 @@ export class MCPToolRegistry {
    */
   registerServerConfig(name: string, config: MCPServerConfig): void {
     if (this.servers.has(name)) {
-      throw new Error(`MCP server already registered: ${name}`);
+      throw new Error(t("mcp.serverAlreadyRegistered", { name }));
     }
 
     const client = new MCPClient({ name, server: config });
@@ -131,7 +132,7 @@ export class MCPToolRegistry {
   async startServer(name: string): Promise<void> {
     const server = this.servers.get(name);
     if (!server) {
-      throw new Error(`MCP server not found: ${name}`);
+      throw new Error(t("mcp.serverNotFound", { name }));
     }
 
     if (server.started) {
@@ -140,7 +141,7 @@ export class MCPToolRegistry {
 
     // 启动客户端
     const initResult = await server.client.start();
-    console.log(`[MCP] Server ${name} started: ${initResult.serverInfo.name} v${initResult.serverInfo.version}`);
+    console.log(t("mcp.serverStarted", { name, serverInfo: initResult.serverInfo.name, version: initResult.serverInfo.version }));
 
     // 获取工具列表
     if (initResult.capabilities.tools?.supported !== false) {
@@ -158,7 +159,7 @@ export class MCPToolRegistry {
         }
       }
 
-      console.log(`[MCP] Server ${name} has ${tools.length} tools`);
+      console.log(t("mcp.serverHasTools", { name, count: String(tools.length) }));
     }
 
     server.started = true;
@@ -183,7 +184,7 @@ export class MCPToolRegistry {
 
     if (errors.length > 0) {
       console.warn(
-        `[MCP] Some servers failed to start:`,
+        t("mcp.serversFailed"),
         errors.map((e) => `${e.name}: ${e.error.message}`).join(", "),
       );
     }
@@ -255,11 +256,11 @@ export class MCPToolRegistry {
   ): Promise<MCPToolResult> {
     const server = this.servers.get(serverName);
     if (!server) {
-      throw new Error(`MCP server not found: ${serverName}`);
+      throw new Error(t("mcp.serverNotFound", { name: serverName }));
     }
 
     if (!server.started) {
-      throw new Error(`MCP server not started: ${serverName}`);
+      throw new Error(t("mcp.serverNotStarted", { name: serverName }));
     }
 
     return server.client.callTool(toolName, args);

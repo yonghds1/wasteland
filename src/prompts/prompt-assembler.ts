@@ -21,6 +21,7 @@ import type {
 } from "./prompt-types.js";
 import { getBuiltinRole, isBuiltinRoleId } from "./role-templates.js";
 import { interpolateVariables } from "./variable-interpolator.js";
+import { t } from "../locales/index.js";
 
 // ============================================================
 // 模板引用解析
@@ -50,7 +51,7 @@ function resolveTemplateRef(
     if (isBuiltinRoleId(ref)) {
       const template = getBuiltinRole(ref);
       if (!template) {
-        throw new Error(`内置角色不存在: ${ref}`);
+        throw new Error(t("prompts.builtinRoleNotFound", { ref }));
       }
       return template;
     }
@@ -90,7 +91,7 @@ function resolveTemplateRef(
     };
   }
 
-  throw new Error(`无效的模板引用: ${JSON.stringify(ref)}`);
+  throw new Error(t("prompts.invalidTemplateRef", { ref: JSON.stringify(ref) }));
 }
 
 /**
@@ -101,7 +102,7 @@ function resolveTemplateRef(
  */
 function loadTemplateFile(filePath: string): PromptTemplate {
   if (!existsSync(filePath)) {
-    throw new Error(`模板文件不存在: ${filePath}`);
+    throw new Error(t("prompts.templateFileNotFound", { filePath }));
   }
 
   const content = readFileSync(filePath, "utf-8");
@@ -145,7 +146,7 @@ function loadSectionContent(section: PromptSection, cwd: string): string {
   // 文件引用
   const filePath = resolve(cwd, section.content.$ref);
   if (!existsSync(filePath)) {
-    throw new Error(`段落文件不存在: ${filePath}`);
+    throw new Error(t("prompts.sectionFileNotFound", { filePath }));
   }
 
   return readFileSync(filePath, "utf-8").trim();

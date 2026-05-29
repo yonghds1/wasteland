@@ -18,7 +18,7 @@ import { SessionManager } from "../../runtime/session-manager.js";
 import { createDefaultProviderRegistry } from "../../providers/provider-registry.js";
 import { createDefaultToolRegistry } from "../../tools/default-registry.js";
 import { loadSkin } from "../../skins/index.js";
-import { initI18n } from "../../locales/index.js";
+import { initI18n, t } from "../../locales/index.js";
 import type { TuiRuntimeContext, TuiConfig, TuiFullConfig } from "../types.js";
 import type { ChatInputTurn } from "../../runtime/event-types.js";
 import type { ProviderRegistry } from "../../providers/provider-registry.js";
@@ -95,7 +95,7 @@ export async function createTuiRuntime(cwd: string): Promise<TuiRuntimeContext> 
   try {
     await startMCP();
   } catch (error) {
-    console.warn("MCP servers startup failed:", error instanceof Error ? error.message : String(error));
+    console.warn(t("mcp.startupFailed"), error instanceof Error ? error.message : String(error));
   }
 
   // 7. 创建 input$ Subject（用于接收用户输入）
@@ -153,7 +153,7 @@ export async function createTuiRuntime(cwd: string): Promise<TuiRuntimeContext> 
     const language = loadedSettings.settings.runtime.language;
     skin = await loadSkin(skinId, undefined, language);
   } catch (error) {
-    console.warn("Failed to load skin:", error instanceof Error ? error.message : String(error));
+    console.warn(t("tui.failedToLoadSkin"), error instanceof Error ? error.message : String(error));
   }
 
   // 返回扩展的上下文（包含 sessionManager 用于清理）

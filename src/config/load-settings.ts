@@ -1,5 +1,6 @@
-import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { readFile, readdir } from "node:fs/promises";
+import { resolve, join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import type { PermissionMode } from "../runtime/permission-gate.js";
 import {
@@ -26,6 +27,24 @@ import {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const localesDir = join(__dirname, "..", "locales");
+
+/**
+ * 扫描翻译文件目录，获取支持的语言列表
+ */
+async function getSupportedLanguages(): Promise<string[]> {
+  try {
+    const files = await readdir(localesDir);
+    return files
+      .filter(file => file.endsWith(".json") && file !== "package.json")
+      .map(file => file.replace(".json", ""));
+  } catch {
+    return ["en"];
+  }
 }
 
 function validatePermissionMode(value: unknown, sourcePath: string): PermissionMode {
@@ -153,7 +172,7 @@ function validateRoleSettings(
   return roles;
 }
 
-function parseSettings(raw: unknown, sourcePath: string): RawJoeSettings {
+async function parseSettings(raw: unknown, sourcePath: string): Promise<RawJoeSettings> {
   if (!isRecord(raw)) {
     throw new Error(`配置文件 ${sourcePath} 的根节点必须是对象。`);
   }
@@ -252,8 +271,13 @@ function parseSettings(raw: unknown, sourcePath: string): RawJoeSettings {
     }
 
     if ("language" in raw.runtime && raw.runtime.language !== undefined) {
-      if (raw.runtime.language !== "en" && raw.runtime.language !== "zh") {
-        throw new Error(`配置文件 ${sourcePath} 中 runtime.language 必须是 "en" 或 "zh"。`);
+      if (typeof raw.runtime.language !== "string" || raw.runtime.language.trim().length === 0) {
+        throw new Error(`配置文件 ${sourcePath} 中 runtime.language 必须是非空字符串。`);
+      }
+
+      const supportedLanguages = await getSupportedLanguages();
+      if (!supportedLanguages.includes(raw.runtime.language)) {
+        throw new Error(`配置文件 ${sourcePath} 中 runtime.language 必须是以下之一: ${supportedLanguages.join(", ")}`);
       }
 
       runtime.language = raw.runtime.language;
@@ -268,7 +292,7 @@ function parseSettings(raw: unknown, sourcePath: string): RawJoeSettings {
 async function readSettingsFile(filePath: string): Promise<RawJoeSettings | null> {
   try {
     const content = await readFile(filePath, "utf8");
-    return parseSettings(JSON.parse(content), filePath);
+    return await parseSettings(JSON.parse(content), filePath);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       return null;

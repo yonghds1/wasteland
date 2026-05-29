@@ -124,7 +124,7 @@ export const contextSkill: Skill = {
     parameters: {
       detailed: {
         type: "boolean",
-        description: "显示详细信息（包括文件树）",
+        description: t("skills.context.detailedDesc"),
         default: false,
       },
     },
@@ -149,11 +149,11 @@ export const contextSkill: Skill = {
 
     // 获取结构
     const structure = await getProjectStructure(context);
-    context.output(`${t("skills.context.directory")} ${structure.length} 个\n`);
+    context.output(`${t("skills.context.directory")} ${structure.length} ${t("skills.context.items")}\n`);
 
     // 获取关键文件
     const keyFiles = await getKeyFiles(context);
-    context.output(`${t("skills.context.files")} ${keyFiles.length} 个\n`);
+    context.output(`${t("skills.context.files")} ${keyFiles.length} ${t("skills.context.items")}\n`);
 
     // 构建输出
     const lines: string[] = [];

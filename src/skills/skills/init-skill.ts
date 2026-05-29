@@ -14,107 +14,10 @@ import type {
 } from "../skill-types.js";
 
 /**
- * CLAUDE.md 默认模板
- */
-const DEFAULT_TEMPLATE = `# 项目上下文
-
-## 概述
-{description}
-
-## 项目结构
-\`\`\`
-{structure}
-\`\`\`
-
-## 关键文件
-- \`src/\` - 源代码目录
-- \`tests/\` - 测试文件目录
-
-## 开发规范
-- 遵循现有代码风格
-- 提交前运行测试
-- 更新相关文档
-
-## 重要事项
-- 保持代码简洁清晰
-- 注释复杂逻辑
-- 处理边界情况
-`;
-
-/**
- * 简洁模板
- */
-const MINIMAL_TEMPLATE = `# 项目上下文
-
-{description}
-
-## 关键约定
-- 遵循现有代码风格
-- 提交前运行测试
-`;
-
-/**
- * 完整模板
- */
-const FULL_TEMPLATE = `# 项目上下文
-
-## 项目概述
-{description}
-
-## 技术栈
-- 运行时: Node.js
-- 语言: TypeScript
-- 包管理器: npm
-
-## 项目结构
-\`\`\`
-{structure}
-\`\`\`
-
-## 开发指南
-
-### 环境设置
-\`\`\`bash
-npm install
-\`\`\`
-
-### 常用命令
-- \`npm run build\` - 构建项目
-- \`npm run test\` - 运行测试
-- \`npm run lint\` - 代码检查
-
-### 代码规范
-- 使用 TypeScript 编写所有新代码
-- 遵循现有命名约定
-- 为公共 API 编写文档注释
-
-### 提交规范
-- 编写清晰的提交信息
-- 提交前确保测试通过
-- 大型更改拆分为小提交
-
-## 架构说明
-{architecture}
-
-## 已知问题
-{issues}
-
-## 未来计划
-{future}
-`;
-
-/**
  * 获取模板内容
  */
 function getTemplate(template: string): string {
-  switch (template) {
-    case "minimal":
-      return MINIMAL_TEMPLATE;
-    case "full":
-      return FULL_TEMPLATE;
-    default:
-      return DEFAULT_TEMPLATE;
-  }
+  return t(`skills.init.templates.${template}`);
 }
 
 /**

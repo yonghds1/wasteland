@@ -11,6 +11,7 @@ import { createAskUserTool } from "./ask-user.js";
 import { createHttpRequestTool } from "./http-request.js";
 import type { MCPServersConfig } from "../config/settings-types.js";
 import { MCPToolRegistry } from "./mcp-registry.js";
+import { t } from "../locales/index.js";
 
 /**
  * 创建 spawn_agent 的占位工具定义
@@ -24,7 +25,7 @@ function createSpawnAgentPlaceholder() {
     riskLevel: "execute" as const,
     // 这个 execute 永远不会被调用，因为 dispatchToolCall 会拦截
     async execute(): Promise<never> {
-      throw new Error("spawn_agent should be handled by dispatchToolCall");
+      throw new Error(t("mcp.spawnAgentHandled"));
     },
   };
 }
@@ -40,7 +41,7 @@ function createMCPToolPlaceholder(name: string) {
     name,
     riskLevel: "execute" as const,
     async execute(): Promise<never> {
-      throw new Error(`MCP tool ${name} should be executed via MCPToolRegistry`);
+      throw new Error(t("mcp.mcpToolRegistry", { name }));
     },
   };
 }

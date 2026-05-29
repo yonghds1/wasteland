@@ -8,7 +8,7 @@ import { createResumeCommand } from "./commands/resume.js";
 import { createSkinCommand } from "./commands/skin.js";
 import { ensureRoleAliases } from "./utils/symlink-manager.js";
 import { loadJoeSettings } from "./config/load-settings.js";
-import { initI18n } from "./locales/index.js";
+import { initI18n, t } from "./locales/index.js";
 
 function registerRootCommands(program: Command): void {
   program.addCommand(createChatCommand());
@@ -25,13 +25,13 @@ export function createProgram(): Command {
 
   program
     .name("joe")
-    .description("Immortan Joe's War Machine - 多智能体 CLI 系统")
+    .description(t("cli.description"))
     .version("0.1.0");
 
   registerRootCommands(program);
 
   const devShim = new Command("joe")
-    .description("开发模式兼容入口。");
+    .description(t("cli.devDescription"));
 
   registerRootCommands(devShim);
   program.addCommand(devShim);

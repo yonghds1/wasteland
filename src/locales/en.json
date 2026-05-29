@@ -1,4 +1,49 @@
 {
+  "cli": {
+    "description": "Immortan Joe's War Machine - Multi-agent CLI system",
+    "devDescription": "Development mode compatibility entry."
+  },
+  "skins": {
+    "notFound": "Skin \"{{skinId}}\" not found: {{skinPath}}",
+    "incomplete": "Skin configuration incomplete: missing required fields",
+    "missingCommandName": "Skin configuration incomplete: cli.commandName is required",
+    "missingGreeting": "Skin configuration incomplete: roles.main.greeting is required"
+  },
+  "prompts": {
+    "builtinRoleNotFound": "Builtin role not found: {{ref}}",
+    "invalidTemplateRef": "Invalid template reference: {{ref}}",
+    "templateFileNotFound": "Template file not found: {{filePath}}",
+    "sectionFileNotFound": "Section file not found: {{filePath}}"
+  },
+  "config": {
+    "cannotParsePromptTemplate": "Cannot parse promptTemplate: {{template}}",
+    "roleNotDefined": "Role not defined: {{roleName}}. Available sub-roles: {{availableRoles}}",
+    "modelNotDefined": "Role {{roleName}} references undefined model: {{modelName}}. Available models: {{availableModels}}"
+  },
+  "mcp": {
+    "serverStarted": "[MCP] Server {{name}} started: {{serverInfo}} v{{version}}",
+    "serverHasTools": "[MCP] Server {{name}} has {{count}} tools",
+    "serversFailed": "[MCP] Some servers failed to start:",
+    "failedToParseMessage": "Failed to parse message: {{line}}",
+    "serverAlreadyRegistered": "MCP server already registered: {{name}}",
+    "serverNotFound": "MCP server not found: {{name}}",
+    "serverNotStarted": "MCP server not started: {{name}}",
+    "clientAlreadyStarted": "MCP client already started",
+    "failedToCreateStdio": "Failed to create stdio streams",
+    "clientNotInitialized": "MCP client not initialized",
+    "spawnAgentHandled": "spawn_agent should be handled by dispatchToolCall",
+    "mcpToolRegistry": "MCP tool {{name}} should be executed via MCPToolRegistry",
+    "startupFailed": "MCP servers startup failed:"
+  },
+  "tui": {
+    "failedToLoadSkin": "Failed to load skin:",
+    "toolError": "Error: {{error}}",
+    "runtimeEventStreamError": "Runtime event stream error:",
+    "debugTraceStreamError": "Debug trace stream error:"
+  },
+  "utils": {
+    "failedToRunScript": "Failed to run create-aliases.sh:"
+  },
   "skin": {
     "name": "Wasteland Style",
     "description": "Post-apocalyptic aesthetics based on Mad Max: Fury Road",
@@ -432,7 +477,11 @@
       "showOverview": "Show project overview",
       "runSkillsHint": "Run /skills to see all available skills.",
       "currentSession": "Current Session:",
-      "workDir": "Working Directory:"
+      "workDir": "Working Directory:",
+      "skillName": "skill-name",
+      "params": "params",
+      "options": "options",
+      "topicDesc": "Help topic: commands, tools, skills, all"
     },
     "status": {
       "description": "Show current session status and statistics",
@@ -452,7 +501,11 @@
       "turn": "Turn:",
       "history": "History:",
       "tools": "Tools:",
-      "directory": "Directory:"
+      "directory": "Directory:",
+      "items": "",
+      "available": " available",
+      "levelTools": " level tools:",
+      "formatDesc": "Output format: simple, detailed, json"
     },
     "context": {
       "description": "Show project context and structure overview",
@@ -467,7 +520,9 @@
       "structure": "Directory Structure",
       "keyFiles": "Key Files",
       "otherFiles": "and {{count}} other files",
-      "commonCommands": "Common Commands"
+      "commonCommands": "Common Commands",
+      "items": "",
+      "detailedDesc": "Show detailed info (including file tree)"
     },
     "tools": {
       "description": "Show detailed information of all available tools",
@@ -481,7 +536,10 @@
       "params": "Parameters:",
       "required": "(Required)",
       "example": "Example:",
-      "hint": "Hint: Use --detailed to view parameter info"
+      "hint": "Hint: Use --detailed to view parameter info",
+      "filterDesc": "Filter: read, write, execute, or tool name prefix",
+      "detailedDesc": "Show detailed parameter info",
+      "items": ""
     },
     "init": {
       "description": "Initialize CLAUDE.md project context file",
@@ -497,7 +555,12 @@
       "writing": "Writing file...",
       "writeFailed": "Write failed:",
       "created": "Created CLAUDE.md:",
-      "cannotGetStructure": "Cannot get project structure"
+      "cannotGetStructure": "Cannot get project structure",
+      "templates": {
+        "default": "# Project Context\n\n## Overview\n{description}\n\n## Project Structure\n```\n{structure}\n```\n\n## Key Files\n- `src/` - Source code directory\n- `tests/` - Test files directory\n\n## Development Guidelines\n- Follow existing code style\n- Run tests before commit\n- Update related documentation\n\n## Important Notes\n- Keep code concise and clear\n- Comment complex logic\n- Handle edge cases",
+        "minimal": "# Project Context\n\n{description}\n\n## Key Conventions\n- Follow existing code style\n- Run tests before commit",
+        "full": "# Project Context\n\n## Project Overview\n{description}\n\n## Tech Stack\n- Runtime: Node.js\n- Language: TypeScript\n- Package Manager: npm\n\n## Project Structure\n```\n{structure}\n```\n\n## Development Guide\n\n### Environment Setup\n```bash\nnpm install\n```\n\n### Common Commands\n- `npm run build` - Build project\n- `npm run test` - Run tests\n- `npm run lint` - Lint code\n\n### Code Standards\n- Write all new code in TypeScript\n- Follow existing naming conventions\n- Add documentation comments for public APIs\n\n### Commit Standards\n- Write clear commit messages\n- Ensure tests pass before commit\n- Split large changes into small commits\n\n## Architecture\n{architecture}\n\n## Known Issues\n{issues}\n\n## Future Plans\n{future}"
+      }
     },
     "common": {
       "unknownSkill": "Unknown skill:",

@@ -22,7 +22,7 @@ test("createQwenProvider: 配置验证 - 缺少 model", () => {
         // model: "qwen-test", // 缺少
       });
     },
-    /缺少 model/
+    /missingModel|缺少 model/
   );
 });
 
@@ -47,7 +47,7 @@ test("createQwenProvider: 配置验证 - 缺少 baseUrl", () => {
         model: "qwen-test",
       });
     },
-    /缺少 baseUrl/
+    /missingBaseUrl|缺少 baseUrl/
   );
 });
 

@@ -4,24 +4,22 @@
  * 管理多语言翻译
  */
 
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-export type Language = "en" | "zh";
+export type Language = string;
 
 type TranslationData = Record<string, unknown>;
 
-const translations: Record<Language, TranslationData> = {
-  en: {},
-  zh: {},
-};
+const translations: Record<Language, TranslationData> = {};
 
 let currentLanguage: Language = "en";
 let isLoaded = false;
+let supportedLanguages: Language[] = [];
 
 /**
  * 加载翻译文件
@@ -33,14 +31,46 @@ async function loadTranslations(lang: Language): Promise<TranslationData> {
 }
 
 /**
+ * 扫描翻译文件目录，获取支持的语言列表
+ */
+async function discoverLanguages(): Promise<Language[]> {
+  try {
+    const files = await readdir(__dirname);
+    return files
+      .filter(file => file.endsWith(".json") && file !== "package.json")
+      .map(file => file.replace(".json", ""));
+  } catch {
+    return ["en"];
+  }
+}
+
+/**
+ * 获取支持的语言列表
+ */
+export function getSupportedLanguages(): Language[] {
+  return supportedLanguages;
+}
+
+/**
  * 初始化 i18n 模块
  */
 export async function initI18n(lang: Language = "en"): Promise<void> {
   currentLanguage = lang;
 
   if (!isLoaded) {
-    translations.en = await loadTranslations("en");
-    translations.zh = await loadTranslations("zh");
+    // 扫描支持的语言
+    const languages = await discoverLanguages();
+
+    // 加载所有支持的语言
+    for (const language of languages) {
+      try {
+        translations[language] = await loadTranslations(language);
+        supportedLanguages.push(language);
+      } catch {
+        // 忽略加载失败的语言
+      }
+    }
+
     isLoaded = true;
   }
 }
@@ -138,4 +168,38 @@ export function tArray(key: string, lang?: Language): string[] {
   }
 
   return value.filter((item): item is string => typeof item === "string");
+}
+
+/**
+ * 获取本地化值（支持语言后缀覆盖）
+ *
+ * 从对象中获取值，优先使用当前语言的后缀版本。
+ * 例如：当语言为 "zh" 时，优先查找 "key.zh"，不存在则回退到 "key"。
+ *
+ * @param obj - 源对象
+ * @param key - 键名
+ * @returns 本地化后的值
+ *
+ * @example
+ * ```typescript
+ * const config = {
+ *   description: "Research",
+ *   "description.zh": "研究"
+ * };
+ * getLocalizedValue(config, "description"); // 中文环境返回 "研究"
+ * ```
+ */
+export function getLocalizedValue(obj: Record<string, unknown>, key: string): string {
+  const lang = getLanguage();
+  const localizedKey = `${key}.${lang}`;
+
+  if (localizedKey in obj && typeof obj[localizedKey] === "string") {
+    return obj[localizedKey] as string;
+  }
+
+  if (key in obj && typeof obj[key] === "string") {
+    return obj[key] as string;
+  }
+
+  return "";
 }

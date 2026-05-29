@@ -21,6 +21,7 @@ import type {
   ToolCall,
   TraceEvent,
 } from "../context/AppContext.js";
+import { t } from "../../locales/index.js";
 
 /**
  * 从 sessionId 推断 Agent 深度
@@ -209,7 +210,7 @@ function processRuntimeEvent(
         timestamp: new Date().toISOString(),
         agentId: event.sessionId,
         type: "tool",
-        content: `Error: ${event.error}`,
+        content: t("tui.toolError", { error: event.error }),
       });
 
       toolStartTimes.delete(event.callId);
@@ -315,7 +316,7 @@ export function useRuntimeEvents(
         });
       },
       error: (error) => {
-        console.error("Runtime event stream error:", error);
+        console.error(t("tui.runtimeEventStreamError"), error);
         setState((prev) => ({
           ...prev,
           session: {
@@ -367,7 +368,7 @@ export function useRuntimeEvents(
         }));
       },
       error: (error) => {
-        console.error("Debug trace stream error:", error);
+        console.error(t("tui.debugTraceStreamError"), error);
       },
     });
 

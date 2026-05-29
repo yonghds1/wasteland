@@ -67,7 +67,7 @@ describe("ask-user 工具", () => {
 
     assert.ok(result, "应该有返回结果");
     assert.equal(result.status, "error", "状态应该是 error");
-    assert.ok(result.error.includes("question"), "错误信息应该提到 question");
+    assert.ok(result.error.includes("question") || result.error.includes("missingQuestion"), "错误信息应该提到 question");
   });
 });
 

@@ -404,7 +404,7 @@ async function readSkinFromFile(skinPath: string): Promise<Skin> {
 export async function loadSkin(
   skinId: string = DEFAULT_SKIN_ID,
   skinsDir?: string,
-  language?: "en" | "zh",
+  language?: string,
 ): Promise<Skin> {
   // 内置默认皮肤：优先使用外部文件，如果没有则使用内置的
   if (skinId === "immortan-joe") {
@@ -421,7 +421,7 @@ export async function loadSkin(
     return skin;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      throw new Error(`皮肤 "${skinId}" 不存在: ${skinPath}`);
+      throw new Error(t("skins.notFound", { skinId, skinPath }));
     }
     throw error;
   }
@@ -434,7 +434,7 @@ export async function loadSkin(
  */
 async function loadImmortanJoeSkin(
   skinsDir?: string,
-  language?: "en" | "zh",
+  language?: string,
 ): Promise<Skin> {
   const dir = getSkinsDir(skinsDir);
   const skinPath = join(dir, "immortan-joe", "skin.json");
@@ -459,15 +459,15 @@ async function loadImmortanJoeSkin(
  */
 function validateSkin(skin: Skin): void {
   if (!skin.id || !skin.name || !skin.cli || !skin.ui || !skin.roles) {
-    throw new Error("皮肤配置不完整: 缺少必要字段");
+    throw new Error(t("skins.incomplete"));
   }
 
   if (!skin.cli.commandName) {
-    throw new Error("皮肤配置不完整: cli.commandName 是必需的");
+    throw new Error(t("skins.missingCommandName"));
   }
 
   if (!skin.roles.main || !skin.roles.main.greeting) {
-    throw new Error("皮肤配置不完整: roles.main.greeting 是必需的");
+    throw new Error(t("skins.missingGreeting"));
   }
 }
 
@@ -488,7 +488,7 @@ export async function getDefaultSkin(skinsDir?: string): Promise<Skin> {
 /**
  * 列出所有可用皮肤
  */
-export async function listSkins(skinsDir?: string, language?: "en" | "zh"): Promise<Skin[]> {
+export async function listSkins(skinsDir?: string, language?: string): Promise<Skin[]> {
   const skins: Skin[] = [];
 
   // 1. 加载 Immortan Joe 皮肤（内置默认或外部）

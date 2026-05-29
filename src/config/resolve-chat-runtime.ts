@@ -9,6 +9,7 @@ import type {
 } from "./settings-types.js";
 import { assemblePrompt, isBuiltinRoleId, ROLE_WORKER, ROLE_IMMORTAN_JOE } from "../prompts/index.js";
 import type { PromptTemplateRef } from "../prompts/prompt-types.js";
+import { t, getLocalizedValue, getSupportedLanguages } from "../locales/index.js";
 
 export type ResolvedRoleRef = {
   name: string;
@@ -37,6 +38,37 @@ function omitModelMetadata(model: ModelSettings): ProviderSettings {
   } = model;
 
   return providerConfig;
+}
+
+/**
+ * 本地化 promptVariables
+ *
+ * 将配置中的语言后缀值（如 role.zh）转换为当前语言的值。
+ *
+ * @param promptVariables - 原始变量配置
+ * @returns 本地化后的变量对象
+ */
+function localizePromptVariables(
+  promptVariables: Record<string, unknown>,
+): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  const supportedLanguages = getSupportedLanguages();
+
+  for (const [key, value] of Object.entries(promptVariables)) {
+    // 跳过已经带有语言后缀的键（如 role.zh）
+    if (key.includes(".")) {
+      const parts = key.split(".");
+      const lastPart = parts[parts.length - 1];
+      if (supportedLanguages.includes(lastPart)) {
+        continue;
+      }
+    }
+
+    // 使用 getLocalizedValue 获取本地化值
+    result[key] = getLocalizedValue(promptVariables, key);
+  }
+
+  return result;
 }
 
 /**
@@ -71,13 +103,16 @@ function resolveRolePrompt(
   // 字符串类型：判断是内置角色 ID 还是简单提示词
   if (typeof role.promptTemplate === "string") {
     const ref = role.promptTemplate;
+    const localizedVariables = role.promptVariables
+      ? localizePromptVariables(role.promptVariables)
+      : {};
 
     // 检查是否为内置角色 ID
     if (isBuiltinRoleId(ref)) {
       return assemblePrompt(
         ref,
-        { cwd, variables: role.promptVariables ?? {} },
-        role.promptVariables,
+        { cwd, variables: localizedVariables },
+        localizedVariables,
       );
     }
 
@@ -94,23 +129,29 @@ function resolveRolePrompt(
 
   // 对象类型：直接使用
   if ("sections" in role.promptTemplate) {
+    const localizedVariables = role.promptVariables
+      ? localizePromptVariables(role.promptVariables)
+      : {};
     return assemblePrompt(
       role.promptTemplate,
-      { cwd, variables: role.promptVariables ?? {} },
-      role.promptVariables,
+      { cwd, variables: localizedVariables },
+      localizedVariables,
     );
   }
 
   // { template, variables } 类型
   if ("template" in role.promptTemplate) {
     const { template, variables } = role.promptTemplate;
+    const localizedVariables = role.promptVariables
+      ? localizePromptVariables(role.promptVariables)
+      : {};
 
     // 判断 template 是内置 ID 还是简单字符串
     if (isBuiltinRoleId(template)) {
       return assemblePrompt(
         template,
-        { cwd, variables: { ...variables, ...role.promptVariables } },
-        { ...variables, ...role.promptVariables },
+        { cwd, variables: { ...variables, ...localizedVariables } },
+        { ...variables, ...localizedVariables },
       );
     }
 
@@ -121,11 +162,11 @@ function resolveRolePrompt(
         sections: [{ id: "main", content: template }],
       },
       { cwd, variables: variables ?? {} },
-      { ...variables, ...role.promptVariables },
+      { ...variables, ...localizedVariables },
     );
   }
 
-  throw new Error(`无法解析 promptTemplate: ${JSON.stringify(role.promptTemplate)}`);
+  throw new Error(t("config.cannotParsePromptTemplate", { template: JSON.stringify(role.promptTemplate) }));
 }
 
 /**
@@ -162,7 +203,7 @@ function resolveRole(
     };
   }
 
-  throw new Error(`当前未定义角色: ${requestedRoleName}。可用的子角色: ${Object.keys(settings.subAgents).join(", ")}`);
+  throw new Error(t("config.roleNotDefined", { roleName: requestedRoleName, availableRoles: Object.keys(settings.subAgents).join(", ") }));
 }
 
 function resolveModel(
@@ -178,7 +219,7 @@ function resolveModel(
   const model = modelName ? settings.models[modelName] : undefined;
 
   if (!model) {
-    throw new Error(`role ${role.name} 引用了未定义的 model: ${modelName ?? "(未设置)"}。可用的 models: ${Object.keys(settings.models).join(", ")}`);
+    throw new Error(t("config.modelNotDefined", { roleName: role.name, modelName: modelName ?? "(未设置)", availableModels: Object.keys(settings.models).join(", ") }));
   }
 
   return {
