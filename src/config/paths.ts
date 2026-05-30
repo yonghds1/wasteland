@@ -8,11 +8,10 @@ export const AUTH_FILENAME = 'auth.json';
 export const SESSIONS_DIRNAME = 'sessions';
 export const WASTELAND_HOME_ENV = 'WASTELAND_HOME';
 export const WASTELAND_SESSION_DIR_ENV = 'WASTELAND_SESSION_DIR';
-/** @deprecated 使用 WASTELAND_HOME_ENV 代替 */
-export const LEGACY_JOE_HOME_ENV = 'JOE_HOME';
-/** @deprecated 使用 WASTELAND_SESSION_DIR_ENV 代替 */
-export const LEGACY_JOE_SESSION_DIR_ENV = 'JOE_SESSION_DIR';
-export const LEGACY_RX_CLI_SESSION_DIR_ENV = 'RX_CLI_SESSION_DIR';
+// Legacy env vars (kept for backward compatibility, not exported)
+const LEGACY_JOE_HOME_ENV = 'JOE_HOME';
+const LEGACY_JOE_SESSION_DIR_ENV = 'JOE_SESSION_DIR';
+const LEGACY_RX_CLI_SESSION_DIR_ENV = 'RX_CLI_SESSION_DIR';
 
 async function pathExists(targetPath: string): Promise<boolean> {
   try {

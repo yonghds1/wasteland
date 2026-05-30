@@ -78,6 +78,7 @@ describe('validateSkillArgs', () => {
   const baseDef: SkillDefinition = {
     name: 'test',
     description: 'test skill',
+    riskLevel: 'read',
     parameters: {
       target: { type: 'string', required: true, description: 'target' },
       count: { type: 'number', required: false, description: 'count' },
@@ -147,7 +148,7 @@ describe('validateSkillArgs', () => {
   });
 
   it('no parameters definition always valid', () => {
-    const def: SkillDefinition = { name: 'test', description: 'test' };
+    const def: SkillDefinition = { name: 'test', description: 'test', riskLevel: 'read' };
     const result = validateSkillArgs(
       { positional: ['anything'], named: { whatever: true }, raw: '/test anything --whatever' },
       def
@@ -161,6 +162,7 @@ describe('applyDefaults', () => {
     const def: SkillDefinition = {
       name: 'test',
       description: 'test',
+      riskLevel: 'read',
       parameters: {
         mode: { type: 'string', required: false, description: 'mode', default: 'auto' },
       },
@@ -176,6 +178,7 @@ describe('applyDefaults', () => {
     const def: SkillDefinition = {
       name: 'test',
       description: 'test',
+      riskLevel: 'read',
       parameters: {
         mode: { type: 'string', required: false, description: 'mode', default: 'auto' },
       },
@@ -190,7 +193,7 @@ describe('applyDefaults', () => {
 
 describe('generateArgsHelp', () => {
   it('no parameters', () => {
-    const def: SkillDefinition = { name: 'test', description: 'test' };
+    const def: SkillDefinition = { name: 'test', description: 'test', riskLevel: 'read' };
     const help = generateArgsHelp(def);
     // 返回 i18n key 或本地化文本
     expect(help.length).toBeGreaterThan(0);
@@ -200,6 +203,7 @@ describe('generateArgsHelp', () => {
     const def: SkillDefinition = {
       name: 'test',
       description: 'test',
+      riskLevel: 'read',
       parameters: {
         target: { type: 'string', required: true, description: 'build target' },
       },
@@ -213,6 +217,7 @@ describe('generateArgsHelp', () => {
     const def: SkillDefinition = {
       name: 'test',
       description: 'test',
+      riskLevel: 'read',
       parameters: {
         format: { type: 'string', required: false, description: 'output format', default: 'json' },
       },

@@ -7,10 +7,11 @@ function makeSkill(overrides: Partial<SkillDefinition> = {}): Skill {
     definition: {
       name: 'test-skill',
       description: 'A test skill',
+      riskLevel: 'read',
       category: 'utility',
       ...overrides,
     },
-    handler: async () => ({ status: 'success', output: 'done' }),
+    execute: async () => ({ status: 'success', output: 'done' }),
   };
 }
 
