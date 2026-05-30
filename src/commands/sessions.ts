@@ -5,7 +5,7 @@
  */
 
 import { Command } from 'commander';
-import { createSessionIndex, type SessionSummary } from '../runtime/session-index.js';
+import { createSessionIndex, type SessionSummary } from '../core/runtime/session-index.js';
 import { t, getLanguage } from '../locales/index.js';
 
 // ============================================================

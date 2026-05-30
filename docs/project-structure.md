@@ -44,9 +44,9 @@ Phase 2 第一批骨架之后，目录边界已经被建出来，但不同目录
 
 ```text
 src/
-  cli.ts
+  cli.ts                      # CLI 入口
   commands/
-    chat.ts
+    chat.ts                   # chat 命令（使用 initializeRuntime）
     hello.ts
   chat/
     reply-pipeline.ts
@@ -54,23 +54,39 @@ src/
     load-settings.ts
     paths.ts
     settings-types.ts
-  runtime/
-    agent-loop.ts
-    debug-events.ts
-    event-types.ts
-    permission-gate.ts
-    tool-dispatch.ts
-    session-manager.ts
-    turn-context.ts
-    turn-state.ts
+  core/                       # 核心层（所有核心逻辑集中在此）
+    index.ts                  # 导出所有核心模块
+    runtime/                  # 运行时核心
+      agent-loop.ts
+      event-types.ts
+      session-manager.ts
+      permission-gate.ts
+      tool-dispatch.ts
+      turn-context.ts
+      turn-state.ts
+      debug-events.ts
+      session-index.ts
+      file-audit.ts
+    shared/                   # 共享业务逻辑
+      initialize-runtime.ts   # 运行时初始化
+      local-commands.ts       # 本地命令处理
+    adapters/                 # 适配器接口
+      input-adapter.ts        # 输入适配器接口
+      output-adapter.ts       # 输出适配器接口
   providers/
     local.ts
     provider-registry.ts
     provider-types.ts
   ui/
+    cli-input-adapter.ts      # CLI 输入适配器实现
     debug-renderer.ts
     readline-input.ts
     terminal-renderer.ts
+  tui/
+    tui-input-adapter.ts      # TUI 输入适配器实现
+    hooks/
+      useRuntime.ts           # TUI 运行时 Hook（使用 initializeRuntime）
+      useLocalCommands.ts     # TUI 本地命令处理 Hook
   tools/
     README.md
     bash.ts

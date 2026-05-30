@@ -40,6 +40,7 @@ This repository now contains a small Node-based agent-CLI skeleton. In this proj
 | [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | Established baseline |
 | [Runtime Contracts](./runtime-contracts.md) | Cross-layer contracts for chat/runtime/provider/session flow | Established baseline |
 | [Tool Runtime Contracts](./tool-runtime-contracts.md) | Contracts for tools, permission gate, and tool lifecycle events | Established baseline |
+| [CLI/TUI Contracts](./cli-tui-contracts.md) | Contracts for CLI/TUI unification (InputAdapter, OutputAdapter, RuntimeContext) | Established baseline |
 | [Logging Guidelines](./logging-guidelines.md) | Structured logging, log levels | Not established yet |
 
 ---

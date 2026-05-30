@@ -1,6 +1,6 @@
-import type { ToolCall, ToolRiskLevel } from '../tools/tool-types.js';
+import type { ToolCall, ToolRiskLevel } from '../../tools/tool-types.js';
 
-import { t } from '../locales/index.js';
+import { t } from '../../locales/index.js';
 
 export type PermissionMode = 'default' | 'accept_edits' | 'bypass_permissions';
 export type PermissionDecisionKind = 'allow' | 'ask' | 'deny';

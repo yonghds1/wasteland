@@ -12,8 +12,8 @@
  * 2. buildToolResultMessages: 批量转换工具结果
  */
 
-import type { SessionMessageRecord } from '../../runtime/event-types.js';
-import type { TurnToolResult } from '../../runtime/turn-state.js';
+import type { SessionMessageRecord } from '../../core/runtime/event-types.js';
+import type { TurnToolResult } from '../../core/runtime/turn-state.js';
 import { t } from '../../locales/index.js';
 import type { OpenAIMessage, OpenAIToolMessage } from './types.js';
 

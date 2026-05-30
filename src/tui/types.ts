@@ -5,9 +5,9 @@
  */
 
 import type { Observable, Subject } from 'rxjs';
-import type { RuntimeEvent, InputSource, ChatInputTurn } from '../runtime/event-types.js';
-import type { DebugTraceEvent } from '../runtime/debug-events.js';
-import type { SessionMetadata } from '../runtime/session-manager.js';
+import type { RuntimeEvent, InputSource, ChatInputTurn } from '../core/runtime/event-types.js';
+import type { DebugTraceEvent } from '../core/runtime/debug-events.js';
+import type { SessionManager, SessionMetadata } from '../core/runtime/session-manager.js';
 import type { ProviderSettings, ModelSettings, RoleSettings } from '../config/settings-types.js';
 import type { Skin } from '../skins/index.js';
 
@@ -31,6 +31,8 @@ export interface TuiRuntimeContext {
   providerId: string;
   /** 完整配置信息（用于配置页面） */
   fullConfig: TuiFullConfig;
+  /** 会话管理器 */
+  sessionManager: SessionManager;
   /** 皮肤配置 */
   skin: Skin | null;
 }

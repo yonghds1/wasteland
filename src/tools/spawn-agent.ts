@@ -31,9 +31,9 @@ import { catchError, defaultIfEmpty, filter, map, take, timeout } from 'rxjs/ope
 import { forkJoin, from, lastValueFrom, of } from 'rxjs';
 
 import { t } from '../locales/index.js';
-import { runAgentLoop } from '../runtime/agent-loop.js';
-import type { SessionMetadata } from '../runtime/session-manager.js';
-import type { SessionMessageRecord } from '../runtime/event-types.js';
+import { runAgentLoop } from '../core/runtime/agent-loop.js';
+import type { SessionMetadata } from '../core/runtime/session-manager.js';
+import type { SessionMessageRecord } from '../core/runtime/event-types.js';
 import type {
   AgentTool,
   ToolExecutionContext,
@@ -41,9 +41,9 @@ import type {
   ToolInput,
 } from './tool-types.js';
 import type { AgentProvider } from '../providers/provider-types.js';
-import type { SessionManager } from '../runtime/session-manager.js';
+import type { SessionManager } from '../core/runtime/session-manager.js';
 import type { ToolRegistry } from './tool-registry.js';
-import type { PermissionGate } from '../runtime/permission-gate.js';
+import type { PermissionGate } from '../core/runtime/permission-gate.js';
 import type { ProviderSettings } from '../config/settings-types.js';
 import type { ProviderRegistry } from '../providers/provider-registry.js';
 

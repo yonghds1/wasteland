@@ -2,7 +2,7 @@ import { of } from 'rxjs';
 
 import { buildLocalReplyText } from '../chat/reply-pipeline.js';
 import { t } from '../locales/index.js';
-import type { TurnToolResult } from '../runtime/turn-state.js';
+import type { TurnToolResult } from '../core/runtime/turn-state.js';
 import { createAssistantTextEvents } from './assistant-events.js';
 import type { AgentProvider, ProviderStreamEvent } from './provider-types.js';
 

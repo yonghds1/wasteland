@@ -3,7 +3,7 @@ import type { Writable } from 'node:stream';
 
 import type { Observable } from 'rxjs';
 
-import type { DebugTraceEvent } from '../runtime/debug-events.js';
+import type { DebugTraceEvent } from '../core/runtime/debug-events.js';
 import { ANSI, paint } from './terminal-theme.js';
 
 function supportsAnsi(output: Writable): boolean {

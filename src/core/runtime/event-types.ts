@@ -1,6 +1,6 @@
 import type { PermissionDecisionKind, PermissionMode } from './permission-gate.js';
-import type { ToolInput, ToolRunStatus } from '../tools/tool-types.js';
-import type { SkillArgs, SkillResult } from '../skills/skill-types.js';
+import type { ToolInput, ToolRunStatus } from '../../tools/tool-types.js';
+import type { SkillArgs, SkillResult } from '../../skills/skill-types.js';
 
 /**
  * 输入来源

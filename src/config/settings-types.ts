@@ -1,4 +1,4 @@
-import type { PermissionMode } from '../runtime/permission-gate.js';
+import type { PermissionMode } from '../core/runtime/permission-gate.js';
 import type { PromptTemplateRef } from '../prompts/prompt-types.js';
 
 export type AuthRef = {

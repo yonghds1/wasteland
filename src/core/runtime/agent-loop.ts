@@ -34,11 +34,11 @@ import {
   tap,
 } from 'rxjs';
 
-import { t } from '../locales/index.js';
+import { t } from '../../locales/index.js';
 
 import { createDebugTraceEvent, type DebugTraceEvent } from './debug-events.js';
-import type { AgentProvider } from '../providers/provider-types.js';
-import type { ToolRegistry } from '../tools/tool-registry.js';
+import type { AgentProvider } from '../../providers/provider-types.js';
+import type { ToolRegistry } from '../../tools/tool-registry.js';
 import type {
   ChatInputTurn,
   RuntimeEvent,
@@ -50,9 +50,9 @@ import type { PermissionGate } from './permission-gate.js';
 import { SessionManager, type SessionMetadata } from './session-manager.js';
 import { dispatchToolCall } from './tool-dispatch.js';
 import { createTurnContext } from './turn-context.js';
-import type { SkillExecutor } from '../skills/skill-executor.js';
-import type { ProviderSettings } from '../config/settings-types.js';
-import type { ProviderRegistry } from '../providers/provider-registry.js';
+import type { SkillExecutor } from '../../skills/skill-executor.js';
+import type { ProviderSettings } from '../../config/settings-types.js';
+import type { ProviderRegistry } from '../../providers/provider-registry.js';
 import {
   advanceTurnState,
   appendAssistantChunk,

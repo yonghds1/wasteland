@@ -3,8 +3,8 @@ import type { Writable } from 'node:stream';
 import type { Observable } from 'rxjs';
 
 import { t } from '../locales/index.js';
-import type { RuntimeEvent } from '../runtime/event-types.js';
-import type { PermissionDecisionKind } from '../runtime/permission-gate.js';
+import type { RuntimeEvent } from '../core/runtime/event-types.js';
+import type { PermissionDecisionKind } from '../core/runtime/permission-gate.js';
 import {
   ANSI,
   hexToFgBold,

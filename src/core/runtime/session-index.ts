@@ -8,7 +8,7 @@
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { resolveDefaultSessionDir } from '../config/paths.js';
+import { resolveDefaultSessionDir } from '../../config/paths.js';
 import type { SessionRecord, SessionStartRecord, SessionMessageRecord } from './event-types.js';
 
 // ============================================================

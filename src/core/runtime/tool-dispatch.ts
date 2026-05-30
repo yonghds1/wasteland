@@ -1,10 +1,10 @@
 import { concat, concatMap, defer, from, map, of, type Observable } from 'rxjs';
 
-import { t } from '../locales/index.js';
+import { t } from '../../locales/index.js';
 
-import { executeToolCall } from '../tools/tool-runner.js';
-import { ToolRegistry } from '../tools/tool-registry.js';
-import type { ToolCall, ToolRunStatus } from '../tools/tool-types.js';
+import { executeToolCall } from '../../tools/tool-runner.js';
+import { ToolRegistry } from '../../tools/tool-registry.js';
+import type { ToolCall, ToolRunStatus } from '../../tools/tool-types.js';
 import {
   type RuntimeEvent,
   type SessionPermissionRecord,
@@ -15,11 +15,11 @@ import { checkReadBeforeEdit } from './file-audit.js';
 import type { PermissionGate } from './permission-gate.js';
 import { SessionManager, type SessionMetadata } from './session-manager.js';
 import type { TurnState } from './turn-state.js';
-import { createSpawnAgentTool } from '../tools/spawn-agent.js';
-import type { AgentProvider } from '../providers/provider-types.js';
+import { createSpawnAgentTool } from '../../tools/spawn-agent.js';
+import type { AgentProvider } from '../../providers/provider-types.js';
 import type { SessionMessageRecord } from './event-types.js';
-import type { ProviderSettings } from '../config/settings-types.js';
-import type { ProviderRegistry } from '../providers/provider-registry.js';
+import type { ProviderSettings } from '../../config/settings-types.js';
+import type { ProviderRegistry } from '../../providers/provider-registry.js';
 
 function createTimestamp(): string {
   return new Date().toISOString();

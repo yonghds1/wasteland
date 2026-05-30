@@ -1,32 +1,30 @@
+/**
+ * chat-unified.ts - 统一的 chat 命令实现
+ *
+ * 使用 initializeRuntime()、CliInputAdapter 和 DefaultOutputAdapter，
+ * 替换原来的重复初始化代码。
+ */
+
 import type { Observable } from 'rxjs';
 import { Command } from 'commander';
 
-import { loadWastelandSettings } from '../config/load-settings.js';
-import { resolveDefaultSessionDir, resolveDefaultTraceDir } from '../config/paths.js';
-import { resolveChatRuntime } from '../config/resolve-chat-runtime.js';
-import type { AgentProvider } from '../providers/provider-types.js';
-import {
-  createDefaultProviderRegistry,
-  type ProviderRegistry,
-} from '../providers/provider-registry.js';
-import type { ChatInputTurn, RuntimeMode } from '../runtime/event-types.js';
-import { runAgentLoop } from '../runtime/agent-loop.js';
-import { createPermissionGate } from '../runtime/permission-gate.js';
-import { SessionManager } from '../runtime/session-manager.js';
-import { createDefaultToolRegistry } from '../tools/default-registry.js';
-import { renderDebugTrace, type DebugFormat } from '../ui/debug-renderer.js';
+import { resolveDefaultTraceDir } from '@config/paths.js';
+import type { ChatInputTurn, RuntimeMode } from '@core/runtime/event-types.js';
+import { runAgentLoop } from '@core/runtime/agent-loop.js';
+import { initializeRuntime, type RuntimeEnvironment } from '@core/shared/initialize-runtime.js';
+import { renderDebugTrace, type DebugFormat } from '@ui/debug-renderer.js';
 import {
   createInteractiveTurnStream,
   createSingleTurnInput,
   readPipedInput,
-} from '../ui/readline-input.js';
-import { renderRuntimeEvents } from '../ui/terminal-renderer.js';
-import { detectTTY } from '../ui/tty-detect.js';
-import type { ProviderSettings, MCPServersConfig } from '../config/settings-types.js';
-import { createSkillRegistry } from '../skills/skill-discovery.js';
-import { SkillExecutor } from '../skills/skill-executor.js';
-import { homedir } from 'node:os';
+} from '@ui/readline-input.js';
+import { renderRuntimeEvents } from '@ui/terminal-renderer.js';
+import { detectTTY } from '@ui/tty-detect.js';
 import { t } from '../locales/index.js';
+
+// ============================================================
+// Types
+// ============================================================
 
 type ChatOptions = {
   debug?: boolean;
@@ -38,6 +36,10 @@ type ChatOptions = {
   /** 多 Agent 模式提示 */
   multi?: boolean;
 };
+
+// ============================================================
+// Helper Functions
+// ============================================================
 
 function resolvePermissionMode(value: string | undefined) {
   const mode = value ?? 'default';
@@ -57,10 +59,13 @@ function resolveDebugFormat(value: string | undefined): DebugFormat {
   return 'pretty';
 }
 
+// ============================================================
+// Core Function
+// ============================================================
+
 async function runChatSession(params: {
   input$: Observable<ChatInputTurn>;
-  provider: AgentProvider;
-  sessionManager: SessionManager;
+  runtime: RuntimeEnvironment;
   cwd: string;
   mode: RuntimeMode;
   debug: boolean;
@@ -69,55 +74,28 @@ async function runChatSession(params: {
   permissionMode: ReturnType<typeof resolvePermissionMode>;
   maxStepsPerTurn: number;
   prompt?: string;
-  /** Provider 注册表，用于子 Agent 模型选择 */
-  providerRegistry: ProviderRegistry;
-  /** Provider 配置，用于子 Agent 模型选择 */
-  providerSettings: ProviderSettings;
-  /** MCP 服务器配置 */
-  mcpServers?: MCPServersConfig;
-  /** 子 Agent 执行超时（毫秒） */
-  childAgentTimeout?: number;
   render?: {
     onTurnComplete?: () => void;
     style?: 'classic' | 'interactive';
   };
 }): Promise<void> {
-  // 创建工具注册表（包含 MCP）
-  const { toolRegistry, startMCP, stopMCP } = createDefaultToolRegistry(params.mcpServers);
-
-  // 创建技能注册表（包含内置技能和用户自定义技能）
-  const skillRegistry = await createSkillRegistry({
-    projectSkillsDir: params.projectConfigDir ? `${params.projectConfigDir}/skills` : undefined,
-    userSkillsDir: `${homedir()}/.wasteland/skills`,
-  });
-
-  // 创建技能执行器
-  const skillExecutor = new SkillExecutor(skillRegistry);
-
-  // 启动 MCP 服务器（如果配置了）
-  try {
-    await startMCP();
-  } catch (error) {
-    console.warn(t('mcp.startupFailed'), error instanceof Error ? error.message : String(error));
-  }
+  const { runtime } = params;
 
   try {
     const run = runAgentLoop({
       input$: params.input$,
-      provider: params.provider,
-      sessionManager: params.sessionManager,
-      toolRegistry,
-      permissionGate: createPermissionGate({
-        mode: params.permissionMode,
-      }),
+      provider: runtime.provider,
+      sessionManager: runtime.sessionManager,
+      toolRegistry: runtime.toolRegistry,
+      permissionGate: runtime.permissionGate,
       cwd: params.cwd,
       mode: params.mode,
       maxStepsPerTurn: params.maxStepsPerTurn,
       prompt: params.prompt,
-      providerRegistry: params.providerRegistry,
-      providerSettings: params.providerSettings,
-      skillExecutor,
-      childAgentTimeout: params.childAgentTimeout,
+      providerRegistry: runtime.providerRegistry,
+      providerSettings: runtime.resolvedRuntime.providerConfig,
+      skillExecutor: runtime.skillExecutor,
+      childAgentTimeout: runtime.loadedSettings.settings.runtime.childAgentTimeout,
     });
 
     const work: Promise<void>[] = [renderRuntimeEvents(run.events$, params.render)];
@@ -143,20 +121,19 @@ async function runChatSession(params: {
     await Promise.all(work);
   } finally {
     // 停止 MCP 服务器
-    await stopMCP();
+    await runtime.mcpManager.stopMCP();
   }
 }
 
-export function createChatCommand(): Command {
-  const providerRegistry = createDefaultProviderRegistry();
+// ============================================================
+// Command Factory
+// ============================================================
 
+export function createChatCommand(): Command {
   return new Command('chat')
     .description(t('commands.chat.description'))
     .option('-m, --message <text>', t('commands.chat.options.once'))
-    .option(
-      '-p, --provider <name>',
-      `${t('commands.chat.options.provider')} ${providerRegistry.list().join(', ')}`
-    )
+    .option('-p, --provider <name>', t('commands.chat.options.provider'))
     .option('-r, --role <name>', t('commands.chat.options.role'))
     .option('--debug', t('commands.chat.options.debug'))
     .option('--debug-format <format>', t('commands.chat.options.debugFormat'))
@@ -164,56 +141,37 @@ export function createChatCommand(): Command {
     .option('--multi', t('commands.chat.options.multiAgent'))
     .action(async (options: ChatOptions) => {
       const cwd = process.cwd();
-      const loadedSettings = await loadWastelandSettings({
+
+      // 使用 initializeRuntime() 初始化
+      const runtime = await initializeRuntime({
         cwd,
-        env: process.env,
-      });
-      const resolvedRuntime = resolveChatRuntime({
-        settings: loadedSettings.settings,
         roleName: options.role,
         providerName: options.provider,
-        cwd,
       });
-      const provider = providerRegistry.resolve(
-        resolvedRuntime.providerName,
-        resolvedRuntime.providerConfig
-      );
-      const sessionManager = new SessionManager(
-        resolveDefaultSessionDir({
-          cwd,
-          projectConfigDir: loadedSettings.projectConfigDir,
-          env: process.env,
-        })
-      );
-      const permissionMode = resolvePermissionMode(
-        options.permissionMode ?? resolvedRuntime.permissionMode
-      );
-      const debug = options.debug === true || loadedSettings.settings.runtime.debug;
-      const debugFormat = resolveDebugFormat(options.debugFormat);
-      const maxStepsPerTurn = loadedSettings.settings.runtime.maxStepsPerTurn;
-      const mcpServers = loadedSettings.settings.mcpServers;
 
-      // TTY 检测：根据环境决定输出样式
+      const permissionMode = resolvePermissionMode(
+        options.permissionMode ?? runtime.resolvedRuntime.permissionMode
+      );
+      const debug = options.debug === true || runtime.loadedSettings.settings.runtime.debug;
+      const debugFormat = resolveDebugFormat(options.debugFormat);
+      const maxStepsPerTurn = runtime.loadedSettings.settings.runtime.maxStepsPerTurn;
+
+      // TTY 检测
       const tty = detectTTY();
       const renderStyle = tty.stdoutIsTTY ? 'interactive' : 'classic';
 
       if (options.message?.trim()) {
         await runChatSession({
           input$: createSingleTurnInput(options.message, 'message'),
-          provider,
-          sessionManager,
+          runtime,
           cwd,
           mode: 'single',
           debug,
           debugFormat,
-          projectConfigDir: loadedSettings.projectConfigDir,
+          projectConfigDir: runtime.loadedSettings.projectConfigDir,
           permissionMode,
           maxStepsPerTurn,
-          prompt: resolvedRuntime.prompt,
-          providerRegistry,
-          providerSettings: resolvedRuntime.providerConfig,
-          mcpServers,
-          childAgentTimeout: loadedSettings.settings.runtime.childAgentTimeout,
+          prompt: runtime.resolvedRuntime.prompt,
           render: { style: renderStyle },
         });
         return;
@@ -224,21 +182,16 @@ export function createChatCommand(): Command {
       if (pipedInput) {
         await runChatSession({
           input$: createSingleTurnInput(pipedInput, 'stdin'),
-          provider,
-          sessionManager,
+          runtime,
           cwd,
           mode: 'single',
           debug,
           debugFormat,
-          projectConfigDir: loadedSettings.projectConfigDir,
+          projectConfigDir: runtime.loadedSettings.projectConfigDir,
           permissionMode,
           maxStepsPerTurn,
-          prompt: resolvedRuntime.prompt,
-          providerRegistry,
-          providerSettings: resolvedRuntime.providerConfig,
-          mcpServers,
-          childAgentTimeout: loadedSettings.settings.runtime.childAgentTimeout,
-          render: { style: 'classic' }, // 管道输入使用经典样式
+          prompt: runtime.resolvedRuntime.prompt,
+          render: { style: 'classic' },
         });
         return;
       }
@@ -254,20 +207,15 @@ export function createChatCommand(): Command {
       try {
         await runChatSession({
           input$: interactive.turns$,
-          provider,
-          sessionManager,
+          runtime,
           cwd,
           mode: 'interactive',
           debug,
           debugFormat,
-          projectConfigDir: loadedSettings.projectConfigDir,
+          projectConfigDir: runtime.loadedSettings.projectConfigDir,
           permissionMode,
           maxStepsPerTurn,
-          prompt: resolvedRuntime.prompt,
-          providerRegistry,
-          providerSettings: resolvedRuntime.providerConfig,
-          mcpServers,
-          childAgentTimeout: loadedSettings.settings.runtime.childAgentTimeout,
+          prompt: runtime.resolvedRuntime.prompt,
           render: {
             onTurnComplete: interactive.prompt,
             style: renderStyle,

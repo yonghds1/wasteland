@@ -14,7 +14,18 @@
     "esModuleInterop": true,
     "types": [
       "node"
-    ]
+    ],
+    "paths": {
+      "@core/*": ["./src/core/*"],
+      "@core/shared/*": ["./src/core/shared/*"],
+      "@core/runtime/*": ["./src/core/runtime/*"],
+      "@core/adapters/*": ["./src/core/adapters/*"],
+      "@core/skills/*": ["./src/skills/*"],
+      "@config/*": ["./src/config/*"],
+      "@providers/*": ["./src/providers/*"],
+      "@ui/*": ["./src/ui/*"],
+      "@tui/*": ["./src/tui/*"]
+    }
   },
   "include": [
     "src/**/*.ts",

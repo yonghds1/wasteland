@@ -20,12 +20,12 @@ import {
   generateArgsHelp,
 } from './skill-parser.js';
 import { t } from '../locales/index.js';
-import type { RuntimeEvent } from '../runtime/event-types.js';
+import type { RuntimeEvent } from '../core/runtime/event-types.js';
 import type { ToolRegistry } from '../tools/tool-registry.js';
-import type { PermissionGate } from '../runtime/permission-gate.js';
-import type { SessionManager, SessionMetadata } from '../runtime/session-manager.js';
+import type { PermissionGate } from '../core/runtime/permission-gate.js';
+import type { SessionManager, SessionMetadata } from '../core/runtime/session-manager.js';
 import type { AgentProvider } from '../providers/provider-types.js';
-import type { SessionMessageRecord } from '../runtime/event-types.js';
+import type { SessionMessageRecord } from '../core/runtime/event-types.js';
 
 /**
  * 技能执行器参数

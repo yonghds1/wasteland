@@ -27,14 +27,21 @@
 bin/            Executable wrapper
 docs/           Architecture and implementation docs
 src/            TypeScript CLI source
+src/cli.ts      CLI entry point
 src/commands/   Subcommands
-src/chat/       RxJS input/reply pipeline
-src/config/     Config loading and `.rxc` path rules
-src/runtime/    Agent runtime layer
+src/core/       Core layer (all core logic)
+  runtime/      Agent runtime core
+  shared/       Shared business logic
+  adapters/     Adapter interfaces
+src/config/     Config loading and path rules
 src/providers/  Provider layer
 src/tools/      Built-in tools layer
 src/ui/         Terminal UI layer
-src/mcp/        MCP integration layer
+src/tui/        TUI (React/Ink)
+src/skills/     Skills system
+src/locales/    i18n
+src/prompts/    Prompt system
+src/skins/      Skin system
 test/           Smoke tests
 dist/           Generated build output
 ```

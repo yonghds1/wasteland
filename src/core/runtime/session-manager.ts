@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { appendFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { resolveDefaultSessionDir } from '../config/paths.js';
+import { resolveDefaultSessionDir } from '../../config/paths.js';
 import type { RuntimeMode, SessionRecord } from './event-types.js';
 
 export type SessionMetadata = {

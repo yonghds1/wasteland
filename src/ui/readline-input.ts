@@ -35,7 +35,7 @@ import type { Readable, Writable } from 'node:stream';
 
 import { filter, from, fromEvent, map, scan, takeUntil, tap, type Observable } from 'rxjs';
 
-import type { ChatInputTurn } from '../runtime/event-types.js';
+import type { ChatInputTurn } from '../core/runtime/event-types.js';
 import type { SkillExecutor } from '../skills/skill-executor.js';
 import {
   ANSI,

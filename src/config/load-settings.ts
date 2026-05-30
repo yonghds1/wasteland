@@ -2,7 +2,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import { resolve, join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import type { PermissionMode } from '../runtime/permission-gate.js';
+import type { PermissionMode } from '../core/runtime/permission-gate.js';
 import {
   type AuthSettings,
   type AuthRef,
