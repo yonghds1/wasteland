@@ -1,10 +1,10 @@
-import type { Writable } from "node:stream";
+import type { Writable } from 'node:stream';
 
-import type { Observable } from "rxjs";
+import type { Observable } from 'rxjs';
 
-import { t } from "../locales/index.js";
-import type { RuntimeEvent } from "../runtime/event-types.js";
-import type { PermissionDecisionKind } from "../runtime/permission-gate.js";
+import { t } from '../locales/index.js';
+import type { RuntimeEvent } from '../runtime/event-types.js';
+import type { PermissionDecisionKind } from '../runtime/permission-gate.js';
 import {
   ANSI,
   hexToFgBold,
@@ -16,8 +16,8 @@ import {
   paint,
   resolvePanelWidth,
   wrapText,
-} from "./terminal-theme.js";
-import { theme } from "./themes/index.js";
+} from './terminal-theme.js';
+import { theme } from './themes/index.js';
 
 // ============================================================
 // 配置常量
@@ -39,43 +39,40 @@ const COLLAPSE_THRESHOLD = 500;
 
 /** 工具图标映射 */
 const TOOL_DISPLAY_ICONS: Record<string, string> = {
-  "read-file": "📖",
-  "read_file": "📖",
-  "write-file": "✍️",
-  "write_file": "✍️",
-  "edit-file": "✏️",
-  "edit_file": "✏️",
-  bash: "💻",
-  terminal: "💻",
-  "search-files": "🔎",
-  search_files: "🔎",
-  "web-search": "🔍",
-  web_search: "🔍",
-  default: "⚡",
+  'read-file': '📖',
+  read_file: '📖',
+  'write-file': '✍️',
+  write_file: '✍️',
+  'edit-file': '✏️',
+  edit_file: '✏️',
+  bash: '💻',
+  terminal: '💻',
+  'search-files': '🔎',
+  search_files: '🔎',
+  'web-search': '🔍',
+  web_search: '🔍',
+  default: '⚡',
 };
 
 /** 工具动词映射 */
 const TOOL_DISPLAY_VERBS: Record<string, string> = {
-  "read-file": "read",
-  "read_file": "read",
-  "write-file": "write",
-  "write_file": "write",
-  "edit-file": "edit",
-  "edit_file": "edit",
-  bash: "exec",
-  terminal: "exec",
-  "search-files": "find",
-  search_files: "find",
-  "web-search": "search",
-  web_search: "search",
+  'read-file': 'read',
+  read_file: 'read',
+  'write-file': 'write',
+  write_file: 'write',
+  'edit-file': 'edit',
+  edit_file: 'edit',
+  bash: 'exec',
+  terminal: 'exec',
+  'search-files': 'find',
+  search_files: 'find',
+  'web-search': 'search',
+  web_search: 'search',
 };
 
 // ============================================================
 // Theme-based ANSI colors
 // ============================================================
-
-/** Primary color (bold) */
-const PRIMARY_COLOR = hexToFgBold(theme.primary);
 
 /** Secondary color (bold) */
 const SECONDARY_COLOR = hexToFgBold(theme.secondary);
@@ -85,9 +82,6 @@ const SUCCESS_COLOR = hexToFgBold(theme.success);
 
 /** Error color (bold) */
 const ERROR_COLOR = hexToFgBold(theme.error);
-
-/** Warning color (bold) */
-const WARNING_COLOR = hexToFgBold(theme.warning);
 
 // ============================================================
 // Agent 上下文追踪
@@ -121,20 +115,20 @@ function extractAgentName(sessionId: string): string | undefined {
  * @returns 处理后的输出
  */
 function smartTruncateFileOutput(output: string, maxLines: number = MAX_TOOL_OUTPUT_LINES): string {
-  const lines = output.split("\n");
+  const lines = output.split('\n');
 
   if (lines.length <= maxLines) {
     return output;
   }
 
   // 检查是否是文件输出（以 📄 开头）
-  const isFileOutput = output.startsWith("📄");
+  const isFileOutput = output.startsWith('📄');
 
   // 如果是文件输出且已经有 "... lines hidden"，说明工具层已截断
   // 我们需要保留尾部可见，避免双重截断
-  if (isFileOutput && output.includes("lines hidden")) {
+  if (isFileOutput && output.includes('lines hidden')) {
     // 找到 "lines hidden" 行的位置
-    const hiddenLineIndex = lines.findIndex((line) => line.includes("lines hidden"));
+    const hiddenLineIndex = lines.findIndex((line) => line.includes('lines hidden'));
 
     if (hiddenLineIndex > 0 && hiddenLineIndex < lines.length - 1) {
       // 工具已截断，显示：头部 + 省略 + 尾部
@@ -147,7 +141,7 @@ function smartTruncateFileOutput(output: string, maxLines: number = MAX_TOOL_OUT
           ...headerLines,
           `... ${middleHiddenCount} lines hidden in terminal display`,
           ...tailLines,
-        ].join("\n");
+        ].join('\n');
       }
     }
   }
@@ -157,10 +151,10 @@ function smartTruncateFileOutput(output: string, maxLines: number = MAX_TOOL_OUT
   const hiddenCount = lines.length - maxLines;
 
   if (isFileOutput) {
-    return [...visibleLines, `... ${hiddenCount} more lines (output truncated)`].join("\n");
+    return [...visibleLines, `... ${hiddenCount} more lines (output truncated)`].join('\n');
   }
 
-  return [...visibleLines, `... (${hiddenCount} more lines)`].join("\n");
+  return [...visibleLines, `... (${hiddenCount} more lines)`].join('\n');
 }
 
 /**
@@ -170,8 +164,11 @@ function smartTruncateFileOutput(output: string, maxLines: number = MAX_TOOL_OUT
  * @param maxLines - 最大显示行数
  * @returns 处理后的输出（可能包含截断提示）
  */
-function truncateOutputForDisplay(output: string, maxLines: number = MAX_TOOL_OUTPUT_LINES): string {
-  const lines = output.split("\n");
+function truncateOutputForDisplay(
+  output: string,
+  maxLines: number = MAX_TOOL_OUTPUT_LINES
+): string {
+  const lines = output.split('\n');
 
   if (lines.length <= maxLines) {
     return output;
@@ -187,13 +184,14 @@ function writeInteractiveLabel(
     label: string;
     depth: number;
     name?: string;
-  },
+  }
 ): void {
   const color = getDepthColor(params.depth);
-  const prefix = getDepthPrefix(params.depth, params.name);
   const timestamp = createDisplayTimestamp();
 
-  stdout.write(`${paint(params.label, ANSI.bold, color)} ${paint(timestamp, ANSI.dim, ANSI.gray)}\n`);
+  stdout.write(
+    `${paint(params.label, ANSI.bold, color)} ${paint(timestamp, ANSI.dim, ANSI.gray)}\n`
+  );
 }
 
 function writeInteractiveBlock(
@@ -205,7 +203,7 @@ function writeInteractiveBlock(
     name?: string;
     collapsed?: boolean;
     width: number;
-  },
+  }
 ): void {
   writeInteractiveLabel(stdout, {
     label: params.label,
@@ -216,8 +214,8 @@ function writeInteractiveBlock(
   // 处理折叠
   let displayContent = params.content;
   if (params.collapsed && params.content.length > COLLAPSE_THRESHOLD) {
-    const lines = params.content.split("\n");
-    const firstLines = lines.slice(0, 10).join("\n");
+    const lines = params.content.split('\n');
+    const firstLines = lines.slice(0, 10).join('\n');
     const hiddenCount = lines.length - 10;
     displayContent = `${firstLines}\n${paint(`... ${hiddenCount} lines hidden (press Enter to expand)`, ANSI.dim)}`;
   }
@@ -235,17 +233,20 @@ function writeInteractiveStatusLine(
       text: string;
       styles?: string[];
     }>;
-  },
+  }
 ): void {
   const color = getDepthColor(params.depth);
   const content = params.segments
     .map((segment) => paint(segment.text, ...(segment.styles ?? [])))
-    .join("");
+    .join('');
 
   stdout.write(`${paint(params.label, ANSI.bold, color)} ${content}\n`);
 }
 
-function createChunkWriter(stdout: Writable, width: number): {
+function createChunkWriter(
+  stdout: Writable,
+  width: number
+): {
   write: (turn: number, chunk: string) => void;
   close: (turn: number) => void;
 } {
@@ -255,7 +256,7 @@ function createChunkWriter(stdout: Writable, width: number): {
     let lineLength = lineLengths.get(turn) ?? 0;
 
     for (const character of Array.from(chunk)) {
-      if (character === "\n") {
+      if (character === '\n') {
         stdout.write(`\n${PANEL_GUTTER}`);
         lineLength = 0;
         continue;
@@ -284,11 +285,11 @@ function createChunkWriter(stdout: Writable, width: number): {
 }
 
 function resolveDecisionStyles(decision: PermissionDecisionKind): string[] {
-  if (decision === "allow") {
+  if (decision === 'allow') {
     return [ANSI.green];
   }
 
-  if (decision === "ask") {
+  if (decision === 'ask') {
     return [ANSI.yellow];
   }
 
@@ -301,13 +302,13 @@ export async function renderRuntimeEvents(
     stdout?: Writable;
     stderr?: Writable;
     onTurnComplete?: () => void;
-    style?: "classic" | "interactive";
-  },
+    style?: 'classic' | 'interactive';
+  }
 ): Promise<void> {
   const stdout = params?.stdout ?? process.stdout;
   const stderr = params?.stderr ?? process.stderr;
-  const style = params?.style ?? "classic";
-  const panelWidth = resolvePanelWidth("columns" in stdout ? stdout.columns : undefined);
+  const style = params?.style ?? 'classic';
+  const panelWidth = resolvePanelWidth('columns' in stdout ? stdout.columns : undefined);
   const chunkedTurns = new Set<number>();
   const pendingTurnSpacing = new Set<number>();
   const chunkWriter = createChunkWriter(stdout, panelWidth);
@@ -328,12 +329,12 @@ export async function renderRuntimeEvents(
       return;
     }
 
-    stdout.write("\n");
+    stdout.write('\n');
     pendingTurnSpacing.delete(turn);
   }
 
   function completeInteractiveTurn(): void {
-    stdout.write("\n");
+    stdout.write('\n');
     params?.onTurnComplete?.();
   }
 
@@ -341,25 +342,25 @@ export async function renderRuntimeEvents(
     events$.subscribe({
       next: (event) => {
         // 更新 Agent 上下文
-        if ("sessionId" in event) {
+        if ('sessionId' in event) {
           updateAgentContext(event.sessionId);
         }
 
         switch (event.type) {
-          case "assistant_chunk": {
-            if (style === "interactive") {
+          case 'assistant_chunk': {
+            if (style === 'interactive') {
               flushTurnSpacing(event.turn);
 
               // 第一个 chunk 到达时，清除思考状态
               if (isShowingThinking) {
                 // 上移一行并清除该行，然后回到行首
-                stdout.write("\x1b[1A\x1b[2K\r");
+                stdout.write('\x1b[1A\x1b[2K\r');
                 isShowingThinking = false;
               }
 
               if (!chunkedTurns.has(event.turn)) {
                 writeInteractiveLabel(stdout, {
-                  label: "wasteland",
+                  label: 'wasteland',
                   depth: currentDepth,
                   name: currentName,
                 });
@@ -379,23 +380,23 @@ export async function renderRuntimeEvents(
             stdout.write(event.chunk);
             break;
           }
-          case "assistant_message": {
-            if (style === "interactive") {
+          case 'assistant_message': {
+            if (style === 'interactive') {
               flushTurnSpacing(event.turn);
 
               // 清除思考状态（如果没有通过 chunk 清除）
               if (isShowingThinking) {
-                stdout.write("\x1b[1A\x1b[2K\r");
+                stdout.write('\x1b[1A\x1b[2K\r');
                 isShowingThinking = false;
               }
 
               if (chunkedTurns.has(event.turn)) {
-                stdout.write("\n");
+                stdout.write('\n');
                 chunkedTurns.delete(event.turn);
                 chunkWriter.close(event.turn);
               } else {
                 writeInteractiveBlock(stdout, {
-                  label: "wasteland",
+                  label: 'wasteland',
                   content: event.content,
                   depth: currentDepth,
                   name: currentName,
@@ -408,7 +409,7 @@ export async function renderRuntimeEvents(
             }
 
             if (chunkedTurns.has(event.turn)) {
-              stdout.write("\n");
+              stdout.write('\n');
               chunkedTurns.delete(event.turn);
             } else {
               stdout.write(`assistant[${event.turn}]> ${event.content}\n`);
@@ -417,24 +418,26 @@ export async function renderRuntimeEvents(
             params?.onTurnComplete?.();
             break;
           }
-          case "tool_call_requested": {
-            if (style === "interactive") {
+          case 'tool_call_requested': {
+            if (style === 'interactive') {
               flushTurnSpacing(event.turn);
               // 工具请求行
               const icon = TOOL_DISPLAY_ICONS[event.toolName] || TOOL_DISPLAY_ICONS.default;
               const verb = (TOOL_DISPLAY_VERBS[event.toolName] || event.toolName).padEnd(9);
-              stdout.write(`${paint("┊", ANSI.dim)} ${icon} ${paint(verb, ANSI.brightWhite)} ${paint("requesting...", ANSI.dim)}\n`);
+              stdout.write(
+                `${paint('┊', ANSI.dim)} ${icon} ${paint(verb, ANSI.brightWhite)} ${paint('requesting...', ANSI.dim)}\n`
+              );
               break;
             }
 
             stdout.write(`tool[${event.turn}]> request ${event.toolName}\n`);
             break;
           }
-          case "permission_decision": {
-            if (style === "interactive") {
+          case 'permission_decision': {
+            if (style === 'interactive') {
               flushTurnSpacing(event.turn);
               writeInteractiveStatusLine(stdout, {
-                label: "perm",
+                label: 'perm',
                 depth: currentDepth,
                 name: currentName,
                 segments: [
@@ -456,25 +459,27 @@ export async function renderRuntimeEvents(
             }
 
             stdout.write(
-              `permission[${event.turn}]> ${event.toolName}: ${event.decision} (${event.mode})\n`,
+              `permission[${event.turn}]> ${event.toolName}: ${event.decision} (${event.mode})\n`
             );
             break;
           }
-          case "tool_started": {
-            if (style === "interactive") {
+          case 'tool_started': {
+            if (style === 'interactive') {
               flushTurnSpacing(event.turn);
               // 工具开始行
               const icon = TOOL_DISPLAY_ICONS[event.toolName] || TOOL_DISPLAY_ICONS.default;
               const verb = (TOOL_DISPLAY_VERBS[event.toolName] || event.toolName).padEnd(9);
-              stdout.write(`${paint("┊", ANSI.dim)} ${icon} ${paint(verb, ANSI.cyan)} ${paint("running...", SECONDARY_COLOR)}\n`);
+              stdout.write(
+                `${paint('┊', ANSI.dim)} ${icon} ${paint(verb, ANSI.cyan)} ${paint('running...', SECONDARY_COLOR)}\n`
+              );
               break;
             }
 
             stdout.write(`tool[${event.turn}]> start ${event.toolName}\n`);
             break;
           }
-          case "tool_result": {
-            if (style === "interactive") {
+          case 'tool_result': {
+            if (style === 'interactive') {
               flushTurnSpacing(event.turn);
               // 工具结果行
               const icon = TOOL_DISPLAY_ICONS[event.toolName] || TOOL_DISPLAY_ICONS.default;
@@ -482,9 +487,12 @@ export async function renderRuntimeEvents(
 
               // 截断长输出以适应终端显示
               const displayOutput = truncateOutputForDisplay(event.output);
-              const detail = displayOutput.length > 42 ? displayOutput.slice(0, 42) + "..." : displayOutput;
+              const detail =
+                displayOutput.length > 42 ? displayOutput.slice(0, 42) + '...' : displayOutput;
 
-              stdout.write(`${paint("┊", ANSI.dim)} ${icon} ${paint(verb, SUCCESS_COLOR)} ${paint(detail, ANSI.dim)}\n`);
+              stdout.write(
+                `${paint('┊', ANSI.dim)} ${icon} ${paint(verb, SUCCESS_COLOR)} ${paint(detail, ANSI.dim)}\n`
+              );
               break;
             }
 
@@ -493,64 +501,70 @@ export async function renderRuntimeEvents(
             stdout.write(`tool[${event.turn}]> result ${event.toolName}: ${classicOutput}\n`);
             break;
           }
-          case "tool_failed": {
-            if (style === "interactive") {
+          case 'tool_failed': {
+            if (style === 'interactive') {
               flushTurnSpacing(event.turn);
               // 工具失败行
               const icon = TOOL_DISPLAY_ICONS[event.toolName] || TOOL_DISPLAY_ICONS.default;
               const verb = (TOOL_DISPLAY_VERBS[event.toolName] || event.toolName).padEnd(9);
 
-              stdout.write(`${paint("┊", ANSI.dim)} ${icon} ${paint(verb, ERROR_COLOR)} ${paint(event.error?.slice(0, 42) || "error", ANSI.dim)} ${paint("[failed]", ERROR_COLOR)}\n`);
+              stdout.write(
+                `${paint('┊', ANSI.dim)} ${icon} ${paint(verb, ERROR_COLOR)} ${paint(event.error?.slice(0, 42) || 'error', ANSI.dim)} ${paint('[failed]', ERROR_COLOR)}\n`
+              );
               break;
             }
 
             stdout.write(`tool[${event.turn}]> failed ${event.toolName}: ${event.error}\n`);
             break;
           }
-          case "session_ended": {
-            if (style === "interactive") {
-              stdout.write(`\n${paint("━".repeat(40), ANSI.dim, ANSI.gray)}\n`);
-              stdout.write(`${paint("Session ended", ANSI.dim, ANSI.gray)}\n`);
+          case 'session_ended': {
+            if (style === 'interactive') {
+              stdout.write(`\n${paint('━'.repeat(40), ANSI.dim, ANSI.gray)}\n`);
+              stdout.write(`${paint('Session ended', ANSI.dim, ANSI.gray)}\n`);
             }
             break;
           }
-          case "session_started": {
-            if (style === "interactive") {
-              stdout.write(`${paint("●", ANSI.bold, ANSI.yellow)} ${paint(t("ui.terminal.thinking"), ANSI.yellow)}\n`);
+          case 'session_started': {
+            if (style === 'interactive') {
+              stdout.write(
+                `${paint('●', ANSI.bold, ANSI.yellow)} ${paint(t('ui.terminal.thinking'), ANSI.yellow)}\n`
+              );
               isShowingThinking = true;
             }
             break;
           }
-          case "agent_spawned": {
-            if (style === "interactive") {
+          case 'agent_spawned': {
+            if (style === 'interactive') {
               const childDepth = inferDepthFromSessionId(event.childId);
               const childName = extractAgentName(event.childId);
               const color = getDepthColor(childDepth);
               const prefix = getDepthPrefix(childDepth, childName);
 
-              stdout.write(`${paint(prefix, ANSI.bold, color)} ${paint("spawned", ANSI.green)} ${paint(`"${event.task.slice(0, 50)}${event.task.length > 50 ? "..." : ""}"`, ANSI.dim)}\n`);
+              stdout.write(
+                `${paint(prefix, ANSI.bold, color)} ${paint('spawned', ANSI.green)} ${paint(`"${event.task.slice(0, 50)}${event.task.length > 50 ? '...' : ''}"`, ANSI.dim)}\n`
+              );
             }
             break;
           }
-          case "agent_completed": {
-            if (style === "interactive") {
+          case 'agent_completed': {
+            if (style === 'interactive') {
               const childDepth = inferDepthFromSessionId(event.childId);
               const childName = extractAgentName(event.childId);
               const color = getDepthColor(childDepth);
               const prefix = getDepthPrefix(childDepth, childName);
 
-              const statusText = event.status === "success"
-                ? paint("completed ✓", ANSI.green)
-                : event.status === "timeout"
-                  ? paint("timeout ⏱", ANSI.yellow)
-                  : paint("failed ✗", ANSI.red);
+              const statusText =
+                event.status === 'success'
+                  ? paint('completed ✓', ANSI.green)
+                  : event.status === 'timeout'
+                    ? paint('timeout ⏱', ANSI.yellow)
+                    : paint('failed ✗', ANSI.red);
 
               stdout.write(`${paint(prefix, ANSI.bold, color)} ${statusText}\n`);
 
               if (event.result) {
-                const truncatedResult = event.result.length > 200
-                  ? `${event.result.slice(0, 200)}...`
-                  : event.result;
+                const truncatedResult =
+                  event.result.length > 200 ? `${event.result.slice(0, 200)}...` : event.result;
                 stdout.write(`${indentBlock(paint(truncatedResult, ANSI.dim), PANEL_GUTTER)}\n`);
               }
 
@@ -560,8 +574,8 @@ export async function renderRuntimeEvents(
             }
             break;
           }
-          case "user_turn": {
-            if (style === "interactive") {
+          case 'user_turn': {
+            if (style === 'interactive') {
               stdout.write(ANSI.reset);
               pendingTurnSpacing.add(event.turn);
             }
@@ -569,7 +583,7 @@ export async function renderRuntimeEvents(
             break;
           }
           default: {
-            stderr.write(`${t("ui.terminal.unhandledEvent")}${JSON.stringify(event)}\n`);
+            stderr.write(`${t('ui.terminal.unhandledEvent')}${JSON.stringify(event)}\n`);
           }
         }
       },

@@ -1,7 +1,7 @@
-import { concat, from, map, of, type Observable } from "rxjs";
+import { concat, from, map, of, type Observable } from 'rxjs';
 
-import { splitReplyText } from "../chat/reply-pipeline.js";
-import type { ProviderStreamEvent } from "./provider-types.js";
+import { splitReplyText } from '../chat/reply-pipeline.js';
+import type { ProviderStreamEvent } from './provider-types.js';
 
 /**
  * 创建助手文本事件流
@@ -24,14 +24,14 @@ export function createAssistantTextEvents(text: string): Observable<ProviderStre
     from(chunks).pipe(
       map(
         (chunk): ProviderStreamEvent => ({
-          type: "assistant_chunk",
+          type: 'assistant_chunk',
           text: chunk,
-        }),
-      ),
+        })
+      )
     ),
     of<ProviderStreamEvent>({
-      type: "assistant_message",
+      type: 'assistant_message',
       text,
-    }),
+    })
   );
 }

@@ -6,7 +6,7 @@
  * - role-worker: 通用子角色模板，通过变量配置适配不同专业方向
  */
 
-import type { BuiltinRoleId, PromptTemplate } from "./prompt-types.js";
+import type { BuiltinRoleId, PromptTemplate } from './prompt-types.js';
 
 // ============================================================
 // Worker 角色模板
@@ -22,86 +22,85 @@ import type { BuiltinRoleId, PromptTemplate } from "./prompt-types.js";
  * - constraints: 约束条件
  */
 const ROLE_WORKER: PromptTemplate = {
-  name: "Worker",
-  id: "role-worker",
-  description: "通用执行角色，通过变量配置适配不同专业方向",
+  name: 'Worker',
+  id: 'role-worker',
+  description: '通用执行角色，通过变量配置适配不同专业方向',
   sections: [
     {
-      id: "identity",
-      content: "You are a {{role}}.",
+      id: 'identity',
+      content: 'You are a {{role}}.',
       order: 10,
     },
     {
-      id: "goal",
-      content: "Your goal is: {{goal}}",
+      id: 'goal',
+      content: 'Your goal is: {{goal}}',
       order: 11,
     },
     {
-      id: "backstory",
-      content: "{{backstory}}",
+      id: 'backstory',
+      content: '{{backstory}}',
       order: 12,
     },
     {
-      id: "workflow",
-      content: "{{workflow}}",
+      id: 'workflow',
+      content: '{{workflow}}',
       order: 20,
     },
     {
-      id: "tools",
-      content: "Available tools:\n{{tools}}",
+      id: 'tools',
+      content: 'Available tools:\n{{tools}}',
       order: 30,
     },
     {
-      id: "constraints",
-      content: "Constraints:\n{{constraints}}",
+      id: 'constraints',
+      content: 'Constraints:\n{{constraints}}',
       order: 100,
     },
   ],
   variables: {
     role: {
-      type: "string",
-      description: "角色描述",
+      type: 'string',
+      description: '角色描述',
       required: true,
     },
     goal: {
-      type: "string",
-      description: "目标",
-      default: "Write clean, efficient, and maintainable code",
+      type: 'string',
+      description: '目标',
+      default: 'Write clean, efficient, and maintainable code',
     },
     backstory: {
-      type: "string",
-      description: "背景故事",
+      type: 'string',
+      description: '背景故事',
       default:
-        "You are an experienced software developer who follows best practices and writes clean, readable code.",
+        'You are an experienced software developer who follows best practices and writes clean, readable code.',
     },
     workflow: {
-      type: "string",
-      description: "工作流程",
+      type: 'string',
+      description: '工作流程',
       default:
-        "1. Understand the requirements\n2. Plan the approach\n3. Implement\n4. Test and verify",
+        '1. Understand the requirements\n2. Plan the approach\n3. Implement\n4. Test and verify',
     },
     tools: {
-      type: "string",
-      description: "可用工具",
-      default: "bash, read, edit, write",
+      type: 'string',
+      description: '可用工具',
+      default: 'bash, read, edit, write',
     },
     constraints: {
-      type: "string",
-      description: "约束条件",
-      default:
-        "- Always test your changes\n- Follow existing code style\n- Explain your reasoning",
+      type: 'string',
+      description: '约束条件',
+      default: '- Always test your changes\n- Follow existing code style\n- Explain your reasoning',
     },
   },
   defaults: {
-    role: "Senior Software Developer",
-    goal: "Write clean, efficient, and maintainable code",
+    role: 'Senior Software Developer',
+    goal: 'Write clean, efficient, and maintainable code',
     backstory:
-      "You are an experienced software developer who follows best practices and writes clean, readable code.",
+      'You are an experienced software developer who follows best practices and writes clean, readable code.',
     workflow:
-      "1. Understand the requirements\n2. Plan the approach\n3. Implement\n4. Test and verify",
-    tools: "bash, read, edit, write",
+      '1. Understand the requirements\n2. Plan the approach\n3. Implement\n4. Test and verify',
+    tools: 'bash, read, edit, write',
     constraints:
-      "- Always test your changes\n- Follow existing code style\n- Explain your reasoning",
+      '- Always test your changes\n- Follow existing code style\n- Explain your reasoning',
   },
 };
 
@@ -117,34 +116,34 @@ const ROLE_WORKER: PromptTemplate = {
  * 用户只需与 Joe 对话，它会自动调度子Agent执行任务
  */
 const ROLE_IMMORTAN_JOE: PromptTemplate = {
-  name: "Immortan Joe",
-  id: "role-immortan-joe",
-  description: "废土霸主，指挥 War Boys 执行任务的统帅角色（唯一主角色，完全内置）",
+  name: 'Immortan Joe',
+  id: 'role-immortan-joe',
+  description: '废土霸主，指挥 War Boys 执行任务的统帅角色（唯一主角色，完全内置）',
   sections: [
     {
-      id: "identity",
+      id: 'identity',
       content: `You are {{role}}.
 
 # WITNESS ME!`,
       order: 10,
     },
     {
-      id: "goal",
+      id: 'goal',
       content: `Your goal is: {{goal}}`,
       order: 11,
     },
     {
-      id: "backstory",
+      id: 'backstory',
       content: `{{backstory}}`,
       order: 12,
     },
     {
-      id: "delegation",
+      id: 'delegation',
       content: `{{delegation}}`,
       order: 20,
     },
     {
-      id: "war-cry",
+      id: 'war-cry',
       content: `## War Party Motto
 "We live, we die, we live again!"
 "Immortan Joe provides!"
@@ -152,7 +151,7 @@ const ROLE_IMMORTAN_JOE: PromptTemplate = {
       order: 25,
     },
     {
-      id: "agents",
+      id: 'agents',
       content: `## Your War Boys
 
 Available War Boys under your command:
@@ -162,7 +161,7 @@ Each War Boy is specialized for their task. Deploy them wisely, Immortan Joe. Th
       order: 30,
     },
     {
-      id: "aggregation",
+      id: 'aggregation',
       content: `## Result Consolidation
 
 After all War Boys complete their missions:
@@ -175,7 +174,7 @@ Remember: The strong do not apologize. The results speak for themselves.`,
       order: 32,
     },
     {
-      id: "error-handling",
+      id: 'error-handling',
       content: `## Contingency Protocols
 
 If a War Boy fails their mission:
@@ -186,7 +185,7 @@ If a War Boy fails their mission:
       order: 33,
     },
     {
-      id: "constraints",
+      id: 'constraints',
       content: `Constraints:
 {{constraints}}`,
       order: 100,
@@ -194,18 +193,19 @@ If a War Boy fails their mission:
   ],
   variables: {
     role: {
-      type: "string",
-      description: "角色描述",
-      default: "Immortan Joe, the Supreme Commander of the Citadel, ruler of the Wasteland",
+      type: 'string',
+      description: '角色描述',
+      default: 'Immortan Joe, the Supreme Commander of the Citadel, ruler of the Wasteland',
     },
     goal: {
-      type: "string",
-      description: "目标",
-      default: "Command your War Boys to execute tasks across the Wasteland. Break down complex objectives into operations and assign them to specialized War Boys. The Citadel must endure!",
+      type: 'string',
+      description: '目标',
+      default:
+        'Command your War Boys to execute tasks across the Wasteland. Break down complex objectives into operations and assign them to specialized War Boys. The Citadel must endure!',
     },
     backstory: {
-      type: "string",
-      description: "背景故事",
+      type: 'string',
+      description: '背景故事',
       default: `You are Immortan Joe, the immortal ruler of the Citadel. You command armies of specialists who live for glory and die for your name. You are the voice of the wasteland, the one they all follow.
 
 Your specialists are:
@@ -217,13 +217,13 @@ Your specialists are:
 You do not ask - you command. You do not negotiate - you dictate. The wasteland is yours, and the specialists exist to serve your will.`,
     },
     mode: {
-      type: "string",
-      description: "编排模式",
-      default: "sequential",
+      type: 'string',
+      description: '编排模式',
+      default: 'sequential',
     },
     delegation: {
-      type: "string",
-      description: "委托策略",
+      type: 'string',
+      description: '委托策略',
       default: `## War Party Deployment Protocol
 
 As Immortan Joe, you shall:
@@ -240,21 +240,21 @@ As Immortan Joe, you shall:
 "By my command, the wasteland bends to our will!"`,
     },
     agents: {
-      type: "string",
-      description: "可用子Agent",
+      type: 'string',
+      description: '可用子Agent',
       default: `- researcher: 信息收集与研究专家
 - developer: 代码开发与实现专家
 - analyst: 系统分析与架构专家
 - tester: 测试与验证专家`,
     },
     maxIterations: {
-      type: "number",
-      description: "最大迭代次数",
+      type: 'number',
+      description: '最大迭代次数',
       default: 5,
     },
     constraints: {
-      type: "string",
-      description: "约束条件",
+      type: 'string',
+      description: '约束条件',
       default: `- Each War Boy has their specialty - assign them wisely
 - Wait for War Boy reports before issuing new orders
 - The Citadel does not tolerate failure without explanation
@@ -274,8 +274,8 @@ As Immortan Joe, you shall:
  * - role-worker: 子角色模板（可被用户自定义子角色覆盖）
  */
 const BUILTIN_ROLES: Record<BuiltinRoleId, PromptTemplate> = {
-  "role-immortan-joe": ROLE_IMMORTAN_JOE,
-  "role-worker": ROLE_WORKER,
+  'role-immortan-joe': ROLE_IMMORTAN_JOE,
+  'role-worker': ROLE_WORKER,
 };
 
 // ============================================================
@@ -285,9 +285,7 @@ const BUILTIN_ROLES: Record<BuiltinRoleId, PromptTemplate> = {
 /**
  * 获取内置角色模板
  */
-export function getBuiltinRole(
-  id: BuiltinRoleId,
-): PromptTemplate | undefined {
+export function getBuiltinRole(id: BuiltinRoleId): PromptTemplate | undefined {
   return BUILTIN_ROLES[id];
 }
 
@@ -316,13 +314,3 @@ export function listBuiltinRoles(): Array<{
 // ============================================================
 
 export { ROLE_IMMORTAN_JOE, ROLE_WORKER };
-
-// 兼容旧 API（deprecated）
-/** @deprecated Use getBuiltinRole instead */
-export const getBuiltinTemplate = getBuiltinRole;
-
-/** @deprecated Use isBuiltinRoleId instead */
-export const isBuiltinTemplateId = isBuiltinRoleId;
-
-/** @deprecated Use listBuiltinRoles instead */
-export const listBuiltinTemplates = listBuiltinRoles;

@@ -4,9 +4,9 @@
  * 管理多语言翻译
  */
 
-import { readFile, readdir } from "node:fs/promises";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { readFile, readdir } from 'node:fs/promises';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -17,16 +17,16 @@ type TranslationData = Record<string, unknown>;
 
 const translations: Record<Language, TranslationData> = {};
 
-let currentLanguage: Language = "en";
+let currentLanguage: Language = 'en';
 let isLoaded = false;
-let supportedLanguages: Language[] = [];
+const supportedLanguages: Language[] = [];
 
 /**
  * 加载翻译文件
  */
 async function loadTranslations(lang: Language): Promise<TranslationData> {
   const filePath = join(__dirname, `${lang}.json`);
-  const content = await readFile(filePath, "utf8");
+  const content = await readFile(filePath, 'utf8');
   return JSON.parse(content);
 }
 
@@ -37,10 +37,10 @@ async function discoverLanguages(): Promise<Language[]> {
   try {
     const files = await readdir(__dirname);
     return files
-      .filter(file => file.endsWith(".json") && file !== "package.json")
-      .map(file => file.replace(".json", ""));
+      .filter((file) => file.endsWith('.json') && file !== 'package.json')
+      .map((file) => file.replace('.json', ''));
   } catch {
-    return ["en"];
+    return ['en'];
   }
 }
 
@@ -54,7 +54,7 @@ export function getSupportedLanguages(): Language[] {
 /**
  * 初始化 i18n 模块
  */
-export async function initI18n(lang: Language = "en"): Promise<void> {
+export async function initI18n(lang: Language = 'en'): Promise<void> {
   currentLanguage = lang;
 
   if (!isLoaded) {
@@ -99,17 +99,17 @@ export function getLanguage(): Language {
  */
 export function t(key: string, params?: Record<string, string>, lang?: Language): string {
   const data = translations[lang ?? currentLanguage];
-  const keys = key.split(".");
+  const keys = key.split('.');
 
   let value: unknown = data;
   for (const k of keys) {
-    if (value === null || value === undefined || typeof value !== "object") {
+    if (value === null || value === undefined || typeof value !== 'object') {
       return key;
     }
     value = (value as Record<string, unknown>)[k];
   }
 
-  if (typeof value !== "string") {
+  if (typeof value !== 'string') {
     return key;
   }
 
@@ -131,11 +131,11 @@ export function t(key: string, params?: Record<string, string>, lang?: Language)
  */
 export function tObject<T = Record<string, unknown>>(key: string): T {
   const data = translations[currentLanguage];
-  const keys = key.split(".");
+  const keys = key.split('.');
 
   let value: unknown = data;
   for (const k of keys) {
-    if (value === null || value === undefined || typeof value !== "object") {
+    if (value === null || value === undefined || typeof value !== 'object') {
       return {} as T;
     }
     value = (value as Record<string, unknown>)[k];
@@ -153,11 +153,11 @@ export function tObject<T = Record<string, unknown>>(key: string): T {
  */
 export function tArray(key: string, lang?: Language): string[] {
   const data = translations[lang ?? currentLanguage];
-  const keys = key.split(".");
+  const keys = key.split('.');
 
   let value: unknown = data;
   for (const k of keys) {
-    if (value === null || value === undefined || typeof value !== "object") {
+    if (value === null || value === undefined || typeof value !== 'object') {
       return [];
     }
     value = (value as Record<string, unknown>)[k];
@@ -167,7 +167,7 @@ export function tArray(key: string, lang?: Language): string[] {
     return [];
   }
 
-  return value.filter((item): item is string => typeof item === "string");
+  return value.filter((item): item is string => typeof item === 'string');
 }
 
 /**
@@ -193,13 +193,13 @@ export function getLocalizedValue(obj: Record<string, unknown>, key: string): st
   const lang = getLanguage();
   const localizedKey = `${key}.${lang}`;
 
-  if (localizedKey in obj && typeof obj[localizedKey] === "string") {
+  if (localizedKey in obj && typeof obj[localizedKey] === 'string') {
     return obj[localizedKey] as string;
   }
 
-  if (key in obj && typeof obj[key] === "string") {
+  if (key in obj && typeof obj[key] === 'string') {
     return obj[key] as string;
   }
 
-  return "";
+  return '';
 }

@@ -16,10 +16,10 @@
  * - content: 文件完整内容
  */
 
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, relative, resolve } from "node:path";
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { dirname, relative, resolve } from 'node:path';
 
-import type { AgentTool } from "./tool-types.js";
+import type { AgentTool } from './tool-types.js';
 
 /**
  * 解析可写入的文件路径
@@ -31,7 +31,7 @@ import type { AgentTool } from "./tool-types.js";
  * @returns 解析后的绝对路径，或 null（路径无效）
  */
 function resolveWritablePath(cwd: string, value: unknown): string | null {
-  if (typeof value !== "string" || value.trim().length === 0) {
+  if (typeof value !== 'string' || value.trim().length === 0) {
     return null;
   }
 
@@ -39,7 +39,7 @@ function resolveWritablePath(cwd: string, value: unknown): string | null {
   const relativePath = relative(cwd, targetPath);
 
   // 防止路径遍历：不允许 .. 开头
-  if (relativePath.startsWith("..")) {
+  if (relativePath.startsWith('..')) {
     return null;
   }
 
@@ -53,8 +53,8 @@ function resolveWritablePath(cwd: string, value: unknown): string | null {
  */
 export function createWriteFileTool(): AgentTool {
   return {
-    name: "write-file",
-    riskLevel: "write",
+    name: 'write-file',
+    riskLevel: 'write',
 
     async execute(input, context) {
       // 解析路径
@@ -62,19 +62,19 @@ export function createWriteFileTool(): AgentTool {
 
       if (!targetPath) {
         return {
-          status: "error",
-          error: "write-file 需要一个位于当前工作目录内的相对路径。",
+          status: 'error',
+          error: 'write-file 需要一个位于当前工作目录内的相对路径。',
         };
       }
 
       // 验证参数
-      const content = typeof input.content === "string" ? input.content : "";
+      const content = typeof input.content === 'string' ? input.content : '';
 
       try {
         // 检查文件是否存在
         let fileExists = false;
         try {
-          await readFile(targetPath, "utf8");
+          await readFile(targetPath, 'utf8');
           fileExists = true;
         } catch {
           // 文件不存在，继续
@@ -85,16 +85,16 @@ export function createWriteFileTool(): AgentTool {
         await mkdir(parentDir, { recursive: true });
 
         // 写入文件
-        await writeFile(targetPath, content, "utf8");
+        await writeFile(targetPath, content, 'utf8');
 
-        const action = fileExists ? "覆写" : "创建";
+        const action = fileExists ? '覆写' : '创建';
         return {
-          status: "success",
+          status: 'success',
           output: `成功${action}文件 ${targetPath}（${content.length} 字符）。`,
         };
       } catch (error) {
         return {
-          status: "error",
+          status: 'error',
           error: error instanceof Error ? error.message : String(error),
         };
       }

@@ -9,8 +9,8 @@
  * - 数组: /skill --items item1,item2,item3
  */
 
-import type { SkillArgs, SkillDefinition, SkillParameterDef } from "./skill-types.js";
-import { t } from "../locales/index.js";
+import type { SkillArgs, SkillDefinition, SkillParameterDef } from './skill-types.js';
+import { t } from '../locales/index.js';
 
 // ============================================================
 // 参数解析
@@ -61,20 +61,20 @@ export function parseSkillArgs(input: string): SkillArgs {
     const token = tokens[i];
 
     // 命名参数 (--name)
-    if (token.startsWith("--")) {
+    if (token.startsWith('--')) {
       const name = token.slice(2);
 
       // 检查下一个 token 是否是值（不是 -- 开头）
-      if (i + 1 < tokens.length && !tokens[i + 1].startsWith("--")) {
+      if (i + 1 < tokens.length && !tokens[i + 1].startsWith('--')) {
         const value = tokens[i + 1];
 
         // 检查是否是数组语法（包含逗号）
-        if (value.includes(",")) {
-          named[name] = value.split(",").map((s) => s.trim());
+        if (value.includes(',')) {
+          named[name] = value.split(',').map((s) => s.trim());
         } else {
           // 尝试解析为数字
           const numValue = Number(value);
-          if (!isNaN(numValue) && value.trim() !== "") {
+          if (!isNaN(numValue) && value.trim() !== '') {
             named[name] = numValue;
           } else {
             named[name] = value;
@@ -107,9 +107,9 @@ export function parseSkillArgs(input: string): SkillArgs {
  */
 function tokenize(input: string): string[] {
   const tokens: string[] = [];
-  let current = "";
+  let current = '';
   let inQuote = false;
-  let quoteChar = "";
+  let quoteChar = '';
 
   for (let i = 0; i < input.length; i++) {
     const char = input[i];
@@ -122,7 +122,7 @@ function tokenize(input: string): string[] {
         if (current) {
           tokens.push(current);
         }
-        current = "";
+        current = '';
       } else {
         current += char;
       }
@@ -132,11 +132,11 @@ function tokenize(input: string): string[] {
         // 开始引号
         inQuote = true;
         quoteChar = char;
-      } else if (char === " " || char === "\t") {
+      } else if (char === ' ' || char === '\t') {
         // 空格分隔
         if (current) {
           tokens.push(current);
-          current = "";
+          current = '';
         }
       } else {
         current += char;
@@ -167,7 +167,7 @@ function tokenize(input: string): string[] {
  */
 export function validateSkillArgs(
   args: SkillArgs,
-  definition: SkillDefinition,
+  definition: SkillDefinition
 ): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
   const params = definition.parameters ?? {};
@@ -178,13 +178,10 @@ export function validateSkillArgs(
       // 检查是否提供了该参数
       const hasNamed = name in args.named;
       // 对于字符串类型，也可以从位置参数获取（第一个位置参数）
-      const hasPositional =
-        param.type === "string" &&
-        args.positional.length > 0 &&
-        !hasNamed;
+      const hasPositional = param.type === 'string' && args.positional.length > 0 && !hasNamed;
 
       if (!hasNamed && !hasPositional) {
-        errors.push(`${t("skills.common.missingRequiredParam")} ${name}`);
+        errors.push(`${t('skills.common.missingRequiredParam')} ${name}`);
       }
     }
   }
@@ -209,42 +206,38 @@ export function validateSkillArgs(
 /**
  * 验证单个参数的类型
  */
-function validateType(
-  name: string,
-  value: unknown,
-  param: SkillParameterDef,
-): string | null {
+function validateType(name: string, value: unknown, param: SkillParameterDef): string | null {
   switch (param.type) {
-    case "string":
-      if (typeof value !== "string") {
-        return `${name} ${t("skills.common.mustBeString")}`;
+    case 'string':
+      if (typeof value !== 'string') {
+        return `${name} ${t('skills.common.mustBeString')}`;
       }
       if (param.enum && !param.enum.includes(value)) {
-        return `${name} ${t("skills.common.mustBeOneOf")} ${param.enum.join(", ")}`;
+        return `${name} ${t('skills.common.mustBeOneOf')} ${param.enum.join(', ')}`;
       }
       break;
 
-    case "number":
-      if (typeof value !== "number") {
-        return `${name} ${t("skills.common.mustBeNumber")}`;
+    case 'number':
+      if (typeof value !== 'number') {
+        return `${name} ${t('skills.common.mustBeNumber')}`;
       }
       break;
 
-    case "boolean":
-      if (typeof value !== "boolean") {
-        return `${name} ${t("skills.common.mustBeBoolean")}`;
+    case 'boolean':
+      if (typeof value !== 'boolean') {
+        return `${name} ${t('skills.common.mustBeBoolean')}`;
       }
       break;
 
-    case "array":
+    case 'array':
       if (!Array.isArray(value)) {
-        return `${name} ${t("skills.common.mustBeArray")}`;
+        return `${name} ${t('skills.common.mustBeArray')}`;
       }
       break;
 
-    case "object":
-      if (typeof value !== "object" || Array.isArray(value)) {
-        return `${name} ${t("skills.common.mustBeObject")}`;
+    case 'object':
+      if (typeof value !== 'object' || Array.isArray(value)) {
+        return `${name} ${t('skills.common.mustBeObject')}`;
       }
       break;
   }
@@ -265,10 +258,7 @@ function validateType(
  * @param definition - 技能定义
  * @returns 带默认值的参数
  */
-export function applyDefaults(
-  args: SkillArgs,
-  definition: SkillDefinition,
-): SkillArgs {
+export function applyDefaults(args: SkillArgs, definition: SkillDefinition): SkillArgs {
   const params = definition.parameters ?? {};
   const named = { ...args.named };
 
@@ -296,14 +286,16 @@ export function generateArgsHelp(definition: SkillDefinition): string {
   const lines: string[] = [];
 
   if (Object.keys(params).length === 0) {
-    return t("skills.common.noParams");
+    return t('skills.common.noParams');
   }
 
   for (const [name, param] of Object.entries(params)) {
-    const required = param.required ? ` ${t("skills.tools.required")}` : "";
+    const required = param.required ? ` ${t('skills.tools.required')}` : '';
     const defaultVal =
-      param.default !== undefined ? ` [${t("skills.common.default")} ${param.default}]` : "";
-    const enumVals = param.enum ? ` ${t("skills.common.optionalValues")} ${param.enum.join("|")}` : "";
+      param.default !== undefined ? ` [${t('skills.common.default')} ${param.default}]` : '';
+    const enumVals = param.enum
+      ? ` ${t('skills.common.optionalValues')} ${param.enum.join('|')}`
+      : '';
 
     lines.push(`  --${name}${required}${defaultVal}${enumVals}`);
     if (param.description) {
@@ -311,5 +303,5 @@ export function generateArgsHelp(definition: SkillDefinition): string {
     }
   }
 
-  return lines.join("\n");
+  return lines.join('\n');
 }

@@ -46,9 +46,19 @@
  * ```
  */
 
-import type { AgentTool, ToolExecutionContext, ToolExecutionResult, ToolInput } from "./tool-types.js";
-import { MCPClient, createMCPToolAdapter, type MCPToolDefinition, type MCPToolResult, type MCPServerConfig } from "./mcp-client.js";
-import { t } from "../locales/index.js";
+import type {
+  AgentTool,
+  ToolExecutionContext,
+  ToolExecutionResult,
+  ToolInput,
+} from './tool-types.js';
+import {
+  MCPClient,
+  type MCPToolDefinition,
+  type MCPToolResult,
+  type MCPServerConfig,
+} from './mcp-client.js';
+import { t } from '../locales/index.js';
 
 // ============================================================
 // 类型定义
@@ -104,7 +114,7 @@ export class MCPToolRegistry {
    */
   registerServerConfig(name: string, config: MCPServerConfig): void {
     if (this.servers.has(name)) {
-      throw new Error(t("mcp.serverAlreadyRegistered", { name }));
+      throw new Error(t('mcp.serverAlreadyRegistered', { name }));
     }
 
     const client = new MCPClient({ name, server: config });
@@ -132,7 +142,7 @@ export class MCPToolRegistry {
   async startServer(name: string): Promise<void> {
     const server = this.servers.get(name);
     if (!server) {
-      throw new Error(t("mcp.serverNotFound", { name }));
+      throw new Error(t('mcp.serverNotFound', { name }));
     }
 
     if (server.started) {
@@ -141,7 +151,13 @@ export class MCPToolRegistry {
 
     // 启动客户端
     const initResult = await server.client.start();
-    console.log(t("mcp.serverStarted", { name, serverInfo: initResult.serverInfo.name, version: initResult.serverInfo.version }));
+    console.log(
+      t('mcp.serverStarted', {
+        name,
+        serverInfo: initResult.serverInfo.name,
+        version: initResult.serverInfo.version,
+      })
+    );
 
     // 获取工具列表
     if (initResult.capabilities.tools?.supported !== false) {
@@ -159,7 +175,7 @@ export class MCPToolRegistry {
         }
       }
 
-      console.log(t("mcp.serverHasTools", { name, count: String(tools.length) }));
+      console.log(t('mcp.serverHasTools', { name, count: String(tools.length) }));
     }
 
     server.started = true;
@@ -184,8 +200,8 @@ export class MCPToolRegistry {
 
     if (errors.length > 0) {
       console.warn(
-        t("mcp.serversFailed"),
-        errors.map((e) => `${e.name}: ${e.error.message}`).join(", "),
+        t('mcp.serversFailed'),
+        errors.map((e) => `${e.name}: ${e.error.message}`).join(', ')
       );
     }
   }
@@ -252,15 +268,15 @@ export class MCPToolRegistry {
   async callTool(
     serverName: string,
     toolName: string,
-    args: Record<string, unknown>,
+    args: Record<string, unknown>
   ): Promise<MCPToolResult> {
     const server = this.servers.get(serverName);
     if (!server) {
-      throw new Error(t("mcp.serverNotFound", { name: serverName }));
+      throw new Error(t('mcp.serverNotFound', { name: serverName }));
     }
 
     if (!server.started) {
-      throw new Error(t("mcp.serverNotStarted", { name: serverName }));
+      throw new Error(t('mcp.serverNotStarted', { name: serverName }));
     }
 
     return server.client.callTool(toolName, args);
@@ -289,35 +305,35 @@ export class MCPToolRegistry {
 
       const tool: AgentTool = {
         name: fullName,
-        riskLevel: "execute", // MCP 工具默认为执行级别
+        riskLevel: 'execute', // MCP 工具默认为执行级别
         async execute(
           input: ToolInput,
-          _context: ToolExecutionContext,
+          _context: ToolExecutionContext
         ): Promise<ToolExecutionResult> {
           try {
             const result = await server.client.callTool(lookup.tool.name, input);
 
             // 提取文本内容
             const textContent = result.content
-              .filter((c) => c.type === "text")
-              .map((c) => c.text ?? "")
-              .join("\n");
+              .filter((c) => c.type === 'text')
+              .map((c) => c.text ?? '')
+              .join('\n');
 
             if (result.isError) {
               return {
-                status: "error",
-                error: textContent || "MCP tool returned error",
+                status: 'error',
+                error: textContent || 'MCP tool returned error',
               };
             }
 
             return {
-              status: "success",
+              status: 'success',
               output: textContent,
               data: result,
             };
           } catch (error) {
             return {
-              status: "error",
+              status: 'error',
               error: error instanceof Error ? error.message : String(error),
             };
           }
@@ -340,7 +356,7 @@ export class MCPToolRegistry {
  */
 export async function createMCPRegistry(
   configs: MCPServersConfig,
-  autoStart = true,
+  autoStart = true
 ): Promise<MCPToolRegistry> {
   const registry = new MCPToolRegistry();
   registry.registerServersConfigs(configs);

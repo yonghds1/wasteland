@@ -6,7 +6,7 @@
  * - 非 TTY 模式：纯文本、无 ANSI、简化输出
  */
 
-import { Writable } from "node:stream";
+import { Writable } from 'node:stream';
 
 // ============================================================
 // 类型定义
@@ -47,20 +47,16 @@ export function detectTTY(params?: {
   const stdin = params?.stdin ?? process.stdin;
   const stderr = params?.stderr ?? process.stderr;
 
-  const stdoutIsTTY = "isTTY" in stdout && stdout.isTTY === true;
-  const stdinIsTTY = "isTTY" in stdin && stdin.isTTY === true;
-  const stderrIsTTY = "isTTY" in stderr && stderr.isTTY === true;
+  const stdoutIsTTY = 'isTTY' in stdout && stdout.isTTY === true;
+  const stdinIsTTY = 'isTTY' in stdin && stdin.isTTY === true;
+  const stderrIsTTY = 'isTTY' in stderr && stderr.isTTY === true;
 
   // 交互模式：stdin 和 stdout 都是 TTY
   const isInteractive = stdinIsTTY && stdoutIsTTY;
 
   // 获取终端尺寸
-  const columns = "columns" in stdout && typeof stdout.columns === "number"
-    ? stdout.columns
-    : 80;
-  const rows = "rows" in stdout && typeof stdout.rows === "number"
-    ? stdout.rows
-    : 24;
+  const columns = 'columns' in stdout && typeof stdout.columns === 'number' ? stdout.columns : 80;
+  const rows = 'rows' in stdout && typeof stdout.rows === 'number' ? stdout.rows : 24;
 
   // 颜色支持检测
   const supportsColor = detectColorSupport(stdout);
@@ -84,12 +80,12 @@ export function detectTTY(params?: {
  * 检测颜色支持
  */
 function detectColorSupport(stream: Writable): boolean {
-  if (!("isTTY" in stream) || stream.isTTY !== true) {
+  if (!('isTTY' in stream) || stream.isTTY !== true) {
     return false;
   }
 
   // 检查 FORCE_COLOR 环境变量
-  if (process.env.FORCE_COLOR === "0") {
+  if (process.env.FORCE_COLOR === '0') {
     return false;
   }
   if (process.env.FORCE_COLOR) {
@@ -102,13 +98,13 @@ function detectColorSupport(stream: Writable): boolean {
   }
 
   // 检查 COLORTERM
-  if (process.env.COLORTERM === "truecolor" || process.env.COLORTERM === "24bit") {
+  if (process.env.COLORTERM === 'truecolor' || process.env.COLORTERM === '24bit') {
     return true;
   }
 
   // 检查 TERM
-  const term = process.env.TERM ?? "";
-  if (term.includes("color") || term.includes("256")) {
+  const term = process.env.TERM ?? '';
+  if (term.includes('color') || term.includes('256')) {
     return true;
   }
 
@@ -121,8 +117,8 @@ function detectColorSupport(stream: Writable): boolean {
  */
 function detectUnicodeSupport(): boolean {
   // Windows 默认不支持 Unicode（除非使用 Windows Terminal）
-  if (process.platform === "win32") {
-    return process.env.WT_SESSION !== undefined || process.env.TERM_PROGRAM === "vscode";
+  if (process.platform === 'win32') {
+    return process.env.WT_SESSION !== undefined || process.env.TERM_PROGRAM === 'vscode';
   }
 
   // Unix-like 系统默认支持
@@ -147,7 +143,7 @@ export function createStyleAdapter(tty: TTYContext) {
       if (!tty.supportsColor || styles.length === 0) {
         return text;
       }
-      return `${styles.join("")}${text}\x1b[0m`;
+      return `${styles.join('')}${text}\x1b[0m`;
     },
 
     /**
@@ -155,14 +151,14 @@ export function createStyleAdapter(tty: TTYContext) {
      */
     get symbol() {
       return {
-        check: tty.supportsUnicode ? "✓" : "[OK]",
-        cross: tty.supportsUnicode ? "✗" : "[X]",
-        arrow: tty.supportsUnicode ? "→" : "->",
-        bullet: tty.supportsUnicode ? "●" : "*",
-        pointer: tty.supportsUnicode ? "▶" : ">",
+        check: tty.supportsUnicode ? '✓' : '[OK]',
+        cross: tty.supportsUnicode ? '✗' : '[X]',
+        arrow: tty.supportsUnicode ? '→' : '->',
+        bullet: tty.supportsUnicode ? '●' : '*',
+        pointer: tty.supportsUnicode ? '▶' : '>',
         spinner: tty.supportsUnicode
-          ? ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
-          : ["-", "\\", "|", "/"],
+          ? ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
+          : ['-', '\\', '|', '/'],
       };
     },
 
@@ -172,30 +168,30 @@ export function createStyleAdapter(tty: TTYContext) {
     get color() {
       return tty.supportsColor
         ? {
-            red: "\x1b[31m",
-            green: "\x1b[32m",
-            yellow: "\x1b[33m",
-            blue: "\x1b[34m",
-            magenta: "\x1b[35m",
-            cyan: "\x1b[36m",
-            white: "\x1b[37m",
-            gray: "\x1b[90m",
-            reset: "\x1b[0m",
-            bold: "\x1b[1m",
-            dim: "\x1b[2m",
+            red: '\x1b[31m',
+            green: '\x1b[32m',
+            yellow: '\x1b[33m',
+            blue: '\x1b[34m',
+            magenta: '\x1b[35m',
+            cyan: '\x1b[36m',
+            white: '\x1b[37m',
+            gray: '\x1b[90m',
+            reset: '\x1b[0m',
+            bold: '\x1b[1m',
+            dim: '\x1b[2m',
           }
         : {
-            red: "",
-            green: "",
-            yellow: "",
-            blue: "",
-            magenta: "",
-            cyan: "",
-            white: "",
-            gray: "",
-            reset: "",
-            bold: "",
-            dim: "",
+            red: '',
+            green: '',
+            yellow: '',
+            blue: '',
+            magenta: '',
+            cyan: '',
+            white: '',
+            gray: '',
+            reset: '',
+            bold: '',
+            dim: '',
           };
     },
 
@@ -206,7 +202,7 @@ export function createStyleAdapter(tty: TTYContext) {
       if (!tty.supportsColor) {
         return `[${text}]`;
       }
-      const label = text.padEnd(5, " ");
+      const label = text.padEnd(5, ' ');
       if (color) {
         return `${color}${label}\x1b[0m`;
       }
@@ -218,7 +214,7 @@ export function createStyleAdapter(tty: TTYContext) {
      */
     timestamp(date?: Date): string {
       const now = date ?? new Date();
-      const time = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}:${now.getSeconds().toString().padStart(2, "0")}`;
+      const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
 
       if (!tty.supportsColor) {
         return `[${time}]`;

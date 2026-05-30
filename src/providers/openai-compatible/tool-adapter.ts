@@ -15,10 +15,10 @@
  * - 需要在两者之间转换
  */
 
-import type { ToolCall } from "../../tools/tool-types.js";
-import { ToolRegistry } from "../../tools/tool-registry.js";
-import { t } from "../../locales/index.js";
-import type { JsonSchema, OpenAIFunctionTool, OpenAIToolCall } from "./types.js";
+import type { ToolCall } from '../../tools/tool-types.js';
+import { ToolRegistry } from '../../tools/tool-registry.js';
+import { t } from '../../locales/index.js';
+import type { JsonSchema, OpenAIFunctionTool, OpenAIToolCall } from './types.js';
 
 // ============================================================
 // 工具定义转换
@@ -58,7 +58,7 @@ export function buildOpenAITools(registry: ToolRegistry): OpenAIFunctionTool[] {
     if (!tool) continue;
 
     tools.push({
-      type: "function",
+      type: 'function',
       function: {
         name: tool.name,
         description: getToolDescription(tool.name, tool.riskLevel),
@@ -77,11 +77,11 @@ export function buildOpenAITools(registry: ToolRegistry): OpenAIFunctionTool[] {
  */
 function getToolDescription(name: string, riskLevel: string): string {
   const descriptions: Record<string, string> = {
-    "read-file": t("providers.toolAdapter.readFile"),
-    "edit-file": t("providers.toolAdapter.editFile"),
-    "write-file": t("providers.toolAdapter.writeFile"),
-    bash: t("providers.toolAdapter.bash"),
-    "spawn_agent": t("providers.toolAdapter.createSubAgent"),
+    'read-file': t('providers.toolAdapter.readFile'),
+    'edit-file': t('providers.toolAdapter.editFile'),
+    'write-file': t('providers.toolAdapter.writeFile'),
+    bash: t('providers.toolAdapter.bash'),
+    spawn_agent: t('providers.toolAdapter.createSubAgent'),
   };
 
   return descriptions[name] ?? `${name} 工具（风险等级：${riskLevel}）。`;
@@ -94,102 +94,102 @@ function getToolDescription(name: string, riskLevel: string): string {
  */
 function getToolParameters(name: string): JsonSchema {
   const schemas: Record<string, JsonSchema> = {
-    "read-file": {
-      type: "object",
+    'read-file': {
+      type: 'object',
       properties: {
         path: {
-          type: "string",
-          description: t("providers.toolAdapter.filePath"),
+          type: 'string',
+          description: t('providers.toolAdapter.filePath'),
         },
         offset: {
-          type: "integer",
-          description: t("providers.toolAdapter.startLine"),
+          type: 'integer',
+          description: t('providers.toolAdapter.startLine'),
         },
         limit: {
-          type: "integer",
-          description: "读取的行数（可选）",
+          type: 'integer',
+          description: '读取的行数（可选）',
         },
       },
-      required: ["path"],
+      required: ['path'],
     },
-    "edit-file": {
-      type: "object",
+    'edit-file': {
+      type: 'object',
       properties: {
         path: {
-          type: "string",
-          description: "要编辑的文件路径（相对于工作目录）",
+          type: 'string',
+          description: '要编辑的文件路径（相对于工作目录）',
         },
         old_string: {
-          type: "string",
-          description: t("providers.toolAdapter.oldString"),
+          type: 'string',
+          description: t('providers.toolAdapter.oldString'),
         },
         new_string: {
-          type: "string",
-          description: t("providers.toolAdapter.newString"),
+          type: 'string',
+          description: t('providers.toolAdapter.newString'),
         },
         replace_all: {
-          type: "boolean",
-          description: "是否替换所有匹配项（默认 false）",
+          type: 'boolean',
+          description: '是否替换所有匹配项（默认 false）',
         },
       },
-      required: ["path", "old_string", "new_string"],
+      required: ['path', 'old_string', 'new_string'],
     },
-    "write-file": {
-      type: "object",
+    'write-file': {
+      type: 'object',
       properties: {
         path: {
-          type: "string",
-          description: t("providers.toolAdapter.writePath"),
+          type: 'string',
+          description: t('providers.toolAdapter.writePath'),
         },
         content: {
-          type: "string",
-          description: t("providers.toolAdapter.content"),
+          type: 'string',
+          description: t('providers.toolAdapter.content'),
         },
       },
-      required: ["path", "content"],
+      required: ['path', 'content'],
     },
     bash: {
-      type: "object",
+      type: 'object',
       properties: {
         command: {
-          type: "string",
-          description: t("providers.toolAdapter.command"),
+          type: 'string',
+          description: t('providers.toolAdapter.command'),
         },
       },
-      required: ["command"],
+      required: ['command'],
     },
-    "spawn_agent": {
-      type: "object",
+    spawn_agent: {
+      type: 'object',
       properties: {
         name: {
-          type: "string",
-          description: t("providers.toolAdapter.subAgentId"),
+          type: 'string',
+          description: t('providers.toolAdapter.subAgentId'),
         },
         task: {
-          type: "string",
-          description: "子 Agent 要执行的任务描述",
+          type: 'string',
+          description: '子 Agent 要执行的任务描述',
         },
         model: {
-          type: "string",
-          description: "可选，模型选择（haiku/sonnet/opus 等）",
+          type: 'string',
+          description: '可选，模型选择（haiku/sonnet/opus 等）',
         },
         tools: {
-          type: "array",
-          items: { type: "string" },
-          description: "可选，限定子 Agent 可用的工具集",
+          type: 'array',
+          items: { type: 'string' },
+          description: '可选，限定子 Agent 可用的工具集',
         },
         inheritHistory: {
-          type: "boolean",
-          description: "可选，是否继承父 Agent 的历史上下文，默认 false",
+          type: 'boolean',
+          description: '可选，是否继承父 Agent 的历史上下文，默认 false',
         },
       },
-      required: ["name", "task"],
+      required: ['name', 'task'],
     },
   };
 
   return (
     schemas[name] ?? {
-      type: "object",
+      type: 'object',
       properties: {},
     }
   );
@@ -234,7 +234,7 @@ export function parseToolCalls(toolCalls: OpenAIToolCall[]): ToolCall[] {
       input = {
         _parseError: true,
         _rawArguments: tc.function.arguments,
-        _errorMessage: `${t("providers.toolAdapter.invalidJson")}${tc.function.arguments}`,
+        _errorMessage: `${t('providers.toolAdapter.invalidJson')}${tc.function.arguments}`,
       };
     }
 
@@ -264,5 +264,5 @@ export function hasParseError(call: ToolCall): boolean {
  */
 export function getParseErrorMessage(call: ToolCall): string {
   const msg = call.input._errorMessage;
-  return typeof msg === "string" ? msg : t("providers.toolAdapter.unknownParseError");
+  return typeof msg === 'string' ? msg : t('providers.toolAdapter.unknownParseError');
 }

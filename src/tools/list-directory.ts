@@ -18,10 +18,10 @@
  * - showHidden: 是否显示隐藏文件（可选，默认 false）
  */
 
-import { readdir, stat } from "node:fs/promises";
-import { join, relative, resolve } from "node:path";
+import { readdir, stat } from 'node:fs/promises';
+import { join, relative, resolve } from 'node:path';
 
-import type { AgentTool, ToolExecutionResult } from "./tool-types.js";
+import type { AgentTool, ToolExecutionResult } from './tool-types.js';
 
 // ============================================================
 // 配置常量
@@ -43,7 +43,7 @@ const MAX_TOTAL_ENTRIES = 500;
 type DirEntry = {
   name: string;
   path: string;
-  type: "file" | "directory" | "symlink" | "other";
+  type: 'file' | 'directory' | 'symlink' | 'other';
   size?: number;
   modified?: string;
 };
@@ -79,10 +79,10 @@ function formatSize(bytes: number): string {
  */
 function formatModified(date: Date): string {
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hour = String(date.getHours()).padStart(2, "0");
-  const minute = String(date.getMinutes()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hour = String(date.getHours()).padStart(2, '0');
+  const minute = String(date.getMinutes()).padStart(2, '0');
   return `${year}-${month}-${day} ${hour}:${minute}`;
 }
 
@@ -94,38 +94,34 @@ function formatModified(date: Date): string {
  * @param baseDir - 基准目录
  * @returns 目录条目信息
  */
-async function getEntryInfo(
-  entryPath: string,
-  name: string,
-  baseDir: string,
-): Promise<DirEntry> {
+async function getEntryInfo(entryPath: string, name: string, baseDir: string): Promise<DirEntry> {
   try {
     const s = await stat(entryPath);
     const isSymlink = s.isSymbolicLink();
 
-    let type: DirEntry["type"];
+    let type: DirEntry['type'];
     if (isSymlink) {
-      type = "symlink";
+      type = 'symlink';
     } else if (s.isDirectory()) {
-      type = "directory";
+      type = 'directory';
     } else if (s.isFile()) {
-      type = "file";
+      type = 'file';
     } else {
-      type = "other";
+      type = 'other';
     }
 
     return {
       name,
       path: relative(baseDir, entryPath),
       type,
-      size: type === "file" ? s.size : undefined,
+      size: type === 'file' ? s.size : undefined,
       modified: formatModified(s.mtime),
     };
   } catch {
     return {
       name,
       path: relative(baseDir, entryPath),
-      type: "other",
+      type: 'other',
     };
   }
 }
@@ -141,7 +137,7 @@ async function getEntryInfo(
 async function listSingleDir(
   dirPath: string,
   baseDir: string,
-  showHidden: boolean,
+  showHidden: boolean
 ): Promise<DirEntry[]> {
   const entries: DirEntry[] = [];
 
@@ -154,7 +150,7 @@ async function listSingleDir(
       }
 
       // 跳过隐藏文件（除非显式请求）
-      if (!showHidden && dirent.name.startsWith(".")) {
+      if (!showHidden && dirent.name.startsWith('.')) {
         continue;
       }
 
@@ -182,7 +178,7 @@ async function listRecursive(
   dirPath: string,
   baseDir: string,
   showHidden: boolean,
-  maxDepth: number,
+  maxDepth: number
 ): Promise<DirEntry[]> {
   const allEntries: DirEntry[] = [];
 
@@ -206,7 +202,7 @@ async function listRecursive(
       if (allEntries.length >= MAX_TOTAL_ENTRIES) {
         break;
       }
-      if (entry.type === "directory") {
+      if (entry.type === 'directory') {
         const subDirPath = join(baseDir, entry.path);
         await walk(subDirPath, depth + 1);
       }
@@ -225,27 +221,27 @@ async function listRecursive(
  */
 function getEntryIcon(entry: DirEntry): string {
   switch (entry.type) {
-    case "directory":
-      return "📁";
-    case "file":
+    case 'directory':
+      return '📁';
+    case 'file':
       // 根据扩展名选择图标
-      if (entry.name.endsWith(".ts") || entry.name.endsWith(".tsx")) {
-        return "📘";
+      if (entry.name.endsWith('.ts') || entry.name.endsWith('.tsx')) {
+        return '📘';
       }
-      if (entry.name.endsWith(".js") || entry.name.endsWith(".jsx")) {
-        return "📙";
+      if (entry.name.endsWith('.js') || entry.name.endsWith('.jsx')) {
+        return '📙';
       }
-      if (entry.name.endsWith(".json")) {
-        return "📋";
+      if (entry.name.endsWith('.json')) {
+        return '📋';
       }
-      if (entry.name.endsWith(".md")) {
-        return "📝";
+      if (entry.name.endsWith('.md')) {
+        return '📝';
       }
-      return "📄";
-    case "symlink":
-      return "🔗";
+      return '📄';
+    case 'symlink':
+      return '🔗';
     default:
-      return "❓";
+      return '❓';
   }
 }
 
@@ -265,32 +261,32 @@ function formatResult(entries: DirEntry[], dirPath: string, recursive: boolean):
   // 按类型和名称排序：目录在前，然后按名称排序
   const sorted = [...entries].sort((a, b) => {
     // 目录优先
-    if (a.type === "directory" && b.type !== "directory") {
+    if (a.type === 'directory' && b.type !== 'directory') {
       return -1;
     }
-    if (a.type !== "directory" && b.type === "directory") {
+    if (a.type !== 'directory' && b.type === 'directory') {
       return 1;
     }
     // 同类型按名称排序
     return a.path.localeCompare(b.path);
   });
 
-  const mode = recursive ? "recursive" : "flat";
-  const header = `📁 ${dirPath} — ${entries.length} ${entries.length === 1 ? "entry" : "entries"} (${mode})\n${"─".repeat(48)}`;
+  const mode = recursive ? 'recursive' : 'flat';
+  const header = `📁 ${dirPath} — ${entries.length} ${entries.length === 1 ? 'entry' : 'entries'} (${mode})\n${'─'.repeat(48)}`;
 
   const body = sorted
     .map((entry) => {
       const icon = getEntryIcon(entry);
-      const sizeStr = entry.size !== undefined ? ` ${formatSize(entry.size)}` : "";
+      const sizeStr = entry.size !== undefined ? ` ${formatSize(entry.size)}` : '';
       const pathStr = recursive ? entry.path : entry.name;
       return `  ${icon} ${pathStr}${sizeStr}`;
     })
-    .join("\n");
+    .join('\n');
 
   const truncationNote =
     entries.length >= MAX_TOTAL_ENTRIES
       ? `\n\n⚠ Results truncated at ${MAX_TOTAL_ENTRIES} entries.`
-      : "";
+      : '';
 
   return `${header}\n${body}${truncationNote}`;
 }
@@ -301,13 +297,13 @@ function formatResult(entries: DirEntry[], dirPath: string, recursive: boolean):
 
 export function createListDirectoryTool(): AgentTool {
   return {
-    name: "list-directory",
-    riskLevel: "read",
+    name: 'list-directory',
+    riskLevel: 'read',
 
     async execute(input, context): Promise<ToolExecutionResult> {
       // 解析目录路径
       const targetPath =
-        typeof input.path === "string" && input.path.trim().length > 0
+        typeof input.path === 'string' && input.path.trim().length > 0
           ? resolve(context.cwd, input.path)
           : context.cwd;
 
@@ -316,13 +312,13 @@ export function createListDirectoryTool(): AgentTool {
         const s = await stat(targetPath);
         if (!s.isDirectory()) {
           return {
-            status: "error",
+            status: 'error',
             error: `路径 "${input.path}" 不是一个目录。`,
           };
         }
       } catch {
         return {
-          status: "error",
+          status: 'error',
           error: `路径 "${targetPath}" 不存在或无法访问。`,
         };
       }
@@ -340,12 +336,12 @@ export function createListDirectoryTool(): AgentTool {
         }
 
         return {
-          status: "success",
+          status: 'success',
           output: formatResult(entries, targetPath, recursive),
         };
       } catch (error) {
         return {
-          status: "error",
+          status: 'error',
           error: error instanceof Error ? error.message : String(error),
         };
       }

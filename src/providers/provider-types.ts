@@ -1,8 +1,8 @@
-import type { Observable } from "rxjs";
+import type { Observable } from 'rxjs';
 
-import type { TurnContext } from "../runtime/turn-context.js";
-import type { TurnState } from "../runtime/turn-state.js";
-import type { ToolCall } from "../tools/tool-types.js";
+import type { TurnContext } from '../runtime/turn-context.js';
+import type { TurnState } from '../runtime/turn-state.js';
+import type { ToolCall } from '../tools/tool-types.js';
 
 /**
  * Provider 流事件（可辨识联合类型）
@@ -37,19 +37,19 @@ import type { ToolCall } from "../tools/tool-types.js";
 export type ProviderStreamEvent =
   | {
       /** 事件类型：AI 生成的文本片段 */
-      type: "assistant_chunk";
+      type: 'assistant_chunk';
       /** 文本片段内容 */
       text: string;
     }
   | {
       /** 事件类型：AI 请求调用工具 */
-      type: "tool_call";
+      type: 'tool_call';
       /** 工具调用请求详情 */
       call: ToolCall;
     }
   | {
       /** 事件类型：AI 完成的完整消息 */
-      type: "assistant_message";
+      type: 'assistant_message';
       /** 完整消息内容 */
       text: string;
     };

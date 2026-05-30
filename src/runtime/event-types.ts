@@ -1,6 +1,6 @@
-import type { PermissionDecisionKind, PermissionMode } from "./permission-gate.js";
-import type { ToolInput, ToolRunStatus } from "../tools/tool-types.js";
-import type { SkillArgs, SkillResult } from "../skills/skill-types.js";
+import type { PermissionDecisionKind, PermissionMode } from './permission-gate.js';
+import type { ToolInput, ToolRunStatus } from '../tools/tool-types.js';
+import type { SkillArgs, SkillResult } from '../skills/skill-types.js';
 
 /**
  * 输入来源
@@ -10,7 +10,7 @@ import type { SkillArgs, SkillResult } from "../skills/skill-types.js";
  * - "stdin": 通过标准输入管道传入
  * - "interactive": 交互式对话中用户主动输入
  */
-export type InputSource = "message" | "stdin" | "interactive";
+export type InputSource = 'message' | 'stdin' | 'interactive';
 
 /**
  * 运行时模式
@@ -18,7 +18,7 @@ export type InputSource = "message" | "stdin" | "interactive";
  * - "single": 单次执行模式，处理一条消息后退出
  * - "interactive": 交互模式，持续等待用户输入
  */
-export type RuntimeMode = "single" | "interactive";
+export type RuntimeMode = 'single' | 'interactive';
 
 /**
  * 聊天输入轮次
@@ -48,8 +48,8 @@ export type ChatInputTurn = {
  * @property source - 可选的输入来源（仅用户消息有）
  */
 export type SessionMessageRecord = {
-  type: "message";
-  role: "user" | "assistant";
+  type: 'message';
+  role: 'user' | 'assistant';
   turn: number;
   content: string;
   timestamp: string;
@@ -70,7 +70,7 @@ export type SessionMessageRecord = {
  * @property timestamp - 调用时间戳
  */
 export type SessionToolCallRecord = {
-  type: "tool_call";
+  type: 'tool_call';
   sessionId: string;
   turn: number;
   callId: string;
@@ -95,7 +95,7 @@ export type SessionToolCallRecord = {
  * @property timestamp - 决策时间戳
  */
 export type SessionPermissionRecord = {
-  type: "permission";
+  type: 'permission';
   sessionId: string;
   turn: number;
   callId: string;
@@ -122,7 +122,7 @@ export type SessionPermissionRecord = {
  * @property timestamp - 结果时间戳
  */
 export type SessionToolResultRecord = {
-  type: "tool_result";
+  type: 'tool_result';
   sessionId: string;
   turn: number;
   callId: string;
@@ -148,7 +148,7 @@ export type SessionToolResultRecord = {
  * @property childName - 子 Agent 名称（如果是子 Agent）
  */
 export type SessionStartRecord = {
-  type: "session";
+  type: 'session';
   sessionId: string;
   mode: RuntimeMode;
   cwd: string;
@@ -168,7 +168,7 @@ export type SessionStartRecord = {
  * @property timestamp - 结束时间戳
  */
 export type SessionEndRecord = {
-  type: "session_end";
+  type: 'session_end';
   sessionId: string;
   timestamp: string;
 };
@@ -250,14 +250,14 @@ export type SessionRecord =
 export type RuntimeEvent =
   | {
       /** 会话开始事件 */
-      type: "session_started";
+      type: 'session_started';
       sessionId: string;
       sessionPath: string;
       mode: RuntimeMode;
     }
   | {
       /** 用户输入事件 */
-      type: "user_turn";
+      type: 'user_turn';
       sessionId: string;
       turn: number;
       content: string;
@@ -265,21 +265,21 @@ export type RuntimeEvent =
     }
   | {
       /** AI 响应片段事件（流式输出） */
-      type: "assistant_chunk";
+      type: 'assistant_chunk';
       sessionId: string;
       turn: number;
       chunk: string;
     }
   | {
       /** AI 响应完成事件 */
-      type: "assistant_message";
+      type: 'assistant_message';
       sessionId: string;
       turn: number;
       content: string;
     }
   | {
       /** 工具调用请求事件 */
-      type: "tool_call_requested";
+      type: 'tool_call_requested';
       sessionId: string;
       turn: number;
       callId: string;
@@ -288,7 +288,7 @@ export type RuntimeEvent =
     }
   | {
       /** 权限决策事件 */
-      type: "permission_decision";
+      type: 'permission_decision';
       sessionId: string;
       turn: number;
       callId: string;
@@ -299,7 +299,7 @@ export type RuntimeEvent =
     }
   | {
       /** 工具开始执行事件 */
-      type: "tool_started";
+      type: 'tool_started';
       sessionId: string;
       turn: number;
       callId: string;
@@ -307,32 +307,32 @@ export type RuntimeEvent =
     }
   | {
       /** 工具执行成功事件 */
-      type: "tool_result";
+      type: 'tool_result';
       sessionId: string;
       turn: number;
       callId: string;
       toolName: string;
-      status: "success";
+      status: 'success';
       output: string;
     }
   | {
       /** 工具执行失败事件 */
-      type: "tool_failed";
+      type: 'tool_failed';
       sessionId: string;
       turn: number;
       callId: string;
       toolName: string;
-      status: Exclude<ToolRunStatus, "success">;
+      status: Exclude<ToolRunStatus, 'success'>;
       error: string;
     }
   | {
       /** 会话结束事件 */
-      type: "session_ended";
+      type: 'session_ended';
       sessionId: string;
     }
   | {
       /** 子 Agent 创建事件 */
-      type: "agent_spawned";
+      type: 'agent_spawned';
       parentId: string;
       childId: string;
       childSessionPath: string;
@@ -341,16 +341,16 @@ export type RuntimeEvent =
     }
   | {
       /** 子 Agent 完成事件 */
-      type: "agent_completed";
+      type: 'agent_completed';
       childId: string;
-      status: "success" | "error" | "timeout";
+      status: 'success' | 'error' | 'timeout';
       result?: string;
       error?: string;
       sessionPath: string;
     }
   | {
       /** 技能调用开始事件 */
-      type: "skill_started";
+      type: 'skill_started';
       sessionId: string;
       turn: number;
       skillName: string;
@@ -358,7 +358,7 @@ export type RuntimeEvent =
     }
   | {
       /** 技能执行结果事件 */
-      type: "skill_result";
+      type: 'skill_result';
       sessionId: string;
       turn: number;
       skillName: string;

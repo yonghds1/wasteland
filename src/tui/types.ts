@@ -4,21 +4,12 @@
  * 定义 TUI 运行时上下文和配置类型
  */
 
-import type { Observable, Subject } from "rxjs";
-import type {
-  RuntimeEvent,
-  InputSource,
-  ChatInputTurn,
-} from "../runtime/event-types.js";
-import type { DebugTraceEvent } from "../runtime/debug-events.js";
-import type { SessionMetadata } from "../runtime/session-manager.js";
-import type {
-  ProviderSettings,
-  ModelSettings,
-  RoleSettings,
-} from "../config/settings-types.js";
-import type { PermissionMode } from "../runtime/permission-gate.js";
-import type { Skin } from "../skins/index.js";
+import type { Observable, Subject } from 'rxjs';
+import type { RuntimeEvent, InputSource, ChatInputTurn } from '../runtime/event-types.js';
+import type { DebugTraceEvent } from '../runtime/debug-events.js';
+import type { SessionMetadata } from '../runtime/session-manager.js';
+import type { ProviderSettings, ModelSettings, RoleSettings } from '../config/settings-types.js';
+import type { Skin } from '../skins/index.js';
 
 /**
  * TUI 运行时上下文
@@ -83,10 +74,4 @@ export interface TuiFullConfig {
 }
 
 // 导出 runtime 类型供 TUI 使用
-export type {
-  RuntimeEvent,
-  DebugTraceEvent,
-  SessionMetadata,
-  InputSource,
-  ChatInputTurn,
-};
+export type { RuntimeEvent, DebugTraceEvent, SessionMetadata, InputSource, ChatInputTurn };

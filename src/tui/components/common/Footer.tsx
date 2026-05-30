@@ -5,18 +5,11 @@
  * 上下文相关提示更醒目
  */
 
-import React from "react";
-import { Text, Box } from "ink";
-import { useAppContext } from "../../context/AppContext.js";
-import {
-  PRIMARY,
-  SECONDARY,
-  SUCCESS,
-  WARNING,
-  BORDER,
-  SEPARATORS,
-} from "../../utils/colors.js";
-import { t } from "../../../locales/index.js";
+import React from 'react';
+import { Text, Box } from 'ink';
+import { useAppContext } from '../../context/AppContext.js';
+import { PRIMARY, SECONDARY, SUCCESS, WARNING, BORDER, SEPARATORS } from '../../utils/colors.js';
+import { t } from '../../../locales/index.js';
 
 interface FooterProps {
   width?: number;
@@ -32,13 +25,13 @@ export function Footer({ width }: FooterProps): React.ReactElement {
       return (
         <Box flexDirection="row" gap={1}>
           <Text bold color={SECONDARY}>
-            {t("tui.footer.inputMode")}
+            {t('tui.footer.inputMode')}
           </Text>
-          <Text dimColor>{t("tui.footer.escCancel")}</Text>
+          <Text dimColor>{t('tui.footer.escCancel')}</Text>
           <Text color={SEPARATORS.item.trim()}>{SEPARATORS.item.trim()}</Text>
-          <Text color={SUCCESS}>{t("tui.footer.enterSend")}</Text>
+          <Text color={SUCCESS}>{t('tui.footer.enterSend')}</Text>
           <Text color={SEPARATORS.item.trim()}>{SEPARATORS.item.trim()}</Text>
-          <Text dimColor>{t("tui.footer.ctrlCExit")}</Text>
+          <Text dimColor>{t('tui.footer.ctrlCExit')}</Text>
         </Box>
       );
     }
@@ -48,13 +41,13 @@ export function Footer({ width }: FooterProps): React.ReactElement {
       return (
         <Box flexDirection="row" gap={1}>
           <Text bold color={SECONDARY}>
-            {t("tui.footer.filterMode")}
+            {t('tui.footer.filterMode')}
           </Text>
-          <Text dimColor>{t("tui.footer.tabSwitchField")}</Text>
+          <Text dimColor>{t('tui.footer.tabSwitchField')}</Text>
           <Text color={SEPARATORS.item.trim()}>{SEPARATORS.item.trim()}</Text>
-          <Text dimColor>{t("tui.footer.arrowSwitchValue")}</Text>
+          <Text dimColor>{t('tui.footer.arrowSwitchValue')}</Text>
           <Text color={SEPARATORS.item.trim()}>{SEPARATORS.item.trim()}</Text>
-          <Text color={WARNING}>{t("tui.footer.escClose")}</Text>
+          <Text color={WARNING}>{t('tui.footer.escClose')}</Text>
         </Box>
       );
     }
@@ -64,11 +57,11 @@ export function Footer({ width }: FooterProps): React.ReactElement {
       return (
         <Box flexDirection="row" gap={1}>
           <Text bold color={SECONDARY}>
-            {t("tui.footer.editMode")}
+            {t('tui.footer.editMode')}
           </Text>
-          <Text color={SUCCESS}>{t("tui.footer.enterConfirm")}</Text>
+          <Text color={SUCCESS}>{t('tui.footer.enterConfirm')}</Text>
           <Text color={SEPARATORS.item.trim()}>{SEPARATORS.item.trim()}</Text>
-          <Text color={WARNING}>{t("tui.footer.escCancel")}</Text>
+          <Text color={WARNING}>{t('tui.footer.escCancel')}</Text>
         </Box>
       );
     }
@@ -78,11 +71,11 @@ export function Footer({ width }: FooterProps): React.ReactElement {
       return (
         <Box flexDirection="row" gap={1}>
           <Text bold color="red">
-            {t("tui.footer.exitConfirm")}
+            {t('tui.footer.exitConfirm')}
           </Text>
-          <Text color={SUCCESS}>{t("tui.footer.yConfirmExit")}</Text>
+          <Text color={SUCCESS}>{t('tui.footer.yConfirmExit')}</Text>
           <Text color={SEPARATORS.item.trim()}>{SEPARATORS.item.trim()}</Text>
-          <Text color={WARNING}>{t("tui.footer.nCancel")}</Text>
+          <Text color={WARNING}>{t('tui.footer.nCancel')}</Text>
         </Box>
       );
     }
@@ -92,9 +85,9 @@ export function Footer({ width }: FooterProps): React.ReactElement {
       return (
         <Box flexDirection="row" gap={1}>
           <Text bold color="cyan">
-            {t("tui.footer.helpMode")}
+            {t('tui.footer.helpMode')}
           </Text>
-          <Text color={WARNING}>{t("tui.footer.hOrEscClose")}</Text>
+          <Text color={WARNING}>{t('tui.footer.hOrEscClose')}</Text>
         </Box>
       );
     }
@@ -103,13 +96,13 @@ export function Footer({ width }: FooterProps): React.ReactElement {
     return (
       <Box flexDirection="row" gap={1}>
         <Text color={PRIMARY}>h</Text>
-        <Text dimColor>{t("tui.footer.help")}</Text>
+        <Text dimColor>{t('tui.footer.help')}</Text>
         <Text dimColor>{SEPARATORS.item.trim()}</Text>
         <Text color={PRIMARY}>Tab</Text>
-        <Text dimColor>{t("tui.footer.switchPage")}</Text>
+        <Text dimColor>{t('tui.footer.switchPage')}</Text>
         <Text dimColor>{SEPARATORS.item.trim()}</Text>
         <Text color={PRIMARY}>q</Text>
-        <Text dimColor>{t("tui.footer.exit")}</Text>
+        <Text dimColor>{t('tui.footer.exit')}</Text>
       </Box>
     );
   };
@@ -117,45 +110,51 @@ export function Footer({ width }: FooterProps): React.ReactElement {
   // 根据页面返回特定提示
   const getPageSpecificHelp = () => {
     // 如果在特殊模式下，不显示页面特定提示
-    if (state.inputMode || state.filterMode || state.editMode || state.exitConfirmPending || state.showHelp) {
+    if (
+      state.inputMode ||
+      state.filterMode ||
+      state.editMode ||
+      state.exitConfirmPending ||
+      state.showHelp
+    ) {
       return null;
     }
 
     switch (state.currentPage) {
-      case "session":
+      case 'session':
         return (
           <Box flexDirection="row" gap={1}>
-            <Text dimColor>{t("tui.footer.scroll")}</Text>
+            <Text dimColor>{t('tui.footer.scroll')}</Text>
             <Text dimColor>{SEPARATORS.item.trim()}</Text>
-            <Text color={SUCCESS}>{t("tui.footer.enterInput")}</Text>
+            <Text color={SUCCESS}>{t('tui.footer.enterInput')}</Text>
           </Box>
         );
-      case "debug":
+      case 'debug':
         return (
           <Box flexDirection="row" gap={1}>
-            <Text dimColor>{t("tui.footer.scroll")}</Text>
+            <Text dimColor>{t('tui.footer.scroll')}</Text>
             <Text dimColor>{SEPARATORS.item.trim()}</Text>
             <Text color={PRIMARY}>Space</Text>
-            <Text dimColor>{t("tui.footer.expand")}</Text>
+            <Text dimColor>{t('tui.footer.expand')}</Text>
             <Text dimColor>{SEPARATORS.item.trim()}</Text>
             <Text color={PRIMARY}>f</Text>
-            <Text dimColor>{t("tui.footer.filter")}</Text>
+            <Text dimColor>{t('tui.footer.filter')}</Text>
             <Text dimColor>{SEPARATORS.item.trim()}</Text>
             <Text color={PRIMARY}>c</Text>
-            <Text dimColor>{t("tui.footer.clear")}</Text>
+            <Text dimColor>{t('tui.footer.clear')}</Text>
           </Box>
         );
-      case "config":
+      case 'config':
         return (
           <Box flexDirection="row" gap={1}>
-            <Text dimColor>{t("tui.footer.switch")}</Text>
+            <Text dimColor>{t('tui.footer.switch')}</Text>
             <Text dimColor>{SEPARATORS.item.trim()}</Text>
             <Text color={PRIMARY}>Enter</Text>
-            <Text dimColor>{t("tui.footer.edit")}</Text>
+            <Text dimColor>{t('tui.footer.edit')}</Text>
             <Text dimColor>{SEPARATORS.item.trim()}</Text>
-            <Text color={SUCCESS}>{t("tui.footer.saveProject")}</Text>
+            <Text color={SUCCESS}>{t('tui.footer.saveProject')}</Text>
             <Text dimColor>{SEPARATORS.item.trim()}</Text>
-            <Text color="cyan">{t("tui.footer.saveUser")}</Text>
+            <Text color="cyan">{t('tui.footer.saveUser')}</Text>
           </Box>
         );
     }
@@ -164,12 +163,12 @@ export function Footer({ width }: FooterProps): React.ReactElement {
   // 获取页面名称
   const getPageName = () => {
     switch (state.currentPage) {
-      case "session":
-        return t("tui.footer.sessionPage");
-      case "debug":
-        return t("tui.footer.debugPage");
-      case "config":
-        return t("tui.footer.guidePage");
+      case 'session':
+        return t('tui.footer.sessionPage');
+      case 'debug':
+        return t('tui.footer.debugPage');
+      case 'config':
+        return t('tui.footer.guidePage');
     }
   };
 
@@ -183,9 +182,7 @@ export function Footer({ width }: FooterProps): React.ReactElement {
       borderTop
       borderColor={BORDER}
     >
-      <Box flexDirection="row">
-        {getModeHelp()}
-      </Box>
+      <Box flexDirection="row">{getModeHelp()}</Box>
 
       <Box flexDirection="row" gap={1}>
         {/* 页面特定提示 */}

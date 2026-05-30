@@ -10,8 +10,8 @@
  * - 均尊重 NO_COLOR 环境变量
  */
 
-import { ANSI } from "./terminal-theme.js";
-import { theme } from "./themes/index.js";
+import { ANSI } from './terminal-theme.js';
+import { theme } from './themes/index.js';
 
 // ============================================================
 // True-color 颜色转换
@@ -92,10 +92,10 @@ export const PROMPT_COLOR = PRIMARY;
 export const INPUT_RULE_COLOR = BORDER;
 
 /** Tool prefix character */
-export const TOOL_PREFIX = "┊";
+export const TOOL_PREFIX = '┊';
 
 /** Message separator line */
-export const MESSAGE_SEPARATOR = "─".repeat(48);
+export const MESSAGE_SEPARATOR = '─'.repeat(48);
 
 // ============================================================
 // Message Prefixes (from theme)
@@ -124,7 +124,7 @@ export function shouldUseColor(): boolean {
   }
 
   // FORCE_COLOR 环境变量
-  if (process.env.FORCE_COLOR === "0") {
+  if (process.env.FORCE_COLOR === '0') {
     return false;
   }
 
@@ -139,5 +139,5 @@ export function colorize(text: string, ...codes: string[]): string {
   if (!shouldUseColor() || codes.length === 0) {
     return text;
   }
-  return `${codes.join("")}${text}${ANSI.reset}`;
+  return `${codes.join('')}${text}${ANSI.reset}`;
 }

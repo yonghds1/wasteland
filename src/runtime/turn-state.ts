@@ -1,7 +1,7 @@
-import type { ToolCall, ToolInput, ToolRunStatus } from "../tools/tool-types.js";
-import type { ChatInputTurn, SessionMessageRecord } from "./event-types.js";
+import type { ToolCall, ToolInput, ToolRunStatus } from '../tools/tool-types.js';
+import type { ChatInputTurn, SessionMessageRecord } from './event-types.js';
 
-export type TurnStatus = "running" | "completed" | "failed";
+export type TurnStatus = 'running' | 'completed' | 'failed';
 
 export type TurnToolResult = {
   callId: string;
@@ -39,7 +39,7 @@ export function createInitialTurnState(params: {
     input: params.input,
     history: [...params.history],
     step: 1,
-    status: "running",
+    status: 'running',
     assistantChunks: [],
     toolCalls: [],
     toolResults: [],
@@ -63,7 +63,7 @@ export function appendAssistantChunk(state: TurnState, chunk: string): TurnState
 export function completeTurnState(state: TurnState, content: string): TurnState {
   return {
     ...state,
-    status: "completed",
+    status: 'completed',
     finalMessage: content,
   };
 }
@@ -71,7 +71,7 @@ export function completeTurnState(state: TurnState, content: string): TurnState 
 export function failTurnState(state: TurnState): TurnState {
   return {
     ...state,
-    status: "failed",
+    status: 'failed',
   };
 }
 

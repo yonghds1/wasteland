@@ -4,7 +4,7 @@
  * 发送 HTTP 请求，支持 GET/POST/PUT/DELETE 等方法。
  */
 
-import type { AgentTool, ToolRiskLevel, ToolExecutionResult } from "./tool-types.js";
+import type { AgentTool, ToolRiskLevel, ToolExecutionResult } from './tool-types.js';
 
 type HttpRequestInput = {
   url: string;
@@ -16,16 +16,22 @@ type HttpRequestInput = {
 
 export function createHttpRequestTool(): AgentTool {
   return {
-    name: "http-request",
-    riskLevel: "execute" as ToolRiskLevel,
+    name: 'http-request',
+    riskLevel: 'execute' as ToolRiskLevel,
 
     async execute(input: unknown): Promise<ToolExecutionResult> {
-      const { url, method = "GET", headers = {}, body, timeout = 30000 } = input as HttpRequestInput;
+      const {
+        url,
+        method = 'GET',
+        headers = {},
+        body,
+        timeout = 30000,
+      } = input as HttpRequestInput;
 
-      if (!url || typeof url !== "string") {
+      if (!url || typeof url !== 'string') {
         return {
-          status: "error",
-          error: "缺少 url 参数",
+          status: 'error',
+          error: '缺少 url 参数',
         };
       }
 
@@ -34,7 +40,7 @@ export function createHttpRequestTool(): AgentTool {
         new URL(url);
       } catch {
         return {
-          status: "error",
+          status: 'error',
           error: `无效的 URL: ${url}`,
         };
       }
@@ -46,7 +52,7 @@ export function createHttpRequestTool(): AgentTool {
         const response = await fetch(url, {
           method: method.toUpperCase(),
           headers,
-          body: method.toUpperCase() !== "GET" ? body : undefined,
+          body: method.toUpperCase() !== 'GET' ? body : undefined,
           signal: controller.signal,
         });
 
@@ -59,7 +65,7 @@ export function createHttpRequestTool(): AgentTool {
         });
 
         return {
-          status: "success",
+          status: 'success',
           output: `HTTP ${method.toUpperCase()} ${url}\n状态码: ${response.status}\n\n${responseBody}`,
           data: {
             statusCode: response.status,
@@ -69,7 +75,7 @@ export function createHttpRequestTool(): AgentTool {
         };
       } catch (error) {
         return {
-          status: "error",
+          status: 'error',
           error: `HTTP 请求失败: ${error instanceof Error ? error.message : String(error)}`,
         };
       }

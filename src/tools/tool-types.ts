@@ -6,7 +6,7 @@
  * - "write": 写入操作，如修改文件，可能需要确认
  * - "execute": 执行操作，如运行命令，通常需要确认
  */
-export type ToolRiskLevel = "read" | "write" | "execute";
+export type ToolRiskLevel = 'read' | 'write' | 'execute';
 
 /**
  * 工具输入参数
@@ -65,7 +65,7 @@ export type ToolExecutionContext = {
  * @property data - 可选的附加数据，用于传递结构化结果
  */
 export type ToolSuccessResult = {
-  status: "success";
+  status: 'success';
   output: string;
   data?: unknown;
 };
@@ -80,7 +80,7 @@ export type ToolSuccessResult = {
  * @property data - 可选的附加数据，用于传递错误详情
  */
 export type ToolErrorResult = {
-  status: "error";
+  status: 'error';
   error: string;
   data?: unknown;
 };
@@ -114,7 +114,7 @@ export type ToolExecutionResult = ToolSuccessResult | ToolErrorResult;
  *
  * 使用 ToolExecutionResult["status"] 提取联合类型的 status 字段类型。
  */
-export type ToolRunStatus = ToolExecutionResult["status"] | "blocked";
+export type ToolRunStatus = ToolExecutionResult['status'] | 'blocked';
 
 /**
  * Agent 工具接口

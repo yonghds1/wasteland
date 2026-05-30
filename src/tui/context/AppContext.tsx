@@ -2,35 +2,28 @@
  * AppContext - 全局状态管理
  */
 
-import React from "react";
-import type {
-  ProviderSettings,
-  ModelSettings,
-  RoleSettings,
-} from "../../config/settings-types.js";
-import type {
-  TuiFullConfig,
-} from "../types.js";
+import React from 'react';
+import type { TuiFullConfig } from '../types.js';
 
 // ============================================================
 // 类型定义
 // ============================================================
 
-export type PageName = "session" | "debug" | "config";
+export type PageName = 'session' | 'debug' | 'config';
 export type FocusArea =
-  | "header"
-  | "agentTree"
-  | "messageList"
-  | "inputBar"
-  | "traceLog"
-  | "configList"
+  | 'header'
+  | 'agentTree'
+  | 'messageList'
+  | 'inputBar'
+  | 'traceLog'
+  | 'configList'
   | null;
 
 export interface AgentNode {
   id: string;
   name: string;
   depth: number;
-  status: "running" | "idle" | "completed" | "failed" | "timeout";
+  status: 'running' | 'idle' | 'completed' | 'failed' | 'timeout';
   startTime: number;
   endTime?: number;
 }
@@ -39,7 +32,7 @@ export interface Message {
   id: string;
   timestamp: string;
   agentId: string;
-  type: "user" | "assistant" | "tool" | "system";
+  type: 'user' | 'assistant' | 'tool' | 'system';
   content: string;
   collapsed?: boolean;
 }
@@ -47,7 +40,7 @@ export interface Message {
 export interface ToolCall {
   id: string;
   name: string;
-  status: "pending" | "running" | "success" | "error";
+  status: 'pending' | 'running' | 'success' | 'error';
   duration?: number;
 }
 
@@ -68,29 +61,37 @@ export interface TraceFilter {
 }
 
 export interface ConfigEdit {
-  field: "provider" | "permissionMode" | "maxSteps" | "maxTurns" | "defaultRole" | "childAgentTimeout" | "debug" | null;
+  field:
+    | 'provider'
+    | 'permissionMode'
+    | 'maxSteps'
+    | 'maxTurns'
+    | 'defaultRole'
+    | 'childAgentTimeout'
+    | 'debug'
+    | null;
   originalValue: string | number | boolean;
 }
 
 export interface AppState {
   currentPage: PageName;
-  focusArea: FocusArea;         // 当前焦点区域
+  focusArea: FocusArea; // 当前焦点区域
 
   // 模式状态
-  inputMode: boolean;           // 是否在输入模式
-  exitConfirmPending: boolean;  // 是否等待退出确认
-  showHelp: boolean;            // 是否显示帮助
-  filterMode: boolean;          // 是否在过滤模式（调试页面）
-  editMode: boolean;            // 是否在编辑模式（配置页面）
+  inputMode: boolean; // 是否在输入模式
+  exitConfirmPending: boolean; // 是否等待退出确认
+  showHelp: boolean; // 是否显示帮助
+  filterMode: boolean; // 是否在过滤模式（调试页面）
+  editMode: boolean; // 是否在编辑模式（配置页面）
 
   session: {
     agents: AgentNode[];
     messages: Message[];
     tools: ToolCall[];
-    isThinking: boolean;        // 等待第一个 chunk（思考中）
-    isStreaming: boolean;       // 正在接收流式数据
-    streamingContent: string;   // 流式输出的累积内容
-    streamingMessageId: string | null;  // 当前流式消息 ID
+    isThinking: boolean; // 等待第一个 chunk（思考中）
+    isStreaming: boolean; // 正在接收流式数据
+    streamingContent: string; // 流式输出的累积内容
+    streamingMessageId: string | null; // 当前流式消息 ID
   };
 
   debug: {
@@ -114,7 +115,7 @@ export interface AppState {
 
   // 配置编辑状态
   configEdit: ConfigEdit;
-  configHasChanges: boolean;  // 配置是否有未保存的更改
+  configHasChanges: boolean; // 配置是否有未保存的更改
 
   // Session 元数据
   sessionMetadata: {
@@ -137,7 +138,7 @@ interface AppContextValue {
   setShowHelp: (show: boolean) => void;
   setFilterMode: (mode: boolean) => void;
   setEditMode: (mode: boolean) => void;
-  updateConfig: (updates: Partial<AppState["config"]>) => void;
+  updateConfig: (updates: Partial<AppState['config']>) => void;
   clearTraces: () => void;
 }
 
@@ -146,7 +147,7 @@ export const AppContext = React.createContext<AppContextValue | null>(null);
 export function useAppContext(): AppContextValue {
   const context = React.useContext(AppContext);
   if (!context) {
-    throw new Error("useAppContext must be used within AppContext.Provider");
+    throw new Error('useAppContext must be used within AppContext.Provider');
   }
   return context;
 }

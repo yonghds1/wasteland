@@ -17,7 +17,11 @@
     "build": "tsc -p tsconfig.json && cp -r src/locales/*.json dist/locales/",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "npm run build && node --test --experimental-test-isolation=none test/**/*.test.js",
-    "check": "npm run typecheck && npm run validate:i18n && npm test",
+    "check": "npm run typecheck && npm run lint && npm run validate:i18n && npm test",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "format": "prettier --write 'src/**/*.{ts,tsx,json}'",
+    "format:check": "prettier --check 'src/**/*.{ts,tsx,json}'",
     "validate:i18n": "node scripts/validate-i18n.js",
     "cli": "tsx src/cli.ts chat",
     "cli:build": "npm run build && node ./bin/wasteland.js chat",
@@ -44,9 +48,14 @@
     "rxjs": "^7.8.2"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^25.9.1",
     "@types/react": "^19.2.15",
+    "eslint": "^10.4.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.8.3",
     "tsx": "^4.22.3",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.60.0"
   }
 }

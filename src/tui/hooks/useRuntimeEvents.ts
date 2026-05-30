@@ -11,17 +11,11 @@
  * - streamingContent: 累积的流式内容
  */
 
-import { useEffect, useRef } from "react";
-import type { Subscription } from "rxjs";
-import type { RuntimeEvent, DebugTraceEvent } from "../types.js";
-import type {
-  AppState,
-  AgentNode,
-  Message,
-  ToolCall,
-  TraceEvent,
-} from "../context/AppContext.js";
-import { t } from "../../locales/index.js";
+import { useEffect, useRef } from 'react';
+import type { Subscription } from 'rxjs';
+import type { RuntimeEvent, DebugTraceEvent } from '../types.js';
+import type { AppState, AgentNode, Message, ToolCall, TraceEvent } from '../context/AppContext.js';
+import { t } from '../../locales/index.js';
 
 /**
  * 从 sessionId 推断 Agent 深度
@@ -40,9 +34,9 @@ function inferAgentDepth(sessionId: string): number {
 function createMainAgent(sessionId: string): AgentNode {
   return {
     id: sessionId,
-    name: "Main Agent",
+    name: 'Main Agent',
     depth: 0,
-    status: "running",
+    status: 'running',
     startTime: Date.now(),
   };
 }
@@ -75,7 +69,7 @@ function processRuntimeEvent(
     streamingMessageId: string | null;
   },
   chunkAccumulator: { current: string },
-  toolStartTimes: Map<string, number>,
+  toolStartTimes: Map<string, number>
 ): EventProcessResult {
   const agents = [...currentState.agents];
   const messages = [...currentState.messages];
@@ -84,7 +78,7 @@ function processRuntimeEvent(
   let { streamingContent, streamingMessageId } = currentState;
 
   switch (event.type) {
-    case "session_started": {
+    case 'session_started': {
       // 创建主 Agent
       const mainAgent = createMainAgent(event.sessionId);
       agents.push(mainAgent);
@@ -94,19 +88,19 @@ function processRuntimeEvent(
       break;
     }
 
-    case "user_turn": {
+    case 'user_turn': {
       // 添加用户消息
       messages.push({
         id: `msg-user-${event.turn}-${Date.now()}`,
         timestamp: new Date().toISOString(),
         agentId: event.sessionId,
-        type: "user",
+        type: 'user',
         content: event.content,
       });
       break;
     }
 
-    case "assistant_chunk": {
+    case 'assistant_chunk': {
       // 收到第一个 chunk，从思考状态切换到流式状态
       if (isThinking) {
         isThinking = false;
@@ -121,49 +115,49 @@ function processRuntimeEvent(
       break;
     }
 
-    case "assistant_message": {
+    case 'assistant_message': {
       // 创建 assistant 消息（使用累积的 chunks 或直接 content）
       const content = chunkAccumulator.current || event.content;
       messages.push({
         id: `msg-assistant-${event.turn}-${Date.now()}`,
         timestamp: new Date().toISOString(),
         agentId: event.sessionId,
-        type: "assistant",
+        type: 'assistant',
         content,
       });
       // 重置 chunk 累积器和流式状态
-      chunkAccumulator.current = "";
-      streamingContent = "";
+      chunkAccumulator.current = '';
+      streamingContent = '';
       streamingMessageId = null;
       isStreaming = false;
       isThinking = false;
       break;
     }
 
-    case "tool_call_requested": {
+    case 'tool_call_requested': {
       // 创建 pending 状态的 ToolCall
       tools.push({
         id: event.callId,
         name: event.toolName,
-        status: "pending",
+        status: 'pending',
       });
       break;
     }
 
-    case "tool_started": {
+    case 'tool_started': {
       // 更新为 running 状态
       const toolIndex = tools.findIndex((t) => t.id === event.callId);
       if (toolIndex >= 0) {
         tools[toolIndex] = {
           ...tools[toolIndex],
-          status: "running",
+          status: 'running',
         };
         toolStartTimes.set(event.callId, Date.now());
       }
       break;
     }
 
-    case "tool_result": {
+    case 'tool_result': {
       // 更新为 success 状态
       const toolIndex = tools.findIndex((t) => t.id === event.callId);
       const startTime = toolStartTimes.get(event.callId);
@@ -172,7 +166,7 @@ function processRuntimeEvent(
       if (toolIndex >= 0) {
         tools[toolIndex] = {
           ...tools[toolIndex],
-          status: "success",
+          status: 'success',
           duration,
         };
       }
@@ -182,7 +176,7 @@ function processRuntimeEvent(
         id: `msg-tool-${event.callId}`,
         timestamp: new Date().toISOString(),
         agentId: event.sessionId,
-        type: "tool",
+        type: 'tool',
         content: event.output,
       });
 
@@ -190,7 +184,7 @@ function processRuntimeEvent(
       break;
     }
 
-    case "tool_failed": {
+    case 'tool_failed': {
       // 更新为 error 状态
       const toolIndex = tools.findIndex((t) => t.id === event.callId);
       const startTime = toolStartTimes.get(event.callId);
@@ -199,7 +193,7 @@ function processRuntimeEvent(
       if (toolIndex >= 0) {
         tools[toolIndex] = {
           ...tools[toolIndex],
-          status: "error",
+          status: 'error',
           duration,
         };
       }
@@ -209,42 +203,45 @@ function processRuntimeEvent(
         id: `msg-tool-${event.callId}`,
         timestamp: new Date().toISOString(),
         agentId: event.sessionId,
-        type: "tool",
-        content: t("tui.toolError", { error: event.error }),
+        type: 'tool',
+        content: t('tui.toolError', { error: event.error }),
       });
 
       toolStartTimes.delete(event.callId);
       break;
     }
 
-    case "agent_spawned": {
+    case 'agent_spawned': {
       // 添加子 Agent
       agents.push({
         id: event.childId,
         name: event.name,
         depth: inferAgentDepth(event.childId) + 1,
-        status: "running",
+        status: 'running',
         startTime: Date.now(),
       });
       break;
     }
 
-    case "agent_completed": {
+    case 'agent_completed': {
       // 更新 Agent 状态
       const agentIndex = agents.findIndex((a) => a.id === event.childId);
       if (agentIndex >= 0) {
         agents[agentIndex] = {
           ...agents[agentIndex],
-          status: event.status === "success" ? "completed"
-            : event.status === "timeout" ? "timeout"
-            : "failed",
+          status:
+            event.status === 'success'
+              ? 'completed'
+              : event.status === 'timeout'
+                ? 'timeout'
+                : 'failed',
           endTime: Date.now(),
         };
       }
       break;
     }
 
-    case "session_ended": {
+    case 'session_ended': {
       isStreaming = false;
       isThinking = false;
       break;
@@ -282,10 +279,10 @@ function toTraceEvent(event: DebugTraceEvent): TraceEvent {
 export function useRuntimeEvents(
   events$: TuiRuntimeEvents | null,
   debug$: TuiRuntimeDebug | null,
-  setState: React.Dispatch<React.SetStateAction<AppState>>,
+  setState: React.Dispatch<React.SetStateAction<AppState>>
 ): void {
   // Chunk 累积器（使用 ref 避免触发重新渲染）
-  const chunkAccumulator = useRef<string>("");
+  const chunkAccumulator = useRef<string>('');
   // Tool 开始时间（用于计算耗时）
   const toolStartTimes = useRef<Map<string, number>>(new Map());
   // 订阅引用
@@ -306,7 +303,7 @@ export function useRuntimeEvents(
             event,
             prev.session,
             chunkAccumulator,
-            toolStartTimes.current,
+            toolStartTimes.current
           );
 
           return {
@@ -316,14 +313,14 @@ export function useRuntimeEvents(
         });
       },
       error: (error) => {
-        console.error(t("tui.runtimeEventStreamError"), error);
+        console.error(t('tui.runtimeEventStreamError'), error);
         setState((prev) => ({
           ...prev,
           session: {
             ...prev.session,
             isThinking: false,
             isStreaming: false,
-            streamingContent: "",
+            streamingContent: '',
             streamingMessageId: null,
           },
         }));
@@ -335,7 +332,7 @@ export function useRuntimeEvents(
             ...prev.session,
             isThinking: false,
             isStreaming: false,
-            streamingContent: "",
+            streamingContent: '',
             streamingMessageId: null,
           },
         }));
@@ -368,7 +365,7 @@ export function useRuntimeEvents(
         }));
       },
       error: (error) => {
-        console.error(t("tui.debugTraceStreamError"), error);
+        console.error(t('tui.debugTraceStreamError'), error);
       },
     });
 
@@ -379,5 +376,5 @@ export function useRuntimeEvents(
 }
 
 // 类型别名，避免循环导入
-type TuiRuntimeEvents = import("rxjs").Observable<RuntimeEvent>;
-type TuiRuntimeDebug = import("rxjs").Observable<DebugTraceEvent>;
+type TuiRuntimeEvents = import('rxjs').Observable<RuntimeEvent>;
+type TuiRuntimeDebug = import('rxjs').Observable<DebugTraceEvent>;

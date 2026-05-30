@@ -1,9 +1,9 @@
-import type { ToolCall, ToolRiskLevel } from "../tools/tool-types.js";
+import type { ToolCall, ToolRiskLevel } from '../tools/tool-types.js';
 
-import { t } from "../locales/index.js";
+import { t } from '../locales/index.js';
 
-export type PermissionMode = "default" | "accept_edits" | "bypass_permissions";
-export type PermissionDecisionKind = "allow" | "ask" | "deny";
+export type PermissionMode = 'default' | 'accept_edits' | 'bypass_permissions';
+export type PermissionDecisionKind = 'allow' | 'ask' | 'deny';
 
 export type PermissionRule = {
   toolName?: string;
@@ -35,42 +35,42 @@ function matchesRule(rule: PermissionRule, call: ToolCall, riskLevel: ToolRiskLe
 }
 
 function decideByMode(mode: PermissionMode, riskLevel: ToolRiskLevel): PermissionDecision {
-  if (mode === "bypass_permissions") {
+  if (mode === 'bypass_permissions') {
     return {
-      decision: "allow",
+      decision: 'allow',
       mode,
-      reason: t("runtime.permissionBypass"),
+      reason: t('runtime.permissionBypass'),
     };
   }
 
-  if (mode === "accept_edits") {
-    if (riskLevel === "execute") {
+  if (mode === 'accept_edits') {
+    if (riskLevel === 'execute') {
       return {
-        decision: "ask",
+        decision: 'ask',
         mode,
-        reason: t("runtime.permissionAcceptEdits"),
+        reason: t('runtime.permissionAcceptEdits'),
       };
     }
 
     return {
-      decision: "allow",
+      decision: 'allow',
       mode,
-      reason: t("runtime.permissionAcceptEditsAllows", { count: riskLevel }),
+      reason: t('runtime.permissionAcceptEditsAllows', { count: riskLevel }),
     };
   }
 
-  if (riskLevel === "read") {
+  if (riskLevel === 'read') {
     return {
-      decision: "allow",
+      decision: 'allow',
       mode,
-      reason: t("runtime.permissionDefault"),
+      reason: t('runtime.permissionDefault'),
     };
   }
 
   return {
-    decision: "ask",
+    decision: 'ask',
     mode,
-    reason: t("runtime.permissionDefaultRequires", { count: riskLevel }),
+    reason: t('runtime.permissionDefaultRequires', { count: riskLevel }),
   };
 }
 
@@ -78,7 +78,7 @@ export function createPermissionGate(params?: {
   mode?: PermissionMode;
   rules?: PermissionRule[];
 }): PermissionGate {
-  const mode = params?.mode ?? "default";
+  const mode = params?.mode ?? 'default';
   const rules = params?.rules ?? [];
 
   return {
@@ -89,7 +89,7 @@ export function createPermissionGate(params?: {
         return {
           decision: matchedRule.decision,
           mode,
-          reason: matchedRule.reason ?? `${t("runtime.permissionRuleHit")}${call.toolName}`,
+          reason: matchedRule.reason ?? `${t('runtime.permissionRuleHit')}${call.toolName}`,
         };
       }
 

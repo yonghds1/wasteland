@@ -10,7 +10,7 @@ export {
   getRoleGreeting,
   getRoleCatchphrase,
   DEFAULT_SKIN_ID,
-} from "./skin-loader.js";
+} from './skin-loader.js';
 
 export type {
   Skin,
@@ -18,4 +18,4 @@ export type {
   SkinUIConfig,
   SkinRolesConfig,
   SkinRoleConfig,
-} from "./skin-loader.js";
+} from './skin-loader.js';

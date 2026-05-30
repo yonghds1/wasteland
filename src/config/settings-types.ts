@@ -1,5 +1,5 @@
-import type { PermissionMode } from "../runtime/permission-gate.js";
-import type { PromptTemplateRef } from "../prompts/prompt-types.js";
+import type { PermissionMode } from '../runtime/permission-gate.js';
+import type { PromptTemplateRef } from '../prompts/prompt-types.js';
 
 export type AuthRef = {
   $auth: string;
@@ -137,18 +137,18 @@ export type LoadedWastelandSettings = {
 };
 
 export const DEFAULT_WASTELAND_SETTINGS: ResolvedWastelandSettings = {
-  defaultProvider: "local",
+  defaultProvider: 'local',
   providers: {},
   models: {},
   subAgents: {},
   runtime: {
-    defaultRole: "immortan-joe",
-    permissionMode: "default",
+    defaultRole: 'immortan-joe',
+    permissionMode: 'default',
     maxStepsPerTurn: 8,
     maxTurns: 20,
     childAgentTimeout: 120000,
     debug: false,
-    language: "en",
+    language: 'en',
   },
   mcpServers: {},
 };

@@ -4,28 +4,28 @@
  * 恢复之前的会话。
  */
 
-import { Command } from "commander";
-import { Subject } from "rxjs";
+import { Command } from 'commander';
+import { Subject } from 'rxjs';
 
-import { t } from "../locales/index.js";
+import { t } from '../locales/index.js';
 
-import { loadWastelandSettings } from "../config/load-settings.js";
-import { resolveDefaultSessionDir, resolveDefaultTraceDir } from "../config/paths.js";
-import { resolveChatRuntime } from "../config/resolve-chat-runtime.js";
-import { createSessionIndex, type SessionDetail } from "../runtime/session-index.js";
-import { runAgentLoop } from "../runtime/agent-loop.js";
-import { createDefaultProviderRegistry } from "../providers/provider-registry.js";
-import { createDefaultToolRegistry } from "../tools/default-registry.js";
-import { createPermissionGate } from "../runtime/permission-gate.js";
-import { SessionManager } from "../runtime/session-manager.js";
-import { renderRuntimeEvents } from "../ui/terminal-renderer.js";
-import { renderDebugTrace } from "../ui/debug-renderer.js";
-import { createInteractiveTurnStream, createSingleTurnInput } from "../ui/readline-input.js";
-import type { ChatInputTurn, RuntimeMode } from "../runtime/event-types.js";
-import { detectTTY } from "../ui/tty-detect.js";
-import { createSkillRegistry } from "../skills/skill-discovery.js";
-import { SkillExecutor } from "../skills/skill-executor.js";
-import { homedir } from "node:os";
+import { loadWastelandSettings } from '../config/load-settings.js';
+import { resolveDefaultSessionDir, resolveDefaultTraceDir } from '../config/paths.js';
+import { resolveChatRuntime } from '../config/resolve-chat-runtime.js';
+import { createSessionIndex, type SessionDetail } from '../runtime/session-index.js';
+import { runAgentLoop } from '../runtime/agent-loop.js';
+import { createDefaultProviderRegistry } from '../providers/provider-registry.js';
+import { createDefaultToolRegistry } from '../tools/default-registry.js';
+import { createPermissionGate } from '../runtime/permission-gate.js';
+import { SessionManager } from '../runtime/session-manager.js';
+import { renderRuntimeEvents } from '../ui/terminal-renderer.js';
+import { renderDebugTrace } from '../ui/debug-renderer.js';
+import { createInteractiveTurnStream, createSingleTurnInput } from '../ui/readline-input.js';
+import type { ChatInputTurn, RuntimeMode } from '../runtime/event-types.js';
+import { detectTTY } from '../ui/tty-detect.js';
+import { createSkillRegistry } from '../skills/skill-discovery.js';
+import { SkillExecutor } from '../skills/skill-executor.js';
+import { homedir } from 'node:os';
 
 // ============================================================
 // 辅助函数
@@ -36,13 +36,13 @@ import { homedir } from "node:os";
  */
 function restoreHistoryFromRecords(records: any[]): any[] {
   return records
-    .filter(record => record.type === "message")
-    .map(record => ({
-      type: "message",
+    .filter((record) => record.type === 'message')
+    .map((record) => ({
+      type: 'message',
       role: record.role,
       turn: record.turn || 0,
       content: record.content,
-      source: record.source || "interactive",
+      source: record.source || 'interactive',
       timestamp: record.timestamp,
     }));
 }
@@ -50,15 +50,13 @@ function restoreHistoryFromRecords(records: any[]): any[] {
 /**
  * 创建恢复的 session 元数据
  */
-function createResumedSessionMetadata(
-  originalSession: SessionDetail,
-) {
+function createResumedSessionMetadata(originalSession: SessionDetail) {
   return {
     id: originalSession.id,
     path: originalSession.path,
     cwd: originalSession.cwd || process.cwd(),
-    mode: (originalSession.mode || "single") as RuntimeMode,
-    providerId: originalSession.providerId || "local",
+    mode: (originalSession.mode || 'single') as RuntimeMode,
+    providerId: originalSession.providerId || 'local',
   };
 }
 
@@ -72,16 +70,16 @@ function createResumedSessionMetadata(
 export function createResumeCommand(): Command {
   const providerRegistry = createDefaultProviderRegistry();
 
-  return new Command("resume")
-    .description(t("commands.resume.description"))
-    .argument("[session-id]", t("commands.resume.options.sessionId"))
-    .option("-m, --message <text>", t("commands.resume.options.message"))
-    .option("-p, --provider <name>", t("commands.resume.options.provider"))
-    .option("-r, --role <name>", t("commands.resume.options.role"))
-    .option("--multi", t("commands.resume.options.multiAgent"))
-    .option("--debug", t("commands.resume.options.debug"))
-    .option("--debug-format <format>", t("commands.resume.options.debugFormat"))
-    .option("--permission-mode <mode>", t("commands.resume.options.permissionMode"))
+  return new Command('resume')
+    .description(t('commands.resume.description'))
+    .argument('[session-id]', t('commands.resume.options.sessionId'))
+    .option('-m, --message <text>', t('commands.resume.options.message'))
+    .option('-p, --provider <name>', t('commands.resume.options.provider'))
+    .option('-r, --role <name>', t('commands.resume.options.role'))
+    .option('--multi', t('commands.resume.options.multiAgent'))
+    .option('--debug', t('commands.resume.options.debug'))
+    .option('--debug-format <format>', t('commands.resume.options.debugFormat'))
+    .option('--permission-mode <mode>', t('commands.resume.options.permissionMode'))
     .action(async (sessionId: string | undefined, options: any) => {
       const cwd = process.cwd();
 
@@ -100,21 +98,21 @@ export function createResumeCommand(): Command {
       if (sessionId) {
         sessionToResume = await sessionIndex.getSession(sessionId);
         if (!sessionToResume) {
-          console.error(`${t("commands.resume.notFound")} ${sessionId}`);
+          console.error(`${t('commands.resume.notFound')} ${sessionId}`);
           process.exit(1);
         }
       } else {
         sessionToResume = await sessionIndex.getLatestSession();
         if (!sessionToResume) {
-          console.error(t("commands.resume.noSession"));
+          console.error(t('commands.resume.noSession'));
           process.exit(1);
         }
       }
 
-      console.log(`\n${t("commands.resume.resuming")} ${sessionToResume.id}`);
-      console.log(`${t("commands.resume.time")} ${sessionToResume.createdAt}`);
-      console.log(`${t("commands.resume.messageCount")} ${sessionToResume.messageCount}`);
-      console.log("");
+      console.log(`\n${t('commands.resume.resuming')} ${sessionToResume.id}`);
+      console.log(`${t('commands.resume.time')} ${sessionToResume.createdAt}`);
+      console.log(`${t('commands.resume.messageCount')} ${sessionToResume.messageCount}`);
+      console.log('');
 
       // 恢复历史消息
       const history = restoreHistoryFromRecords(sessionToResume.records);
@@ -130,7 +128,7 @@ export function createResumeCommand(): Command {
       // 创建 provider
       const provider = providerRegistry.resolve(
         runtimeConfig.providerName,
-        runtimeConfig.providerConfig,
+        runtimeConfig.providerConfig
       );
 
       // 创建 session 管理器
@@ -139,19 +137,19 @@ export function createResumeCommand(): Command {
           cwd,
           projectConfigDir: loadedSettings.projectConfigDir,
           env: process.env,
-        }),
+        })
       );
 
       // 创建恢复的 session 元数据
       const resumedSession = createResumedSessionMetadata(sessionToResume);
 
       // 创建权限门控
-      const permissionMode = options.permissionMode ?? runtimeConfig.permissionMode ?? "default";
+      const permissionMode = options.permissionMode ?? runtimeConfig.permissionMode ?? 'default';
       const permissionGate = createPermissionGate({ mode: permissionMode });
 
       // 创建工具注册表
       const { toolRegistry, startMCP, stopMCP } = createDefaultToolRegistry(
-        loadedSettings.settings.mcpServers,
+        loadedSettings.settings.mcpServers
       );
 
       // 创建技能注册表和执行器
@@ -167,20 +165,23 @@ export function createResumeCommand(): Command {
       try {
         await startMCP();
       } catch (error) {
-        console.warn(t("mcp.startupFailed"), error instanceof Error ? error.message : String(error));
+        console.warn(
+          t('mcp.startupFailed'),
+          error instanceof Error ? error.message : String(error)
+        );
       }
 
       const debug = options.debug === true || loadedSettings.settings.runtime.debug;
-      const debugFormat = options.debugFormat === "jsonl" ? "jsonl" : "pretty";
+      const debugFormat = options.debugFormat === 'jsonl' ? 'jsonl' : 'pretty';
       const maxStepsPerTurn = loadedSettings.settings.runtime.maxStepsPerTurn ?? 8;
       const childAgentTimeout = loadedSettings.settings.runtime.childAgentTimeout;
       const tty = detectTTY();
-      const renderStyle = tty.stdoutIsTTY ? "interactive" : "classic";
+      const renderStyle = tty.stdoutIsTTY ? 'interactive' : 'classic';
 
       try {
         if (options.message?.trim()) {
           // 单次消息模式
-          const input$ = createSingleTurnInput(options.message, "message");
+          const input$ = createSingleTurnInput(options.message, 'message');
 
           const run = runAgentLoop({
             input$,
@@ -189,7 +190,7 @@ export function createResumeCommand(): Command {
             toolRegistry,
             permissionGate,
             cwd,
-            mode: "single",
+            mode: 'single',
             maxStepsPerTurn,
             existingSession: resumedSession,
             prompt: runtimeConfig.prompt,
@@ -199,24 +200,23 @@ export function createResumeCommand(): Command {
             childAgentTimeout,
           });
 
-          const work: Promise<void>[] = [
-            renderRuntimeEvents(run.events$, { style: renderStyle }),
-          ];
+          const work: Promise<void>[] = [renderRuntimeEvents(run.events$, { style: renderStyle })];
 
           if (debug) {
-            const traceDir = debugFormat === "jsonl"
-              ? resolveDefaultTraceDir({
-                  cwd,
-                  projectConfigDir: loadedSettings.projectConfigDir,
-                })
-              : undefined;
+            const traceDir =
+              debugFormat === 'jsonl'
+                ? resolveDefaultTraceDir({
+                    cwd,
+                    projectConfigDir: loadedSettings.projectConfigDir,
+                  })
+                : undefined;
 
             work.unshift(
               renderDebugTrace(run.debug$, {
                 output: process.stderr,
                 format: debugFormat,
                 traceDir,
-              }),
+              })
             );
           }
 
@@ -231,7 +231,7 @@ export function createResumeCommand(): Command {
               const turn: ChatInputTurn = {
                 turn: msg.turn,
                 content: msg.content,
-                source: "interactive",
+                source: 'interactive',
               };
               inputSubject.next(turn);
             }
@@ -244,7 +244,7 @@ export function createResumeCommand(): Command {
             toolRegistry,
             permissionGate,
             cwd,
-            mode: "interactive",
+            mode: 'interactive',
             maxStepsPerTurn,
             existingSession: resumedSession,
             prompt: runtimeConfig.prompt,
@@ -265,19 +265,20 @@ export function createResumeCommand(): Command {
           ];
 
           if (debug) {
-            const traceDir = debugFormat === "jsonl"
-              ? resolveDefaultTraceDir({
-                  cwd,
-                  projectConfigDir: loadedSettings.projectConfigDir,
-                })
-              : undefined;
+            const traceDir =
+              debugFormat === 'jsonl'
+                ? resolveDefaultTraceDir({
+                    cwd,
+                    projectConfigDir: loadedSettings.projectConfigDir,
+                  })
+                : undefined;
 
             work.unshift(
               renderDebugTrace(run.debug$, {
                 output: process.stderr,
                 format: debugFormat,
                 traceDir,
-              }),
+              })
             );
           }
 

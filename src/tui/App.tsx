@@ -1,21 +1,26 @@
-import React, { useState, useCallback } from "react";
-import { Box, useInput, useStdout } from "ink";
-import { Header } from "./components/common/Header.js";
-import { Footer } from "./components/common/Footer.js";
-import { HelpModal } from "./components/common/HelpModal.js";
-import { ExitConfirm } from "./components/common/ExitConfirm.js";
-import { SessionPage } from "./components/session/SessionPage.js";
-import { DebugPage } from "./components/debug/DebugPage.js";
-import { ConfigPage } from "./components/config/ConfigPage.js";
-import { AppContext, type AppState, type PageName, type FocusArea } from "./context/AppContext.js";
-import { useRuntimeEvents } from "./hooks/useRuntimeEvents.js";
-import { useUserInput } from "./hooks/useUserInput.js";
-import type { TuiRuntimeContext, TuiFullConfig } from "./types.js";
+import React, { useState, useCallback } from 'react';
+import { Box, useInput, useStdout } from 'ink';
+import { Header } from './components/common/Header.js';
+import { Footer } from './components/common/Footer.js';
+import { HelpModal } from './components/common/HelpModal.js';
+import { ExitConfirm } from './components/common/ExitConfirm.js';
+import { SessionPage } from './components/session/SessionPage.js';
+import { DebugPage } from './components/debug/DebugPage.js';
+import { ConfigPage } from './components/config/ConfigPage.js';
+import { AppContext, type AppState, type PageName, type FocusArea } from './context/AppContext.js';
+import { useRuntimeEvents } from './hooks/useRuntimeEvents.js';
+import { useUserInput } from './hooks/useUserInput.js';
+import type { TuiRuntimeContext, TuiFullConfig } from './types.js';
 
 // 初始状态
-const createInitialState = (config: TuiRuntimeContext["config"], session: TuiRuntimeContext["session"], providerId: string, fullConfig: TuiFullConfig): AppState => ({
-  currentPage: "session",
-  focusArea: null,  // 初始无焦点
+const createInitialState = (
+  config: TuiRuntimeContext['config'],
+  session: TuiRuntimeContext['session'],
+  providerId: string,
+  fullConfig: TuiFullConfig
+): AppState => ({
+  currentPage: 'session',
+  focusArea: null, // 初始无焦点
   inputMode: false,
   exitConfirmPending: false,
   showHelp: false,
@@ -28,7 +33,7 @@ const createInitialState = (config: TuiRuntimeContext["config"], session: TuiRun
     tools: [],
     isThinking: false,
     isStreaming: false,
-    streamingContent: "",
+    streamingContent: '',
     streamingMessageId: null,
   },
 
@@ -41,7 +46,7 @@ const createInitialState = (config: TuiRuntimeContext["config"], session: TuiRun
   fullConfig,
   configEdit: {
     field: null,
-    originalValue: "",
+    originalValue: '',
   },
   configHasChanges: false,
 
@@ -56,7 +61,9 @@ interface AppProps {
 }
 
 export function App({ runtime }: AppProps): React.ReactElement {
-  const [state, setState] = useState<AppState>(() => createInitialState(runtime.config, runtime.session, runtime.providerId, runtime.fullConfig));
+  const [state, setState] = useState<AppState>(() =>
+    createInitialState(runtime.config, runtime.session, runtime.providerId, runtime.fullConfig)
+  );
 
   // 订阅 runtime 事件
   useRuntimeEvents(runtime.events$, runtime.debug$, setState);
@@ -66,7 +73,7 @@ export function App({ runtime }: AppProps): React.ReactElement {
 
   // 页面切换（重置焦点到 header）
   const setCurrentPage = useCallback((page: PageName) => {
-    setState((prev) => ({ ...prev, currentPage: page, focusArea: "header" }));
+    setState((prev) => ({ ...prev, currentPage: page, focusArea: 'header' }));
   }, []);
 
   // 焦点设置
@@ -95,7 +102,7 @@ export function App({ runtime }: AppProps): React.ReactElement {
     setState((prev) => ({ ...prev, editMode: mode }));
   }, []);
 
-  const updateConfig = useCallback((updates: Partial<AppState["config"]>) => {
+  const updateConfig = useCallback((updates: Partial<AppState['config']>) => {
     setState((prev) => ({
       ...prev,
       config: { ...prev.config, ...updates },
@@ -118,15 +125,15 @@ export function App({ runtime }: AppProps): React.ReactElement {
 
   // 页面区域配置
   const pageAreas: Record<PageName, FocusArea[]> = {
-    session: ["header", "agentTree", "messageList", "inputBar"],
-    debug: ["header", "traceLog"],
-    config: ["header", "configList"],
+    session: ['header', 'agentTree', 'messageList', 'inputBar'],
+    debug: ['header', 'traceLog'],
+    config: ['header', 'configList'],
   };
 
   // 全局键盘处理
   useInput((input, key) => {
     // Ctrl+C 全局退出
-    if (key.ctrl && input === "c") {
+    if (key.ctrl && input === 'c') {
       if (state.exitConfirmPending) {
         process.exit(0);
       } else {
@@ -138,7 +145,7 @@ export function App({ runtime }: AppProps): React.ReactElement {
 
     // 退出确认
     if (state.exitConfirmPending) {
-      if (input === "y") {
+      if (input === 'y') {
         process.exit(0);
       } else {
         setExitConfirmPending(false);
@@ -148,7 +155,7 @@ export function App({ runtime }: AppProps): React.ReactElement {
 
     // 帮助模态框
     if (state.showHelp) {
-      if (input === "h" || key.escape) {
+      if (input === 'h' || key.escape) {
         setShowHelp(false);
       }
       return;
@@ -179,7 +186,7 @@ export function App({ runtime }: AppProps): React.ReactElement {
         const nextArea = areas[nextIndex];
 
         // 切换焦点时退出输入模式
-        if (nextArea !== "inputBar") {
+        if (nextArea !== 'inputBar') {
           setInputMode(false);
         }
         setFocusArea(nextArea);
@@ -206,50 +213,51 @@ export function App({ runtime }: AppProps): React.ReactElement {
       const areas = pageAreas[state.currentPage];
       const currentIndex = state.focusArea ? (areas as string[]).indexOf(state.focusArea) : -1;
       // 无焦点时 Tab 进入第一个区域，有焦点时循环切换
-      const nextIndex = state.focusArea === null
-        ? 0
-        : key.shift
-          ? (currentIndex - 1 + areas.length) % areas.length
-          : (currentIndex + 1) % areas.length;
+      const nextIndex =
+        state.focusArea === null
+          ? 0
+          : key.shift
+            ? (currentIndex - 1 + areas.length) % areas.length
+            : (currentIndex + 1) % areas.length;
       setFocusArea(areas[nextIndex]);
       return;
     }
 
     // Ctrl+Enter 进入输入模式 (Session 页面)
-    if (key.return && key.ctrl && state.currentPage === "session") {
-      setFocusArea("inputBar");
+    if (key.return && key.ctrl && state.currentPage === 'session') {
+      setFocusArea('inputBar');
       setInputMode(true);
       return;
     }
 
     // Enter 快捷进入
     if (key.return && !key.ctrl) {
-      if (state.focusArea === "inputBar") {
+      if (state.focusArea === 'inputBar') {
         setInputMode(true);
         return;
       }
-      if (state.focusArea === null || state.focusArea === "header") {
-        if (state.currentPage === "session") {
-          setFocusArea("inputBar");
-        } else if (state.currentPage === "debug") {
-          setFocusArea("traceLog");
-        } else if (state.currentPage === "config") {
-          setFocusArea("configList");
+      if (state.focusArea === null || state.focusArea === 'header') {
+        if (state.currentPage === 'session') {
+          setFocusArea('inputBar');
+        } else if (state.currentPage === 'debug') {
+          setFocusArea('traceLog');
+        } else if (state.currentPage === 'config') {
+          setFocusArea('configList');
         }
         return;
       }
     }
 
     // 导航区域方向键
-    if (state.focusArea === "header") {
+    if (state.focusArea === 'header') {
       if (key.leftArrow) {
-        const pages: PageName[] = ["session", "debug", "config"];
+        const pages: PageName[] = ['session', 'debug', 'config'];
         const idx = pages.indexOf(state.currentPage);
         setCurrentPage(pages[(idx - 1 + pages.length) % pages.length]);
         return;
       }
       if (key.rightArrow) {
-        const pages: PageName[] = ["session", "debug", "config"];
+        const pages: PageName[] = ['session', 'debug', 'config'];
         const idx = pages.indexOf(state.currentPage);
         setCurrentPage(pages[(idx + 1) % pages.length]);
         return;
@@ -257,23 +265,23 @@ export function App({ runtime }: AppProps): React.ReactElement {
     }
 
     // 其他快捷键
-    if (input === "h") {
+    if (input === 'h') {
       setShowHelp(true);
       return;
     }
 
-    if (input === "q") {
+    if (input === 'q') {
       setExitConfirmPending(true);
       return;
     }
 
     // 页面特定快捷键
-    if (state.currentPage === "debug") {
-      if (input === "f") {
+    if (state.currentPage === 'debug') {
+      if (input === 'f') {
         setFilterMode(true);
         return;
       }
-      if (input === "c") {
+      if (input === 'c') {
         clearTraces();
         return;
       }
@@ -282,11 +290,13 @@ export function App({ runtime }: AppProps): React.ReactElement {
 
   const renderPage = () => {
     switch (state.currentPage) {
-      case "session":
-        return <SessionPage height={contentHeight} width={terminalColumns} sendMessage={sendMessage} />;
-      case "debug":
+      case 'session':
+        return (
+          <SessionPage height={contentHeight} width={terminalColumns} sendMessage={sendMessage} />
+        );
+      case 'debug':
         return <DebugPage height={contentHeight} width={terminalColumns} />;
-      case "config":
+      case 'config':
         return <ConfigPage height={contentHeight} width={terminalColumns} />;
     }
   };
@@ -294,7 +304,13 @@ export function App({ runtime }: AppProps): React.ReactElement {
   const renderContent = () => {
     if (state.showHelp) {
       return (
-        <Box height={contentHeight} width={terminalColumns} flexDirection="column" alignItems="center" justifyContent="center">
+        <Box
+          height={contentHeight}
+          width={terminalColumns}
+          flexDirection="column"
+          alignItems="center"
+          justifyContent="center"
+        >
           <HelpModal width={terminalColumns} />
         </Box>
       );
@@ -302,13 +318,23 @@ export function App({ runtime }: AppProps): React.ReactElement {
 
     if (state.exitConfirmPending) {
       return (
-        <Box height={contentHeight} width={terminalColumns} flexDirection="column" alignItems="center" justifyContent="center">
+        <Box
+          height={contentHeight}
+          width={terminalColumns}
+          flexDirection="column"
+          alignItems="center"
+          justifyContent="center"
+        >
           <ExitConfirm width={terminalColumns} />
         </Box>
       );
     }
 
-    return <Box height={contentHeight} width={terminalColumns}>{renderPage()}</Box>;
+    return (
+      <Box height={contentHeight} width={terminalColumns}>
+        {renderPage()}
+      </Box>
+    );
   };
 
   return (

@@ -18,11 +18,11 @@
  * - replace_all: 是否替换所有匹配项（可选，默认 false）
  */
 
-import { readFile, writeFile } from "node:fs/promises";
-import { relative, resolve } from "node:path";
+import { readFile, writeFile } from 'node:fs/promises';
+import { relative, resolve } from 'node:path';
 
-import { t } from "../locales/index.js";
-import type { AgentTool } from "./tool-types.js";
+import { t } from '../locales/index.js';
+import type { AgentTool } from './tool-types.js';
 
 /**
  * 解析可编辑的文件路径
@@ -34,7 +34,7 @@ import type { AgentTool } from "./tool-types.js";
  * @returns 解析后的绝对路径，或 null（路径无效）
  */
 function resolveEditablePath(cwd: string, value: unknown): string | null {
-  if (typeof value !== "string" || value.trim().length === 0) {
+  if (typeof value !== 'string' || value.trim().length === 0) {
     return null;
   }
 
@@ -42,7 +42,7 @@ function resolveEditablePath(cwd: string, value: unknown): string | null {
   const relativePath = relative(cwd, targetPath);
 
   // 防止路径遍历：不允许 .. 开头
-  if (relativePath.startsWith("..")) {
+  if (relativePath.startsWith('..')) {
     return null;
   }
 
@@ -56,8 +56,8 @@ function resolveEditablePath(cwd: string, value: unknown): string | null {
  */
 export function createEditFileTool(): AgentTool {
   return {
-    name: "edit-file",
-    riskLevel: "write",
+    name: 'edit-file',
+    riskLevel: 'write',
 
     async execute(input, context) {
       // 解析路径
@@ -65,41 +65,41 @@ export function createEditFileTool(): AgentTool {
 
       if (!targetPath) {
         return {
-          status: "error",
-          error: t("tools.editFile.needRelativePath"),
+          status: 'error',
+          error: t('tools.editFile.needRelativePath'),
         };
       }
 
       // 验证参数
-      const oldString = typeof input.old_string === "string" ? input.old_string : "";
-      const newString = typeof input.new_string === "string" ? input.new_string : "";
+      const oldString = typeof input.old_string === 'string' ? input.old_string : '';
+      const newString = typeof input.new_string === 'string' ? input.new_string : '';
       const replaceAll = input.replace_all === true;
 
       if (oldString.length === 0) {
         return {
-          status: "error",
-          error: t("tools.editFile.needOldString"),
+          status: 'error',
+          error: t('tools.editFile.needOldString'),
         };
       }
 
       try {
         // 读取文件内容
-        const content = await readFile(targetPath, "utf8");
+        const content = await readFile(targetPath, 'utf8');
 
         // 检查匹配次数
         const matchCount = countMatches(content, oldString);
 
         if (matchCount === 0) {
           return {
-            status: "error",
-            error: t("tools.editFile.noMatch"),
+            status: 'error',
+            error: t('tools.editFile.noMatch'),
           };
         }
 
         if (matchCount > 1 && !replaceAll) {
           return {
-            status: "error",
-            error: t("tools.editFile.multipleMatches", { count: String(matchCount) }),
+            status: 'error',
+            error: t('tools.editFile.multipleMatches', { count: String(matchCount) }),
           };
         }
 
@@ -109,15 +109,15 @@ export function createEditFileTool(): AgentTool {
           : content.replace(oldString, newString);
 
         // 写入文件
-        await writeFile(targetPath, newContent, "utf8");
+        await writeFile(targetPath, newContent, 'utf8');
 
         return {
-          status: "success",
-          output: t("tools.editFile.success", { count: String(replaceAll ? matchCount : 1) }),
+          status: 'success',
+          output: t('tools.editFile.success', { count: String(replaceAll ? matchCount : 1) }),
         };
       } catch (error) {
         return {
-          status: "error",
+          status: 'error',
           error: error instanceof Error ? error.message : String(error),
         };
       }

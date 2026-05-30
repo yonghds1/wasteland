@@ -5,12 +5,7 @@
  * 支持名称和别名查找。
  */
 
-import type {
-  Skill,
-  SkillDefinition,
-  SkillSource,
-  RegisteredSkill,
-} from "./skill-types.js";
+import type { Skill, SkillDefinition, SkillSource, RegisteredSkill } from './skill-types.js';
 
 /**
  * 技能注册表
@@ -84,10 +79,7 @@ export class SkillRegistry {
    * @param filter - 可选的过滤条件
    * @returns 技能定义数组
    */
-  list(filter?: {
-    category?: string;
-    source?: SkillSource["type"];
-  }): SkillDefinition[] {
+  list(filter?: { category?: string; source?: SkillSource['type'] }): SkillDefinition[] {
     const entries = Array.from(this.skills.values());
 
     return entries
@@ -119,7 +111,7 @@ export class SkillRegistry {
    */
   isSkillCommand(input: string): boolean {
     const trimmed = input.trim();
-    if (!trimmed.startsWith("/")) return false;
+    if (!trimmed.startsWith('/')) return false;
 
     // 提取命令名称（第一个空格之前，去掉 /）
     const name = trimmed.slice(1).split(/\s/)[0];

@@ -6,11 +6,11 @@
  * 切换皮肤时自动删除旧的符号链接，创建新的
  */
 
-import { access, mkdir, readdir, symlink, unlink } from "node:fs/promises";
-import { join, resolve } from "node:path";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-import { t } from "../locales/index.js";
+import { access, mkdir, readdir, symlink, unlink } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { t } from '../locales/index.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -35,12 +35,12 @@ async function fileExists(filePath: string): Promise<boolean> {
 async function getProjectRoot(): Promise<string> {
   // 从当前文件位置向上查找 package.json
   let dir = process.cwd();
-  while (dir !== "/") {
-    const pkgPath = join(dir, "package.json");
+  while (dir !== '/') {
+    const pkgPath = join(dir, 'package.json');
     if (await fileExists(pkgPath)) {
       return dir;
     }
-    dir = resolve(dir, "..");
+    dir = resolve(dir, '..');
   }
   return process.cwd();
 }
@@ -49,7 +49,7 @@ async function getProjectRoot(): Promise<string> {
  * 确保 bin/links 目录存在
  */
 async function ensureLinksDir(projectRoot: string): Promise<string> {
-  const linksDir = join(projectRoot, "bin", "links");
+  const linksDir = join(projectRoot, 'bin', 'links');
   await mkdir(linksDir, { recursive: true });
   return linksDir;
 }
@@ -76,7 +76,7 @@ async function removeRoleAliases(linksDir: string): Promise<void> {
     const entries = await readdir(linksDir);
     for (const entry of entries) {
       // 保留 install.sh 和 wasteland 主入口
-      if (entry === "install.sh" || entry === "wasteland") {
+      if (entry === 'install.sh' || entry === 'wasteland') {
         continue;
       }
 
@@ -96,20 +96,20 @@ async function removeRoleAliases(linksDir: string): Promise<void> {
  * 运行 create-aliases.sh 脚本
  */
 async function runCreateAliasesScript(projectRoot: string, skinId: string): Promise<void> {
-  const scriptPath = join(projectRoot, "scripts", "create-aliases.sh");
+  const scriptPath = join(projectRoot, 'scripts', 'create-aliases.sh');
 
   if (!(await fileExists(scriptPath))) {
     return;
   }
 
   try {
-    await execFileAsync("bash", [scriptPath, skinId], {
+    await execFileAsync('bash', [scriptPath, skinId], {
       cwd: projectRoot,
       timeout: 30000,
     });
   } catch (error) {
     // 脚本执行失败，忽略
-    console.warn(t("utils.failedToRunScript"), error);
+    console.warn(t('utils.failedToRunScript'), error);
   }
 }
 
@@ -120,14 +120,14 @@ async function runCreateAliasesScript(projectRoot: string, skinId: string): Prom
  * 1. 首次加载时，如果符号链接不存在，创建它们
  * 2. 切换皮肤时，删除旧的符号链接，创建新的
  */
-export async function ensureRoleAliases(skinId: string = "immortan-joe"): Promise<void> {
+export async function ensureRoleAliases(skinId: string = 'immortan-joe'): Promise<void> {
   const projectRoot = await getProjectRoot();
   const linksDir = await ensureLinksDir(projectRoot);
 
   // 主命令符号链接（始终存在）
-  const mainLink = join(linksDir, "wasteland");
+  const mainLink = join(linksDir, 'wasteland');
   if (!(await fileExists(mainLink))) {
-    await createSymlink("../wasteland.js", mainLink);
+    await createSymlink('../wasteland.js', mainLink);
   }
 
   // 检查是否切换了皮肤
@@ -141,10 +141,10 @@ export async function ensureRoleAliases(skinId: string = "immortan-joe"): Promis
 
   // 检查角色别名符号链接是否存在
   // 通过 get-role-aliases.js 获取别名列表
-  const getAliasesScript = join(projectRoot, "scripts", "get-role-aliases.js");
+  const getAliasesScript = join(projectRoot, 'scripts', 'get-role-aliases.js');
   if (await fileExists(getAliasesScript)) {
     try {
-      const { stdout } = await execFileAsync("node", [getAliasesScript, skinId], {
+      const { stdout } = await execFileAsync('node', [getAliasesScript, skinId], {
         cwd: projectRoot,
         timeout: 10000,
       });
@@ -188,7 +188,7 @@ export async function switchSkin(newSkinId: string): Promise<void> {
  */
 export async function hasCommandAlias(alias: string): Promise<boolean> {
   const projectRoot = await getProjectRoot();
-  const linksDir = join(projectRoot, "bin", "links");
+  const linksDir = join(projectRoot, 'bin', 'links');
   const linkPath = join(linksDir, alias);
 
   return fileExists(linkPath);
@@ -199,5 +199,5 @@ export async function hasCommandAlias(alias: string): Promise<boolean> {
  */
 export async function getSymlinkPath(alias: string): Promise<string> {
   const projectRoot = await getProjectRoot();
-  return join(projectRoot, "bin", "links", alias);
+  return join(projectRoot, 'bin', 'links', alias);
 }

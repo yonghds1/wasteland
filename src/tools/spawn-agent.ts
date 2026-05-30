@@ -27,25 +27,25 @@
  * ```
  */
 
-import { catchError, defaultIfEmpty, filter, map, take, timeout } from "rxjs/operators";
-import { forkJoin, from, lastValueFrom, of } from "rxjs";
+import { catchError, defaultIfEmpty, filter, map, take, timeout } from 'rxjs/operators';
+import { forkJoin, from, lastValueFrom, of } from 'rxjs';
 
-import { t } from "../locales/index.js";
-import { runAgentLoop } from "../runtime/agent-loop.js";
-import type { SessionMetadata } from "../runtime/session-manager.js";
-import type { SessionMessageRecord } from "../runtime/event-types.js";
+import { t } from '../locales/index.js';
+import { runAgentLoop } from '../runtime/agent-loop.js';
+import type { SessionMetadata } from '../runtime/session-manager.js';
+import type { SessionMessageRecord } from '../runtime/event-types.js';
 import type {
   AgentTool,
   ToolExecutionContext,
   ToolExecutionResult,
   ToolInput,
-} from "./tool-types.js";
-import type { AgentProvider } from "../providers/provider-types.js";
-import type { SessionManager } from "../runtime/session-manager.js";
-import type { ToolRegistry } from "./tool-registry.js";
-import type { PermissionGate } from "../runtime/permission-gate.js";
-import type { ProviderSettings } from "../config/settings-types.js";
-import type { ProviderRegistry } from "../providers/provider-registry.js";
+} from './tool-types.js';
+import type { AgentProvider } from '../providers/provider-types.js';
+import type { SessionManager } from '../runtime/session-manager.js';
+import type { ToolRegistry } from './tool-registry.js';
+import type { PermissionGate } from '../runtime/permission-gate.js';
+import type { ProviderSettings } from '../config/settings-types.js';
+import type { ProviderRegistry } from '../providers/provider-registry.js';
 
 /**
  * 将通用模型名称映射到实际模型名称
@@ -58,14 +58,14 @@ function mapModelToActualModel(model: string, providerId: string): string {
   // 通用模型名称到各 Provider 的映射
   const modelMappings: Record<string, Record<string, string>> = {
     qwen: {
-      haiku: "qwen-turbo",
-      sonnet: "qwen-plus",
-      opus: "qwen-max",
+      haiku: 'qwen-turbo',
+      sonnet: 'qwen-plus',
+      opus: 'qwen-max',
     },
     ollama: {
-      haiku: "llama3.2:1b",
-      sonnet: "llama3.2",
-      opus: "llama3.3:70b",
+      haiku: 'llama3.2:1b',
+      sonnet: 'llama3.2',
+      opus: 'llama3.3:70b',
     },
   };
 
@@ -121,62 +121,62 @@ export type SpawnAgentContext = ToolExecutionContext & {
  */
 export function createSpawnAgentTool(context: SpawnAgentContext): AgentTool {
   return {
-    name: "spawn_agent",
-    riskLevel: "execute",
+    name: 'spawn_agent',
+    riskLevel: 'execute',
 
     async execute(
       input: ToolInput,
-      _toolContext: ToolExecutionContext,
+      _toolContext: ToolExecutionContext
     ): Promise<ToolExecutionResult> {
       const { name, task, tools, model, inheritHistory } = input as SpawnAgentInput;
 
       if (!name || !task) {
         return {
-          status: "error",
+          status: 'error',
           error: "spawn_agent requires 'name' and 'task' parameters",
         };
       }
 
       try {
         // 1. 创建子 Agent session
-        const childSession = await context.sessionManager.createChildSession(
-          context.session,
-          name,
-        );
+        const childSession = await context.sessionManager.createChildSession(context.session, name);
 
         // 2. 准备子 Agent 的输入
         // 如果 inheritHistory 为 true，将历史上下文作为前缀添加到 task
         let taskContent = task;
         if (inheritHistory && context.history.length > 0) {
           const historySummary = context.history
-            .filter((record) => record.type === "message")
+            .filter((record) => record.type === 'message')
             .map((record) => {
-              const role = record.role === "user" ? t("tools.spawnAgent.roleUser") : t("tools.spawnAgent.roleAssistant");
+              const role =
+                record.role === 'user'
+                  ? t('tools.spawnAgent.roleUser')
+                  : t('tools.spawnAgent.roleAssistant');
               return `【${role}】\n${record.content}`;
             })
-            .join("\n\n");
+            .join('\n\n');
 
           if (historySummary) {
-            taskContent = `${t("tools.spawnAgent.historyHeader")}\n\n${historySummary}\n\n${t("tools.spawnAgent.currentTaskHeader")}\n\n${task}`;
+            taskContent = `${t('tools.spawnAgent.historyHeader')}\n\n${historySummary}\n\n${t('tools.spawnAgent.currentTaskHeader')}\n\n${task}`;
           }
         }
 
         const childInput$ = of({
           turn: 1,
           content: taskContent,
-          source: "message" as const,
+          source: 'message' as const,
         });
 
         // 3. 处理工具限定：如果指定了 tools 参数，创建受限的 ToolRegistry
         let childToolRegistry = context.toolRegistry;
         if (tools && tools.length > 0 && context.toolRegistry) {
           const allowedTools = tools
-            .map((toolName) => context.toolRegistry!.get(toolName))
+            .map((toolName) => context.toolRegistry?.get(toolName))
             .filter((tool): tool is AgentTool => tool !== undefined);
 
           if (allowedTools.length > 0) {
             // 使用动态导入避免循环依赖
-            const { ToolRegistry } = await import("./tool-registry.js");
+            const { ToolRegistry } = await import('./tool-registry.js');
             childToolRegistry = new ToolRegistry(allowedTools);
           }
         }
@@ -194,10 +194,7 @@ export function createSpawnAgentTool(context: SpawnAgentContext): AgentTool {
           };
 
           // 使用 ProviderRegistry 创建新的 Provider
-          childProvider = context.providerRegistry.resolve(
-            context.provider.id,
-            newSettings
-          );
+          childProvider = context.providerRegistry.resolve(context.provider.id, newSettings);
         }
 
         // 5. 运行子 Agent（使用已有的 childSession、受限的 toolRegistry 和选择的 provider）
@@ -208,7 +205,7 @@ export function createSpawnAgentTool(context: SpawnAgentContext): AgentTool {
           toolRegistry: childToolRegistry,
           permissionGate: context.permissionGate,
           cwd: context.cwd,
-          mode: "single",
+          mode: 'single',
           existingSession: childSession,
           // 传递 providerRegistry 和 providerSettings 以支持嵌套 spawn
           providerRegistry: context.providerRegistry,
@@ -218,7 +215,7 @@ export function createSpawnAgentTool(context: SpawnAgentContext): AgentTool {
         // 6. 等待子 Agent 完成
         let result: { success: boolean; content?: string; error?: string } = {
           success: false,
-          error: t("tools.spawnAgent.noResponse"),
+          error: t('tools.spawnAgent.noResponse'),
         };
 
         try {
@@ -226,18 +223,31 @@ export function createSpawnAgentTool(context: SpawnAgentContext): AgentTool {
             events$.pipe(
               // 只取最终的 assistant_message
               filter(
-                (event): event is { type: "assistant_message"; sessionId: string; turn: number; content: string } =>
-                  "type" in event && event.type === "assistant_message",
+                (
+                  event
+                ): event is {
+                  type: 'assistant_message';
+                  sessionId: string;
+                  turn: number;
+                  content: string;
+                } => 'type' in event && event.type === 'assistant_message'
               ),
               take(1),
               // 子 Agent 执行超时
               timeout(context.childAgentTimeout ?? 120000),
               // 如果没有值，返回 undefined
-              defaultIfEmpty(undefined as unknown as { type: "assistant_message"; sessionId: string; turn: number; content: string }),
-            ),
+              defaultIfEmpty(
+                undefined as unknown as {
+                  type: 'assistant_message';
+                  sessionId: string;
+                  turn: number;
+                  content: string;
+                }
+              )
+            )
           );
 
-          if (finalEvent && finalEvent.type === "assistant_message") {
+          if (finalEvent && finalEvent.type === 'assistant_message') {
             result = { success: true, content: finalEvent.content };
           }
         } catch (err) {
@@ -250,8 +260,8 @@ export function createSpawnAgentTool(context: SpawnAgentContext): AgentTool {
         // 7. 返回结果
         if (result.success) {
           return {
-            status: "success",
-            output: result.content || "子 Agent 执行完成",
+            status: 'success',
+            output: result.content || '子 Agent 执行完成',
             data: {
               sessionPath: childSession.path,
               childId: childSession.id,
@@ -259,8 +269,8 @@ export function createSpawnAgentTool(context: SpawnAgentContext): AgentTool {
           };
         } else {
           return {
-            status: "error",
-            error: result.error || "子 Agent 执行失败",
+            status: 'error',
+            error: result.error || '子 Agent 执行失败',
             data: {
               sessionPath: childSession.path,
               childId: childSession.id,
@@ -269,7 +279,7 @@ export function createSpawnAgentTool(context: SpawnAgentContext): AgentTool {
         }
       } catch (error) {
         return {
-          status: "error",
+          status: 'error',
           error: error instanceof Error ? error.message : String(error),
         };
       }
@@ -289,7 +299,7 @@ export function createSpawnAgentTool(context: SpawnAgentContext): AgentTool {
  */
 export function handleParallelSpawns(
   calls: { callId: string; input: SpawnAgentInput }[],
-  context: SpawnAgentContext,
+  context: SpawnAgentContext
 ) {
   const childRuns = calls.map((call) => {
     const tool = createSpawnAgentTool(context);
@@ -298,19 +308,19 @@ export function handleParallelSpawns(
         sessionId: context.sessionId,
         turn: context.turn,
         cwd: context.cwd,
-      }),
+      })
     ).pipe(
       timeout(context.childAgentTimeout ?? 120000),
       catchError((err: Error) =>
         of({
-          status: "error" as const,
-          error: err.message || "timeout",
-        }),
+          status: 'error' as const,
+          error: err.message || 'timeout',
+        })
       ),
       map((result) => ({
         callId: call.callId,
         ...result,
-      })),
+      }))
     );
   });
 

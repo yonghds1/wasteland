@@ -7,8 +7,8 @@
  * - brain: 思考动画
  */
 
-import { t } from "../locales/index.js";
-import { ANSI } from "./terminal-theme.js";
+import { t } from '../locales/index.js';
+import { ANSI } from './terminal-theme.js';
 
 // ============================================================
 // Spinner 帧定义
@@ -16,28 +16,28 @@ import { ANSI } from "./terminal-theme.js";
 
 export const SPINNERS = {
   /** Braille 点动画 */
-  dots: ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"],
+  dots: ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'],
 
   /** 增长条 */
-  grow: ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"],
+  grow: ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'],
 
   /** 箭头旋转 */
-  arrows: ["←", "↖", "↑", "↗", "→", "↘", "↓", "↙"],
+  arrows: ['←', '↖', '↑', '↗', '→', '↘', '↓', '↙'],
 
   /** 星星闪烁 */
-  star: ["✶", "✷", "✸", "✹", "✺", "✹", "✸", "✷"],
+  star: ['✶', '✷', '✸', '✹', '✺', '✹', '✸', '✷'],
 
   /** 月相变化 */
-  moon: ["🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘"],
+  moon: ['🌑', '🌒', '🌓', '🌔', '🌕', '🌖', '🌗', '🌘'],
 
   /** 脉冲 */
-  pulse: ["◜", "◠", "◝", "◞", "◡", "◟"],
+  pulse: ['◜', '◠', '◝', '◞', '◡', '◟'],
 
   /** 思考 (brain) */
-  brain: ["🧠", "💭", "💡", "✨", "💫", "🌟", "💡", "💭"],
+  brain: ['🧠', '💭', '💡', '✨', '💫', '🌟', '💡', '💭'],
 
   /** 闪烁 */
-  sparkle: ["⁺", "˚", "*", "✧", "✦", "✧", "*", "˚"],
+  sparkle: ['⁺', '˚', '*', '✧', '✦', '✧', '*', '˚'],
 } as const;
 
 export type SpinnerStyle = keyof typeof SPINNERS;
@@ -47,14 +47,14 @@ export type SpinnerStyle = keyof typeof SPINNERS;
 // ============================================================
 
 export const THINKING_VERBS = [
-  t("ui.spinner.thinking"),
-  t("ui.spinner.analyzing"),
-  t("ui.spinner.processing"),
-  t("ui.spinner.generating"),
-  t("ui.spinner.reasoning"),
-  t("ui.spinner.computing"),
-  t("ui.spinner.understanding"),
-  t("ui.spinner.preparing"),
+  t('ui.spinner.thinking'),
+  t('ui.spinner.analyzing'),
+  t('ui.spinner.processing'),
+  t('ui.spinner.generating'),
+  t('ui.spinner.reasoning'),
+  t('ui.spinner.computing'),
+  t('ui.spinner.understanding'),
+  t('ui.spinner.preparing'),
 ];
 
 // ============================================================
@@ -77,7 +77,7 @@ export class Spinner {
   private frames: readonly string[];
   private interval: ReturnType<typeof setInterval> | null = null;
 
-  constructor(style: SpinnerStyle = "dots") {
+  constructor(style: SpinnerStyle = 'dots') {
     this.style = style;
     this.frames = SPINNERS[style];
     this.state = {
@@ -191,43 +191,43 @@ export function formatToolCompleteLine(params: {
 
   // 工具图标映射
   const TOOL_ICONS: Record<string, string> = {
-    "read-file": "📖",
-    "read_file": "📖",
-    "write-file": "✍️",
-    "write_file": "✍️",
-    "edit-file": "✏️",
-    "edit_file": "✏️",
-    bash: "💻",
-    terminal: "💻",
-    "search-files": "🔎",
-    search_files: "🔎",
-    "web-search": "🔍",
-    web_search: "🔍",
+    'read-file': '📖',
+    read_file: '📖',
+    'write-file': '✍️',
+    write_file: '✍️',
+    'edit-file': '✏️',
+    edit_file: '✏️',
+    bash: '💻',
+    terminal: '💻',
+    'search-files': '🔎',
+    search_files: '🔎',
+    'web-search': '🔍',
+    web_search: '🔍',
   };
 
   // 工具动词映射
   const TOOL_VERBS: Record<string, string> = {
-    "read-file": "read",
-    "read_file": "read",
-    "write-file": "write",
-    "write_file": "write",
-    "edit-file": "edit",
-    "edit_file": "edit",
-    bash: "exec",
-    terminal: "exec",
-    "search-files": "find",
-    search_files: "find",
-    "web-search": "search",
-    web_search: "search",
+    'read-file': 'read',
+    read_file: 'read',
+    'write-file': 'write',
+    write_file: 'write',
+    'edit-file': 'edit',
+    edit_file: 'edit',
+    bash: 'exec',
+    terminal: 'exec',
+    'search-files': 'find',
+    search_files: 'find',
+    'web-search': 'search',
+    web_search: 'search',
   };
 
-  const icon = TOOL_ICONS[toolName] || "⚡";
+  const icon = TOOL_ICONS[toolName] || '⚡';
   const verb = (TOOL_VERBS[toolName] || toolName).padEnd(9);
   const color = success ? ANSI.green : ANSI.red;
 
   let line = `${ANSI.dim}┊${ANSI.reset} ${icon} ${color}${verb}${ANSI.reset}`;
   if (detail) {
-    line += ` ${detail.slice(0, 42)}${detail.length > 42 ? "..." : ""}`;
+    line += ` ${detail.slice(0, 42)}${detail.length > 42 ? '...' : ''}`;
   }
   line += `  ${ANSI.dim}${duration}${ANSI.reset}`;
 
@@ -247,12 +247,12 @@ export function formatToolCompleteLine(params: {
  */
 export function formatWelcomeMessage(): string {
   const lines = [
-    `${ANSI.dim}╭${"─".repeat(48)}╮${ANSI.reset}`,
-    `${ANSI.dim}│${ANSI.reset} ${ANSI.bold}${ANSI.cyan}✦ wasteland - Immortan Joe's War Machine${" ".repeat(12)}${ANSI.reset}${ANSI.dim}│${ANSI.reset}`,
-    `${ANSI.dim}│${ANSI.reset}   ${t("ui.spinner.welcome")}${" ".repeat(12)}${ANSI.dim}│${ANSI.reset}`,
-    `${ANSI.dim}╰${"─".repeat(48)}╯${ANSI.reset}`,
+    `${ANSI.dim}╭${'─'.repeat(48)}╮${ANSI.reset}`,
+    `${ANSI.dim}│${ANSI.reset} ${ANSI.bold}${ANSI.cyan}✦ wasteland - Immortan Joe's War Machine${' '.repeat(12)}${ANSI.reset}${ANSI.dim}│${ANSI.reset}`,
+    `${ANSI.dim}│${ANSI.reset}   ${t('ui.spinner.welcome')}${' '.repeat(12)}${ANSI.dim}│${ANSI.reset}`,
+    `${ANSI.dim}╰${'─'.repeat(48)}╯${ANSI.reset}`,
   ];
-  return lines.join("\n");
+  return lines.join('\n');
 }
 
 /**
@@ -260,10 +260,10 @@ export function formatWelcomeMessage(): string {
  */
 export function formatGoodbyeMessage(): string {
   const lines = [
-    "",
-    `${ANSI.dim}╭${"─".repeat(48)}╮${ANSI.reset}`,
-    `${ANSI.dim}│${ANSI.reset} ${ANSI.bold}${ANSI.green}${t("ui.spinner.goodbye")} ✦${" ".repeat(38)}${ANSI.reset}${ANSI.dim}│${ANSI.reset}`,
-    `${ANSI.dim}╰${"─".repeat(48)}╯${ANSI.reset}`,
+    '',
+    `${ANSI.dim}╭${'─'.repeat(48)}╮${ANSI.reset}`,
+    `${ANSI.dim}│${ANSI.reset} ${ANSI.bold}${ANSI.green}${t('ui.spinner.goodbye')} ✦${' '.repeat(38)}${ANSI.reset}${ANSI.dim}│${ANSI.reset}`,
+    `${ANSI.dim}╰${'─'.repeat(48)}╯${ANSI.reset}`,
   ];
-  return lines.join("\n");
+  return lines.join('\n');
 }

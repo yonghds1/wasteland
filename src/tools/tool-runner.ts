@@ -1,5 +1,5 @@
-import { ToolRegistry } from "./tool-registry.js";
-import type { ToolCall, ToolExecutionContext, ToolExecutionResult } from "./tool-types.js";
+import { ToolRegistry } from './tool-registry.js';
+import type { ToolCall, ToolExecutionContext, ToolExecutionResult } from './tool-types.js';
 
 export async function executeToolCall(params: {
   registry: ToolRegistry;
@@ -10,7 +10,7 @@ export async function executeToolCall(params: {
 
   if (!tool) {
     return {
-      status: "error",
+      status: 'error',
       error: `未找到工具：${params.call.toolName}`,
     };
   }
@@ -19,7 +19,7 @@ export async function executeToolCall(params: {
     return await tool.execute(params.call.input, params.context);
   } catch (error) {
     return {
-      status: "error",
+      status: 'error',
       error: error instanceof Error ? error.message : String(error),
     };
   }

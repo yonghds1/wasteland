@@ -24,19 +24,13 @@
  * getNestedValue({ a: { b: 1 } }, "a.b") // 1
  * getNestedValue({ a: { b: 1 } }, "a.c") // undefined
  */
-function getNestedValue(
-  obj: Record<string, unknown>,
-  path: string,
-): unknown {
-  return path.split(".").reduce<unknown>(
-    (current, key) => {
-      if (current && typeof current === "object") {
-        return (current as Record<string, unknown>)[key];
-      }
-      return undefined;
-    },
-    obj,
-  );
+function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
+  return path.split('.').reduce<unknown>((current, key) => {
+    if (current && typeof current === 'object') {
+      return (current as Record<string, unknown>)[key];
+    }
+    return undefined;
+  }, obj);
 }
 
 // ============================================================
@@ -62,10 +56,7 @@ function getNestedValue(
  * interpolateVariables("Value: {{x|default:10}}", {})
  * // "Value: 10"
  */
-export function interpolateVariables(
-  template: string,
-  variables: Record<string, unknown>,
-): string {
+export function interpolateVariables(template: string, variables: Record<string, unknown>): string {
   // 匹配 {{variable}} 或 {{variable|default:value}}
   return template.replace(
     /\{\{([\w.]+)(?:\|default:([^}]*))?\}\}/g,
@@ -75,10 +66,10 @@ export function interpolateVariables(
       if (value !== undefined && value !== null) {
         // 数组转为换行分隔的字符串
         if (Array.isArray(value)) {
-          return value.join("\n");
+          return value.join('\n');
         }
         // 对象转为 JSON
-        if (typeof value === "object") {
+        if (typeof value === 'object') {
           return JSON.stringify(value);
         }
         return String(value);
@@ -91,7 +82,7 @@ export function interpolateVariables(
 
       // 保留未定义的变量（方便调试）
       return `{{${path}}}`;
-    },
+    }
   );
 }
 
@@ -108,18 +99,15 @@ export function interpolateVariables(
  */
 export function interpolateObject(
   obj: Record<string, unknown>,
-  variables: Record<string, unknown>,
+  variables: Record<string, unknown>
 ): Record<string, unknown> {
   const result: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(obj)) {
-    if (typeof value === "string") {
+    if (typeof value === 'string') {
       result[key] = interpolateVariables(value, variables);
-    } else if (typeof value === "object" && value !== null) {
-      result[key] = interpolateObject(
-        value as Record<string, unknown>,
-        variables,
-      );
+    } else if (typeof value === 'object' && value !== null) {
+      result[key] = interpolateObject(value as Record<string, unknown>, variables);
     } else {
       result[key] = value;
     }

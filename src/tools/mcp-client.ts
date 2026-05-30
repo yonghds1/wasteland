@@ -39,10 +39,10 @@
  * ```
  */
 
-import { spawn, type ChildProcess } from "node:child_process";
-import { randomUUID } from "node:crypto";
-import { EventEmitter } from "node:events";
-import { t } from "../locales/index.js";
+import { spawn, type ChildProcess } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
+import { EventEmitter } from 'node:events';
+import { t } from '../locales/index.js';
 
 // ============================================================
 // JSON-RPC 类型定义
@@ -52,7 +52,7 @@ import { t } from "../locales/index.js";
  * JSON-RPC 请求
  */
 export type JSONRPCRequest = {
-  jsonrpc: "2.0";
+  jsonrpc: '2.0';
   id: string | number;
   method: string;
   params?: unknown;
@@ -62,7 +62,7 @@ export type JSONRPCRequest = {
  * JSON-RPC 响应（成功）
  */
 export type JSONRPCResponse<T = unknown> = {
-  jsonrpc: "2.0";
+  jsonrpc: '2.0';
   id: string | number;
   result: T;
 };
@@ -71,7 +71,7 @@ export type JSONRPCResponse<T = unknown> = {
  * JSON-RPC 错误响应
  */
 export type JSONRPCError = {
-  jsonrpc: "2.0";
+  jsonrpc: '2.0';
   id: string | number;
   error: {
     code: number;
@@ -84,7 +84,7 @@ export type JSONRPCError = {
  * JSON-RPC 通知
  */
 export type JSONRPCNotification = {
-  jsonrpc: "2.0";
+  jsonrpc: '2.0';
   method: string;
   params?: unknown;
 };
@@ -134,7 +134,7 @@ export type MCPToolDefinition = {
   name: string;
   description?: string;
   inputSchema: {
-    type: "object";
+    type: 'object';
     properties?: Record<string, unknown>;
     required?: string[];
   };
@@ -145,7 +145,7 @@ export type MCPToolDefinition = {
  */
 export type MCPToolResult = {
   content: Array<{
-    type: "text" | "image" | "resource";
+    type: 'text' | 'image' | 'resource';
     text?: string;
     data?: string;
     mimeType?: string;
@@ -224,7 +224,7 @@ export class MCPClient extends EventEmitter {
     }
   > = new Map();
 
-  private buffer: string = "";
+  private buffer: string = '';
   private initialized = false;
   private capabilities: MCPServerCapabilities | null = null;
   private requestTimeout: number;
@@ -241,62 +241,62 @@ export class MCPClient extends EventEmitter {
    */
   async start(): Promise<MCPInitializeResult> {
     if (this.process) {
-      throw new Error(t("mcp.clientAlreadyStarted"));
+      throw new Error(t('mcp.clientAlreadyStarted'));
     }
 
     // 启动子进程
     this.process = spawn(this.config.command, this.config.args ?? [], {
       cwd: this.config.cwd,
       env: { ...process.env, ...this.config.env },
-      stdio: ["pipe", "pipe", "pipe"],
+      stdio: ['pipe', 'pipe', 'pipe'],
     });
 
     if (!this.process.stdin || !this.process.stdout) {
-      throw new Error(t("mcp.failedToCreateStdio"));
+      throw new Error(t('mcp.failedToCreateStdio'));
     }
 
     // 处理 stdout（JSON-RPC 响应）
-    this.process.stdout.on("data", (data: Buffer) => {
+    this.process.stdout.on('data', (data: Buffer) => {
       this.handleStdout(data);
     });
 
     // 处理 stderr（日志/错误）
-    this.process.stderr?.on("data", (data: Buffer) => {
-      this.emit("log", data.toString("utf-8"));
+    this.process.stderr?.on('data', (data: Buffer) => {
+      this.emit('log', data.toString('utf-8'));
     });
 
     // 处理进程退出
-    this.process.on("close", (code) => {
-      this.emit("close", code);
+    this.process.on('close', (code) => {
+      this.emit('close', code);
       this.cleanup();
     });
 
-    this.process.on("error", (error) => {
-      this.emit("error", error);
+    this.process.on('error', (error) => {
+      this.emit('error', error);
     });
 
     // 执行初始化握手
     const startupTimeout = this.config.startupTimeout ?? 10000;
     const initResult = await this.sendRequest<MCPInitializeResult>(
-      "initialize",
+      'initialize',
       {
-        protocolVersion: "2024-11-05",
+        protocolVersion: '2024-11-05',
         capabilities: {
           tools: {},
         },
         clientInfo: {
-          name: "wasteland",
-          version: "0.1.0",
+          name: 'wasteland',
+          version: '0.1.0',
         },
       },
-      startupTimeout,
+      startupTimeout
     );
 
     this.capabilities = initResult.capabilities;
     this.initialized = true;
 
     // 发送 initialized 通知
-    this.sendNotification("notifications/initialized");
+    this.sendNotification('notifications/initialized');
 
     return initResult;
   }
@@ -311,20 +311,20 @@ export class MCPClient extends EventEmitter {
 
     // 发送 shutdown 请求（如果支持）
     try {
-      await this.sendRequest("shutdown", {}, 5000);
+      await this.sendRequest('shutdown', {}, 5000);
     } catch {
       // 忽略错误
     }
 
     // 发送 exit 通知
-    this.sendNotification("exit");
+    this.sendNotification('exit');
 
     // 给进程时间退出
     await new Promise((resolve) => setTimeout(resolve, 100));
 
     // 强制终止
     if (this.process) {
-      this.process.kill("SIGTERM");
+      this.process.kill('SIGTERM');
       this.process = null;
     }
 
@@ -339,7 +339,7 @@ export class MCPClient extends EventEmitter {
 
     const response = await this.sendRequest<{
       tools: MCPToolDefinition[];
-    }>("tools/list", {});
+    }>('tools/list', {});
 
     return response.tools;
   }
@@ -347,13 +347,10 @@ export class MCPClient extends EventEmitter {
   /**
    * 调用工具
    */
-  async callTool(
-    name: string,
-    args: Record<string, unknown>,
-  ): Promise<MCPToolResult> {
+  async callTool(name: string, args: Record<string, unknown>): Promise<MCPToolResult> {
     this.ensureInitialized();
 
-    return this.sendRequest<MCPToolResult>("tools/call", {
+    return this.sendRequest<MCPToolResult>('tools/call', {
       name,
       arguments: args,
     });
@@ -379,16 +376,16 @@ export class MCPClient extends EventEmitter {
 
   private ensureInitialized(): void {
     if (!this.initialized || !this.process) {
-      throw new Error(t("mcp.clientNotInitialized"));
+      throw new Error(t('mcp.clientNotInitialized'));
     }
   }
 
   private handleStdout(data: Buffer): void {
-    this.buffer += data.toString("utf-8");
+    this.buffer += data.toString('utf-8');
 
     // 解析完整的 JSON 消息（以换行分隔）
-    const lines = this.buffer.split("\n");
-    this.buffer = lines.pop() ?? "";
+    const lines = this.buffer.split('\n');
+    this.buffer = lines.pop() ?? '';
 
     for (const line of lines) {
       if (line.trim().length === 0) {
@@ -398,20 +395,15 @@ export class MCPClient extends EventEmitter {
       try {
         const message = JSON.parse(line);
         this.handleMessage(message);
-      } catch (error) {
-        this.emit("error", new Error(t("mcp.failedToParseMessage", { line })));
+      } catch {
+        this.emit('error', new Error(t('mcp.failedToParseMessage', { line })));
       }
     }
   }
 
   private handleMessage(message: unknown): void {
     // 响应
-    if (
-      typeof message === "object" &&
-      message !== null &&
-      "id" in message &&
-      "result" in message
-    ) {
+    if (typeof message === 'object' && message !== null && 'id' in message && 'result' in message) {
       const response = message as JSONRPCResponse;
       const pending = this.pendingRequests.get(response.id);
       if (pending) {
@@ -423,51 +415,40 @@ export class MCPClient extends EventEmitter {
     }
 
     // 错误响应
-    if (
-      typeof message === "object" &&
-      message !== null &&
-      "id" in message &&
-      "error" in message
-    ) {
+    if (typeof message === 'object' && message !== null && 'id' in message && 'error' in message) {
       const error = message as JSONRPCError;
       const pending = this.pendingRequests.get(error.id);
       if (pending) {
         clearTimeout(pending.timeout);
         this.pendingRequests.delete(error.id);
-        pending.reject(
-          new Error(`MCP Error ${error.error.code}: ${error.error.message}`),
-        );
+        pending.reject(new Error(`MCP Error ${error.error.code}: ${error.error.message}`));
       }
       return;
     }
 
     // 通知
     if (
-      typeof message === "object" &&
+      typeof message === 'object' &&
       message !== null &&
-      "method" in message &&
-      !("id" in message)
+      'method' in message &&
+      !('id' in message)
     ) {
       const notification = message as JSONRPCNotification;
-      this.emit("notification", notification);
+      this.emit('notification', notification);
       return;
     }
   }
 
-  private sendRequest<T>(
-    method: string,
-    params: unknown,
-    timeoutMs?: number,
-  ): Promise<T> {
+  private sendRequest<T>(method: string, params: unknown, timeoutMs?: number): Promise<T> {
     return new Promise((resolve, reject) => {
       if (!this.process?.stdin) {
-        reject(new Error("MCP process not running"));
+        reject(new Error('MCP process not running'));
         return;
       }
 
       const id = randomUUID();
       const request: JSONRPCRequest = {
-        jsonrpc: "2.0",
+        jsonrpc: '2.0',
         id,
         method,
         params,
@@ -484,7 +465,7 @@ export class MCPClient extends EventEmitter {
         timeout: timeoutId,
       });
 
-      const message = JSON.stringify(request) + "\n";
+      const message = JSON.stringify(request) + '\n';
       this.process.stdin.write(message);
     });
   }
@@ -495,20 +476,20 @@ export class MCPClient extends EventEmitter {
     }
 
     const notification: JSONRPCNotification = {
-      jsonrpc: "2.0",
+      jsonrpc: '2.0',
       method,
       params,
     };
 
-    const message = JSON.stringify(notification) + "\n";
+    const message = JSON.stringify(notification) + '\n';
     this.process.stdin.write(message);
   }
 
   private cleanup(): void {
     // 清理所有待处理的请求
-    for (const [id, pending] of this.pendingRequests) {
+    for (const [_id, pending] of this.pendingRequests) {
       clearTimeout(pending.timeout);
-      pending.reject(new Error("MCP client stopped"));
+      pending.reject(new Error('MCP client stopped'));
     }
     this.pendingRequests.clear();
     this.initialized = false;
@@ -539,7 +520,7 @@ export type MCPToolAdapter = {
  */
 export function createMCPToolAdapter(
   client: MCPClient,
-  definition: MCPToolDefinition,
+  definition: MCPToolDefinition
 ): MCPToolAdapter {
   return {
     client,

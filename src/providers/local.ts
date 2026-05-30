@@ -1,18 +1,18 @@
-import { of } from "rxjs";
+import { of } from 'rxjs';
 
-import { buildLocalReplyText } from "../chat/reply-pipeline.js";
-import { t } from "../locales/index.js";
-import type { TurnToolResult } from "../runtime/turn-state.js";
-import { createAssistantTextEvents } from "./assistant-events.js";
-import type { AgentProvider, ProviderStreamEvent } from "./provider-types.js";
+import { buildLocalReplyText } from '../chat/reply-pipeline.js';
+import { t } from '../locales/index.js';
+import type { TurnToolResult } from '../runtime/turn-state.js';
+import { createAssistantTextEvents } from './assistant-events.js';
+import type { AgentProvider, ProviderStreamEvent } from './provider-types.js';
 
 function createToolCallFromInput(input: string, turn: number): ProviderStreamEvent | null {
   const trimmed = input.trim();
 
   // /spawn <name> <task> - 创建子 Agent
-  if (trimmed.startsWith("/spawn ")) {
-    const rest = trimmed.slice("/spawn ".length).trim();
-    const firstSpace = rest.indexOf(" ");
+  if (trimmed.startsWith('/spawn ')) {
+    const rest = trimmed.slice('/spawn '.length).trim();
+    const firstSpace = rest.indexOf(' ');
 
     if (firstSpace === -1 || firstSpace === 0) {
       return null;
@@ -26,10 +26,10 @@ function createToolCallFromInput(input: string, turn: number): ProviderStreamEve
     }
 
     return {
-      type: "tool_call",
+      type: 'tool_call',
       call: {
         id: `tool-spawn-${turn}`,
-        toolName: "spawn_agent",
+        toolName: 'spawn_agent',
         input: {
           name,
           task,
@@ -39,18 +39,18 @@ function createToolCallFromInput(input: string, turn: number): ProviderStreamEve
   }
 
   // /read <path> - 读取文件
-  if (trimmed.startsWith("/read ")) {
-    const targetPath = trimmed.slice("/read ".length).trim();
+  if (trimmed.startsWith('/read ')) {
+    const targetPath = trimmed.slice('/read '.length).trim();
 
     if (targetPath.length === 0) {
       return null;
     }
 
     return {
-      type: "tool_call",
+      type: 'tool_call',
       call: {
         id: `tool-read-file-${turn}`,
-        toolName: "read-file",
+        toolName: 'read-file',
         input: {
           path: targetPath,
         },
@@ -59,18 +59,18 @@ function createToolCallFromInput(input: string, turn: number): ProviderStreamEve
   }
 
   // /bash <command> - 执行命令
-  if (trimmed.startsWith("/bash ")) {
-    const command = trimmed.slice("/bash ".length).trim();
+  if (trimmed.startsWith('/bash ')) {
+    const command = trimmed.slice('/bash '.length).trim();
 
     if (command.length === 0) {
       return null;
     }
 
     return {
-      type: "tool_call",
+      type: 'tool_call',
       call: {
         id: `tool-bash-${turn}`,
-        toolName: "bash",
+        toolName: 'bash',
         input: {
           command,
         },
@@ -79,18 +79,18 @@ function createToolCallFromInput(input: string, turn: number): ProviderStreamEve
   }
 
   // /glob <pattern> - 查找文件
-  if (trimmed.startsWith("/glob ")) {
-    const pattern = trimmed.slice("/glob ".length).trim();
+  if (trimmed.startsWith('/glob ')) {
+    const pattern = trimmed.slice('/glob '.length).trim();
 
     if (pattern.length === 0) {
       return null;
     }
 
     return {
-      type: "tool_call",
+      type: 'tool_call',
       call: {
         id: `tool-glob-${turn}`,
-        toolName: "glob",
+        toolName: 'glob',
         input: {
           pattern,
         },
@@ -99,18 +99,18 @@ function createToolCallFromInput(input: string, turn: number): ProviderStreamEve
   }
 
   // /grep <pattern> - 搜索文本
-  if (trimmed.startsWith("/grep ")) {
-    const pattern = trimmed.slice("/grep ".length).trim();
+  if (trimmed.startsWith('/grep ')) {
+    const pattern = trimmed.slice('/grep '.length).trim();
 
     if (pattern.length === 0) {
       return null;
     }
 
     return {
-      type: "tool_call",
+      type: 'tool_call',
       call: {
         id: `tool-grep-${turn}`,
-        toolName: "grep",
+        toolName: 'grep',
         input: {
           pattern,
         },
@@ -119,15 +119,15 @@ function createToolCallFromInput(input: string, turn: number): ProviderStreamEve
   }
 
   // /list-directory [path] - 列出目录
-  if (trimmed.startsWith("/list-directory")) {
-    const rest = trimmed.slice("/list-directory".length).trim();
-    const path = rest.length > 0 ? rest : ".";
+  if (trimmed.startsWith('/list-directory')) {
+    const rest = trimmed.slice('/list-directory'.length).trim();
+    const path = rest.length > 0 ? rest : '.';
 
     return {
-      type: "tool_call",
+      type: 'tool_call',
       call: {
         id: `tool-list-directory-${turn}`,
-        toolName: "list-directory",
+        toolName: 'list-directory',
         input: {
           path,
         },
@@ -136,8 +136,8 @@ function createToolCallFromInput(input: string, turn: number): ProviderStreamEve
   }
 
   // /web-fetch <url> [method] [body] - 网络请求
-  if (trimmed.startsWith("/web-fetch ")) {
-    const rest = trimmed.slice("/web-fetch ".length).trim();
+  if (trimmed.startsWith('/web-fetch ')) {
+    const rest = trimmed.slice('/web-fetch '.length).trim();
     const parts = rest.split(/\s+/);
 
     if (parts.length === 0 || parts[0].length === 0) {
@@ -145,8 +145,8 @@ function createToolCallFromInput(input: string, turn: number): ProviderStreamEve
     }
 
     const url = parts[0];
-    const method = parts.length > 1 ? parts[1].toUpperCase() : "GET";
-    const body = parts.length > 2 ? parts.slice(2).join(" ") : undefined;
+    const method = parts.length > 1 ? parts[1].toUpperCase() : 'GET';
+    const body = parts.length > 2 ? parts.slice(2).join(' ') : undefined;
 
     const toolInput: Record<string, unknown> = { url, method };
     if (body) {
@@ -158,10 +158,10 @@ function createToolCallFromInput(input: string, turn: number): ProviderStreamEve
     }
 
     return {
-      type: "tool_call",
+      type: 'tool_call',
       call: {
         id: `tool-web-fetch-${turn}`,
-        toolName: "web-fetch",
+        toolName: 'web-fetch',
         input: toolInput,
       },
     };
@@ -171,23 +171,23 @@ function createToolCallFromInput(input: string, turn: number): ProviderStreamEve
 }
 
 function buildToolResultReply(result: TurnToolResult): string {
-  if (result.status === "success") {
+  if (result.status === 'success') {
     return [
-      t("providers.local.toolCompleted", { tool: result.toolName }),
-      result.output && result.output.length > 0 ? result.output : "(no output)",
-    ].join("\n");
+      t('providers.local.toolCompleted', { tool: result.toolName }),
+      result.output && result.output.length > 0 ? result.output : '(no output)',
+    ].join('\n');
   }
 
-  if (result.status === "blocked") {
-    return t("providers.local.toolNoPermission", { tool: result.toolName });
+  if (result.status === 'blocked') {
+    return t('providers.local.toolNoPermission', { tool: result.toolName });
   }
 
-  return t("providers.local.toolFailed", { tool: result.toolName });
+  return t('providers.local.toolFailed', { tool: result.toolName });
 }
 
 export function createLocalProvider(): AgentProvider {
   return {
-    id: "local",
+    id: 'local',
     runStep({ context, state }) {
       const latestToolResult = state.toolResults[state.toolResults.length - 1];
 

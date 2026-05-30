@@ -1,4 +1,4 @@
-import type { AgentTool } from "./tool-types.js";
+import type { AgentTool } from './tool-types.js';
 
 export class ToolRegistry {
   private readonly tools = new Map<string, AgentTool>();

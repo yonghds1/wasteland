@@ -5,11 +5,11 @@
  * 优化策略：列表操作只读取必要的摘要信息，避免完整解析。
  */
 
-import { readdir, readFile, stat } from "node:fs/promises";
-import { join } from "node:path";
+import { readdir, readFile, stat } from 'node:fs/promises';
+import { join } from 'node:path';
 
-import { resolveDefaultSessionDir } from "../config/paths.js";
-import type { SessionRecord, SessionStartRecord, SessionMessageRecord } from "./event-types.js";
+import { resolveDefaultSessionDir } from '../config/paths.js';
+import type { SessionRecord, SessionStartRecord, SessionMessageRecord } from './event-types.js';
 
 // ============================================================
 // 类型定义
@@ -68,7 +68,7 @@ export type SessionQueryOptions = {
   /** 按模式过滤 */
   mode?: string;
   /** 排序方式 */
-  sort?: "newest" | "oldest";
+  sort?: 'newest' | 'oldest';
 };
 
 /**
@@ -107,7 +107,7 @@ function extractSessionId(filename: string): string | null {
  * 检查是否是子 Agent session
  */
 function isChildSession(sessionId: string): boolean {
-  return sessionId.includes("-child-");
+  return sessionId.includes('-child-');
 }
 
 /**
@@ -122,11 +122,11 @@ function extractChildName(sessionId: string): string | null {
  * 快速读取 session 文件的摘要信息（只读取前几行）
  */
 async function readSessionSummaryFast(
-  filePath: string,
+  filePath: string
 ): Promise<{ firstUserMessage?: string; providerId?: string; mode?: string; cwd?: string }> {
   try {
-    const content = await readFile(filePath, "utf8");
-    const lines = content.split("\n").filter(line => line.trim().length > 0);
+    const content = await readFile(filePath, 'utf8');
+    const lines = content.split('\n').filter((line) => line.trim().length > 0);
 
     let firstUserMessage: string | undefined;
     let providerId: string | undefined;
@@ -138,7 +138,7 @@ async function readSessionSummaryFast(
         const record = JSON.parse(line) as SessionRecord;
 
         // 从 session 开始记录获取元数据
-        if (record.type === "session" && !providerId) {
+        if (record.type === 'session' && !providerId) {
           const sessionRecord = record as SessionStartRecord;
           providerId = sessionRecord.provider;
           mode = sessionRecord.mode;
@@ -146,9 +146,9 @@ async function readSessionSummaryFast(
         }
 
         // 获取第一条用户消息
-        if (record.type === "message" && !firstUserMessage) {
+        if (record.type === 'message' && !firstUserMessage) {
           const msgRecord = record as SessionMessageRecord;
-          if (msgRecord.role === "user") {
+          if (msgRecord.role === 'user') {
             firstUserMessage = msgRecord.content?.substring(0, 100);
           }
         }
@@ -191,14 +191,7 @@ export class SessionIndex {
    * 3. 只对需要展示的 session 读取摘要信息
    */
   async listSessions(options: SessionQueryOptions = {}): Promise<SessionSummary[]> {
-    const {
-      limit = 50,
-      offset = 0,
-      search,
-      provider,
-      mode,
-      sort = "newest",
-    } = options;
+    const { limit = 50, offset = 0, search, provider, mode, sort = 'newest' } = options;
 
     try {
       // 读取 session 目录
@@ -221,13 +214,13 @@ export class SessionIndex {
 
       // 按 mtime 排序
       sessionFileInfos.sort((a, b) =>
-        sort === "newest" ? b.mtimeMs - a.mtimeMs : a.mtimeMs - b.mtimeMs,
+        sort === 'newest' ? b.mtimeMs - a.mtimeMs : a.mtimeMs - b.mtimeMs
       );
 
       // 收集子 Agent 信息（一次性扫描）
       const childMap = new Map<string, string[]>();
       for (const file of files) {
-        if (!file.endsWith(".jsonl")) continue;
+        if (!file.endsWith('.jsonl')) continue;
 
         // 尝试匹配子 Agent 文件名格式: {parentId}-child-{childName}.jsonl
         const childMatch = file.match(/^(.+)-child-(.+)\.jsonl$/);
@@ -237,7 +230,10 @@ export class SessionIndex {
           if (!childMap.has(parentId)) {
             childMap.set(parentId, []);
           }
-          childMap.get(parentId)!.push(childName);
+          const children = childMap.get(parentId);
+          if (children) {
+            children.push(childName);
+          }
         }
       }
 
@@ -280,7 +276,7 @@ export class SessionIndex {
         sessions.push({
           id: info.id,
           path: filePath,
-          createdAt: info.id.replace("T", " ").replace("_", " ").substring(0, 19),
+          createdAt: info.id.replace('T', ' ').replace('_', ' ').substring(0, 19),
           updatedAt: new Date(info.mtimeMs).toISOString(),
           messageCount: 0, // 快速模式不计算消息数
           firstUserMessage: summary.firstUserMessage,
@@ -295,7 +291,7 @@ export class SessionIndex {
       return sessions;
     } catch (error) {
       // 如果目录不存在，返回空数组
-      if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+      if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
         return [];
       }
       throw error;
@@ -322,22 +318,26 @@ export class SessionIndex {
 
     // 查找子 Agent
     const files = await readdir(this.sessionDir);
-    const childFiles = files.filter(f => f.startsWith(`${sessionId}-child-`));
+    const childFiles = files.filter((f) => f.startsWith(`${sessionId}-child-`));
     const childNames = childFiles
-      .map(f => extractChildName(extractSessionId(f) || ""))
+      .map((f) => extractChildName(extractSessionId(f) || ''))
       .filter((name): name is string => name !== null);
 
     // 从记录中提取摘要
-    const sessionStart = records.find(r => r.type === "session") as SessionStartRecord | undefined;
+    const sessionStart = records.find((r) => r.type === 'session') as
+      | SessionStartRecord
+      | undefined;
     const userMessages = records.filter(
-      (r): r is SessionMessageRecord => r.type === "message" && (r as SessionMessageRecord).role === "user",
+      (r): r is SessionMessageRecord =>
+        r.type === 'message' && (r as SessionMessageRecord).role === 'user'
     );
     const assistantMessages = records.filter(
-      (r): r is SessionMessageRecord => r.type === "message" && (r as SessionMessageRecord).role === "assistant",
+      (r): r is SessionMessageRecord =>
+        r.type === 'message' && (r as SessionMessageRecord).role === 'assistant'
     );
 
-    const createdAt = sessionStart?.timestamp || records[0]?.timestamp || "";
-    const updatedAt = records[records.length - 1]?.timestamp || "";
+    const createdAt = sessionStart?.timestamp || records[0]?.timestamp || '';
+    const updatedAt = records[records.length - 1]?.timestamp || '';
 
     return {
       id: sessionId,
@@ -346,7 +346,10 @@ export class SessionIndex {
       updatedAt,
       messageCount: userMessages.length + assistantMessages.length,
       firstUserMessage: userMessages[0]?.content?.substring(0, 100),
-      lastAssistantMessage: assistantMessages[assistantMessages.length - 1]?.content?.substring(0, 100),
+      lastAssistantMessage: assistantMessages[assistantMessages.length - 1]?.content?.substring(
+        0,
+        100
+      ),
       cwd: sessionStart?.cwd,
       providerId: sessionStart?.provider,
       mode: sessionStart?.mode,
@@ -360,7 +363,7 @@ export class SessionIndex {
    * 获取最新的 session
    */
   async getLatestSession(): Promise<SessionDetail | null> {
-    const sessions = await this.listSessions({ limit: 1, sort: "newest" });
+    const sessions = await this.listSessions({ limit: 1, sort: 'newest' });
 
     if (sessions.length === 0) {
       return null;
@@ -383,12 +386,12 @@ export class SessionIndex {
     const filePath = join(this.sessionDir, `${sessionId}.jsonl`);
 
     try {
-      const { unlink } = await import("node:fs/promises");
+      const { unlink } = await import('node:fs/promises');
       await unlink(filePath);
 
       // 删除子 Agent session
       const files = await readdir(this.sessionDir);
-      const childFiles = files.filter(f => f.startsWith(`${sessionId}-child-`));
+      const childFiles = files.filter((f) => f.startsWith(`${sessionId}-child-`));
 
       for (const childFile of childFiles) {
         await unlink(join(this.sessionDir, childFile));
@@ -429,16 +432,18 @@ export class SessionIndex {
    */
   private async parseSessionRecords(filePath: string): Promise<SessionRecord[]> {
     try {
-      const content = await readFile(filePath, "utf8");
-      const lines = content.split("\n").filter(line => line.trim().length > 0);
+      const content = await readFile(filePath, 'utf8');
+      const lines = content.split('\n').filter((line) => line.trim().length > 0);
 
-      return lines.map(line => {
-        try {
-          return JSON.parse(line) as SessionRecord;
-        } catch {
-          return null;
-        }
-      }).filter((record): record is SessionRecord => record !== null);
+      return lines
+        .map((line) => {
+          try {
+            return JSON.parse(line) as SessionRecord;
+          } catch {
+            return null;
+          }
+        })
+        .filter((record): record is SessionRecord => record !== null);
     } catch {
       return [];
     }

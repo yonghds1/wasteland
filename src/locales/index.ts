@@ -11,6 +11,6 @@ export {
   tObject,
   tArray,
   getLocalizedValue,
-} from "./i18n.js";
+} from './i18n.js';
 
-export type { Language } from "./i18n.js";
+export type { Language } from './i18n.js';

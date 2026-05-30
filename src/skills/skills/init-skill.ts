@@ -4,14 +4,9 @@
  * 初始化 CLAUDE.md 文件，生成项目上下文文档。
  */
 
-import { join } from "node:path";
-import { t } from "../../locales/index.js";
-import type {
-  Skill,
-  SkillArgs,
-  SkillExecutionContext,
-  SkillResult,
-} from "../skill-types.js";
+import { join } from 'node:path';
+import { t } from '../../locales/index.js';
+import type { Skill, SkillArgs, SkillExecutionContext, SkillResult } from '../skill-types.js';
 
 /**
  * 获取模板内容
@@ -23,30 +18,28 @@ function getTemplate(template: string): string {
 /**
  * 简单的项目结构生成
  */
-async function getProjectStructure(
-  context: SkillExecutionContext,
-): Promise<string> {
-  const bashTool = context.toolRegistry.get("bash");
+async function getProjectStructure(context: SkillExecutionContext): Promise<string> {
+  const bashTool = context.toolRegistry.get('bash');
   if (!bashTool) {
-    return t("skills.init.cannotGetStructure");
+    return t('skills.init.cannotGetStructure');
   }
 
   const result = await bashTool.execute(
-    { command: "ls -la" },
+    { command: 'ls -la' },
     {
       sessionId: context.sessionId,
       turn: context.turn,
       cwd: context.cwd,
-    },
+    }
   );
 
-  if (result.status === "success") {
+  if (result.status === 'success') {
     // 提取目录列表，简化输出
-    const lines = result.output.split("\n").slice(1, 11); // 取前 10 行
-    return lines.map((line) => line.split(/\s+/).pop()).join("\n");
+    const lines = result.output.split('\n').slice(1, 11); // 取前 10 行
+    return lines.map((line) => line.split(/\s+/).pop()).join('\n');
   }
 
-  return t("skills.init.cannotGetStructure");
+  return t('skills.init.cannotGetStructure');
 }
 
 /**
@@ -54,44 +47,41 @@ async function getProjectStructure(
  */
 export const initSkill: Skill = {
   definition: {
-    name: "init",
-    description: t("skills.init.description"),
-    riskLevel: "write",
-    aliases: ["i"],
-    category: "project",
+    name: 'init',
+    description: t('skills.init.description'),
+    riskLevel: 'write',
+    aliases: ['i'],
+    category: 'project',
     parameters: {
       template: {
-        type: "string",
-        description: t("skills.init.templateType"),
-        default: "default",
-        enum: ["default", "minimal", "full"],
+        type: 'string',
+        description: t('skills.init.templateType'),
+        default: 'default',
+        enum: ['default', 'minimal', 'full'],
       },
       force: {
-        type: "boolean",
-        description: t("skills.init.force"),
+        type: 'boolean',
+        description: t('skills.init.force'),
         default: false,
       },
     },
     examples: [
-      "/init",
-      "/init --template minimal",
-      "/init --force",
-      "/init --template full --force",
+      '/init',
+      '/init --template minimal',
+      '/init --force',
+      '/init --template full --force',
     ],
   },
 
-  async execute(
-    args: SkillArgs,
-    context: SkillExecutionContext,
-  ): Promise<SkillResult> {
-    const template = (args.named.template as string) ?? "default";
+  async execute(args: SkillArgs, context: SkillExecutionContext): Promise<SkillResult> {
+    const template = (args.named.template as string) ?? 'default';
     const force = (args.named.force as boolean) ?? false;
-    const targetPath = join(context.cwd, "CLAUDE.md");
+    const targetPath = join(context.cwd, 'CLAUDE.md');
 
-    context.output(`${t("skills.init.initContext")} ${targetPath}\n`);
+    context.output(`${t('skills.init.initContext')} ${targetPath}\n`);
 
     // 检查文件是否存在
-    const readTool = context.toolRegistry.get("read-file");
+    const readTool = context.toolRegistry.get('read-file');
     if (readTool && !force) {
       const checkResult = await readTool.execute(
         { path: targetPath },
@@ -99,20 +89,20 @@ export const initSkill: Skill = {
           sessionId: context.sessionId,
           turn: context.turn,
           cwd: context.cwd,
-        },
+        }
       );
 
-      if (checkResult.status === "success") {
+      if (checkResult.status === 'success') {
         return {
-          status: "error",
-          output: t("skills.init.alreadyExists"),
+          status: 'error',
+          output: t('skills.init.alreadyExists'),
         };
       }
     }
 
     // 获取项目名称
-    let projectName = t("skills.init.project");
-    const packageJsonPath = join(context.cwd, "package.json");
+    let projectName = t('skills.init.project');
+    const packageJsonPath = join(context.cwd, 'package.json');
 
     if (readTool) {
       const pkgResult = await readTool.execute(
@@ -121,13 +111,13 @@ export const initSkill: Skill = {
           sessionId: context.sessionId,
           turn: context.turn,
           cwd: context.cwd,
-        },
+        }
       );
 
-      if (pkgResult.status === "success") {
+      if (pkgResult.status === 'success') {
         try {
           const pkg = JSON.parse(pkgResult.output);
-          projectName = pkg.name ?? pkg.description ?? t("skills.init.project");
+          projectName = pkg.name ?? pkg.description ?? t('skills.init.project');
         } catch {
           // 忽略 JSON 解析错误
         }
@@ -135,47 +125,47 @@ export const initSkill: Skill = {
     }
 
     // 获取项目结构
-    context.output(`${t("skills.init.gettingStructure")}\n`);
+    context.output(`${t('skills.init.gettingStructure')}\n`);
     const structure = await getProjectStructure(context);
 
     // 生成内容
     const templateContent = getTemplate(template);
     const content = templateContent
-      .replace("{description}", `${projectName} - ${t("skills.init.autoGenerated")}`)
-      .replace("{structure}", structure)
-      .replace("{architecture}", t("skills.init.toDo"))
-      .replace("{issues}", t("skills.init.toDo"))
-      .replace("{future}", t("skills.init.toDo"));
+      .replace('{description}', `${projectName} - ${t('skills.init.autoGenerated')}`)
+      .replace('{structure}', structure)
+      .replace('{architecture}', t('skills.init.toDo'))
+      .replace('{issues}', t('skills.init.toDo'))
+      .replace('{future}', t('skills.init.toDo'));
 
     // 写入文件
-    const writeTool = context.toolRegistry.get("write-file");
+    const writeTool = context.toolRegistry.get('write-file');
     if (!writeTool) {
       return {
-        status: "error",
-        output: t("skills.init.writeFileNotAvailable"),
+        status: 'error',
+        output: t('skills.init.writeFileNotAvailable'),
       };
     }
 
-    context.output(`${t("skills.init.writing")}\n`);
+    context.output(`${t('skills.init.writing')}\n`);
     const writeResult = await writeTool.execute(
       { path: targetPath, content },
       {
         sessionId: context.sessionId,
         turn: context.turn,
         cwd: context.cwd,
-      },
+      }
     );
 
-    if (writeResult.status === "error") {
+    if (writeResult.status === 'error') {
       return {
-        status: "error",
-        output: `${t("skills.init.writeFailed")} ${writeResult.error}`,
+        status: 'error',
+        output: `${t('skills.init.writeFailed')} ${writeResult.error}`,
       };
     }
 
     return {
-      status: "success",
-      output: `${t("skills.init.created")} ${targetPath}`,
+      status: 'success',
+      output: `${t('skills.init.created')} ${targetPath}`,
     };
   },
 };

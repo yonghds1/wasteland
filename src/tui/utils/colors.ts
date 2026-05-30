@@ -5,7 +5,7 @@
  * Gets colors from the theme system.
  */
 
-import { theme } from "../../ui/themes/index.js";
+import { theme } from '../../ui/themes/index.js';
 
 // ============================================================
 // Primary Colors (from theme)
@@ -85,16 +85,16 @@ export const TUI_COLORS = {
   headerTitle: PRIMARY,
   headerDim: MUTED,
   tabActive: PRIMARY,
-  tabInactive: "gray",
-  borderDefault: "gray",
+  tabInactive: 'gray',
+  borderDefault: 'gray',
   borderAccent: BORDER,
 
   // Agent status
-  agentRunning: "green",
-  agentIdle: "gray",
-  agentCompleted: "green",
-  agentFailed: "red",
-  agentTimeout: "yellow",
+  agentRunning: 'green',
+  agentIdle: 'gray',
+  agentCompleted: 'green',
+  agentFailed: 'red',
+  agentTimeout: 'yellow',
 } as const;
 
 // ============================================================
@@ -111,23 +111,23 @@ export const ASSISTANT_PREFIX = theme.prefix.assistant;
 export const SYSTEM_PREFIX = theme.prefix.system;
 
 /** Streaming cursor */
-export const STREAMING_CURSOR = "▌";
+export const STREAMING_CURSOR = '▌';
 
 /** Message separator line */
-export const MESSAGE_SEPARATOR = "─".repeat(48);
+export const MESSAGE_SEPARATOR = '─'.repeat(48);
 
 // ============================================================
 // Status Icons
 // ============================================================
 
 export const STATUS_ICONS = {
-  running: "●",
-  idle: "○",
-  completed: "✓",
-  failed: "✗",
-  timeout: "⏱",
-  success: "✓",
-  error: "✗",
+  running: '●',
+  idle: '○',
+  completed: '✓',
+  failed: '✗',
+  timeout: '⏱',
+  success: '✓',
+  error: '✗',
 } as const;
 
 // ============================================================
@@ -135,19 +135,19 @@ export const STATUS_ICONS = {
 // ============================================================
 
 export const TOOL_ICONS: Record<string, string> = {
-  "read-file": "📖",
-  "read_file": "📖",
-  "write-file": "✍️",
-  "write_file": "✍️",
-  "edit-file": "✏️",
-  "edit_file": "✏️",
-  bash: "💻",
-  terminal: "💻",
-  "search-files": "🔎",
-  search_files: "🔎",
-  "web-search": "🔍",
-  web_search: "🔍",
-  default: "⚡",
+  'read-file': '📖',
+  read_file: '📖',
+  'write-file': '✍️',
+  write_file: '✍️',
+  'edit-file': '✏️',
+  edit_file: '✏️',
+  bash: '💻',
+  terminal: '💻',
+  'search-files': '🔎',
+  search_files: '🔎',
+  'web-search': '🔍',
+  web_search: '🔍',
+  default: '⚡',
 } as const;
 
 // ============================================================
@@ -155,15 +155,15 @@ export const TOOL_ICONS: Record<string, string> = {
 // ============================================================
 
 export const TOOL_VERBS: Record<string, string> = {
-  "read-file": "read",
-  "read_file": "read",
-  "write-file": "write",
-  "write_file": "write",
-  "edit-file": "edit",
-  "edit_file": "edit",
-  bash: "exec",
-  terminal: "exec",
-  default: "tool",
+  'read-file': 'read',
+  read_file: 'read',
+  'write-file': 'write',
+  write_file: 'write',
+  'edit-file': 'edit',
+  edit_file: 'edit',
+  bash: 'exec',
+  terminal: 'exec',
+  default: 'tool',
 } as const;
 
 // ============================================================
@@ -180,13 +180,13 @@ export const INPUT_PROMPT = theme.prefix.user;
 
 export const SEPARATORS = {
   /** Used between help items */
-  item: " ┊ ",
+  item: ' ┊ ',
   /** Line separator */
-  line: "─",
+  line: '─',
   /** Tree branch */
-  branch: "└─",
+  branch: '└─',
   /** Tree vertical */
-  vertical: "│",
+  vertical: '│',
   /** Tool prefix */
-  tool: "┊",
+  tool: '┊',
 } as const;

@@ -20,7 +20,7 @@
  * - timeout: 超时时间（可选，默认 30000ms）
  */
 
-import type { AgentTool, ToolExecutionResult } from "./tool-types.js";
+import type { AgentTool, ToolExecutionResult } from './tool-types.js';
 
 // ============================================================
 // 配置常量
@@ -37,8 +37,8 @@ const MAX_DISPLAY_LENGTH = 50000;
 
 /** 默认请求头 */
 const DEFAULT_HEADERS: Record<string, string> = {
-  "User-Agent": "wasteland/0.1.0",
-  Accept: "*/*",
+  'User-Agent': 'wasteland/0.1.0',
+  Accept: '*/*',
 };
 
 // ============================================================
@@ -52,14 +52,14 @@ const DEFAULT_HEADERS: Record<string, string> = {
  * @returns 有效 URL，或 null 表示无效
  */
 function validateUrl(value: unknown): URL | null {
-  if (typeof value !== "string" || value.trim().length === 0) {
+  if (typeof value !== 'string' || value.trim().length === 0) {
     return null;
   }
 
   try {
     const url = new URL(value);
     // 只允许 HTTP 和 HTTPS
-    if (url.protocol !== "http:" && url.protocol !== "https:") {
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
       return null;
     }
     return url;
@@ -75,14 +75,14 @@ function validateUrl(value: unknown): URL | null {
  * @returns 请求头对象
  */
 function parseHeaders(value: unknown): Record<string, string> {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return { ...DEFAULT_HEADERS };
   }
 
   const headers: Record<string, string> = { ...DEFAULT_HEADERS };
 
   for (const [key, val] of Object.entries(value)) {
-    if (typeof val === "string") {
+    if (typeof val === 'string') {
       headers[key] = val;
     }
   }
@@ -97,7 +97,7 @@ function parseHeaders(value: unknown): Record<string, string> {
  * @returns 超时时间（毫秒）
  */
 function parseTimeout(value: unknown): number {
-  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
     return DEFAULT_TIMEOUT;
   }
   return Math.min(Math.floor(value), 120000); // 最大 120 秒
@@ -114,7 +114,7 @@ function truncateContent(content: string, maxLength: number): string {
   if (content.length <= maxLength) {
     return content;
   }
-  return content.slice(0, maxLength) + "\n\n... [content truncated]";
+  return content.slice(0, maxLength) + '\n\n... [content truncated]';
 }
 
 /**
@@ -127,7 +127,7 @@ function isJsonContent(contentType: string | null): boolean {
   if (!contentType) {
     return false;
   }
-  return contentType.includes("application/json");
+  return contentType.includes('application/json');
 }
 
 /**
@@ -147,13 +147,13 @@ function formatResponse(
   statusText: string,
   headers: Headers,
   content: string,
-  duration: number,
+  duration: number
 ): string {
-  const statusEmoji = status >= 200 && status < 300 ? "✅" : "❌";
-  const header = `${statusEmoji} web-fetch "${url}" — ${status} ${statusText} (${duration}ms)\n${"─".repeat(48)}`;
+  const statusEmoji = status >= 200 && status < 300 ? '✅' : '❌';
+  const header = `${statusEmoji} web-fetch "${url}" — ${status} ${statusText} (${duration}ms)\n${'─'.repeat(48)}`;
 
-  const contentType = headers.get("content-type") || "unknown";
-  const contentLength = headers.get("content-length") || `${content.length}`;
+  const contentType = headers.get('content-type') || 'unknown';
+  const contentLength = headers.get('content-length') || `${content.length}`;
 
   const meta = `Content-Type: ${contentType}\nContent-Length: ${contentLength}`;
 
@@ -168,8 +168,8 @@ function formatResponse(
 
 export function createWebFetchTool(): AgentTool {
   return {
-    name: "web-fetch",
-    riskLevel: "execute",
+    name: 'web-fetch',
+    riskLevel: 'execute',
 
     async execute(input): Promise<ToolExecutionResult> {
       // 验证 URL
@@ -177,33 +177,32 @@ export function createWebFetchTool(): AgentTool {
 
       if (url === null) {
         return {
-          status: "error",
-          error: "web-fetch 工具需要有效的 HTTP/HTTPS URL。示例：{ \"url\": \"https://api.example.com/data\" }",
+          status: 'error',
+          error:
+            'web-fetch 工具需要有效的 HTTP/HTTPS URL。示例：{ "url": "https://api.example.com/data" }',
         };
       }
 
       // 解析参数
       const method =
-        typeof input.method === "string" &&
-        ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD"].includes(
-          input.method.toUpperCase(),
-        )
+        typeof input.method === 'string' &&
+        ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD'].includes(input.method.toUpperCase())
           ? input.method.toUpperCase()
-          : "GET";
+          : 'GET';
 
       const headers = parseHeaders(input.headers);
       const timeout = parseTimeout(input.timeout);
 
       // 请求体（仅用于 POST/PUT/PATCH）
       let body: string | undefined;
-      if (["POST", "PUT", "PATCH"].includes(method)) {
-        if (typeof input.body === "string") {
+      if (['POST', 'PUT', 'PATCH'].includes(method)) {
+        if (typeof input.body === 'string') {
           body = input.body;
-        } else if (typeof input.body === "object" && input.body !== null) {
+        } else if (typeof input.body === 'object' && input.body !== null) {
           body = JSON.stringify(input.body);
           // 自动设置 Content-Type
-          if (!headers["Content-Type"]) {
-            headers["Content-Type"] = "application/json";
+          if (!headers['Content-Type']) {
+            headers['Content-Type'] = 'application/json';
           }
         }
       }
@@ -220,7 +219,7 @@ export function createWebFetchTool(): AgentTool {
           headers,
           body,
           signal: controller.signal,
-          redirect: "follow",
+          redirect: 'follow',
         });
 
         clearTimeout(timeoutId);
@@ -228,17 +227,17 @@ export function createWebFetchTool(): AgentTool {
         const duration = Date.now() - startTime;
 
         // 检查响应大小
-        const contentLength = response.headers.get("content-length");
+        const contentLength = response.headers.get('content-length');
         if (contentLength && parseInt(contentLength, 10) > MAX_RESPONSE_SIZE) {
           return {
-            status: "error",
+            status: 'error',
             error: `响应体过大 (${contentLength} 字节)，最大允许 ${MAX_RESPONSE_SIZE} 字节。`,
           };
         }
 
         // 解析响应内容
         let content: string;
-        const contentType = response.headers.get("content-type");
+        const contentType = response.headers.get('content-type');
 
         if (isJsonContent(contentType)) {
           const json = await response.json();
@@ -253,31 +252,31 @@ export function createWebFetchTool(): AgentTool {
         }
 
         return {
-          status: "success",
+          status: 'success',
           output: formatResponse(
             url.toString(),
             response.status,
             response.statusText,
             response.headers,
             content,
-            duration,
+            duration
           ),
         };
       } catch (error) {
         if (error instanceof Error) {
-          if (error.name === "AbortError") {
+          if (error.name === 'AbortError') {
             return {
-              status: "error",
+              status: 'error',
               error: `请求超时 (${timeout}ms)。`,
             };
           }
           return {
-            status: "error",
+            status: 'error',
             error: `请求失败: ${error.message}`,
           };
         }
         return {
-          status: "error",
+          status: 'error',
           error: `请求失败: ${String(error)}`,
         };
       }

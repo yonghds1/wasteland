@@ -12,10 +12,10 @@
  * 2. buildToolResultMessages: 批量转换工具结果
  */
 
-import type { SessionMessageRecord } from "../../runtime/event-types.js";
-import type { TurnToolResult } from "../../runtime/turn-state.js";
-import { t } from "../../locales/index.js";
-import type { OpenAIMessage, OpenAIToolMessage } from "./types.js";
+import type { SessionMessageRecord } from '../../runtime/event-types.js';
+import type { TurnToolResult } from '../../runtime/turn-state.js';
+import { t } from '../../locales/index.js';
+import type { OpenAIMessage, OpenAIToolMessage } from './types.js';
 
 // ============================================================
 // 消息构建
@@ -64,7 +64,7 @@ export function buildMessages(params: {
   // 0. 添加 system 消息（如果提供了 prompt）
   if (params.prompt) {
     messages.push({
-      role: "system",
+      role: 'system',
       content: params.prompt,
     });
   }
@@ -72,7 +72,7 @@ export function buildMessages(params: {
   // 1. 添加历史消息
   for (const record of params.history) {
     // 跳过工具调用和结果记录，只保留对话消息
-    if (record.type !== "message") continue;
+    if (record.type !== 'message') continue;
 
     messages.push({
       role: record.role,
@@ -82,7 +82,7 @@ export function buildMessages(params: {
 
   // 2. 添加当前用户输入
   messages.push({
-    role: "user",
+    role: 'user',
     content: params.input,
   });
 
@@ -92,7 +92,7 @@ export function buildMessages(params: {
     // 从 toolResults 构建 tool_calls，包含原始 input
     const toolCalls = params.toolResults.map((result) => ({
       id: result.callId,
-      type: "function" as const,
+      type: 'function' as const,
       function: {
         name: result.toolName,
         arguments: JSON.stringify(result.input ?? {}),
@@ -100,7 +100,7 @@ export function buildMessages(params: {
     }));
 
     messages.push({
-      role: "assistant",
+      role: 'assistant',
       content: null,
       tool_calls: toolCalls,
     });
@@ -108,12 +108,12 @@ export function buildMessages(params: {
     // 3.2 添加 tool 消息（批量返回）
     for (const result of params.toolResults) {
       messages.push({
-        role: "tool",
+        role: 'tool',
         tool_call_id: result.callId,
         content:
-          result.status === "success"
-            ? result.output ?? t("providers.messageBuilder.noOutput")
-            : result.error ?? t("providers.messageBuilder.toolFailed"),
+          result.status === 'success'
+            ? (result.output ?? t('providers.messageBuilder.noOutput'))
+            : (result.error ?? t('providers.messageBuilder.toolFailed')),
       });
     }
   }
@@ -131,12 +131,12 @@ export function buildMessages(params: {
  */
 export function buildToolResultMessages(results: readonly TurnToolResult[]): OpenAIToolMessage[] {
   return results.map((result) => ({
-    role: "tool" as const,
+    role: 'tool' as const,
     tool_call_id: result.callId,
     content:
-      result.status === "success"
-        ? result.output ?? t("providers.messageBuilder.noOutput")
-        : result.error ?? t("providers.messageBuilder.toolFailed"),
+      result.status === 'success'
+        ? (result.output ?? t('providers.messageBuilder.noOutput'))
+        : (result.error ?? t('providers.messageBuilder.toolFailed')),
   }));
 }
 
@@ -150,5 +150,5 @@ export function buildToolResultMessages(results: readonly TurnToolResult[]): Ope
  */
 export function needsToolLoop(messages: OpenAIMessage[]): boolean {
   const lastMessage = messages[messages.length - 1];
-  return lastMessage?.role === "tool";
+  return lastMessage?.role === 'tool';
 }

@@ -19,16 +19,13 @@ export type {
   PromptAssemblyContext,
   ResolvedPrompt,
   BuiltinRoleId,
-} from "./prompt-types.js";
+} from './prompt-types.js';
 
 // 组装器导出
-export { PromptAssembler, assemblePrompt } from "./prompt-assembler.js";
+export { PromptAssembler, assemblePrompt } from './prompt-assembler.js';
 
 // 变量插值导出
-export {
-  interpolateVariables,
-  interpolateObject,
-} from "./variable-interpolator.js";
+export { interpolateVariables, interpolateObject } from './variable-interpolator.js';
 
 // 角色模板导出
 export {
@@ -37,8 +34,4 @@ export {
   listBuiltinRoles,
   ROLE_WORKER,
   ROLE_IMMORTAN_JOE,
-  // 兼容旧 API (deprecated)
-  getBuiltinTemplate,
-  isBuiltinTemplateId,
-  listBuiltinTemplates,
-} from "./role-templates.js";
+} from './role-templates.js';

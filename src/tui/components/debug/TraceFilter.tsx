@@ -4,13 +4,13 @@
  * 支持按 scope 和 phase 过滤 trace 日志
  */
 
-import React, { useState } from "react";
-import { Text, Box, useInput } from "ink";
-import { useAppContext } from "../../context/AppContext.js";
-import { t } from "../../../locales/index.js";
+import React, { useState } from 'react';
+import { Text, Box, useInput } from 'ink';
+import { useAppContext } from '../../context/AppContext.js';
+import { t } from '../../../locales/index.js';
 
-const SCOPE_OPTIONS = ["all", "session", "turn", "provider", "tool", "ui"];
-const PHASE_OPTIONS = ["all", "start", "end", "step", "call", "result"];
+const SCOPE_OPTIONS = ['all', 'session', 'turn', 'provider', 'tool', 'ui'];
+const PHASE_OPTIONS = ['all', 'start', 'end', 'step', 'call', 'result'];
 
 interface TraceFilterProps {
   onExit: () => void;
@@ -18,17 +18,17 @@ interface TraceFilterProps {
 
 export function TraceFilter({ onExit }: TraceFilterProps): React.ReactElement {
   const { state, setState } = useAppContext();
-  const [focusField, setFocusField] = useState<"scope" | "phase">("scope");
+  const [focusField, setFocusField] = useState<'scope' | 'phase'>('scope');
 
-  const currentScope = state.debug.filter.scope ?? "all";
-  const currentPhase = state.debug.filter.phase ?? "all";
+  const currentScope = state.debug.filter.scope ?? 'all';
+  const currentPhase = state.debug.filter.phase ?? 'all';
 
   // 键盘交互（仅在过滤模式下活跃）
   useInput(
     (input, key) => {
       // Tab 切换字段
       if (key.tab) {
-        setFocusField((prev) => (prev === "scope" ? "phase" : "scope"));
+        setFocusField((prev) => (prev === 'scope' ? 'phase' : 'scope'));
         return;
       }
 
@@ -46,7 +46,7 @@ export function TraceFilter({ onExit }: TraceFilterProps): React.ReactElement {
 
       // 左右切换选项
       if (key.leftArrow || key.rightArrow) {
-        if (focusField === "scope") {
+        if (focusField === 'scope') {
           const options = SCOPE_OPTIONS;
           const idx = options.indexOf(currentScope);
           const nextIdx = key.leftArrow
@@ -59,7 +59,7 @@ export function TraceFilter({ onExit }: TraceFilterProps): React.ReactElement {
               ...prev.debug,
               filter: {
                 ...prev.debug.filter,
-                scope: nextScope === "all" ? undefined : nextScope,
+                scope: nextScope === 'all' ? undefined : nextScope,
               },
             },
           }));
@@ -76,7 +76,7 @@ export function TraceFilter({ onExit }: TraceFilterProps): React.ReactElement {
               ...prev.debug,
               filter: {
                 ...prev.debug.filter,
-                phase: nextPhase === "all" ? undefined : nextPhase,
+                phase: nextPhase === 'all' ? undefined : nextPhase,
               },
             },
           }));
@@ -86,7 +86,7 @@ export function TraceFilter({ onExit }: TraceFilterProps): React.ReactElement {
 
       // 上下切换字段
       if (key.upArrow || key.downArrow) {
-        setFocusField((prev) => (prev === "scope" ? "phase" : "scope"));
+        setFocusField((prev) => (prev === 'scope' ? 'phase' : 'scope'));
         return;
       }
     },
@@ -99,15 +99,15 @@ export function TraceFilter({ onExit }: TraceFilterProps): React.ReactElement {
       {/* 标题 */}
       <Box marginBottom={1}>
         <Text bold color="cyan">
-          {t("tui.debug.filterTitle")}
+          {t('tui.debug.filterTitle')}
         </Text>
-        <Text dimColor> ({t("tui.debug.filterHint")})</Text>
+        <Text dimColor> ({t('tui.debug.filterHint')})</Text>
       </Box>
 
       {/* Scope 字段 */}
       <Box flexDirection="row">
-        <Text bold={focusField === "scope"} color={focusField === "scope" ? "yellow" : undefined}>
-          {focusField === "scope" ? "▶ " : "  "}
+        <Text bold={focusField === 'scope'} color={focusField === 'scope' ? 'yellow' : undefined}>
+          {focusField === 'scope' ? '▶ ' : '  '}
           Scope:
         </Text>
         <Box flexDirection="row">
@@ -115,15 +115,9 @@ export function TraceFilter({ onExit }: TraceFilterProps): React.ReactElement {
             <Text
               key={scope}
               bold={currentScope === scope}
-              color={
-                currentScope === scope
-                  ? "green"
-                  : focusField === "scope"
-                    ? "gray"
-                    : undefined
-              }
+              color={currentScope === scope ? 'green' : focusField === 'scope' ? 'gray' : undefined}
             >
-              {idx === 0 ? " " : " | "}
+              {idx === 0 ? ' ' : ' | '}
               {scope}
             </Text>
           ))}
@@ -132,8 +126,8 @@ export function TraceFilter({ onExit }: TraceFilterProps): React.ReactElement {
 
       {/* Phase 字段 */}
       <Box flexDirection="row">
-        <Text bold={focusField === "phase"} color={focusField === "phase" ? "yellow" : undefined}>
-          {focusField === "phase" ? "▶ " : "  "}
+        <Text bold={focusField === 'phase'} color={focusField === 'phase' ? 'yellow' : undefined}>
+          {focusField === 'phase' ? '▶ ' : '  '}
           Phase:
         </Text>
         <Box flexDirection="row">
@@ -141,15 +135,9 @@ export function TraceFilter({ onExit }: TraceFilterProps): React.ReactElement {
             <Text
               key={phase}
               bold={currentPhase === phase}
-              color={
-                currentPhase === phase
-                  ? "green"
-                  : focusField === "phase"
-                    ? "gray"
-                    : undefined
-              }
+              color={currentPhase === phase ? 'green' : focusField === 'phase' ? 'gray' : undefined}
             >
-              {idx === 0 ? " " : " | "}
+              {idx === 0 ? ' ' : ' | '}
               {phase}
             </Text>
           ))}
@@ -158,14 +146,14 @@ export function TraceFilter({ onExit }: TraceFilterProps): React.ReactElement {
 
       {/* 当前过滤状态 */}
       <Box marginTop={1}>
-        <Text dimColor>{t("tui.debug.currentFilter")} </Text>
-        {currentScope === "all" && currentPhase === "all" ? (
-          <Text dimColor>{t("tui.debug.none")}</Text>
+        <Text dimColor>{t('tui.debug.currentFilter')} </Text>
+        {currentScope === 'all' && currentPhase === 'all' ? (
+          <Text dimColor>{t('tui.debug.none')}</Text>
         ) : (
           <>
-            {currentScope !== "all" && <Text color="green">scope={currentScope}</Text>}
-            {currentScope !== "all" && currentPhase !== "all" && <Text dimColor> & </Text>}
-            {currentPhase !== "all" && <Text color="green">phase={currentPhase}</Text>}
+            {currentScope !== 'all' && <Text color="green">scope={currentScope}</Text>}
+            {currentScope !== 'all' && currentPhase !== 'all' && <Text dimColor> & </Text>}
+            {currentPhase !== 'all' && <Text color="green">phase={currentPhase}</Text>}
           </>
         )}
       </Box>

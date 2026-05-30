@@ -7,7 +7,7 @@ export type LocalReplyInput = {
 export function buildLocalReplyText({ input, turn, historyLength }: LocalReplyInput): string {
   const normalized = input.trim().toLowerCase();
 
-  if (normalized === "你好" || normalized === "hello" || normalized === "hi") {
+  if (normalized === '你好' || normalized === 'hello' || normalized === 'hi') {
     return `你好，我已经收到你的输入：${input}`;
   }
 

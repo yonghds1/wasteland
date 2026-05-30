@@ -1,14 +1,14 @@
-import { Command } from "commander";
+import { Command } from 'commander';
 
-import { createChatCommand } from "./commands/chat.js";
-import { createConfigCommand, createCurrentConfigCommand } from "./commands/config.js";
-import { createTuiCommand } from "./commands/tui.js";
-import { createSessionsCommand } from "./commands/sessions.js";
-import { createResumeCommand } from "./commands/resume.js";
-import { createSkinCommand } from "./commands/skin.js";
-import { ensureRoleAliases } from "./utils/symlink-manager.js";
-import { loadWastelandSettings } from "./config/load-settings.js";
-import { initI18n, t } from "./locales/index.js";
+import { createChatCommand } from './commands/chat.js';
+import { createConfigCommand, createCurrentConfigCommand } from './commands/config.js';
+import { createTuiCommand } from './commands/tui.js';
+import { createSessionsCommand } from './commands/sessions.js';
+import { createResumeCommand } from './commands/resume.js';
+import { createSkinCommand } from './commands/skin.js';
+import { ensureRoleAliases } from './utils/symlink-manager.js';
+import { loadWastelandSettings } from './config/load-settings.js';
+import { initI18n, t } from './locales/index.js';
 
 function registerRootCommands(program: Command): void {
   program.addCommand(createChatCommand());
@@ -23,15 +23,11 @@ function registerRootCommands(program: Command): void {
 export function createProgram(): Command {
   const program = new Command();
 
-  program
-    .name("wasteland")
-    .description(t("cli.description"))
-    .version("0.1.0");
+  program.name('wasteland').description(t('cli.description')).version('0.1.0');
 
   registerRootCommands(program);
 
-  const devShim = new Command("wasteland")
-    .description(t("cli.devDescription"));
+  const devShim = new Command('wasteland').description(t('cli.devDescription'));
 
   registerRootCommands(devShim);
   program.addCommand(devShim);
@@ -50,7 +46,7 @@ export async function run(argv = process.argv): Promise<void> {
     await initI18n(language);
   } catch {
     // 如果加载配置失败，使用默认语言
-    await initI18n("en");
+    await initI18n('en');
   }
 
   await createProgram().parseAsync(argv);

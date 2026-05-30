@@ -1,13 +1,13 @@
-import { appendFile, mkdir } from "node:fs/promises";
-import type { Writable } from "node:stream";
+import { appendFile, mkdir } from 'node:fs/promises';
+import type { Writable } from 'node:stream';
 
-import type { Observable } from "rxjs";
+import type { Observable } from 'rxjs';
 
-import type { DebugTraceEvent } from "../runtime/debug-events.js";
-import { ANSI, formatStatusLabel, paint } from "./terminal-theme.js";
+import type { DebugTraceEvent } from '../runtime/debug-events.js';
+import { ANSI, paint } from './terminal-theme.js';
 
 function supportsAnsi(output: Writable): boolean {
-  return "isTTY" in output && output.isTTY === true;
+  return 'isTTY' in output && output.isTTY === true;
 }
 
 function maybePaint(output: Writable, text: string, ...styles: string[]): string {
@@ -19,15 +19,15 @@ function maybePaint(output: Writable, text: string, ...styles: string[]): string
 }
 
 function formatDebugValue(value: unknown): string {
-  if (typeof value === "string") {
+  if (typeof value === 'string') {
     return /\s/.test(value) ? JSON.stringify(value) : value;
   }
 
   if (
-    typeof value === "number"
-    || typeof value === "boolean"
-    || value === null
-    || value === undefined
+    typeof value === 'number' ||
+    typeof value === 'boolean' ||
+    value === null ||
+    value === undefined
   ) {
     return String(value);
   }
@@ -60,7 +60,7 @@ function renderPrettyEvent(output: Writable, event: DebugTraceEvent): void {
   parts.push(...formatDebugData(event.data));
 
   output.write(
-    `${maybePaint(output, "trace", ANSI.dim, ANSI.gray)} ${maybePaint(output, parts.join(" "), ANSI.dim, ANSI.brightWhite)}\n`,
+    `${maybePaint(output, 'trace', ANSI.dim, ANSI.gray)} ${maybePaint(output, parts.join(' '), ANSI.dim, ANSI.brightWhite)}\n`
   );
 }
 
@@ -68,7 +68,7 @@ function renderJsonlLine(event: DebugTraceEvent): string {
   return `${JSON.stringify(event)}\n`;
 }
 
-export type DebugFormat = "pretty" | "jsonl";
+export type DebugFormat = 'pretty' | 'jsonl';
 
 export type DebugRendererParams = {
   output?: Writable;
@@ -78,14 +78,14 @@ export type DebugRendererParams = {
 
 export async function renderDebugTrace(
   events$: Observable<DebugTraceEvent>,
-  params?: DebugRendererParams,
+  params?: DebugRendererParams
 ): Promise<void> {
   const output = params?.output ?? process.stderr;
-  const format = params?.format ?? "pretty";
+  const format = params?.format ?? 'pretty';
   const traceDir = params?.traceDir;
 
   // Pre-create trace directory if needed (for jsonl format)
-  if (format === "jsonl" && traceDir) {
+  if (format === 'jsonl' && traceDir) {
     try {
       await mkdir(traceDir, { recursive: true });
     } catch {
@@ -98,7 +98,7 @@ export async function renderDebugTrace(
 
     events$.subscribe({
       next: (event) => {
-        if (format === "jsonl") {
+        if (format === 'jsonl') {
           const line = renderJsonlLine(event);
           // Always write JSONL to stderr for piping
           output.write(line);
@@ -110,7 +110,7 @@ export async function renderDebugTrace(
 
           // Write to trace file if path is set
           if (traceFilePath) {
-            appendFile(traceFilePath, line, "utf8").catch(() => {
+            appendFile(traceFilePath, line, 'utf8').catch(() => {
               // Silently ignore file write errors
             });
           }

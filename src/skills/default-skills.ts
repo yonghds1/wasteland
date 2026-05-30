@@ -4,12 +4,12 @@
  * 导出所有内置技能，供 SkillRegistry 注册使用。
  */
 
-import type { Skill } from "./skill-types.js";
-import { initSkill } from "./skills/init-skill.js";
-import { contextSkill } from "./skills/context-skill.js";
-import { helpSkill } from "./skills/help-skill.js";
-import { statusSkill } from "./skills/status-skill.js";
-import { toolsSkill } from "./skills/tools-skill.js";
+import type { Skill } from './skill-types.js';
+import { initSkill } from './skills/init-skill.js';
+import { contextSkill } from './skills/context-skill.js';
+import { helpSkill } from './skills/help-skill.js';
+import { statusSkill } from './skills/status-skill.js';
+import { toolsSkill } from './skills/tools-skill.js';
 
 /**
  * 内置技能列表

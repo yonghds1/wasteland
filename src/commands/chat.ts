@@ -1,25 +1,32 @@
-import type { Observable } from "rxjs";
-import { Command } from "commander";
+import type { Observable } from 'rxjs';
+import { Command } from 'commander';
 
-import { loadWastelandSettings } from "../config/load-settings.js";
-import { resolveDefaultSessionDir, resolveDefaultTraceDir } from "../config/paths.js";
-import { resolveChatRuntime } from "../config/resolve-chat-runtime.js";
-import type { AgentProvider } from "../providers/provider-types.js";
-import { createDefaultProviderRegistry, type ProviderRegistry } from "../providers/provider-registry.js";
-import type { ChatInputTurn, RuntimeMode } from "../runtime/event-types.js";
-import { runAgentLoop } from "../runtime/agent-loop.js";
-import { createPermissionGate } from "../runtime/permission-gate.js";
-import { SessionManager } from "../runtime/session-manager.js";
-import { createDefaultToolRegistry, type CreateToolRegistryResult } from "../tools/default-registry.js";
-import { renderDebugTrace, type DebugFormat } from "../ui/debug-renderer.js";
-import { createInteractiveTurnStream, createSingleTurnInput, readPipedInput } from "../ui/readline-input.js";
-import { renderRuntimeEvents } from "../ui/terminal-renderer.js";
-import { detectTTY } from "../ui/tty-detect.js";
-import type { ProviderSettings, MCPServersConfig } from "../config/settings-types.js";
-import { createSkillRegistry } from "../skills/skill-discovery.js";
-import { SkillExecutor } from "../skills/skill-executor.js";
-import { homedir } from "node:os";
-import { t } from "../locales/index.js";
+import { loadWastelandSettings } from '../config/load-settings.js';
+import { resolveDefaultSessionDir, resolveDefaultTraceDir } from '../config/paths.js';
+import { resolveChatRuntime } from '../config/resolve-chat-runtime.js';
+import type { AgentProvider } from '../providers/provider-types.js';
+import {
+  createDefaultProviderRegistry,
+  type ProviderRegistry,
+} from '../providers/provider-registry.js';
+import type { ChatInputTurn, RuntimeMode } from '../runtime/event-types.js';
+import { runAgentLoop } from '../runtime/agent-loop.js';
+import { createPermissionGate } from '../runtime/permission-gate.js';
+import { SessionManager } from '../runtime/session-manager.js';
+import { createDefaultToolRegistry } from '../tools/default-registry.js';
+import { renderDebugTrace, type DebugFormat } from '../ui/debug-renderer.js';
+import {
+  createInteractiveTurnStream,
+  createSingleTurnInput,
+  readPipedInput,
+} from '../ui/readline-input.js';
+import { renderRuntimeEvents } from '../ui/terminal-renderer.js';
+import { detectTTY } from '../ui/tty-detect.js';
+import type { ProviderSettings, MCPServersConfig } from '../config/settings-types.js';
+import { createSkillRegistry } from '../skills/skill-discovery.js';
+import { SkillExecutor } from '../skills/skill-executor.js';
+import { homedir } from 'node:os';
+import { t } from '../locales/index.js';
 
 type ChatOptions = {
   debug?: boolean;
@@ -33,21 +40,21 @@ type ChatOptions = {
 };
 
 function resolvePermissionMode(value: string | undefined) {
-  const mode = value ?? "default";
+  const mode = value ?? 'default';
 
-  if (mode === "default" || mode === "accept_edits" || mode === "bypass_permissions") {
+  if (mode === 'default' || mode === 'accept_edits' || mode === 'bypass_permissions') {
     return mode;
   }
 
-  throw new Error(`${t("commands.chat.errors.permissionMode")} ${mode}`);
+  throw new Error(`${t('commands.chat.errors.permissionMode')} ${mode}`);
 }
 
 function resolveDebugFormat(value: string | undefined): DebugFormat {
-  if (value === "jsonl") {
-    return "jsonl";
+  if (value === 'jsonl') {
+    return 'jsonl';
   }
 
-  return "pretty";
+  return 'pretty';
 }
 
 async function runChatSession(params: {
@@ -72,7 +79,7 @@ async function runChatSession(params: {
   childAgentTimeout?: number;
   render?: {
     onTurnComplete?: () => void;
-    style?: "classic" | "interactive";
+    style?: 'classic' | 'interactive';
   };
 }): Promise<void> {
   // 创建工具注册表（包含 MCP）
@@ -91,7 +98,7 @@ async function runChatSession(params: {
   try {
     await startMCP();
   } catch (error) {
-    console.warn(t("mcp.startupFailed"), error instanceof Error ? error.message : String(error));
+    console.warn(t('mcp.startupFailed'), error instanceof Error ? error.message : String(error));
   }
 
   try {
@@ -113,24 +120,23 @@ async function runChatSession(params: {
       childAgentTimeout: params.childAgentTimeout,
     });
 
-    const work: Promise<void>[] = [
-      renderRuntimeEvents(run.events$, params.render),
-    ];
+    const work: Promise<void>[] = [renderRuntimeEvents(run.events$, params.render)];
 
     if (params.debug) {
-      const traceDir = params.debugFormat === "jsonl"
-        ? resolveDefaultTraceDir({
-            cwd: params.cwd,
-            projectConfigDir: params.projectConfigDir,
-          })
-        : undefined;
+      const traceDir =
+        params.debugFormat === 'jsonl'
+          ? resolveDefaultTraceDir({
+              cwd: params.cwd,
+              projectConfigDir: params.projectConfigDir,
+            })
+          : undefined;
 
       work.unshift(
         renderDebugTrace(run.debug$, {
           output: process.stderr,
           format: params.debugFormat,
           traceDir,
-        }),
+        })
       );
     }
 
@@ -144,27 +150,18 @@ async function runChatSession(params: {
 export function createChatCommand(): Command {
   const providerRegistry = createDefaultProviderRegistry();
 
-  return new Command("chat")
-    .description(t("commands.chat.description"))
-    .option("-m, --message <text>", t("commands.chat.options.once"))
+  return new Command('chat')
+    .description(t('commands.chat.description'))
+    .option('-m, --message <text>', t('commands.chat.options.once'))
     .option(
-      "-p, --provider <name>",
-      `${t("commands.chat.options.provider")} ${providerRegistry.list().join(", ")}`,
+      '-p, --provider <name>',
+      `${t('commands.chat.options.provider')} ${providerRegistry.list().join(', ')}`
     )
-    .option("-r, --role <name>", t("commands.chat.options.role"))
-    .option("--debug", t("commands.chat.options.debug"))
-    .option(
-      "--debug-format <format>",
-      t("commands.chat.options.debugFormat"),
-    )
-    .option(
-      "--permission-mode <mode>",
-      t("commands.chat.options.permissionMode"),
-    )
-    .option(
-      "--multi",
-      t("commands.chat.options.multiAgent"),
-    )
+    .option('-r, --role <name>', t('commands.chat.options.role'))
+    .option('--debug', t('commands.chat.options.debug'))
+    .option('--debug-format <format>', t('commands.chat.options.debugFormat'))
+    .option('--permission-mode <mode>', t('commands.chat.options.permissionMode'))
+    .option('--multi', t('commands.chat.options.multiAgent'))
     .action(async (options: ChatOptions) => {
       const cwd = process.cwd();
       const loadedSettings = await loadWastelandSettings({
@@ -179,17 +176,17 @@ export function createChatCommand(): Command {
       });
       const provider = providerRegistry.resolve(
         resolvedRuntime.providerName,
-        resolvedRuntime.providerConfig,
+        resolvedRuntime.providerConfig
       );
       const sessionManager = new SessionManager(
         resolveDefaultSessionDir({
           cwd,
           projectConfigDir: loadedSettings.projectConfigDir,
           env: process.env,
-        }),
+        })
       );
       const permissionMode = resolvePermissionMode(
-        options.permissionMode ?? resolvedRuntime.permissionMode,
+        options.permissionMode ?? resolvedRuntime.permissionMode
       );
       const debug = options.debug === true || loadedSettings.settings.runtime.debug;
       const debugFormat = resolveDebugFormat(options.debugFormat);
@@ -198,15 +195,15 @@ export function createChatCommand(): Command {
 
       // TTY 检测：根据环境决定输出样式
       const tty = detectTTY();
-      const renderStyle = tty.stdoutIsTTY ? "interactive" : "classic";
+      const renderStyle = tty.stdoutIsTTY ? 'interactive' : 'classic';
 
       if (options.message?.trim()) {
         await runChatSession({
-          input$: createSingleTurnInput(options.message, "message"),
+          input$: createSingleTurnInput(options.message, 'message'),
           provider,
           sessionManager,
           cwd,
-          mode: "single",
+          mode: 'single',
           debug,
           debugFormat,
           projectConfigDir: loadedSettings.projectConfigDir,
@@ -226,11 +223,11 @@ export function createChatCommand(): Command {
 
       if (pipedInput) {
         await runChatSession({
-          input$: createSingleTurnInput(pipedInput, "stdin"),
+          input$: createSingleTurnInput(pipedInput, 'stdin'),
           provider,
           sessionManager,
           cwd,
-          mode: "single",
+          mode: 'single',
           debug,
           debugFormat,
           projectConfigDir: loadedSettings.projectConfigDir,
@@ -241,13 +238,13 @@ export function createChatCommand(): Command {
           providerSettings: resolvedRuntime.providerConfig,
           mcpServers,
           childAgentTimeout: loadedSettings.settings.runtime.childAgentTimeout,
-          render: { style: "classic" }, // 管道输入使用经典样式
+          render: { style: 'classic' }, // 管道输入使用经典样式
         });
         return;
       }
 
       if (!process.stdin.isTTY) {
-        throw new Error(t("commands.chat.errors.emptyStdin"));
+        throw new Error(t('commands.chat.errors.emptyStdin'));
       }
 
       const interactive = createInteractiveTurnStream();
@@ -260,7 +257,7 @@ export function createChatCommand(): Command {
           provider,
           sessionManager,
           cwd,
-          mode: "interactive",
+          mode: 'interactive',
           debug,
           debugFormat,
           projectConfigDir: loadedSettings.projectConfigDir,

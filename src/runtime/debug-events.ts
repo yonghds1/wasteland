@@ -1,4 +1,11 @@
-export type DebugTraceScope = "session" | "turn" | "provider" | "tool" | "ui" | "skill" | "permission";
+export type DebugTraceScope =
+  | 'session'
+  | 'turn'
+  | 'provider'
+  | 'tool'
+  | 'ui'
+  | 'skill'
+  | 'permission';
 
 export type DebugTraceEvent = {
   timestamp: string;
@@ -12,7 +19,7 @@ export type DebugTraceEvent = {
 };
 
 export function createDebugTraceEvent(
-  params: Omit<DebugTraceEvent, "timestamp"> & { timestamp?: string },
+  params: Omit<DebugTraceEvent, 'timestamp'> & { timestamp?: string }
 ): DebugTraceEvent {
   return {
     timestamp: params.timestamp ?? new Date().toISOString(),

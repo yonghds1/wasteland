@@ -19,11 +19,11 @@
  * - ignoreCase: 是否忽略大小写（可选，默认 false）
  */
 
-import { readFile, stat } from "node:fs/promises";
-import { join, relative, resolve } from "node:path";
+import { readFile, stat } from 'node:fs/promises';
+import { join, relative, resolve } from 'node:path';
 
-import { t } from "../locales/index.js";
-import type { AgentTool, ToolExecutionResult } from "./tool-types.js";
+import { t } from '../locales/index.js';
+import type { AgentTool, ToolExecutionResult } from './tool-types.js';
 
 // ============================================================
 // 配置常量
@@ -43,15 +43,15 @@ const MAX_LINE_LENGTH = 300;
 
 /** 默认忽略的目录 */
 const DEFAULT_IGNORE_DIRS = new Set([
-  "node_modules",
-  ".git",
-  "dist",
-  ".wasteland",
-  "__pycache__",
-  ".next",
-  ".nuxt",
-  "coverage",
-  ".turbo",
+  'node_modules',
+  '.git',
+  'dist',
+  '.wasteland',
+  '__pycache__',
+  '.next',
+  '.nuxt',
+  'coverage',
+  '.turbo',
 ]);
 
 // ============================================================
@@ -75,7 +75,7 @@ type GrepMatch = {
  * @returns 有效模式字符串，或 null 表示无效
  */
 function resolvePattern(value: unknown): string | null {
-  if (typeof value !== "string" || value.trim().length === 0) {
+  if (typeof value !== 'string' || value.trim().length === 0) {
     return null;
   }
   return value.trim();
@@ -90,10 +90,10 @@ function resolvePattern(value: unknown): string | null {
  */
 function compilePattern(
   pattern: string,
-  ignoreCase: boolean,
+  ignoreCase: boolean
 ): { regex: RegExp } | { error: string } {
   try {
-    const flags = ignoreCase ? "gim" : "gm";
+    const flags = ignoreCase ? 'gim' : 'gm';
     return { regex: new RegExp(pattern, flags) };
   } catch {
     return { error: `无效的正则表达式: "${pattern}"` };
@@ -110,7 +110,7 @@ function truncateLine(line: string): string {
   if (line.length <= MAX_LINE_LENGTH) {
     return line;
   }
-  return line.slice(0, MAX_LINE_LENGTH) + "…";
+  return line.slice(0, MAX_LINE_LENGTH) + '…';
 }
 
 /**
@@ -124,7 +124,7 @@ function truncateLine(line: string): string {
 async function collectFiles(
   searchDir: string,
   include?: string,
-  maxDepth: number = 10,
+  maxDepth: number = 10
 ): Promise<string[]> {
   const files: string[] = [];
   const includeRegex = include ? globToRegex(include) : null;
@@ -136,7 +136,7 @@ async function collectFiles(
 
     let entries;
     try {
-      const { readdir } = await import("node:fs/promises");
+      const { readdir } = await import('node:fs/promises');
       entries = await readdir(dir, { withFileTypes: true });
     } catch {
       return;
@@ -179,9 +179,9 @@ async function collectFiles(
  */
 function globToRegex(pattern: string): RegExp {
   const escaped = pattern
-    .replace(/[.+^${}()|[\]\\]/g, "\\$&")
-    .replace(/\*/g, ".*")
-    .replace(/\?/g, ".");
+    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+    .replace(/\*/g, '.*')
+    .replace(/\?/g, '.');
   return new RegExp(`^${escaped}$`);
 }
 
@@ -196,13 +196,13 @@ function globToRegex(pattern: string): RegExp {
 async function searchInFile(
   filePath: string,
   regex: RegExp,
-  baseDir: string,
+  baseDir: string
 ): Promise<GrepMatch[]> {
   const matches: GrepMatch[] = [];
 
   try {
-    const content = await readFile(filePath, "utf-8");
-    const lines = content.split("\n");
+    const content = await readFile(filePath, 'utf-8');
+    const lines = content.split('\n');
 
     const lineLimit = Math.min(lines.length, MAX_LINES_PER_FILE);
 
@@ -233,7 +233,7 @@ async function searchInFile(
  * @param baseDir - 搜索目录
  * @returns 格式化后的输出文本
  */
-function formatResult(matches: GrepMatch[], pattern: string, baseDir: string): string {
+function formatResult(matches: GrepMatch[], pattern: string): string {
   if (matches.length === 0) {
     return `🔍 grep "${pattern}" — no matches found`;
   }
@@ -246,22 +246,20 @@ function formatResult(matches: GrepMatch[], pattern: string, baseDir: string): s
     grouped.set(match.filePath, group);
   }
 
-  const header = `🔍 grep "${pattern}" — ${matches.length} ${matches.length === 1 ? "match" : "matches"} in ${grouped.size} ${grouped.size === 1 ? "file" : "files"}\n${"─".repeat(48)}`;
+  const header = `🔍 grep "${pattern}" — ${matches.length} ${matches.length === 1 ? 'match' : 'matches'} in ${grouped.size} ${grouped.size === 1 ? 'file' : 'files'}\n${'─'.repeat(48)}`;
 
   const body = Array.from(grouped.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([filePath, fileMatches]) => {
       const matchLines = fileMatches
         .map((m) => `  ${String(m.line).padStart(4)} │ ${m.content}`)
-        .join("\n");
+        .join('\n');
       return `📄 ${filePath}\n${matchLines}`;
     })
-    .join("\n\n");
+    .join('\n\n');
 
   const truncationNote =
-    matches.length >= MAX_MATCHES
-      ? `\n\n⚠ Results truncated at ${MAX_MATCHES} matches.`
-      : "";
+    matches.length >= MAX_MATCHES ? `\n\n⚠ Results truncated at ${MAX_MATCHES} matches.` : '';
 
   return `${header}\n\n${body}${truncationNote}`;
 }
@@ -272,8 +270,8 @@ function formatResult(matches: GrepMatch[], pattern: string, baseDir: string): s
 
 export function createGrepTool(): AgentTool {
   return {
-    name: "grep",
-    riskLevel: "read",
+    name: 'grep',
+    riskLevel: 'read',
 
     async execute(input, context): Promise<ToolExecutionResult> {
       // 解析搜索模式
@@ -281,8 +279,8 @@ export function createGrepTool(): AgentTool {
 
       if (pattern === null) {
         return {
-          status: "error",
-          error: t("tools.grep.needPattern"),
+          status: 'error',
+          error: t('tools.grep.needPattern'),
         };
       }
 
@@ -290,16 +288,16 @@ export function createGrepTool(): AgentTool {
       const ignoreCase = input.ignoreCase === true;
       const compiled = compilePattern(pattern, ignoreCase);
 
-      if ("error" in compiled) {
+      if ('error' in compiled) {
         return {
-          status: "error",
+          status: 'error',
           error: compiled.error,
         };
       }
 
       // 解析搜索路径
       const searchDir =
-        typeof input.path === "string" && input.path.trim().length > 0
+        typeof input.path === 'string' && input.path.trim().length > 0
           ? resolve(context.cwd, input.path)
           : context.cwd;
 
@@ -308,13 +306,13 @@ export function createGrepTool(): AgentTool {
         const s = await stat(searchDir);
         if (!s.isDirectory()) {
           return {
-            status: "error",
+            status: 'error',
             error: `路径 "${input.path}" 不是一个目录。`,
           };
         }
       } catch {
         return {
-          status: "error",
+          status: 'error',
           error: `路径 "${searchDir}" 不存在或无法访问。`,
         };
       }
@@ -322,7 +320,7 @@ export function createGrepTool(): AgentTool {
       try {
         // 收集文件
         const include =
-          typeof input.include === "string" && input.include.trim().length > 0
+          typeof input.include === 'string' && input.include.trim().length > 0
             ? input.include.trim()
             : undefined;
 
@@ -341,12 +339,12 @@ export function createGrepTool(): AgentTool {
         }
 
         return {
-          status: "success",
-          output: formatResult(allMatches.slice(0, MAX_MATCHES), pattern, searchDir),
+          status: 'success',
+          output: formatResult(allMatches.slice(0, MAX_MATCHES), pattern),
         };
       } catch (error) {
         return {
-          status: "error",
+          status: 'error',
           error: error instanceof Error ? error.message : String(error),
         };
       }

@@ -6,9 +6,9 @@
  * 使用树形连接线（└─、│）
  */
 
-import React from "react";
-import { Text, Box } from "ink";
-import { useAppContext } from "../../context/AppContext.js";
+import React from 'react';
+import { Text, Box } from 'ink';
+import { useAppContext } from '../../context/AppContext.js';
 import {
   PRIMARY,
   MUTED,
@@ -17,12 +17,12 @@ import {
   WARNING,
   STATUS_ICONS,
   SEPARATORS,
-} from "../../utils/colors.js";
-import { t } from "../../../locales/index.js";
+} from '../../utils/colors.js';
+import { t } from '../../../locales/index.js';
 
 const STATUS_COLORS: Record<string, string> = {
-  running: "green",
-  idle: "gray",
+  running: 'green',
+  idle: 'gray',
   completed: SUCCESS,
   failed: ERROR,
   timeout: WARNING,
@@ -53,10 +53,8 @@ export function AgentTree({ width = 25 }: AgentTreeProps): React.ReactElement {
   const { agents } = state.session;
 
   // 计算总运行时长
-  const mainAgent = agents.find(a => a.depth === 0);
-  const totalDuration = mainAgent
-    ? formatDuration(mainAgent.startTime, mainAgent.endTime)
-    : "0ms";
+  const mainAgent = agents.find((a) => a.depth === 0);
+  const totalDuration = mainAgent ? formatDuration(mainAgent.startTime, mainAgent.endTime) : '0ms';
 
   return (
     <Box
@@ -64,16 +62,14 @@ export function AgentTree({ width = 25 }: AgentTreeProps): React.ReactElement {
       paddingX={1}
       width={width}
       borderStyle="single"
-      borderColor={state.focusArea === "agentTree" ? "cyan" : "gray"}
+      borderColor={state.focusArea === 'agentTree' ? 'cyan' : 'gray'}
     >
       {/* 标题 */}
       <Box flexDirection="row" gap={1}>
         <Text bold color={PRIMARY}>
           Agents
         </Text>
-        <Text dimColor>
-          ({agents.length || 1})
-        </Text>
+        <Text dimColor>({agents.length || 1})</Text>
       </Box>
 
       {/* Agent 列表 */}
@@ -83,51 +79,40 @@ export function AgentTree({ width = 25 }: AgentTreeProps): React.ReactElement {
           <Text bold color="green">
             {STATUS_ICONS.running}
           </Text>
-          <Text>{t("tui.session.agentTree.main")}</Text>
+          <Text>{t('tui.session.agentTree.main')}</Text>
         </Box>
       ) : (
         agents.map((agent) => {
           const icon = STATUS_ICONS[agent.status];
           const color = STATUS_COLORS[agent.status];
           const duration = formatDuration(agent.startTime, agent.endTime);
-          const indent = "  ".repeat(agent.depth);
-          const branch = agent.depth > 0 ? SEPARATORS.branch + " " : "";
+          const indent = '  '.repeat(agent.depth);
+          const branch = agent.depth > 0 ? SEPARATORS.branch + ' ' : '';
 
           return (
             <Box key={agent.id} flexDirection="column">
               {/* Agent 行 */}
               <Box flexDirection="row" gap={1}>
                 <Text dimColor>
-                  {indent}{branch}
+                  {indent}
+                  {branch}
                 </Text>
                 <Text bold color={color}>
                   {icon}
                 </Text>
                 <Text>{agent.name}</Text>
                 {/* 运行时长 */}
-                {agent.status === "running" && (
+                {agent.status === 'running' && (
                   <Text dimColor color="gray">
                     {duration}
                   </Text>
                 )}
                 {/* 完成状态 */}
-                {agent.status === "completed" && (
-                  <Text color={SUCCESS}>
-                    ✓ {duration}
-                  </Text>
-                )}
+                {agent.status === 'completed' && <Text color={SUCCESS}>✓ {duration}</Text>}
                 {/* 失败状态 */}
-                {agent.status === "failed" && (
-                  <Text color={ERROR}>
-                    ✗ {duration}
-                  </Text>
-                )}
+                {agent.status === 'failed' && <Text color={ERROR}>✗ {duration}</Text>}
                 {/* 超时状态 */}
-                {agent.status === "timeout" && (
-                  <Text color={WARNING}>
-                    ⏱ {duration}
-                  </Text>
-                )}
+                {agent.status === 'timeout' && <Text color={WARNING}>⏱ {duration}</Text>}
               </Box>
             </Box>
           );
@@ -138,7 +123,7 @@ export function AgentTree({ width = 25 }: AgentTreeProps): React.ReactElement {
       <Box flexDirection="column" marginTop={1}>
         <Text dimColor>─────────────</Text>
         <Box flexDirection="row" gap={1}>
-          <Text dimColor>{t("tui.session.agentTree.running")}</Text>
+          <Text dimColor>{t('tui.session.agentTree.running')}</Text>
           <Text color={MUTED}>{totalDuration}</Text>
         </Box>
       </Box>

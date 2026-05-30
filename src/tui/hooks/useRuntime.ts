@@ -5,24 +5,21 @@
  * 并启动 runAgentLoop 获取事件流。
  */
 
-import { Subject } from "rxjs";
+import { Subject } from 'rxjs';
 
-import { loadWastelandSettings } from "../../config/load-settings.js";
-import {
-  resolveDefaultSessionDir,
-} from "../../config/paths.js";
-import { resolveChatRuntime } from "../../config/resolve-chat-runtime.js";
-import { runAgentLoop } from "../../runtime/agent-loop.js";
-import { createPermissionGate } from "../../runtime/permission-gate.js";
-import { SessionManager } from "../../runtime/session-manager.js";
-import { createDefaultProviderRegistry } from "../../providers/provider-registry.js";
-import { createDefaultToolRegistry } from "../../tools/default-registry.js";
-import { loadSkin } from "../../skins/index.js";
-import { initI18n, t } from "../../locales/index.js";
-import type { TuiRuntimeContext, TuiConfig, TuiFullConfig } from "../types.js";
-import type { ChatInputTurn } from "../../runtime/event-types.js";
-import type { ProviderRegistry } from "../../providers/provider-registry.js";
-import type { Skin } from "../../skins/index.js";
+import { loadWastelandSettings } from '../../config/load-settings.js';
+import { resolveDefaultSessionDir } from '../../config/paths.js';
+import { resolveChatRuntime } from '../../config/resolve-chat-runtime.js';
+import { runAgentLoop } from '../../runtime/agent-loop.js';
+import { createPermissionGate } from '../../runtime/permission-gate.js';
+import { SessionManager } from '../../runtime/session-manager.js';
+import { createDefaultProviderRegistry } from '../../providers/provider-registry.js';
+import { createDefaultToolRegistry } from '../../tools/default-registry.js';
+import { loadSkin } from '../../skins/index.js';
+import { initI18n, t } from '../../locales/index.js';
+import type { TuiRuntimeContext, TuiConfig, TuiFullConfig } from '../types.js';
+import type { ChatInputTurn } from '../../runtime/event-types.js';
+import type { Skin } from '../../skins/index.js';
 
 /**
  * TUI 运行时上下文（扩展版，包含清理资源）
@@ -71,7 +68,7 @@ export async function createTuiRuntime(cwd: string): Promise<TuiRuntimeContext> 
   const providerRegistry = createDefaultProviderRegistry();
   const provider = providerRegistry.resolve(
     resolvedRuntime.providerName,
-    resolvedRuntime.providerConfig,
+    resolvedRuntime.providerConfig
   );
 
   // 4. 创建 SessionManager
@@ -95,7 +92,7 @@ export async function createTuiRuntime(cwd: string): Promise<TuiRuntimeContext> 
   try {
     await startMCP();
   } catch (error) {
-    console.warn(t("mcp.startupFailed"), error instanceof Error ? error.message : String(error));
+    console.warn(t('mcp.startupFailed'), error instanceof Error ? error.message : String(error));
   }
 
   // 7. 创建 input$ Subject（用于接收用户输入）
@@ -104,7 +101,7 @@ export async function createTuiRuntime(cwd: string): Promise<TuiRuntimeContext> 
   // 8. 启动会话
   const session = await sessionManager.startSession({
     cwd,
-    mode: "interactive", // TUI 始终使用交互模式
+    mode: 'interactive', // TUI 始终使用交互模式
     providerId: provider.id,
   });
 
@@ -116,7 +113,7 @@ export async function createTuiRuntime(cwd: string): Promise<TuiRuntimeContext> 
     toolRegistry,
     permissionGate,
     cwd,
-    mode: "interactive",
+    mode: 'interactive',
     maxStepsPerTurn: loadedSettings.settings.runtime.maxStepsPerTurn,
     existingSession: session,
     prompt: resolvedRuntime.prompt,
@@ -128,11 +125,11 @@ export async function createTuiRuntime(cwd: string): Promise<TuiRuntimeContext> 
   // 10. 构建 TUI 配置
   const config: TuiConfig = {
     provider: resolvedRuntime.providerName,
-    model: resolvedRuntime.model?.name ?? "",
+    model: resolvedRuntime.model?.name ?? '',
     permissionMode: resolvedRuntime.permissionMode,
     maxTurns: loadedSettings.settings.runtime.maxTurns,
     maxSteps: loadedSettings.settings.runtime.maxStepsPerTurn,
-    defaultRole: loadedSettings.settings.runtime.defaultRole ?? "",
+    defaultRole: loadedSettings.settings.runtime.defaultRole ?? '',
     childAgentTimeout: loadedSettings.settings.runtime.childAgentTimeout,
     debug: loadedSettings.settings.runtime.debug,
   };
@@ -149,11 +146,11 @@ export async function createTuiRuntime(cwd: string): Promise<TuiRuntimeContext> 
   // 12. 加载皮肤配置（从 defaultRole 推导，根据 language 参数选择语言）
   let skin: Skin | null = null;
   try {
-    const skinId = loadedSettings.settings.runtime.defaultRole ?? "immortan-joe";
+    const skinId = loadedSettings.settings.runtime.defaultRole ?? 'immortan-joe';
     const language = loadedSettings.settings.runtime.language;
     skin = await loadSkin(skinId, undefined, language);
   } catch (error) {
-    console.warn(t("tui.failedToLoadSkin"), error instanceof Error ? error.message : String(error));
+    console.warn(t('tui.failedToLoadSkin'), error instanceof Error ? error.message : String(error));
   }
 
   // 返回扩展的上下文（包含 sessionManager 用于清理）
@@ -176,9 +173,7 @@ export async function createTuiRuntime(cwd: string): Promise<TuiRuntimeContext> 
  *
  * @param runtime - TUI 运行时上下文
  */
-export async function cleanupTuiRuntime(
-  runtime: TuiRuntimeContext,
-): Promise<void> {
+export async function cleanupTuiRuntime(runtime: TuiRuntimeContext): Promise<void> {
   // 完成 input$ 流
   runtime.input$.complete();
 

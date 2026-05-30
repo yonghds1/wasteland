@@ -20,27 +20,39 @@
  * ```
  */
 
-import { EMPTY, Observable, ReplaySubject, Subject, concat, concatMap, defer, from, map, of, tap } from "rxjs";
+import {
+  EMPTY,
+  Observable,
+  ReplaySubject,
+  Subject,
+  concat,
+  concatMap,
+  defer,
+  from,
+  map,
+  of,
+  tap,
+} from 'rxjs';
 
-import { t } from "../locales/index.js";
+import { t } from '../locales/index.js';
 
-import { createDebugTraceEvent, type DebugTraceEvent } from "./debug-events.js";
-import type { AgentProvider } from "../providers/provider-types.js";
-import type { ToolRegistry } from "../tools/tool-registry.js";
+import { createDebugTraceEvent, type DebugTraceEvent } from './debug-events.js';
+import type { AgentProvider } from '../providers/provider-types.js';
+import type { ToolRegistry } from '../tools/tool-registry.js';
 import type {
   ChatInputTurn,
   RuntimeEvent,
   RuntimeMode,
   SessionMessageRecord,
   SessionRecord,
-} from "./event-types.js";
-import type { PermissionGate } from "./permission-gate.js";
-import { SessionManager, type SessionMetadata } from "./session-manager.js";
-import { dispatchToolCall } from "./tool-dispatch.js";
-import { createTurnContext } from "./turn-context.js";
-import type { SkillExecutor } from "../skills/skill-executor.js";
-import type { ProviderSettings } from "../config/settings-types.js";
-import type { ProviderRegistry } from "../providers/provider-registry.js";
+} from './event-types.js';
+import type { PermissionGate } from './permission-gate.js';
+import { SessionManager, type SessionMetadata } from './session-manager.js';
+import { dispatchToolCall } from './tool-dispatch.js';
+import { createTurnContext } from './turn-context.js';
+import type { SkillExecutor } from '../skills/skill-executor.js';
+import type { ProviderSettings } from '../config/settings-types.js';
+import type { ProviderRegistry } from '../providers/provider-registry.js';
 import {
   advanceTurnState,
   appendAssistantChunk,
@@ -50,7 +62,7 @@ import {
   recordToolCall,
   recordToolResult,
   type TurnState,
-} from "./turn-state.js";
+} from './turn-state.js';
 
 // ============================================================
 // 工具函数：时间戳和记录创建
@@ -63,11 +75,11 @@ import {
 function createTimestamp(): string {
   const now = new Date();
   const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  const hour = String(now.getHours()).padStart(2, "0");
-  const minute = String(now.getMinutes()).padStart(2, "0");
-  const second = String(now.getSeconds()).padStart(2, "0");
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hour = String(now.getHours()).padStart(2, '0');
+  const minute = String(now.getMinutes()).padStart(2, '0');
+  const second = String(now.getSeconds()).padStart(2, '0');
   return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
 }
 
@@ -78,8 +90,8 @@ function createTimestamp(): string {
  */
 function createUserRecord(turn: ChatInputTurn): SessionMessageRecord {
   return {
-    type: "message",
-    role: "user",
+    type: 'message',
+    role: 'user',
     turn: turn.turn,
     content: turn.content,
     source: turn.source,
@@ -95,8 +107,8 @@ function createUserRecord(turn: ChatInputTurn): SessionMessageRecord {
  */
 function createAssistantRecord(turn: number, content: string): SessionMessageRecord {
   return {
-    type: "message",
-    role: "assistant",
+    type: 'message',
+    role: 'assistant',
     turn,
     content,
     timestamp: createTimestamp(),
@@ -110,7 +122,7 @@ function createAssistantRecord(turn: number, content: string): SessionMessageRec
  */
 function createSessionStartRecord(session: SessionMetadata): SessionRecord {
   return {
-    type: "session",
+    type: 'session',
     sessionId: session.id,
     mode: session.mode,
     cwd: session.cwd,
@@ -128,7 +140,7 @@ function createSessionStartRecord(session: SessionMetadata): SessionRecord {
  */
 function createSessionEndRecord(sessionId: string): SessionRecord {
   return {
-    type: "session_end",
+    type: 'session_end',
     sessionId,
     timestamp: createTimestamp(),
   };
@@ -139,7 +151,7 @@ function createSessionEndRecord(sessionId: string): SessionRecord {
 // ============================================================
 
 /** 调试追踪事件的输入参数（不含时间戳） */
-type DebugTraceInput = Omit<DebugTraceEvent, "timestamp">;
+type DebugTraceInput = Omit<DebugTraceEvent, 'timestamp'>;
 
 /** Agent 运行结果，包含事件流和调试流 */
 type AgentRun = {
@@ -182,12 +194,12 @@ function persistAssistantMessage(params: {
     }),
     map(
       (): RuntimeEvent => ({
-        type: "assistant_message",
+        type: 'assistant_message',
         sessionId: params.session.id,
         turn: params.turn,
         content: params.content,
-      }),
-    ),
+      })
+    )
   );
 }
 
@@ -214,11 +226,11 @@ function createTraceEmitter(subject: Subject<DebugTraceEvent>) {
 function buildProviderFallbackMessage(state: TurnState): string {
   // 如果有累积的 chunk，拼接它们
   if (state.assistantChunks.length > 0) {
-    return state.assistantChunks.join("");
+    return state.assistantChunks.join('');
   }
 
   // 否则返回默认消息
-  return t("runtime.noFinalMessage");
+  return t('runtime.noFinalMessage');
 }
 
 /**
@@ -227,7 +239,7 @@ function buildProviderFallbackMessage(state: TurnState): string {
  * @returns 提示消息
  */
 function buildMaxStepsMessage(_maxStepsPerTurn: number): string {
-  return t("runtime.maxStepsReached");
+  return t('runtime.maxStepsReached');
 }
 
 // ============================================================
@@ -304,15 +316,15 @@ function runTurnLoop(params: {
     const inputContent = params.context.input.content;
     if (params.skillExecutor && params.skillExecutor.isSkillCommand(inputContent)) {
       // 解析技能名称用于trace
-      const skillName = inputContent.trim().split(/\s+/)[0]?.slice(1) ?? "";
+      const skillName = inputContent.trim().split(/\s+/)[0]?.slice(1) ?? '';
 
       params.trace({
         sessionId: params.session.id,
         turn: params.state.turn,
         step: params.state.step,
-        scope: "skill",
-        phase: "started",
-        message: "routing to skill executor",
+        scope: 'skill',
+        phase: 'started',
+        message: 'routing to skill executor',
         data: {
           skillName,
           input: inputContent,
@@ -320,48 +332,53 @@ function runTurnLoop(params: {
       });
 
       // 执行技能
-      return params.skillExecutor.execute({
-        input: inputContent,
-        sessionId: params.session.id,
-        turn: params.state.turn,
-        cwd: params.cwd,
-        session: params.session,
-        toolRegistry: params.toolRegistry!,
-        permissionGate: params.permissionGate!,
-        sessionManager: params.sessionManager,
-        provider: params.provider,
-        history: params.history,
-        output: (msg) => {
-          // 技能的进度输出（目前暂不处理，可以后续扩展）
-          params.trace({
-            sessionId: params.session.id,
-            turn: params.state.turn,
-            step: params.state.step,
-            scope: "skill",
-            phase: "progress",
-            message: msg,
-            data: { skillName },
-          });
-        },
-      }).pipe(
-        // 在技能执行事件上添加debug trace
-        tap((event) => {
-          if (event.type === "skill_result") {
+      if (!params.toolRegistry || !params.permissionGate) {
+        throw new Error('skillExecutor requires toolRegistry and permissionGate');
+      }
+      return params.skillExecutor
+        .execute({
+          input: inputContent,
+          sessionId: params.session.id,
+          turn: params.state.turn,
+          cwd: params.cwd,
+          session: params.session,
+          toolRegistry: params.toolRegistry,
+          permissionGate: params.permissionGate,
+          sessionManager: params.sessionManager,
+          provider: params.provider,
+          history: params.history,
+          output: (msg) => {
+            // 技能的进度输出（目前暂不处理，可以后续扩展）
             params.trace({
               sessionId: params.session.id,
               turn: params.state.turn,
               step: params.state.step,
-              scope: "skill",
-              phase: event.result.status,
-              message: `skill ${event.result.status}`,
-              data: {
-                skillName: event.skillName,
-                result: event.result.output,
-              },
+              scope: 'skill',
+              phase: 'progress',
+              message: msg,
+              data: { skillName },
             });
-          }
-        }),
-      );
+          },
+        })
+        .pipe(
+          // 在技能执行事件上添加debug trace
+          tap((event) => {
+            if (event.type === 'skill_result') {
+              params.trace({
+                sessionId: params.session.id,
+                turn: params.state.turn,
+                step: params.state.step,
+                scope: 'skill',
+                phase: event.result.status,
+                message: `skill ${event.result.status}`,
+                data: {
+                  skillName: event.skillName,
+                  result: event.result.output,
+                },
+              });
+            }
+          })
+        );
     }
 
     // ---- 检查步数限制 ----
@@ -374,9 +391,9 @@ function runTurnLoop(params: {
         sessionId: params.session.id,
         turn: limitedState.turn,
         step: limitedState.step,
-        scope: "turn",
-        phase: "turn.max_steps",
-        message: "turn reached max steps",
+        scope: 'turn',
+        phase: 'turn.max_steps',
+        message: 'turn reached max steps',
         data: {
           maxSteps: params.maxStepsPerTurn,
         },
@@ -396,16 +413,16 @@ function runTurnLoop(params: {
     // 使用可变状态，在 concatMap 内部通过 tap 更新
     let state = params.state;
     // nextAction 用于决定 continuation$ 的行为
-    let nextAction: "complete" | "tool" | "none" = "none";
+    let nextAction: 'complete' | 'tool' | 'none' = 'none';
 
     // 记录 Provider 开始
     params.trace({
       sessionId: params.session.id,
       turn: state.turn,
       step: state.step,
-      scope: "provider",
-      phase: "provider.start",
-      message: "run provider step",
+      scope: 'provider',
+      phase: 'provider.start',
+      message: 'run provider step',
       data: {
         provider: params.provider.id,
         history: state.history.length,
@@ -416,261 +433,263 @@ function runTurnLoop(params: {
     // ---- Provider 执行阶段 ----
     // provider.runStep 返回一个 Observable<ProviderStreamEvent>
     // 使用 concatMap 顺序处理每个事件，确保事件顺序正确
-    const provider$ = params.provider.runStep({
-      context: params.context,
-      state,
-    }).pipe(
-      // concatMap: 对每个事件进行处理，返回新的 Observable
-      // 与 switchMap 不同，concatMap 保证事件按顺序处理
-      concatMap((event) => {
-        // 非 chunk 事件记录追踪
-        if (event.type !== "assistant_chunk") {
-          params.trace({
-            sessionId: params.session.id,
-            turn: state.turn,
-            step: state.step,
-            scope: "provider",
-            phase: "provider.event",
-            message: "provider emitted event",
-            data: {
-              type: event.type,
-              toolName: event.type === "tool_call" ? event.call.toolName : undefined,
-            },
-          });
-        }
+    const provider$ = params.provider
+      .runStep({
+        context: params.context,
+        state,
+      })
+      .pipe(
+        // concatMap: 对每个事件进行处理，返回新的 Observable
+        // 与 switchMap 不同，concatMap 保证事件按顺序处理
+        concatMap((event) => {
+          // 非 chunk 事件记录追踪
+          if (event.type !== 'assistant_chunk') {
+            params.trace({
+              sessionId: params.session.id,
+              turn: state.turn,
+              step: state.step,
+              scope: 'provider',
+              phase: 'provider.event',
+              message: 'provider emitted event',
+              data: {
+                type: event.type,
+                toolName: event.type === 'tool_call' ? event.call.toolName : undefined,
+              },
+            });
+          }
 
-        // ---- 处理 assistant_chunk 事件 ----
-        // assistant_chunk 是流式响应的文本片段，需要累积起来
-        if (event.type === "assistant_chunk") {
-          // 将 chunk 追加到状态中
-          state = appendAssistantChunk(state, event.text);
+          // ---- 处理 assistant_chunk 事件 ----
+          // assistant_chunk 是流式响应的文本片段，需要累积起来
+          if (event.type === 'assistant_chunk') {
+            // 将 chunk 追加到状态中
+            state = appendAssistantChunk(state, event.text);
 
-          // 发出 assistant_chunk RuntimeEvent 供 UI 显示
-          return of<RuntimeEvent>({
-            type: "assistant_chunk",
-            sessionId: params.session.id,
-            turn: state.turn,
-            chunk: event.text,
-          });
-        }
+            // 发出 assistant_chunk RuntimeEvent 供 UI 显示
+            return of<RuntimeEvent>({
+              type: 'assistant_chunk',
+              sessionId: params.session.id,
+              turn: state.turn,
+              chunk: event.text,
+            });
+          }
 
-        // ---- 处理 assistant_message 事件 ----
-        // assistant_message 是 Provider 返回的最终完整消息，
-        // 表示当前 turn 完成，无需工具调用
-        if (event.type === "assistant_message") {
-          // 标记 turn 为完成状态
-          state = completeTurnState(state, event.text);
-          // 标记 turn 完成
-          nextAction = "complete";
+          // ---- 处理 assistant_message 事件 ----
+          // assistant_message 是 Provider 返回的最终完整消息，
+          // 表示当前 turn 完成，无需工具调用
+          if (event.type === 'assistant_message') {
+            // 标记 turn 为完成状态
+            state = completeTurnState(state, event.text);
+            // 标记 turn 完成
+            nextAction = 'complete';
 
-          // 持久化消息并发出事件
-          // 使用 tap 在持久化完成后记录追踪
-          return persistAssistantMessage({
+            // 持久化消息并发出事件
+            // 使用 tap 在持久化完成后记录追踪
+            return persistAssistantMessage({
+              session: params.session,
+              sessionManager: params.sessionManager,
+              history: params.history,
+              turn: state.turn,
+              content: event.text,
+            }).pipe(
+              tap(() => {
+                params.trace({
+                  sessionId: params.session.id,
+                  turn: state.turn,
+                  step: state.step,
+                  scope: 'turn',
+                  phase: 'turn.complete',
+                  message: 'turn completed',
+                  data: {
+                    contentLength: event.text.length,
+                  },
+                });
+              })
+            );
+          }
+
+          // ---- 处理 tool_call 事件 ----
+          // tool_call 表示 Agent 想要调用工具
+          // 需要进行权限检查，然后执行工具
+          state = recordToolCall(state, event.call);
+          nextAction = 'tool';
+
+          // 检查是否配置了工具执行所需的基础设施
+          if (!params.toolRegistry || !params.permissionGate) {
+            const error = t('runtime.noToolRegistry');
+
+            // 记录错误结果
+            state = recordToolResult(state, {
+              callId: event.call.id,
+              toolName: event.call.toolName,
+              input: event.call.input,
+              status: 'error',
+              error,
+            });
+
+            params.trace({
+              sessionId: params.session.id,
+              turn: state.turn,
+              step: state.step,
+              scope: 'tool',
+              phase: 'tool.result',
+              message: 'tool execution failed before dispatch',
+              data: {
+                tool: event.call.toolName,
+                status: 'error',
+              },
+            });
+
+            // 发出失败事件
+            return of<RuntimeEvent>({
+              type: 'tool_failed',
+              sessionId: params.session.id,
+              turn: state.turn,
+              callId: event.call.id,
+              toolName: event.call.toolName,
+              status: 'error',
+              error,
+            });
+          }
+
+          // 记录开始时间用于计算耗时
+          const startedAt = Date.now();
+
+          // 分发工具调用
+          // dispatchToolCall 返回工具执行事件的 Observable
+          return dispatchToolCall({
             session: params.session,
             sessionManager: params.sessionManager,
+            turn: state.turn,
+            call: event.call,
+            registry: params.toolRegistry,
+            permissionGate: params.permissionGate,
+            cwd: params.cwd,
+            turnState: state,
+            // 多 Agent 支持
+            provider: params.provider,
             history: params.history,
-            turn: state.turn,
-            content: event.text,
+            providerRegistry: params.providerRegistry,
+            providerSettings: params.providerSettings,
+            childAgentTimeout: params.childAgentTimeout,
           }).pipe(
-            tap(() => {
-              params.trace({
-                sessionId: params.session.id,
-                turn: state.turn,
-                step: state.step,
-                scope: "turn",
-                phase: "turn.complete",
-                message: "turn completed",
-                data: {
-                  contentLength: event.text.length,
-                },
-              });
-            }),
-          );
-        }
+            // tap 用于副作用：更新状态和记录追踪
+            // 注意：这里更新外层的 state 变量，这是关键！
+            // 工具执行结果必须累积到状态中，供下一次递归使用
+            tap((toolEvent) => {
+              if (toolEvent.type === 'tool_started') {
+                params.trace({
+                  sessionId: params.session.id,
+                  turn: state.turn,
+                  step: state.step,
+                  scope: 'tool',
+                  phase: 'call',
+                  message: 'tool execution started',
+                  data: {
+                    toolName: toolEvent.toolName,
+                    callId: toolEvent.callId,
+                  },
+                });
 
-        // ---- 处理 tool_call 事件 ----
-        // tool_call 表示 Agent 想要调用工具
-        // 需要进行权限检查，然后执行工具
-        state = recordToolCall(state, event.call);
-        nextAction = "tool";
+                return;
+              }
 
-        // 检查是否配置了工具执行所需的基础设施
-        if (!params.toolRegistry || !params.permissionGate) {
-          const error = t("runtime.noToolRegistry");
+              if (toolEvent.type === 'permission_decision') {
+                params.trace({
+                  sessionId: params.session.id,
+                  turn: state.turn,
+                  step: state.step,
+                  scope: 'tool',
+                  phase: 'permission',
+                  message: 'permission decision resolved',
+                  data: {
+                    toolName: toolEvent.toolName,
+                    decision: toolEvent.decision,
+                    mode: toolEvent.mode,
+                    callId: toolEvent.callId,
+                  },
+                });
 
-          // 记录错误结果
-          state = recordToolResult(state, {
-            callId: event.call.id,
-            toolName: event.call.toolName,
-            input: event.call.input,
-            status: "error",
-            error,
-          });
+                return;
+              }
 
-          params.trace({
-            sessionId: params.session.id,
-            turn: state.turn,
-            step: state.step,
-            scope: "tool",
-            phase: "tool.result",
-            message: "tool execution failed before dispatch",
-            data: {
-              tool: event.call.toolName,
-              status: "error",
-            },
-          });
+              // tool_result: 工具执行成功
+              // 更新状态，记录工具结果
+              if (toolEvent.type === 'tool_result') {
+                // 从 toolCalls 中查找原始 input
+                const originalCall = state.toolCalls.find((tc) => tc.id === toolEvent.callId);
 
-          // 发出失败事件
-          return of<RuntimeEvent>({
-            type: "tool_failed",
-            sessionId: params.session.id,
-            turn: state.turn,
-            callId: event.call.id,
-            toolName: event.call.toolName,
-            status: "error",
-            error,
-          });
-        }
-
-        // 记录开始时间用于计算耗时
-        const startedAt = Date.now();
-
-        // 分发工具调用
-        // dispatchToolCall 返回工具执行事件的 Observable
-        return dispatchToolCall({
-          session: params.session,
-          sessionManager: params.sessionManager,
-          turn: state.turn,
-          call: event.call,
-          registry: params.toolRegistry,
-          permissionGate: params.permissionGate,
-          cwd: params.cwd,
-          turnState: state,
-          // 多 Agent 支持
-          provider: params.provider,
-          history: params.history,
-          providerRegistry: params.providerRegistry,
-          providerSettings: params.providerSettings,
-          childAgentTimeout: params.childAgentTimeout,
-        }).pipe(
-          // tap 用于副作用：更新状态和记录追踪
-          // 注意：这里更新外层的 state 变量，这是关键！
-          // 工具执行结果必须累积到状态中，供下一次递归使用
-          tap((toolEvent) => {
-            if (toolEvent.type === "tool_started") {
-              params.trace({
-                sessionId: params.session.id,
-                turn: state.turn,
-                step: state.step,
-                scope: "tool",
-                phase: "call",
-                message: "tool execution started",
-                data: {
-                  toolName: toolEvent.toolName,
+                state = recordToolResult(state, {
                   callId: toolEvent.callId,
-                },
-              });
-
-              return;
-            }
-
-            if (toolEvent.type === "permission_decision") {
-              params.trace({
-                sessionId: params.session.id,
-                turn: state.turn,
-                step: state.step,
-                scope: "tool",
-                phase: "permission",
-                message: "permission decision resolved",
-                data: {
                   toolName: toolEvent.toolName,
-                  decision: toolEvent.decision,
-                  mode: toolEvent.mode,
-                  callId: toolEvent.callId,
-                },
-              });
-
-              return;
-            }
-
-            // tool_result: 工具执行成功
-            // 更新状态，记录工具结果
-            if (toolEvent.type === "tool_result") {
-              // 从 toolCalls 中查找原始 input
-              const originalCall = state.toolCalls.find((tc) => tc.id === toolEvent.callId);
-
-              state = recordToolResult(state, {
-                callId: toolEvent.callId,
-                toolName: toolEvent.toolName,
-                input: originalCall?.input ?? {},
-                status: toolEvent.status,
-                output: toolEvent.output,
-              });
-
-              params.trace({
-                sessionId: params.session.id,
-                turn: state.turn,
-                step: state.step,
-                scope: "tool",
-                phase: "success",
-                message: "tool execution completed",
-                data: {
-                  toolName: toolEvent.toolName,
+                  input: originalCall?.input ?? {},
                   status: toolEvent.status,
-                  ms: Date.now() - startedAt,
+                  output: toolEvent.output,
+                });
+
+                params.trace({
+                  sessionId: params.session.id,
+                  turn: state.turn,
+                  step: state.step,
+                  scope: 'tool',
+                  phase: 'success',
+                  message: 'tool execution completed',
+                  data: {
+                    toolName: toolEvent.toolName,
+                    status: toolEvent.status,
+                    ms: Date.now() - startedAt,
+                    callId: toolEvent.callId,
+                  },
+                });
+
+                return;
+              }
+
+              // tool_failed: 工具执行失败
+              // 同样需要更新状态，记录失败结果
+              if (toolEvent.type === 'tool_failed') {
+                // 从 toolCalls 中查找原始 input
+                const originalCall = state.toolCalls.find((tc) => tc.id === toolEvent.callId);
+
+                state = recordToolResult(state, {
                   callId: toolEvent.callId,
-                },
-              });
-
-              return;
-            }
-
-            // tool_failed: 工具执行失败
-            // 同样需要更新状态，记录失败结果
-            if (toolEvent.type === "tool_failed") {
-              // 从 toolCalls 中查找原始 input
-              const originalCall = state.toolCalls.find((tc) => tc.id === toolEvent.callId);
-
-              state = recordToolResult(state, {
-                callId: toolEvent.callId,
-                toolName: toolEvent.toolName,
-                input: originalCall?.input ?? {},
-                status: toolEvent.status,
-                error: toolEvent.error,
-              });
-
-              params.trace({
-                sessionId: params.session.id,
-                turn: state.turn,
-                step: state.step,
-                scope: "tool",
-                phase: "error",
-                message: "tool execution failed",
-                data: {
                   toolName: toolEvent.toolName,
+                  input: originalCall?.input ?? {},
                   status: toolEvent.status,
-                  ms: Date.now() - startedAt,
                   error: toolEvent.error,
-                  callId: toolEvent.callId,
-                },
-              });
-            }
-          }),
-        );
-      }),
-    );
+                });
+
+                params.trace({
+                  sessionId: params.session.id,
+                  turn: state.turn,
+                  step: state.step,
+                  scope: 'tool',
+                  phase: 'error',
+                  message: 'tool execution failed',
+                  data: {
+                    toolName: toolEvent.toolName,
+                    status: toolEvent.status,
+                    ms: Date.now() - startedAt,
+                    error: toolEvent.error,
+                    callId: toolEvent.callId,
+                  },
+                });
+              }
+            })
+          );
+        })
+      );
 
     // ---- 后续处理阶段 (continuation$) ----
     // 使用 defer 延迟执行，根据 nextAction 决定后续行为
     const continuation$ = defer(() => {
       // 情况 1: Turn 完成，无需继续
-      if (nextAction === "complete" || state.status === "completed") {
+      if (nextAction === 'complete' || state.status === 'completed') {
         // EMPTY 是一个立即 complete 的 Observable，不发出任何值
         return EMPTY;
       }
 
       // 情况 2: 工具调用完成，需要递归调用 Provider
-      if (nextAction === "tool") {
+      if (nextAction === 'tool') {
         // 推进步数
         const nextState = advanceTurnState(state);
 
@@ -678,9 +697,9 @@ function runTurnLoop(params: {
           sessionId: params.session.id,
           turn: nextState.turn,
           step: nextState.step,
-          scope: "turn",
-          phase: "turn.advance",
-          message: "advance to next provider step",
+          scope: 'turn',
+          phase: 'turn.advance',
+          message: 'advance to next provider step',
           data: {
             toolResults: nextState.toolResults.length,
           },
@@ -703,9 +722,9 @@ function runTurnLoop(params: {
         sessionId: params.session.id,
         turn: state.turn,
         step: state.step,
-        scope: "provider",
-        phase: "provider.empty",
-        message: "provider completed without final assistant message",
+        scope: 'provider',
+        phase: 'provider.empty',
+        message: 'provider completed without final assistant message',
         data: {
           chunkCount: state.assistantChunks.length,
         },
@@ -723,14 +742,14 @@ function runTurnLoop(params: {
             sessionId: params.session.id,
             turn: state.turn,
             step: state.step,
-            scope: "turn",
-            phase: "turn.complete",
-            message: "turn completed via fallback assistant message",
+            scope: 'turn',
+            phase: 'turn.complete',
+            message: 'turn completed via fallback assistant message',
             data: {
               contentLength: fallbackMessage.length,
             },
           });
-        }),
+        })
       );
     });
 
@@ -845,13 +864,15 @@ export function runAgentLoop(params: {
 
   // ---- 主事件流 ----
   // 使用 defer 延迟执行异步的会话创建
-  const events$ = defer(async () =>
-    // 如果传入了已有 session，使用它；否则创建新会话
-    params.existingSession ?? params.sessionManager.startSession({
-      cwd: params.cwd,
-      mode: params.mode,
-      providerId: params.provider.id,
-    }),
+  const events$ = defer(
+    async () =>
+      // 如果传入了已有 session，使用它；否则创建新会话
+      params.existingSession ??
+      params.sessionManager.startSession({
+        cwd: params.cwd,
+        mode: params.mode,
+        providerId: params.provider.id,
+      })
   ).pipe(
     // concatMap: 将 Promise 结果转换为 Observable，顺序处理
     // 不同于 switchMap，concatMap 不会取消前一个
@@ -862,14 +883,14 @@ export function runAgentLoop(params: {
       // ---- 会话开始阶段 ----
       // 持久化会话开始记录，发出 session_started 事件
       const start$ = defer(() =>
-        from(params.sessionManager.appendRecord(session, createSessionStartRecord(session))),
+        from(params.sessionManager.appendRecord(session, createSessionStartRecord(session)))
       ).pipe(
         tap(() => {
           trace({
             sessionId: session.id,
-            scope: "session",
-            phase: "session.start",
-            message: "session started",
+            scope: 'session',
+            phase: 'session.start',
+            message: 'session started',
             data: {
               mode: session.mode,
               provider: session.providerId,
@@ -878,12 +899,12 @@ export function runAgentLoop(params: {
         }),
         map(
           (): RuntimeEvent => ({
-            type: "session_started",
+            type: 'session_started',
             sessionId: session.id,
             sessionPath: session.path,
             mode: session.mode,
-          }),
-        ),
+          })
+        )
       );
 
       // ---- Turn 处理阶段 ----
@@ -912,9 +933,9 @@ export function runAgentLoop(params: {
                 sessionId: session.id,
                 turn: turn.turn,
                 step: 1,
-                scope: "turn",
-                phase: "turn.input",
-                message: "user turn received",
+                scope: 'turn',
+                phase: 'turn.input',
+                message: 'user turn received',
                 data: {
                   source: turn.source,
                 },
@@ -922,13 +943,13 @@ export function runAgentLoop(params: {
             }),
             map(
               (): RuntimeEvent => ({
-                type: "user_turn",
+                type: 'user_turn',
                 sessionId: session.id,
                 turn: turn.turn,
                 content: turn.content,
                 source: turn.source,
-              }),
-            ),
+              })
+            )
           );
 
           // assistant$, 运行 Agent 响应循环
@@ -957,28 +978,28 @@ export function runAgentLoop(params: {
 
           // concat 确保先处理 user$，再处理 assistant$
           return concat(user$, assistant$);
-        }),
+        })
       );
 
       // ---- 会话结束阶段 ----
       // 持久化会话结束记录，发出 session_ended 事件
       const end$ = defer(() =>
-        from(params.sessionManager.appendRecord(session, createSessionEndRecord(session.id))),
+        from(params.sessionManager.appendRecord(session, createSessionEndRecord(session.id)))
       ).pipe(
         tap(() => {
           trace({
             sessionId: session.id,
-            scope: "session",
-            phase: "session.end",
-            message: "session ended",
+            scope: 'session',
+            phase: 'session.end',
+            message: 'session ended',
           });
         }),
         map(
           (): RuntimeEvent => ({
-            type: "session_ended",
+            type: 'session_ended',
             sessionId: session.id,
-          }),
-        ),
+          })
+        )
       );
 
       // 使用 concat 顺序执行三个阶段
@@ -989,13 +1010,13 @@ export function runAgentLoop(params: {
     tap({
       error: (error) => {
         trace({
-          sessionId: "runtime",
-          scope: "session",
-          phase: "session.error",
+          sessionId: 'runtime',
+          scope: 'session',
+          phase: 'session.error',
           message: error instanceof Error ? error.message : String(error),
         });
       },
-    }),
+    })
   );
 
   // ---- 返回结果 ----

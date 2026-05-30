@@ -5,10 +5,10 @@
  * Supports environment variable WASTELAND_THEME for theme selection.
  */
 
-import type { Theme } from "./types.js";
-import { defaultTheme } from "./default.js";
-import { nordTheme } from "./nord.js";
-import { monokaiTheme } from "./monokai.js";
+import type { Theme } from './types.js';
+import { defaultTheme } from './default.js';
+import { nordTheme } from './nord.js';
+import { monokaiTheme } from './monokai.js';
 
 // ============================================================
 // Theme Registry
@@ -43,7 +43,7 @@ export function getTheme(name: string): Theme {
  * 2. Default theme
  */
 export function getCurrentTheme(): Theme {
-  const themeName = process.env.WASTELAND_THEME ?? process.env.JOE_THEME ?? "default";
+  const themeName = process.env.WASTELAND_THEME ?? process.env.JOE_THEME ?? 'default';
   return getTheme(themeName);
 }
 
@@ -55,7 +55,7 @@ export function getCurrentTheme(): Theme {
 export const theme = getCurrentTheme();
 
 // Re-export types and individual themes
-export { type Theme } from "./types.js";
-export { defaultTheme } from "./default.js";
-export { nordTheme } from "./nord.js";
-export { monokaiTheme } from "./monokai.js";
+export { type Theme } from './types.js';
+export { defaultTheme } from './default.js';
+export { nordTheme } from './nord.js';
+export { monokaiTheme } from './monokai.js';

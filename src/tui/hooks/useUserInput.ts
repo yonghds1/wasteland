@@ -4,9 +4,9 @@
  * 提供 sendMessage 方法，将用户输入发送到 runtime。
  */
 
-import { useCallback, useRef } from "react";
-import type { Subject } from "rxjs";
-import type { ChatInputTurn } from "../types.js";
+import { useCallback, useRef } from 'react';
+import type { Subject } from 'rxjs';
+import type { ChatInputTurn } from '../types.js';
 
 /**
  * useUserInput Hook
@@ -14,9 +14,7 @@ import type { ChatInputTurn } from "../types.js";
  * @param input$ - 用户输入流 Subject
  * @returns sendMessage - 发送消息到 runtime 的方法
  */
-export function useUserInput(
-  input$: Subject<ChatInputTurn> | null,
-): {
+export function useUserInput(input$: Subject<ChatInputTurn> | null): {
   sendMessage: (content: string) => void;
 } {
   // Turn 计数器（从 1 开始）
@@ -25,7 +23,7 @@ export function useUserInput(
   const sendMessage = useCallback(
     (content: string) => {
       if (!input$) {
-        console.error("Runtime not initialized, cannot send message");
+        console.error('Runtime not initialized, cannot send message');
         return;
       }
 
@@ -37,13 +35,13 @@ export function useUserInput(
       const turn: ChatInputTurn = {
         turn: turnRef.current,
         content: content.trim(),
-        source: "interactive",
+        source: 'interactive',
       };
 
       input$.next(turn);
       turnRef.current += 1;
     },
-    [input$],
+    [input$]
   );
 
   return { sendMessage };

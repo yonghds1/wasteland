@@ -1,33 +1,37 @@
-import { concat, concatMap, defer, from, map, of, type Observable } from "rxjs";
+import { concat, concatMap, defer, from, map, of, type Observable } from 'rxjs';
 
-import { t } from "../locales/index.js";
+import { t } from '../locales/index.js';
 
-import { executeToolCall } from "../tools/tool-runner.js";
-import { ToolRegistry } from "../tools/tool-registry.js";
-import type { ToolCall, ToolRunStatus } from "../tools/tool-types.js";
+import { executeToolCall } from '../tools/tool-runner.js';
+import { ToolRegistry } from '../tools/tool-registry.js';
+import type { ToolCall, ToolRunStatus } from '../tools/tool-types.js';
 import {
   type RuntimeEvent,
   type SessionPermissionRecord,
   type SessionToolCallRecord,
   type SessionToolResultRecord,
-} from "./event-types.js";
-import { checkReadBeforeEdit } from "./file-audit.js";
-import type { PermissionGate } from "./permission-gate.js";
-import { SessionManager, type SessionMetadata } from "./session-manager.js";
-import type { TurnState } from "./turn-state.js";
-import { createSpawnAgentTool, type SpawnAgentInput } from "../tools/spawn-agent.js";
-import type { AgentProvider } from "../providers/provider-types.js";
-import type { SessionMessageRecord } from "./event-types.js";
-import type { ProviderSettings } from "../config/settings-types.js";
-import type { ProviderRegistry } from "../providers/provider-registry.js";
+} from './event-types.js';
+import { checkReadBeforeEdit } from './file-audit.js';
+import type { PermissionGate } from './permission-gate.js';
+import { SessionManager, type SessionMetadata } from './session-manager.js';
+import type { TurnState } from './turn-state.js';
+import { createSpawnAgentTool } from '../tools/spawn-agent.js';
+import type { AgentProvider } from '../providers/provider-types.js';
+import type { SessionMessageRecord } from './event-types.js';
+import type { ProviderSettings } from '../config/settings-types.js';
+import type { ProviderRegistry } from '../providers/provider-registry.js';
 
 function createTimestamp(): string {
   return new Date().toISOString();
 }
 
-function createToolCallRecord(session: SessionMetadata, turn: number, call: ToolCall): SessionToolCallRecord {
+function createToolCallRecord(
+  session: SessionMetadata,
+  turn: number,
+  call: ToolCall
+): SessionToolCallRecord {
   return {
-    type: "tool_call",
+    type: 'tool_call',
     sessionId: session.id,
     turn,
     callId: call.id,
@@ -41,10 +45,10 @@ function createPermissionRecord(params: {
   session: SessionMetadata;
   turn: number;
   call: ToolCall;
-  decision: ReturnType<PermissionGate["evaluate"]>;
+  decision: ReturnType<PermissionGate['evaluate']>;
 }): SessionPermissionRecord {
   return {
-    type: "permission",
+    type: 'permission',
     sessionId: params.session.id,
     turn: params.turn,
     callId: params.call.id,
@@ -65,7 +69,7 @@ function createToolResultRecord(params: {
   error?: string;
 }): SessionToolResultRecord {
   return {
-    type: "tool_result",
+    type: 'tool_result',
     sessionId: params.session.id,
     turn: params.turn,
     callId: params.call.id,
@@ -100,7 +104,7 @@ export function dispatchToolCall(params: {
   // ---- read-before-edit 检查 ----
   // 对于 edit-file 和 write-file，检查是否已读取过目标文件
   const filePath = params.call.input.path;
-  if (typeof filePath === "string") {
+  if (typeof filePath === 'string') {
     const check = checkReadBeforeEdit({
       toolName: params.call.toolName,
       filePath,
@@ -113,22 +117,22 @@ export function dispatchToolCall(params: {
         session: params.session,
         turn: params.turn,
         call: params.call,
-        status: "error",
+        status: 'error',
         error: check.error,
       });
 
       const failed$ = from(params.sessionManager.appendRecord(params.session, failedRecord)).pipe(
         map(
           (): RuntimeEvent => ({
-            type: "tool_failed",
+            type: 'tool_failed',
             sessionId: params.session.id,
             turn: params.turn,
             callId: params.call.id,
             toolName: params.call.toolName,
-            status: "error",
-            error: check.error ?? t("runtime.readBeforeEdit"),
-          }),
-        ),
+            status: 'error',
+            error: check.error ?? t('runtime.readBeforeEdit'),
+          })
+        )
       );
 
       return failed$;
@@ -138,26 +142,26 @@ export function dispatchToolCall(params: {
   const requested$ = from(
     params.sessionManager.appendRecord(
       params.session,
-      createToolCallRecord(params.session, params.turn, params.call),
-    ),
+      createToolCallRecord(params.session, params.turn, params.call)
+    )
   ).pipe(
     map(
       (): RuntimeEvent => ({
-        type: "tool_call_requested",
+        type: 'tool_call_requested',
         sessionId: params.session.id,
         turn: params.turn,
         callId: params.call.id,
         toolName: params.call.toolName,
         input: params.call.input,
-      }),
-    ),
+      })
+    )
   );
 
   const tool = params.registry.get(params.call.toolName);
 
   // ---- 特殊处理：spawn_agent ----
   // spawn_agent 需要额外的上下文，直接在这里处理
-  if (params.call.toolName === "spawn_agent" && params.provider) {
+  if (params.call.toolName === 'spawn_agent' && params.provider) {
     const spawnTool = createSpawnAgentTool({
       sessionId: params.session.id,
       turn: params.turn,
@@ -184,12 +188,12 @@ export function dispatchToolCall(params: {
           turn: params.turn,
           call: params.call,
           decision,
-        }),
-      ),
+        })
+      )
     ).pipe(
       map(
         (): RuntimeEvent => ({
-          type: "permission_decision",
+          type: 'permission_decision',
           sessionId: params.session.id,
           turn: params.turn,
           callId: params.call.id,
@@ -197,12 +201,12 @@ export function dispatchToolCall(params: {
           decision: decision.decision,
           mode: decision.mode,
           reason: decision.reason,
-        }),
-      ),
+        })
+      )
     );
 
-    if (decision.decision !== "allow") {
-      const blockedStatus = decision.decision === "deny" ? "error" : "blocked";
+    if (decision.decision !== 'allow') {
+      const blockedStatus = decision.decision === 'deny' ? 'error' : 'blocked';
       const failedRecord = createToolResultRecord({
         session: params.session,
         turn: params.turn,
@@ -214,22 +218,22 @@ export function dispatchToolCall(params: {
       const failed$ = from(params.sessionManager.appendRecord(params.session, failedRecord)).pipe(
         map(
           (): RuntimeEvent => ({
-            type: "tool_failed",
+            type: 'tool_failed',
             sessionId: params.session.id,
             turn: params.turn,
             callId: params.call.id,
             toolName: params.call.toolName,
             status: blockedStatus,
             error: decision.reason,
-          }),
-        ),
+          })
+        )
       );
 
       return concat(requested$, permission$, failed$);
     }
 
     const started$ = of<RuntimeEvent>({
-      type: "tool_started",
+      type: 'tool_started',
       sessionId: params.session.id,
       turn: params.turn,
       callId: params.call.id,
@@ -241,30 +245,30 @@ export function dispatchToolCall(params: {
         sessionId: params.session.id,
         turn: params.turn,
         cwd: params.cwd,
-      }),
+      })
     ).pipe(
       concatMap((result) => {
-        if (result.status === "success") {
+        if (result.status === 'success') {
           const resultRecord = createToolResultRecord({
             session: params.session,
             turn: params.turn,
             call: params.call,
-            status: "success",
+            status: 'success',
             output: result.output,
           });
 
           return from(params.sessionManager.appendRecord(params.session, resultRecord)).pipe(
             map(
               (): RuntimeEvent => ({
-                type: "tool_result",
+                type: 'tool_result',
                 sessionId: params.session.id,
                 turn: params.turn,
                 callId: params.call.id,
                 toolName: params.call.toolName,
-                status: "success",
+                status: 'success',
                 output: result.output,
-              }),
-            ),
+              })
+            )
           );
         }
 
@@ -272,24 +276,24 @@ export function dispatchToolCall(params: {
           session: params.session,
           turn: params.turn,
           call: params.call,
-          status: "error",
+          status: 'error',
           error: result.error,
         });
 
         return from(params.sessionManager.appendRecord(params.session, failedRecord)).pipe(
           map(
             (): RuntimeEvent => ({
-              type: "tool_failed",
+              type: 'tool_failed',
               sessionId: params.session.id,
               turn: params.turn,
               callId: params.call.id,
               toolName: params.call.toolName,
-              status: "error",
+              status: 'error',
               error: result.error,
-            }),
-          ),
+            })
+          )
         );
-      }),
+      })
     );
 
     return concat(requested$, permission$, started$, result$);
@@ -300,22 +304,22 @@ export function dispatchToolCall(params: {
       session: params.session,
       turn: params.turn,
       call: params.call,
-      status: "error",
-      error: `${t("runtime.toolNotFound")} ${params.call.toolName}`,
+      status: 'error',
+      error: `${t('runtime.toolNotFound')} ${params.call.toolName}`,
     });
 
     const failed$ = from(params.sessionManager.appendRecord(params.session, failedRecord)).pipe(
       map(
         (): RuntimeEvent => ({
-          type: "tool_failed",
+          type: 'tool_failed',
           sessionId: params.session.id,
           turn: params.turn,
           callId: params.call.id,
           toolName: params.call.toolName,
-          status: "error",
-          error: failedRecord.error ?? t("runtime.toolFailed"),
-        }),
-      ),
+          status: 'error',
+          error: failedRecord.error ?? t('runtime.toolFailed'),
+        })
+      )
     );
 
     return concat(requested$, failed$);
@@ -331,12 +335,12 @@ export function dispatchToolCall(params: {
         turn: params.turn,
         call: params.call,
         decision,
-      }),
-    ),
+      })
+    )
   ).pipe(
     map(
       (): RuntimeEvent => ({
-        type: "permission_decision",
+        type: 'permission_decision',
         sessionId: params.session.id,
         turn: params.turn,
         callId: params.call.id,
@@ -344,12 +348,12 @@ export function dispatchToolCall(params: {
         decision: decision.decision,
         mode: decision.mode,
         reason: decision.reason,
-      }),
-    ),
+      })
+    )
   );
 
-  if (decision.decision !== "allow") {
-    const blockedStatus = decision.decision === "deny" ? "error" : "blocked";
+  if (decision.decision !== 'allow') {
+    const blockedStatus = decision.decision === 'deny' ? 'error' : 'blocked';
     const failedRecord = createToolResultRecord({
       session: params.session,
       turn: params.turn,
@@ -361,22 +365,22 @@ export function dispatchToolCall(params: {
     const failed$ = from(params.sessionManager.appendRecord(params.session, failedRecord)).pipe(
       map(
         (): RuntimeEvent => ({
-          type: "tool_failed",
+          type: 'tool_failed',
           sessionId: params.session.id,
           turn: params.turn,
           callId: params.call.id,
           toolName: params.call.toolName,
           status: blockedStatus,
           error: decision.reason,
-        }),
-      ),
+        })
+      )
     );
 
     return concat(requested$, permission$, failed$);
   }
 
   const started$ = of<RuntimeEvent>({
-    type: "tool_started",
+    type: 'tool_started',
     sessionId: params.session.id,
     turn: params.turn,
     callId: params.call.id,
@@ -392,30 +396,30 @@ export function dispatchToolCall(params: {
         turn: params.turn,
         cwd: params.cwd,
       },
-    }),
+    })
   ).pipe(
     concatMap((result) => {
-      if (result.status === "success") {
+      if (result.status === 'success') {
         const resultRecord = createToolResultRecord({
           session: params.session,
           turn: params.turn,
           call: params.call,
-          status: "success",
+          status: 'success',
           output: result.output,
         });
 
         return from(params.sessionManager.appendRecord(params.session, resultRecord)).pipe(
           map(
             (): RuntimeEvent => ({
-              type: "tool_result",
+              type: 'tool_result',
               sessionId: params.session.id,
               turn: params.turn,
               callId: params.call.id,
               toolName: params.call.toolName,
-              status: "success",
+              status: 'success',
               output: result.output,
-            }),
-          ),
+            })
+          )
         );
       }
 
@@ -423,24 +427,24 @@ export function dispatchToolCall(params: {
         session: params.session,
         turn: params.turn,
         call: params.call,
-        status: "error",
+        status: 'error',
         error: result.error,
       });
 
       return from(params.sessionManager.appendRecord(params.session, failedRecord)).pipe(
         map(
           (): RuntimeEvent => ({
-            type: "tool_failed",
+            type: 'tool_failed',
             sessionId: params.session.id,
             turn: params.turn,
             callId: params.call.id,
             toolName: params.call.toolName,
-            status: "error",
+            status: 'error',
             error: result.error,
-          }),
-        ),
+          })
+        )
       );
-    }),
+    })
   );
 
   return concat(requested$, permission$, started$, result$);

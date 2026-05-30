@@ -29,14 +29,14 @@
  * ```
  */
 
-import { once } from "node:events";
-import { createInterface } from "node:readline";
-import type { Readable, Writable } from "node:stream";
+import { once } from 'node:events';
+import { createInterface } from 'node:readline';
+import type { Readable, Writable } from 'node:stream';
 
-import { filter, from, fromEvent, map, scan, takeUntil, tap, type Observable } from "rxjs";
+import { filter, from, fromEvent, map, scan, takeUntil, tap, type Observable } from 'rxjs';
 
-import type { ChatInputTurn } from "../runtime/event-types.js";
-import type { SkillExecutor } from "../skills/skill-executor.js";
+import type { ChatInputTurn } from '../runtime/event-types.js';
+import type { SkillExecutor } from '../skills/skill-executor.js';
 import {
   ANSI,
   PANEL_GUTTER,
@@ -44,17 +44,17 @@ import {
   paint,
   resolvePanelWidth,
   wrapText,
-} from "./terminal-theme.js";
+} from './terminal-theme.js';
 
 // ============================================================
 // 常量定义
 // ============================================================
 
 /** 退出命令集合 */
-const EXIT_COMMANDS = new Set(["/exit", "/quit"]);
+const EXIT_COMMANDS = new Set(['/exit', '/quit']);
 
 /** 本地命令集合（不发送给 Agent） */
-const LOCAL_COMMANDS = new Set(["/help", "/tools", "/clear", "/skills"]);
+const LOCAL_COMMANDS = new Set(['/help', '/tools', '/clear', '/skills']);
 
 // ============================================================
 // UI 辅助函数
@@ -66,10 +66,10 @@ const LOCAL_COMMANDS = new Set(["/help", "/tools", "/clear", "/skills"]);
  */
 function createInteractiveIntro(): string {
   return [
-    paint("wasteland interactive", ANSI.bold, ANSI.cyan),
-    paint("Prompt: >    Replies: wasteland", ANSI.bold, ANSI.brightWhite),
-    paint("Commands: /help /tools /clear /exit", ANSI.brightWhite),
-  ].join("\n");
+    paint('wasteland interactive', ANSI.bold, ANSI.cyan),
+    paint('Prompt: >    Replies: wasteland', ANSI.bold, ANSI.brightWhite),
+    paint('Commands: /help /tools /clear /exit', ANSI.brightWhite),
+  ].join('\n');
 }
 
 /**
@@ -81,9 +81,9 @@ function createInteractiveIntro(): string {
  */
 function createLocalOutput(title: string, lines: string[], columns?: number): string {
   return [
-    paint("local", ANSI.bold, ANSI.gray),
-    indentBlock(wrapText([title, ...lines].join("\n"), resolvePanelWidth(columns)), PANEL_GUTTER),
-  ].join("\n");
+    paint('local', ANSI.bold, ANSI.gray),
+    indentBlock(wrapText([title, ...lines].join('\n'), resolvePanelWidth(columns)), PANEL_GUTTER),
+  ].join('\n');
 }
 
 /**
@@ -92,13 +92,17 @@ function createLocalOutput(title: string, lines: string[], columns?: number): st
  * @returns 帮助信息
  */
 function createHelpText(columns?: number): string {
-  return createLocalOutput("Session commands", [
-    "/help   Show interactive help",
-    "/tools  Show current local tool syntax",
-    "/skills Show available skills",
-    "/clear  Clear the terminal and redraw the header",
-    "/exit   Exit interactive mode",
-  ], columns);
+  return createLocalOutput(
+    'Session commands',
+    [
+      '/help   Show interactive help',
+      '/tools  Show current local tool syntax',
+      '/skills Show available skills',
+      '/clear  Clear the terminal and redraw the header',
+      '/exit   Exit interactive mode',
+    ],
+    columns
+  );
 }
 
 /**
@@ -107,16 +111,11 @@ function createHelpText(columns?: number): string {
  * @returns 工具语法信息
  */
 function createToolsText(columns?: number): string {
-  return createLocalOutput("Current local tool syntax", ["/read <relative-path>", "/bash <command>"], columns);
-}
-
-/**
- * 解析输出流的列宽度
- * @param output - 输出流
- * @returns 列宽度（如果可用）
- */
-function resolveOutputColumns(output: Writable): number | undefined {
-  return "columns" in output && typeof output.columns === "number" ? output.columns : undefined;
+  return createLocalOutput(
+    'Current local tool syntax',
+    ['/read <relative-path>', '/bash <command>'],
+    columns
+  );
 }
 
 // ============================================================
@@ -161,7 +160,7 @@ export type InteractiveTurnStream = {
  */
 export function createSingleTurnInput(
   message: string,
-  source: "message" | "stdin",
+  source: 'message' | 'stdin'
 ): Observable<ChatInputTurn> {
   // from: 将数组转换为 Observable，依次发出每个元素
   // 这里只有一个元素，所以发出一次
@@ -190,12 +189,12 @@ export function createSingleTurnInput(
 export async function readPipedInput(stdin: Readable = process.stdin): Promise<string | null> {
   // TTY 检测：如果 stdin.isTTY 为 true，说明是交互式终端
   // 管道输入时，isTTY 为 undefined 或 false
-  if ("isTTY" in stdin && stdin.isTTY) {
+  if ('isTTY' in stdin && stdin.isTTY) {
     return null;
   }
 
   // 异步迭代读取所有 chunk
-  let content = "";
+  let content = '';
 
   for await (const chunk of stdin) {
     content += chunk.toString();
@@ -277,7 +276,7 @@ export function createInteractiveTurnStream(params?: {
   const input = params?.input ?? process.stdin;
   const output = params?.output ?? process.stdout;
   const intro = params?.intro ?? createInteractiveIntro();
-  const promptText = params?.promptText ?? "> ";
+  const promptText = params?.promptText ?? '> ';
   const skillExecutor = params?.skillExecutor;
 
   // 创建 readline 接口
@@ -305,10 +304,10 @@ export function createInteractiveTurnStream(params?: {
 
   // close$ 事件流：用于 takeUntil 结束主流
   // fromEvent: 将 readline 的 "close" 事件转为 Observable
-  const close$ = fromEvent(rl, "close");
+  const close$ = fromEvent(rl, 'close');
 
   // turns$: 主输入流
-  const turns$ = fromEvent<string>(rl, "line").pipe(
+  const turns$ = fromEvent<string>(rl, 'line').pipe(
     // ---- map: 去除首尾空白 ----
     // 每次用户按回车，readline 发出 "line" 事件
     // map 将原始行转换为 trimmed 行
@@ -325,31 +324,37 @@ export function createInteractiveTurnStream(params?: {
       }
 
       // /help: 显示帮助
-      if (line === "/help") {
-        output.write(`${ANSI.reset}\n${createHelpText("columns" in output ? output.columns : undefined)}\n\n`);
+      if (line === '/help') {
+        output.write(
+          `${ANSI.reset}\n${createHelpText('columns' in output ? output.columns : undefined)}\n\n`
+        );
         renderPrompt();
         return;
       }
 
       // /tools: 显示工具语法
-      if (line === "/tools") {
-        output.write(`${ANSI.reset}\n${createToolsText("columns" in output ? output.columns : undefined)}\n\n`);
+      if (line === '/tools') {
+        output.write(
+          `${ANSI.reset}\n${createToolsText('columns' in output ? output.columns : undefined)}\n\n`
+        );
         renderPrompt();
         return;
       }
 
       // /clear: 清屏并重绘
-      if (line === "/clear") {
-        output.write(`${ANSI.reset}\x1b[2J\x1b[H`);  // ANSI 清屏和移动光标
+      if (line === '/clear') {
+        output.write(`${ANSI.reset}\x1b[2J\x1b[H`); // ANSI 清屏和移动光标
         output.write(`${intro}\n`);
         renderPrompt();
         return;
       }
 
       // /skills: 显示可用技能
-      if (line === "/skills" && skillExecutor) {
+      if (line === '/skills' && skillExecutor) {
         const skillsHelp = skillExecutor.createSkillsHelp();
-        output.write(`${ANSI.reset}\n${createLocalOutput("Available skills", [skillsHelp], "columns" in output ? output.columns : undefined)}\n\n`);
+        output.write(
+          `${ANSI.reset}\n${createLocalOutput('Available skills', [skillsHelp], 'columns' in output ? output.columns : undefined)}\n\n`
+        );
         renderPrompt();
         return;
       }
@@ -372,16 +377,16 @@ export function createInteractiveTurnStream(params?: {
     // 参数2: 初始状态
     scan<string, ChatInputTurn>(
       (state, line) => ({
-        turn: state.turn + 1,  // turn 递增
+        turn: state.turn + 1, // turn 递增
         content: line,
-        source: "interactive",
+        source: 'interactive',
       }),
       {
-        turn: 0,  // 初始 turn
-        content: "",
-        source: "interactive",
-      },
-    ),
+        turn: 0, // 初始 turn
+        content: '',
+        source: 'interactive',
+      }
+    )
   );
 
   // ---- 返回结果 ----
@@ -390,8 +395,8 @@ export function createInteractiveTurnStream(params?: {
     prompt: renderPrompt,
     close: () => rl.close(),
     // once: 等待单个事件，返回 Promise
-    done: once(rl, "close").then(() => {
-      output.write(`${ANSI.reset}${paint("Session ended.", ANSI.dim, ANSI.gray)}\n`);
+    done: once(rl, 'close').then(() => {
+      output.write(`${ANSI.reset}${paint('Session ended.', ANSI.dim, ANSI.gray)}\n`);
     }),
   };
 }

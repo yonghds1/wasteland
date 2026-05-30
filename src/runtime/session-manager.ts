@@ -1,9 +1,9 @@
-import { randomUUID } from "node:crypto";
-import { appendFile, mkdir } from "node:fs/promises";
-import { join } from "node:path";
+import { randomUUID } from 'node:crypto';
+import { appendFile, mkdir } from 'node:fs/promises';
+import { join } from 'node:path';
 
-import { resolveDefaultSessionDir } from "../config/paths.js";
-import type { RuntimeMode, SessionRecord } from "./event-types.js";
+import { resolveDefaultSessionDir } from '../config/paths.js';
+import type { RuntimeMode, SessionRecord } from './event-types.js';
 
 export type SessionMetadata = {
   id: string;
@@ -30,11 +30,11 @@ function generateSessionId(): string {
 
   // 使用本地时间而非 UTC
   const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  const hours = String(now.getHours()).padStart(2, "0");
-  const minutes = String(now.getMinutes()).padStart(2, "0");
-  const seconds = String(now.getSeconds()).padStart(2, "0");
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
 
   const date = `${year}-${month}-${day}`;
   const time = `${hours}${minutes}${seconds}`;
@@ -92,10 +92,7 @@ export class SessionManager {
    * @param parent - 父会话元数据
    * @param name - 子 Agent 名称
    */
-  async createChildSession(
-    parent: SessionMetadata,
-    name: string,
-  ): Promise<SessionMetadata> {
+  async createChildSession(parent: SessionMetadata, name: string): Promise<SessionMetadata> {
     await mkdir(this.sessionDir, { recursive: true });
 
     const childId = `${parent.id}-child-${name}`;
@@ -104,7 +101,7 @@ export class SessionManager {
       id: childId,
       path: join(this.sessionDir, `${childId}.jsonl`),
       cwd: parent.cwd,
-      mode: "single",
+      mode: 'single',
       providerId: parent.providerId,
       parentId: parent.id,
       childName: name,
@@ -125,14 +122,14 @@ export class SessionManager {
     const buffer = this.buffers.get(session.id);
     if (!buffer) {
       // 无缓冲区时直接写入（兼容旧逻辑）
-      await appendFile(session.path, `${JSON.stringify(record)}\n`, "utf8");
+      await appendFile(session.path, `${JSON.stringify(record)}\n`, 'utf8');
       return;
     }
 
     buffer.records.push(record);
 
     // session_end 记录立即写入所有缓冲内容
-    if (record.type === "session_end") {
+    if (record.type === 'session_end') {
       await this.flush(session.id);
       return;
     }
@@ -166,10 +163,10 @@ export class SessionManager {
     }
 
     // 批量写入
-    const content = buffer.records.map((r) => JSON.stringify(r)).join("\n") + "\n";
+    const content = buffer.records.map((r) => JSON.stringify(r)).join('\n') + '\n';
     const sessionPath = join(this.sessionDir, `${sessionId}.jsonl`);
 
-    await appendFile(sessionPath, content, "utf8");
+    await appendFile(sessionPath, content, 'utf8');
     buffer.records = [];
   }
 

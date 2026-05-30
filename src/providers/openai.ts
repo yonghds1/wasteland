@@ -50,13 +50,13 @@
  * ```
  */
 
-import { defer, concatMap, from, type Observable } from "rxjs";
+import { defer, concatMap, from, type Observable } from 'rxjs';
 
-import type { ProviderSettings } from "../config/settings-types.js";
-import { t } from "../locales/index.js";
-import { createAssistantTextEvents } from "./assistant-events.js";
-import type { AgentProvider, ProviderStreamEvent } from "./provider-types.js";
-import type { ProviderStepInput } from "./provider-types.js";
+import type { ProviderSettings } from '../config/settings-types.js';
+import { t } from '../locales/index.js';
+import { createAssistantTextEvents } from './assistant-events.js';
+import type { AgentProvider, ProviderStreamEvent } from './provider-types.js';
+import type { ProviderStepInput } from './provider-types.js';
 import {
   buildOpenAITools,
   buildMessages,
@@ -64,7 +64,7 @@ import {
   type OpenAIChatCompletionResponse,
   type OpenAIFunctionTool,
   type OpenAIMessage,
-} from "./openai-compatible/index.js";
+} from './openai-compatible/index.js';
 
 // ============================================================
 // 类型定义
@@ -73,19 +73,19 @@ import {
 /** OpenAI 兼容 Provider 配置 */
 type OpenAIProviderConfig = {
   baseUrl: string;
-  apiKey?: string;  // 可选，Ollama 等本地服务不需要
+  apiKey?: string; // 可选，Ollama 等本地服务不需要
   model: string;
 };
 
 /** OpenAI API 响应 */
 type OpenAIChatResponse = OpenAIChatCompletionResponse & {
   choices?: Array<{
-    finish_reason?: "stop" | "tool_calls" | string;
+    finish_reason?: 'stop' | 'tool_calls' | string;
     message?: {
       content?: unknown;
       tool_calls?: Array<{
         id: string;
-        type: "function";
+        type: 'function';
         function: {
           name: string;
           arguments: string;
@@ -103,7 +103,7 @@ type OpenAIChatResponse = OpenAIChatCompletionResponse & {
 // ============================================================
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
+  return typeof value === 'object' && value !== null;
 }
 
 /**
@@ -111,10 +111,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  */
 function readNonEmptyString(
   settings: ProviderSettings | undefined,
-  key: "baseUrl" | "apiKey" | "model",
+  key: 'baseUrl' | 'apiKey' | 'model'
 ): string | undefined {
   const value = settings?.[key];
-  if (typeof value !== "string") return undefined;
+  if (typeof value !== 'string') return undefined;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : undefined;
 }
@@ -127,15 +127,15 @@ function readNonEmptyString(
  * - baseUrl 直接使用用户配置的值，不做自动追加
  */
 function resolveOpenAIConfig(settings?: ProviderSettings): OpenAIProviderConfig {
-  const apiKey = readNonEmptyString(settings, "apiKey");
-  const model = readNonEmptyString(settings, "model");
-  const baseUrl = readNonEmptyString(settings, "baseUrl");
+  const apiKey = readNonEmptyString(settings, 'apiKey');
+  const model = readNonEmptyString(settings, 'model');
+  const baseUrl = readNonEmptyString(settings, 'baseUrl');
 
-  if (!model) throw new Error(t("providers.openai.missingModel"));
-  if (!baseUrl) throw new Error(t("providers.openai.missingBaseUrl"));
+  if (!model) throw new Error(t('providers.openai.missingModel'));
+  if (!baseUrl) throw new Error(t('providers.openai.missingBaseUrl'));
 
   return {
-    baseUrl: baseUrl.replace(/\/+$/, ""),
+    baseUrl: baseUrl.replace(/\/+$/, ''),
     apiKey,
     model,
   };
@@ -153,7 +153,7 @@ function resolveOpenAIConfig(settings?: ProviderSettings): OpenAIProviderConfig 
 async function requestOpenAICompletion(
   config: OpenAIProviderConfig,
   messages: readonly OpenAIMessage[],
-  tools?: readonly OpenAIFunctionTool[],
+  tools?: readonly OpenAIFunctionTool[]
 ): Promise<OpenAIChatResponse> {
   const body: Record<string, unknown> = {
     model: config.model,
@@ -167,36 +167,36 @@ async function requestOpenAICompletion(
 
   // 构建 headers：apiKey 可选（Ollama 不需要）
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    'Content-Type': 'application/json',
   };
 
   if (config.apiKey) {
-    headers["Authorization"] = `Bearer ${config.apiKey}`;
+    headers['Authorization'] = `Bearer ${config.apiKey}`;
   }
 
   const response = await fetch(`${config.baseUrl}/chat/completions`, {
-    method: "POST",
+    method: 'POST',
     headers,
     body: JSON.stringify(body),
   });
 
-  let payload: OpenAIChatResponse | null = null;
+  let payload: OpenAIChatResponse;
 
   try {
-    payload = await response.json() as OpenAIChatResponse;
+    payload = (await response.json()) as OpenAIChatResponse;
   } catch {
     if (!response.ok) {
-      throw new Error(`${t("providers.openai.requestFailed")} HTTP ${response.status}`);
+      throw new Error(`${t('providers.openai.requestFailed')} HTTP ${response.status}`);
     }
-    throw new Error(t("providers.openai.invalidJson"));
+    throw new Error(t('providers.openai.invalidJson'));
   }
 
   if (!response.ok) {
     const errorMessage = payload?.error?.message;
     throw new Error(
       errorMessage
-        ? `${t("providers.openai.requestFailed")}${errorMessage}`
-        : `${t("providers.openai.requestFailed")} HTTP ${response.status}`,
+        ? `${t('providers.openai.requestFailed')}${errorMessage}`
+        : `${t('providers.openai.requestFailed')} HTTP ${response.status}`
     );
   }
 
@@ -210,17 +210,17 @@ function handleOpenAIResponse(payload: OpenAIChatResponse): Observable<ProviderS
   const choice = payload.choices?.[0];
 
   if (!choice) {
-    throw new Error(t("providers.openai.missingChoices"));
+    throw new Error(t('providers.openai.missingChoices'));
   }
 
   const finishReason = choice.finish_reason;
   const message = choice.message;
 
   // 工具调用响应
-  if (finishReason === "tool_calls" && message?.tool_calls) {
+  if (finishReason === 'tool_calls' && message?.tool_calls) {
     const toolCalls = parseToolCalls(message.tool_calls);
     return from<ProviderStreamEvent[]>(
-      toolCalls.map((call) => ({ type: "tool_call" as const, call })),
+      toolCalls.map((call) => ({ type: 'tool_call' as const, call }))
     );
   }
 
@@ -230,31 +230,31 @@ function handleOpenAIResponse(payload: OpenAIChatResponse): Observable<ProviderS
     return createAssistantTextEvents(text);
   }
 
-  throw new Error(`${t("providers.openai.unexpectedResponse")}finish_reason=${finishReason}`);
+  throw new Error(`${t('providers.openai.unexpectedResponse')}finish_reason=${finishReason}`);
 }
 
 /**
  * 提取文本内容
  */
 function extractTextContent(content: unknown): string {
-  if (typeof content === "string") {
+  if (typeof content === 'string') {
     return content;
   }
 
   if (!Array.isArray(content)) {
-    throw new Error(t("providers.openai.contentNotString"));
+    throw new Error(t('providers.openai.contentNotString'));
   }
 
   const text = content
     .map((part) => {
-      if (typeof part === "string") return part;
-      if (isRecord(part) && typeof part.text === "string") return part.text;
-      return "";
+      if (typeof part === 'string') return part;
+      if (isRecord(part) && typeof part.text === 'string') return part.text;
+      return '';
     })
-    .join("");
+    .join('');
 
   if (text.length === 0) {
-    throw new Error(t("providers.openai.contentEmpty"));
+    throw new Error(t('providers.openai.contentEmpty'));
   }
 
   return text;
@@ -277,7 +277,7 @@ export function createOpenAIProvider(settings?: ProviderSettings): AgentProvider
   const config = resolveOpenAIConfig(settings);
 
   return {
-    id: "openai-compatible",
+    id: 'openai-compatible',
 
     runStep({ context, state }: ProviderStepInput) {
       return defer(async () => {
@@ -288,14 +288,10 @@ export function createOpenAIProvider(settings?: ProviderSettings): AgentProvider
           prompt: context.prompt,
         });
 
-        const tools = context.toolRegistry
-          ? buildOpenAITools(context.toolRegistry)
-          : undefined;
+        const tools = context.toolRegistry ? buildOpenAITools(context.toolRegistry) : undefined;
 
         return requestOpenAICompletion(config, messages, tools);
-      }).pipe(
-        concatMap((response) => handleOpenAIResponse(response)),
-      );
+      }).pipe(concatMap((response) => handleOpenAIResponse(response)));
     },
   };
 }

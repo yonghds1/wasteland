@@ -9,31 +9,23 @@
  * - 发出运行时事件
  */
 
-import { Observable, of } from "rxjs";
+import { Observable, of } from 'rxjs';
 
-import type { SkillRegistry } from "./skill-registry.js";
-import type {
-  SkillArgs,
-  SkillExecutionContext,
-  SkillResult,
-  Skill,
-} from "./skill-types.js";
+import type { SkillRegistry } from './skill-registry.js';
+import type { SkillExecutionContext, Skill } from './skill-types.js';
 import {
   applyDefaults,
   parseSkillArgs,
   validateSkillArgs,
   generateArgsHelp,
-} from "./skill-parser.js";
-import { t } from "../locales/index.js";
-import type { RuntimeEvent } from "../runtime/event-types.js";
-import type { ToolRegistry } from "../tools/tool-registry.js";
-import type { PermissionGate } from "../runtime/permission-gate.js";
-import type {
-  SessionManager,
-  SessionMetadata,
-} from "../runtime/session-manager.js";
-import type { AgentProvider } from "../providers/provider-types.js";
-import type { SessionMessageRecord } from "../runtime/event-types.js";
+} from './skill-parser.js';
+import { t } from '../locales/index.js';
+import type { RuntimeEvent } from '../runtime/event-types.js';
+import type { ToolRegistry } from '../tools/tool-registry.js';
+import type { PermissionGate } from '../runtime/permission-gate.js';
+import type { SessionManager, SessionMetadata } from '../runtime/session-manager.js';
+import type { AgentProvider } from '../providers/provider-types.js';
+import type { SessionMessageRecord } from '../runtime/event-types.js';
 
 /**
  * 技能执行器参数
@@ -107,20 +99,20 @@ export class SkillExecutor {
     // 解析技能名称
     const trimmed = input.trim();
     const parts = trimmed.split(/\s+/);
-    const skillName = parts[0]?.slice(1) ?? ""; // 去掉 /
+    const skillName = parts[0]?.slice(1) ?? ''; // 去掉 /
 
     // 查找技能
     const registered = this.registry.get(skillName);
 
     if (!registered) {
       return of<RuntimeEvent>({
-        type: "skill_result",
+        type: 'skill_result',
         sessionId,
         turn,
         skillName,
         result: {
-          status: "error",
-          output: `${t("skills.common.unknownSkill")} ${skillName}`,
+          status: 'error',
+          output: `${t('skills.common.unknownSkill')} ${skillName}`,
         },
       });
     }
@@ -134,13 +126,13 @@ export class SkillExecutor {
     const validation = validateSkillArgs(args, skill.definition);
     if (!validation.valid) {
       return of<RuntimeEvent>({
-        type: "skill_result",
+        type: 'skill_result',
         sessionId,
         turn,
         skillName,
         result: {
-          status: "error",
-          output: `${t("skills.common.paramError")}\n${validation.errors.join("\n")}\n\n${this.createSkillHelp(skill)}`,
+          status: 'error',
+          output: `${t('skills.common.paramError')}\n${validation.errors.join('\n')}\n\n${this.createSkillHelp(skill)}`,
         },
       });
     }
@@ -164,7 +156,7 @@ export class SkillExecutor {
 
     // 发出 skill_started 事件
     const startedEvent: RuntimeEvent = {
-      type: "skill_started",
+      type: 'skill_started',
       sessionId,
       turn,
       skillName,
@@ -182,7 +174,7 @@ export class SkillExecutor {
         .execute(finalArgs, context)
         .then((result) => {
           subscriber.next({
-            type: "skill_result",
+            type: 'skill_result',
             sessionId,
             turn,
             skillName,
@@ -192,12 +184,12 @@ export class SkillExecutor {
         })
         .catch((error) => {
           subscriber.next({
-            type: "skill_result",
+            type: 'skill_result',
             sessionId,
             turn,
             skillName,
             result: {
-              status: "error",
+              status: 'error',
               output: error instanceof Error ? error.message : String(error),
             },
           });
@@ -216,22 +208,22 @@ export class SkillExecutor {
     lines.push(`/${def.name} - ${def.description}`);
 
     if (def.aliases?.length) {
-      lines.push(`${t("skills.common.alias")} ${def.aliases.map((a) => `/${a}`).join(", ")}`);
+      lines.push(`${t('skills.common.alias')} ${def.aliases.map((a) => `/${a}`).join(', ')}`);
     }
 
-    lines.push("");
-    lines.push(t("skills.common.params"));
+    lines.push('');
+    lines.push(t('skills.common.params'));
     lines.push(generateArgsHelp(def));
 
     if (def.examples?.length) {
-      lines.push("");
-      lines.push(t("skills.common.example"));
+      lines.push('');
+      lines.push(t('skills.common.example'));
       for (const example of def.examples) {
         lines.push(`  ${example}`);
       }
     }
 
-    return lines.join("\n");
+    return lines.join('\n');
   }
 
   /**
@@ -241,35 +233,35 @@ export class SkillExecutor {
     const skills = this.registry.list();
 
     if (skills.length === 0) {
-      return t("skills.common.noSkills");
+      return t('skills.common.noSkills');
     }
 
     // 按分类分组
     const byCategory = new Map<string, typeof skills>();
     for (const skill of skills) {
-      const category = skill.category ?? "general";
+      const category = skill.category ?? 'general';
       const existing = byCategory.get(category) ?? [];
       existing.push(skill);
       byCategory.set(category, existing);
     }
 
-    const lines: string[] = [t("skills.common.availableSkills"), ""];
+    const lines: string[] = [t('skills.common.availableSkills'), ''];
 
     for (const [category, categorySkills] of byCategory) {
       lines.push(`[${category}]`);
       for (const skill of categorySkills) {
         const aliases = skill.aliases?.length
-          ? ` (${skill.aliases.map((a) => `/${a}`).join(", ")})`
-          : "";
+          ? ` (${skill.aliases.map((a) => `/${a}`).join(', ')})`
+          : '';
         lines.push(`  /${skill.name}${aliases}`);
         lines.push(`    ${skill.description}`);
         if (skill.examples?.length) {
-          lines.push(`    ${t("skills.common.example")} ${skill.examples[0]}`);
+          lines.push(`    ${t('skills.common.example')} ${skill.examples[0]}`);
         }
       }
-      lines.push("");
+      lines.push('');
     }
 
-    return lines.join("\n");
+    return lines.join('\n');
   }
 }

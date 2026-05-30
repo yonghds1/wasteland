@@ -16,10 +16,10 @@
  * - cwd: 搜索根目录（可选，默认为当前工作目录）
  */
 
-import { glob } from "node:fs/promises";
-import { relative, resolve } from "node:path";
+import { glob } from 'node:fs/promises';
+import { relative, resolve } from 'node:path';
 
-import type { AgentTool, ToolExecutionResult } from "./tool-types.js";
+import type { AgentTool, ToolExecutionResult } from './tool-types.js';
 
 // ============================================================
 // 辅助函数
@@ -32,7 +32,7 @@ import type { AgentTool, ToolExecutionResult } from "./tool-types.js";
  * @returns 有效模式字符串，或 null 表示无效
  */
 function resolvePattern(value: unknown): string | null {
-  if (typeof value !== "string" || value.trim().length === 0) {
+  if (typeof value !== 'string' || value.trim().length === 0) {
     return null;
   }
   return value.trim();
@@ -46,7 +46,7 @@ function resolvePattern(value: unknown): string | null {
  * @returns 解析后的绝对路径，或默认使用 cwd
  */
 function resolveSearchDir(cwd: string, value: unknown): string {
-  if (typeof value !== "string" || value.trim().length === 0) {
+  if (typeof value !== 'string' || value.trim().length === 0) {
     return cwd;
   }
   return resolve(cwd, value);
@@ -69,8 +69,8 @@ function formatResult(files: string[], baseDir: string, pattern: string): string
     .map((file) => relative(baseDir, file))
     .sort((a, b) => a.localeCompare(b));
 
-  const header = `🔍 glob "${pattern}" — ${files.length} ${files.length === 1 ? "match" : "matches"}\n${"─".repeat(48)}`;
-  const body = relativePaths.map((path) => `  ${path}`).join("\n");
+  const header = `🔍 glob "${pattern}" — ${files.length} ${files.length === 1 ? 'match' : 'matches'}\n${'─'.repeat(48)}`;
+  const body = relativePaths.map((path) => `  ${path}`).join('\n');
 
   return `${header}\n${body}`;
 }
@@ -81,8 +81,8 @@ function formatResult(files: string[], baseDir: string, pattern: string): string
 
 export function createGlobTool(): AgentTool {
   return {
-    name: "glob",
-    riskLevel: "read",
+    name: 'glob',
+    riskLevel: 'read',
 
     async execute(input, context): Promise<ToolExecutionResult> {
       // 解析 glob 模式
@@ -90,8 +90,8 @@ export function createGlobTool(): AgentTool {
 
       if (pattern === null) {
         return {
-          status: "error",
-          error: "glob 工具需要非空 pattern 字段。示例：{ \"pattern\": \"**/*.ts\" }",
+          status: 'error',
+          error: 'glob 工具需要非空 pattern 字段。示例：{ "pattern": "**/*.ts" }',
         };
       }
 
@@ -107,12 +107,12 @@ export function createGlobTool(): AgentTool {
         }
 
         return {
-          status: "success",
+          status: 'success',
           output: formatResult(files, searchDir, pattern),
         };
       } catch (error) {
         return {
-          status: "error",
+          status: 'error',
           error: error instanceof Error ? error.message : String(error),
         };
       }

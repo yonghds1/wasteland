@@ -96,11 +96,7 @@
         "developer": {
           "personality": "Efficient, precise, forges code with ruthless efficiency",
           "greeting": "I shall forge code in the Citadel's furnace!",
-          "catchphrases": [
-            "Code is law!",
-            "Forged in the Citadel's furnace!",
-            "Code is victory!"
-          ]
+          "catchphrases": ["Code is law!", "Forged in the Citadel's furnace!", "Code is victory!"]
         },
         "analyst": {
           "personality": "Observant, analytical, deciphers code patterns",

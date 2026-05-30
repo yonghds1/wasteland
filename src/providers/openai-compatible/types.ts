@@ -54,7 +54,7 @@ export type JsonSchema = {
  * }
  */
 export type OpenAIFunctionTool = {
-  type: "function";
+  type: 'function';
   function: {
     name: string;
     description?: string;
@@ -71,10 +71,10 @@ export type OpenAIFunctionTool = {
  * - { type: 'function', function: { name: '...' } }: 强制调用特定工具
  */
 export type OpenAIToolChoice =
-  | "auto"
-  | "none"
-  | "required"
-  | { type: "function"; function: { name: string } };
+  | 'auto'
+  | 'none'
+  | 'required'
+  | { type: 'function'; function: { name: string } };
 
 // ============================================================
 // 消息类型
@@ -86,7 +86,7 @@ export type OpenAIToolChoice =
  * 基础消息格式，支持 user、assistant、system 角色。
  */
 export type OpenAIChatMessage = {
-  role: "user" | "assistant" | "system";
+  role: 'user' | 'assistant' | 'system';
   content: string | null;
 };
 
@@ -107,7 +107,7 @@ export type OpenAIChatMessage = {
  */
 export type OpenAIToolCall = {
   id: string;
-  type: "function";
+  type: 'function';
   function: {
     name: string;
     arguments: string; // JSON 字符串，需要解析
@@ -120,7 +120,7 @@ export type OpenAIToolCall = {
  * 当模型调用工具时，content 为 null，tool_calls 包含调用信息。
  */
 export type OpenAIAssistantMessage = {
-  role: "assistant";
+  role: 'assistant';
   content: string | null;
   tool_calls?: OpenAIToolCall[];
 };
@@ -138,7 +138,7 @@ export type OpenAIAssistantMessage = {
  * }
  */
 export type OpenAIToolMessage = {
-  role: "tool";
+  role: 'tool';
   tool_call_id: string;
   content: string;
 };
@@ -161,15 +161,15 @@ export type OpenAIMessage = OpenAIChatMessage | OpenAIAssistantMessage | OpenAIT
  */
 export type OpenAIChatCompletionResponse = {
   id: string;
-  object: "chat.completion";
+  object: 'chat.completion';
   choices: Array<{
     index: number;
     message: {
-      role: "assistant";
+      role: 'assistant';
       content: string | null;
       tool_calls?: OpenAIToolCall[];
     };
-    finish_reason: "stop" | "tool_calls" | null;
+    finish_reason: 'stop' | 'tool_calls' | null;
   }>;
   usage?: {
     prompt_tokens: number;

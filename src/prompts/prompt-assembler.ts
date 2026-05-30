@@ -9,8 +9,8 @@
  * 5. 组装输出 → 按 order 排序，用 XML 标签包裹
  */
 
-import { existsSync, readFileSync } from "fs";
-import { resolve } from "path";
+import { existsSync, readFileSync } from 'fs';
+import { resolve } from 'path';
 
 import type {
   PromptAssemblyContext,
@@ -18,10 +18,10 @@ import type {
   PromptTemplate,
   PromptTemplateRef,
   ResolvedPrompt,
-} from "./prompt-types.js";
-import { getBuiltinRole, isBuiltinRoleId } from "./role-templates.js";
-import { interpolateVariables } from "./variable-interpolator.js";
-import { t } from "../locales/index.js";
+} from './prompt-types.js';
+import { getBuiltinRole, isBuiltinRoleId } from './role-templates.js';
+import { interpolateVariables } from './variable-interpolator.js';
+import { t } from '../locales/index.js';
 
 // ============================================================
 // 模板引用解析
@@ -41,32 +41,29 @@ import { t } from "../locales/index.js";
  * @param cwd - 工作目录（用于解析文件路径）
  * @returns 解析后的模板
  */
-function resolveTemplateRef(
-  ref: PromptTemplateRef,
-  cwd: string,
-): PromptTemplate {
+function resolveTemplateRef(ref: PromptTemplateRef, cwd: string): PromptTemplate {
   // 字符串引用
-  if (typeof ref === "string") {
+  if (typeof ref === 'string') {
     // 检查是否为内置角色 ID
     if (isBuiltinRoleId(ref)) {
       const template = getBuiltinRole(ref);
       if (!template) {
-        throw new Error(t("prompts.builtinRoleNotFound", { ref }));
+        throw new Error(t('prompts.builtinRoleNotFound', { ref }));
       }
       return template;
     }
 
     // 检查是否为文件路径
-    if (ref.endsWith(".json") || ref.endsWith(".md") || ref.endsWith(".txt")) {
+    if (ref.endsWith('.json') || ref.endsWith('.md') || ref.endsWith('.txt')) {
       return loadTemplateFile(resolve(cwd, ref));
     }
 
     // 其他字符串作为简单提示词处理
     return {
-      name: "simple-prompt",
+      name: 'simple-prompt',
       sections: [
         {
-          id: "main",
+          id: 'main',
           content: ref,
           order: 10,
         },
@@ -75,12 +72,12 @@ function resolveTemplateRef(
   }
 
   // 内联定义
-  if ("sections" in ref) {
+  if ('sections' in ref) {
     return ref;
   }
 
   // 引用 + 变量覆盖
-  if ("template" in ref) {
+  if ('template' in ref) {
     const baseTemplate = resolveTemplateRef(ref.template, cwd);
     return {
       ...baseTemplate,
@@ -91,7 +88,7 @@ function resolveTemplateRef(
     };
   }
 
-  throw new Error(t("prompts.invalidTemplateRef", { ref: JSON.stringify(ref) }));
+  throw new Error(t('prompts.invalidTemplateRef', { ref: JSON.stringify(ref) }));
 }
 
 /**
@@ -102,13 +99,13 @@ function resolveTemplateRef(
  */
 function loadTemplateFile(filePath: string): PromptTemplate {
   if (!existsSync(filePath)) {
-    throw new Error(t("prompts.templateFileNotFound", { filePath }));
+    throw new Error(t('prompts.templateFileNotFound', { filePath }));
   }
 
-  const content = readFileSync(filePath, "utf-8");
+  const content = readFileSync(filePath, 'utf-8');
 
   // JSON 文件
-  if (filePath.endsWith(".json")) {
+  if (filePath.endsWith('.json')) {
     return JSON.parse(content) as PromptTemplate;
   }
 
@@ -117,7 +114,7 @@ function loadTemplateFile(filePath: string): PromptTemplate {
     name: `template:${filePath}`,
     sections: [
       {
-        id: "main",
+        id: 'main',
         content: content.trim(),
         order: 10,
       },
@@ -139,17 +136,17 @@ function loadTemplateFile(filePath: string): PromptTemplate {
  * @returns 段落内容字符串
  */
 function loadSectionContent(section: PromptSection, cwd: string): string {
-  if (typeof section.content === "string") {
+  if (typeof section.content === 'string') {
     return section.content;
   }
 
   // 文件引用
   const filePath = resolve(cwd, section.content.$ref);
   if (!existsSync(filePath)) {
-    throw new Error(t("prompts.sectionFileNotFound", { filePath }));
+    throw new Error(t('prompts.sectionFileNotFound', { filePath }));
   }
 
-  return readFileSync(filePath, "utf-8").trim();
+  return readFileSync(filePath, 'utf-8').trim();
 }
 
 // ============================================================
@@ -169,7 +166,7 @@ function loadSectionContent(section: PromptSection, cwd: string): string {
 function mergeVariables(
   template: PromptTemplate,
   context: PromptAssemblyContext,
-  promptVariables?: Record<string, unknown>,
+  promptVariables?: Record<string, unknown>
 ): Record<string, unknown> {
   return {
     ...template.defaults,
@@ -178,7 +175,7 @@ function mergeVariables(
     // 添加上下文变量
     __role: context.roleName,
     __model: context.model,
-    __tools: context.tools?.join(", "),
+    __tools: context.tools?.join(', '),
   };
 }
 
@@ -197,14 +194,13 @@ function mergeVariables(
 function assembleTemplate(
   template: PromptTemplate,
   context: PromptAssemblyContext,
-  promptVariables?: Record<string, unknown>,
+  promptVariables?: Record<string, unknown>
 ): ResolvedPrompt {
   // 合并变量
   const variables = mergeVariables(template, context, promptVariables);
 
   // 加载并插值每个段落
-  const resolvedSections: Array<{ id: string; content: string; order: number }> =
-    [];
+  const resolvedSections: Array<{ id: string; content: string; order: number }> = [];
 
   for (const section of template.sections) {
     // 加载内容
@@ -230,11 +226,11 @@ function assembleTemplate(
 
   // 用 XML 标签包裹并连接
   const contentParts = resolvedSections.map(
-    (s) => `<section id="${s.id}">\n${s.content}\n</section>`,
+    (s) => `<section id="${s.id}">\n${s.content}\n</section>`
   );
 
   return {
-    content: contentParts.join("\n\n"),
+    content: contentParts.join('\n\n'),
     includedSections: resolvedSections.map((s) => s.id),
     resolvedVariables: variables,
   };
@@ -265,7 +261,7 @@ export class PromptAssembler {
   assemble(
     ref: PromptTemplateRef,
     context: PromptAssemblyContext,
-    promptVariables?: Record<string, unknown>,
+    promptVariables?: Record<string, unknown>
   ): ResolvedPrompt {
     // 解析模板引用
     const template = resolveTemplateRef(ref, this.cwd);
@@ -290,7 +286,7 @@ export class PromptAssembler {
 export function assemblePrompt(
   ref: PromptTemplateRef,
   context: PromptAssemblyContext,
-  promptVariables?: Record<string, unknown>,
+  promptVariables?: Record<string, unknown>
 ): string {
   const assembler = new PromptAssembler({ cwd: context.cwd });
   const result = assembler.assemble(ref, context, promptVariables);

@@ -1,8 +1,8 @@
-import { readFile, stat } from "node:fs/promises";
-import { relative, resolve } from "node:path";
+import { readFile, stat } from 'node:fs/promises';
+import { relative, resolve } from 'node:path';
 
-import { t } from "../locales/index.js";
-import type { AgentTool, ToolExecutionResult } from "./tool-types.js";
+import { t } from '../locales/index.js';
+import type { AgentTool, ToolExecutionResult } from './tool-types.js';
 
 // ============================================================
 // 配置常量
@@ -26,7 +26,7 @@ const TRUNCATION_HALF_LINES = 50;
  * @returns 解析后的绝对路径，或 null 表示无效
  */
 function resolveReadablePath(cwd: string, value: unknown): string | null {
-  if (typeof value !== "string" || value.trim().length === 0) {
+  if (typeof value !== 'string' || value.trim().length === 0) {
     return null;
   }
 
@@ -34,7 +34,7 @@ function resolveReadablePath(cwd: string, value: unknown): string | null {
   const relativePath = relative(cwd, targetPath);
 
   // 不允许读取工作目录外的文件
-  if (relativePath.startsWith("..")) {
+  if (relativePath.startsWith('..')) {
     return null;
   }
 
@@ -48,7 +48,7 @@ function resolveReadablePath(cwd: string, value: unknown): string | null {
  * @returns 解析后的数字，或 undefined
  */
 function parseOptionalNumber(value: unknown): number | undefined {
-  if (typeof value !== "number" || !Number.isInteger(value) || value < 1) {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 1) {
     return undefined;
   }
   return value;
@@ -63,23 +63,24 @@ function formatFileHeader(
   byteSize: number,
   truncated: boolean,
   offset?: number,
-  limit?: number,
+  limit?: number
 ): string {
   const sizeKB = (byteSize / 1024).toFixed(1);
-  const lines = totalLines === 1 ? "1 line" : `${totalLines} lines`;
+  const lines = totalLines === 1 ? '1 line' : `${totalLines} lines`;
 
   if (offset !== undefined || limit !== undefined) {
-    const rangeDesc = offset !== undefined
-      ? `lines ${offset}-${Math.min(offset + (limit ?? totalLines) - 1, totalLines)}`
-      : `first ${limit} lines`;
-    return `📄 ${relativePath} (${lines}, ${sizeKB}KB) — ${rangeDesc}\n${"─".repeat(48)}`;
+    const rangeDesc =
+      offset !== undefined
+        ? `lines ${offset}-${Math.min(offset + (limit ?? totalLines) - 1, totalLines)}`
+        : `first ${limit} lines`;
+    return `📄 ${relativePath} (${lines}, ${sizeKB}KB) — ${rangeDesc}\n${'─'.repeat(48)}`;
   }
 
   if (truncated) {
-    return `📄 ${relativePath} (${lines}, ${sizeKB}KB) — truncated, use offset/limit to read more\n${"─".repeat(48)}`;
+    return `📄 ${relativePath} (${lines}, ${sizeKB}KB) — truncated, use offset/limit to read more\n${'─'.repeat(48)}`;
   }
 
-  return `📄 ${relativePath} (${lines}, ${sizeKB}KB)\n${"─".repeat(48)}`;
+  return `📄 ${relativePath} (${lines}, ${sizeKB}KB)\n${'─'.repeat(48)}`;
 }
 
 /**
@@ -93,7 +94,7 @@ function formatFileHeader(
 function formatWithLineNumbers(
   lines: string[],
   startLine: number = 1,
-  totalLines?: number,
+  totalLines?: number
 ): string {
   const maxWidth = String(totalLines ?? lines.length + startLine - 1).length;
 
@@ -102,7 +103,7 @@ function formatWithLineNumbers(
       const lineNum = String(startLine + index).padStart(maxWidth);
       return `${lineNum}│${line}`;
     })
-    .join("\n");
+    .join('\n');
 }
 
 /**
@@ -118,9 +119,9 @@ function processFileContent(
   relativePath: string,
   byteSize: number,
   offset?: number,
-  limit?: number,
+  limit?: number
 ): ToolExecutionResult {
-  const lines = content.split("\n");
+  const lines = content.split('\n');
   const totalLines = lines.length;
 
   // 情况 1：用户指定了范围
@@ -131,8 +132,11 @@ function processFileContent(
 
     if (startLine > totalLines) {
       return {
-        status: "error",
-        error: t("tools.readFile.offsetOutOfRange", { offset: String(startLine), total: String(totalLines) }),
+        status: 'error',
+        error: t('tools.readFile.offsetOutOfRange', {
+          offset: String(startLine),
+          total: String(totalLines),
+        }),
       };
     }
 
@@ -141,7 +145,7 @@ function processFileContent(
     const formattedContent = formatWithLineNumbers(selectedLines, startLine, totalLines);
 
     return {
-      status: "success",
+      status: 'success',
       output: `${header}\n${formattedContent}`,
       data: {
         path: relativePath,
@@ -158,7 +162,7 @@ function processFileContent(
     const formattedContent = formatWithLineNumbers(lines, 1, totalLines);
 
     return {
-      status: "success",
+      status: 'success',
       output: `${header}\n${formattedContent}`,
       data: {
         path: relativePath,
@@ -175,12 +179,16 @@ function processFileContent(
 
   const header = formatFileHeader(relativePath, totalLines, byteSize, true);
   const firstFormatted = formatWithLineNumbers(firstLines, 1, totalLines);
-  const lastFormatted = formatWithLineNumbers(lastLines, totalLines - TRUNCATION_HALF_LINES + 1, totalLines);
+  const lastFormatted = formatWithLineNumbers(
+    lastLines,
+    totalLines - TRUNCATION_HALF_LINES + 1,
+    totalLines
+  );
 
-  const separator = `\n${" ".repeat(String(totalLines).length)}│... ${hiddenLines} lines hidden ...\n`;
+  const separator = `\n${' '.repeat(String(totalLines).length)}│... ${hiddenLines} lines hidden ...\n`;
 
   return {
-    status: "success",
+    status: 'success',
     output: `${header}\n${firstFormatted}${separator}${lastFormatted}`,
     data: {
       path: relativePath,
@@ -236,8 +244,8 @@ function processFileContent(
  */
 export function createReadFileTool(): AgentTool {
   return {
-    name: "read-file",
-    riskLevel: "read",
+    name: 'read-file',
+    riskLevel: 'read',
 
     async execute(input, context): Promise<ToolExecutionResult> {
       // 解析路径
@@ -245,8 +253,8 @@ export function createReadFileTool(): AgentTool {
 
       if (!targetPath) {
         return {
-          status: "error",
-          error: t("tools.readFile.needRelativePath"),
+          status: 'error',
+          error: t('tools.readFile.needRelativePath'),
         };
       }
 
@@ -259,14 +267,14 @@ export function createReadFileTool(): AgentTool {
       try {
         // 读取文件内容和元数据
         const [content, stats] = await Promise.all([
-          readFile(targetPath, "utf8"),
+          readFile(targetPath, 'utf8'),
           stat(targetPath),
         ]);
 
         return processFileContent(content, relativePath, stats.size, offset, limit);
       } catch (error) {
         return {
-          status: "error",
+          status: 'error',
           error: error instanceof Error ? error.message : String(error),
         };
       }

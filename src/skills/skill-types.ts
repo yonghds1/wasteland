@@ -9,11 +9,11 @@
  * - 支持参数和别名
  */
 
-import type { ToolRegistry } from "../tools/tool-registry.js";
-import type { PermissionGate } from "../runtime/permission-gate.js";
-import type { SessionManager, SessionMetadata } from "../runtime/session-manager.js";
-import type { AgentProvider } from "../providers/provider-types.js";
-import type { SessionMessageRecord } from "../runtime/event-types.js";
+import type { ToolRegistry } from '../tools/tool-registry.js';
+import type { PermissionGate } from '../runtime/permission-gate.js';
+import type { SessionManager, SessionMetadata } from '../runtime/session-manager.js';
+import type { AgentProvider } from '../providers/provider-types.js';
+import type { SessionMessageRecord } from '../runtime/event-types.js';
 
 // ============================================================
 // 技能风险等级
@@ -27,7 +27,7 @@ import type { SessionMessageRecord } from "../runtime/event-types.js";
  * - "write": 写入操作，如创建/修改文件，可能需要确认
  * - "execute": 执行操作，如运行命令，通常需要确认
  */
-export type SkillRiskLevel = "read" | "write" | "execute";
+export type SkillRiskLevel = 'read' | 'write' | 'execute';
 
 // ============================================================
 // 技能参数定义
@@ -47,7 +47,7 @@ export type SkillRiskLevel = "read" | "write" | "execute";
  * @property properties - 对象属性（仅 object 类型）
  */
 export type SkillParameterDef = {
-  type: "string" | "number" | "boolean" | "array" | "object";
+  type: 'string' | 'number' | 'boolean' | 'array' | 'object';
   description?: string;
   required?: boolean;
   default?: unknown;
@@ -153,7 +153,7 @@ export type SkillExecutionContext = {
  * 技能执行成功结果
  */
 export type SkillSuccessResult = {
-  status: "success";
+  status: 'success';
   /** 主要输出，显示给用户 */
   output: string;
   /** 附加结构化数据 */
@@ -164,7 +164,7 @@ export type SkillSuccessResult = {
  * 技能执行失败结果
  */
 export type SkillErrorResult = {
-  status: "error";
+  status: 'error';
   /** 错误信息 */
   output: string;
   /** 附加错误详情 */
@@ -175,7 +175,7 @@ export type SkillErrorResult = {
  * 技能被取消结果
  */
 export type SkillCancelledResult = {
-  status: "cancelled";
+  status: 'cancelled';
   /** 取消原因 */
   output: string;
 };
@@ -225,9 +225,9 @@ export interface Skill {
  * 标识技能来自哪里，用于显示和审计。
  */
 export type SkillSource =
-  | { type: "builtin" }
-  | { type: "project"; path: string }
-  | { type: "user"; path: string };
+  | { type: 'builtin' }
+  | { type: 'project'; path: string }
+  | { type: 'user'; path: string };
 
 /**
  * 注册的技能条目

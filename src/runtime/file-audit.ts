@@ -16,10 +16,10 @@
  * 未来可扩展为读取完整 session 文件，检查整个会话历史。
  */
 
-import type { ToolCall } from "../tools/tool-types.js";
+import type { ToolCall } from '../tools/tool-types.js';
 
-import { t } from "../locales/index.js";
-import type { TurnState } from "./turn-state.js";
+import { t } from '../locales/index.js';
+import type { TurnState } from './turn-state.js';
 
 /**
  * 检查 read-before-edit 约束
@@ -50,7 +50,7 @@ export function checkReadBeforeEdit(params: {
   const { toolName, filePath, turnState } = params;
 
   // 只对 edit-file 和 write-file 进行检查
-  if (toolName !== "edit-file" && toolName !== "write-file") {
+  if (toolName !== 'edit-file' && toolName !== 'write-file') {
     return { ok: true };
   }
 
@@ -62,7 +62,7 @@ export function checkReadBeforeEdit(params: {
   // 未读取，返回错误
   return {
     ok: false,
-    error: `${t("runtime.mustReadBeforeEdit")} ${filePath}`,
+    error: `${t('runtime.mustReadBeforeEdit')} ${filePath}`,
   };
 }
 
@@ -74,7 +74,5 @@ export function checkReadBeforeEdit(params: {
  * @returns true 表示已读取，false 表示未读取
  */
 function hasFileBeenReadInTurn(filePath: string, toolCalls: readonly ToolCall[]): boolean {
-  return toolCalls.some(
-    (call) => call.toolName === "read-file" && call.input.path === filePath,
-  );
+  return toolCalls.some((call) => call.toolName === 'read-file' && call.input.path === filePath);
 }
