@@ -4,8 +4,7 @@
  * 测试 buildOpenAITools 和 parseToolCalls 的正确性。
  */
 
-import assert from "node:assert/strict";
-import { test } from "node:test";
+import { describe, it, expect } from "vitest";
 import { buildOpenAITools, parseToolCalls, hasParseError, getParseErrorMessage } from "../../../dist/providers/openai-compatible/tool-adapter.js";
 import { ToolRegistry } from "../../../dist/tools/tool-registry.js";
 
@@ -13,283 +12,175 @@ import { ToolRegistry } from "../../../dist/tools/tool-registry.js";
 // buildOpenAITools 测试
 // ============================================================
 
-test("buildOpenAITools: 空注册表返回空数组", () => {
-  const registry = new ToolRegistry();
-  const tools = buildOpenAITools(registry);
-
-  assert.deepEqual(tools, []);
-});
-
-test("buildOpenAITools: 单个工具转换", () => {
-  const registry = new ToolRegistry();
-  registry.register({
-    name: "read-file",
-    description: "读取文件",
-    riskLevel: "read",
-    execute: async () => ({ status: "success", output: "" }),
+describe("buildOpenAITools", () => {
+  it("空注册表返回空数组", () => {
+    const registry = new ToolRegistry();
+    const tools = buildOpenAITools(registry);
+    expect(tools).toEqual([]);
   });
 
-  const tools = buildOpenAITools(registry);
+  it("单个工具转换", () => {
+    const registry = new ToolRegistry();
+    registry.register({
+      name: "read-file",
+      description: "读取文件",
+      riskLevel: "read",
+      execute: async () => ({ status: "success", output: "" }),
+    });
 
-  assert.equal(tools.length, 1);
-  assert.equal(tools[0].type, "function");
-  assert.equal(tools[0].function.name, "read-file");
-  assert.ok(tools[0].function.description);
-  assert.ok(tools[0].function.parameters);
-  assert.equal(tools[0].function.parameters.type, "object");
-  assert.ok(tools[0].function.parameters.properties.path);
-  assert.deepEqual(tools[0].function.parameters.required, ["path"]);
-});
+    const tools = buildOpenAITools(registry);
 
-test("buildOpenAITools: 多个工具转换", () => {
-  const registry = new ToolRegistry();
-
-  registry.register({
-    name: "read-file",
-    description: "读取文件",
-    riskLevel: "read",
-    execute: async () => ({ status: "success", output: "" }),
+    expect(tools.length).toBe(1);
+    expect(tools[0].type).toBe("function");
+    expect(tools[0].function.name).toBe("read-file");
+    expect(tools[0].function.description).toBeTruthy();
+    expect(tools[0].function.parameters).toBeTruthy();
+    expect(tools[0].function.parameters.type).toBe("object");
+    expect(tools[0].function.parameters.properties.path).toBeTruthy();
+    expect(tools[0].function.parameters.required).toEqual(["path"]);
   });
 
-  registry.register({
-    name: "bash",
-    description: "执行命令",
-    riskLevel: "write",
-    execute: async () => ({ status: "success", output: "" }),
+  it("多个工具转换", () => {
+    const registry = new ToolRegistry();
+    registry.register({ name: "read-file", description: "读取文件", riskLevel: "read", execute: async () => ({ status: "success", output: "" }) });
+    registry.register({ name: "bash", description: "执行命令", riskLevel: "write", execute: async () => ({ status: "success", output: "" }) });
+
+    const tools = buildOpenAITools(registry);
+    expect(tools.length).toBe(2);
+    const toolNames = tools.map(t => t.function.name);
+    expect(toolNames).toContain("read-file");
+    expect(toolNames).toContain("bash");
   });
 
-  const tools = buildOpenAITools(registry);
+  it("edit-file 参数 Schema 正确", () => {
+    const registry = new ToolRegistry();
+    registry.register({ name: "edit-file", description: "编辑文件", riskLevel: "write", execute: async () => ({ status: "success", output: "" }) });
 
-  assert.equal(tools.length, 2);
+    const tools = buildOpenAITools(registry);
+    const params = tools[0].function.parameters;
 
-  const toolNames = tools.map(t => t.function.name);
-  assert.ok(toolNames.includes("read-file"));
-  assert.ok(toolNames.includes("bash"));
-});
-
-test("buildOpenAITools: edit-file 参数 Schema 正确", () => {
-  const registry = new ToolRegistry();
-  registry.register({
-    name: "edit-file",
-    description: "编辑文件",
-    riskLevel: "write",
-    execute: async () => ({ status: "success", output: "" }),
+    expect(params.properties.path).toBeTruthy();
+    expect(params.properties.old_string).toBeTruthy();
+    expect(params.properties.new_string).toBeTruthy();
+    expect(params.properties.replace_all).toBeTruthy();
+    expect(params.required).toEqual(["path", "old_string", "new_string"]);
   });
 
-  const tools = buildOpenAITools(registry);
-  const params = tools[0].function.parameters;
+  it("spawn_agent 参数 Schema 正确", () => {
+    const registry = new ToolRegistry();
+    registry.register({ name: "spawn_agent", description: "创建子 Agent", riskLevel: "write", execute: async () => ({ status: "success", output: "" }) });
 
-  assert.ok(params.properties.path);
-  assert.ok(params.properties.old_string);
-  assert.ok(params.properties.new_string);
-  assert.ok(params.properties.replace_all);
-  assert.deepEqual(params.required, ["path", "old_string", "new_string"]);
-});
+    const tools = buildOpenAITools(registry);
+    const params = tools[0].function.parameters;
 
-test("buildOpenAITools: spawn_agent 参数 Schema 正确", () => {
-  const registry = new ToolRegistry();
-  registry.register({
-    name: "spawn_agent",
-    description: "创建子 Agent",
-    riskLevel: "write",
-    execute: async () => ({ status: "success", output: "" }),
+    expect(params.properties.name).toBeTruthy();
+    expect(params.properties.task).toBeTruthy();
+    expect(params.properties.model).toBeTruthy();
+    expect(params.properties.tools).toBeTruthy();
+    expect(params.properties.inheritHistory).toBeTruthy();
+    expect(params.required).toEqual(["name", "task"]);
   });
-
-  const tools = buildOpenAITools(registry);
-  const params = tools[0].function.parameters;
-
-  assert.ok(params.properties.name);
-  assert.ok(params.properties.task);
-  assert.ok(params.properties.model);
-  assert.ok(params.properties.tools);
-  assert.ok(params.properties.inheritHistory);
-  assert.deepEqual(params.required, ["name", "task"]);
 });
 
 // ============================================================
 // parseToolCalls 测试
 // ============================================================
 
-test("parseToolCalls: 空数组返回空数组", () => {
-  const calls = parseToolCalls([]);
-  assert.deepEqual(calls, []);
-});
-
-test("parseToolCalls: 单个工具调用解析", () => {
-  const toolCalls = [
-    {
-      id: "call_abc123",
-      type: "function",
-      function: {
-        name: "read-file",
-        arguments: '{"path": "package.json"}',
-      },
-    },
-  ];
-
-  const calls = parseToolCalls(toolCalls);
-
-  assert.equal(calls.length, 1);
-  assert.equal(calls[0].id, "call_abc123");
-  assert.equal(calls[0].toolName, "read-file");
-  assert.deepEqual(calls[0].input, { path: "package.json" });
-});
-
-test("parseToolCalls: 多个工具调用解析", () => {
-  const toolCalls = [
-    {
-      id: "call_1",
-      type: "function",
-      function: {
-        name: "read-file",
-        arguments: '{"path": "a.txt"}',
-      },
-    },
-    {
-      id: "call_2",
-      type: "function",
-      function: {
-        name: "bash",
-        arguments: '{"command": "pwd"}',
-      },
-    },
-  ];
-
-  const calls = parseToolCalls(toolCalls);
-
-  assert.equal(calls.length, 2);
-  assert.equal(calls[0].toolName, "read-file");
-  assert.equal(calls[1].toolName, "bash");
-});
-
-test("parseToolCalls: 复杂参数解析", () => {
-  const toolCalls = [
-    {
-      id: "call_edit",
-      type: "function",
-      function: {
-        name: "edit-file",
-        arguments: '{"path": "test.ts", "old_string": "foo", "new_string": "bar", "replace_all": true}',
-      },
-    },
-  ];
-
-  const calls = parseToolCalls(toolCalls);
-
-  assert.deepEqual(calls[0].input, {
-    path: "test.ts",
-    old_string: "foo",
-    new_string: "bar",
-    replace_all: true,
+describe("parseToolCalls", () => {
+  it("空数组返回空数组", () => {
+    expect(parseToolCalls([])).toEqual([]);
   });
-});
 
-test("parseToolCalls: 无效 JSON 返回错误标记", () => {
-  const toolCalls = [
-    {
-      id: "call_error",
-      type: "function",
-      function: {
-        name: "read-file",
-        arguments: 'not valid json',
-      },
-    },
-  ];
+  it("单个工具调用解析", () => {
+    const toolCalls = [
+      { id: "call_abc123", type: "function", function: { name: "read-file", arguments: '{"path": "package.json"}' } },
+    ];
+    const calls = parseToolCalls(toolCalls);
 
-  const calls = parseToolCalls(toolCalls);
+    expect(calls.length).toBe(1);
+    expect(calls[0].id).toBe("call_abc123");
+    expect(calls[0].toolName).toBe("read-file");
+    expect(calls[0].input).toEqual({ path: "package.json" });
+  });
 
-  assert.equal(calls.length, 1);
-  assert.equal(calls[0].id, "call_error");
-  assert.equal(calls[0].toolName, "read-file");
-  assert.equal(calls[0].input._parseError, true);
-  assert.ok(calls[0].input._rawArguments);
-  assert.ok(calls[0].input._errorMessage);
-});
+  it("多个工具调用解析", () => {
+    const toolCalls = [
+      { id: "call_1", type: "function", function: { name: "read-file", arguments: '{"path": "a.txt"}' } },
+      { id: "call_2", type: "function", function: { name: "bash", arguments: '{"command": "pwd"}' } },
+    ];
+    const calls = parseToolCalls(toolCalls);
 
-test("parseToolCalls: 部分无效 JSON", () => {
-  const toolCalls = [
-    {
-      id: "call_valid",
-      type: "function",
-      function: {
-        name: "bash",
-        arguments: '{"command": "ls"}',
-      },
-    },
-    {
-      id: "call_invalid",
-      type: "function",
-      function: {
-        name: "read-file",
-        arguments: '{invalid}',
-      },
-    },
-  ];
+    expect(calls.length).toBe(2);
+    expect(calls[0].toolName).toBe("read-file");
+    expect(calls[1].toolName).toBe("bash");
+  });
 
-  const calls = parseToolCalls(toolCalls);
+  it("复杂参数解析", () => {
+    const toolCalls = [
+      { id: "call_edit", type: "function", function: { name: "edit-file", arguments: '{"path": "test.ts", "old_string": "foo", "new_string": "bar", "replace_all": true}' } },
+    ];
+    const calls = parseToolCalls(toolCalls);
 
-  assert.equal(calls.length, 2);
-  assert.deepEqual(calls[0].input, { command: "ls" });
-  assert.equal(calls[1].input._parseError, true);
+    expect(calls[0].input).toEqual({ path: "test.ts", old_string: "foo", new_string: "bar", replace_all: true });
+  });
+
+  it("无效 JSON 返回错误标记", () => {
+    const toolCalls = [
+      { id: "call_error", type: "function", function: { name: "read-file", arguments: "not valid json" } },
+    ];
+    const calls = parseToolCalls(toolCalls);
+
+    expect(calls.length).toBe(1);
+    expect(calls[0].id).toBe("call_error");
+    expect(calls[0].toolName).toBe("read-file");
+    expect(calls[0].input._parseError).toBe(true);
+    expect(calls[0].input._rawArguments).toBeTruthy();
+    expect(calls[0].input._errorMessage).toBeTruthy();
+  });
+
+  it("部分无效 JSON", () => {
+    const toolCalls = [
+      { id: "call_valid", type: "function", function: { name: "bash", arguments: '{"command": "ls"}' } },
+      { id: "call_invalid", type: "function", function: { name: "read-file", arguments: "{invalid}" } },
+    ];
+    const calls = parseToolCalls(toolCalls);
+
+    expect(calls.length).toBe(2);
+    expect(calls[0].input).toEqual({ command: "ls" });
+    expect(calls[1].input._parseError).toBe(true);
+  });
 });
 
 // ============================================================
 // hasParseError 测试
 // ============================================================
 
-test("hasParseError: 有效调用返回 false", () => {
-  const call = {
-    id: "call_1",
-    toolName: "read-file",
-    input: { path: "test.txt" },
-  };
+describe("hasParseError", () => {
+  it("有效调用返回 false", () => {
+    const call = { id: "call_1", toolName: "read-file", input: { path: "test.txt" } };
+    expect(hasParseError(call)).toBe(false);
+  });
 
-  assert.equal(hasParseError(call), false);
-});
-
-test("hasParseError: 无效调用返回 true", () => {
-  const call = {
-    id: "call_1",
-    toolName: "read-file",
-    input: {
-      _parseError: true,
-      _rawArguments: "bad json",
-      _errorMessage: "parse error",
-    },
-  };
-
-  assert.equal(hasParseError(call), true);
+  it("无效调用返回 true", () => {
+    const call = { id: "call_1", toolName: "read-file", input: { _parseError: true, _rawArguments: "bad json", _errorMessage: "parse error" } };
+    expect(hasParseError(call)).toBe(true);
+  });
 });
 
 // ============================================================
 // getParseErrorMessage 测试
 // ============================================================
 
-test("getParseErrorMessage: 提取错误消息", () => {
-  const call = {
-    id: "call_1",
-    toolName: "read-file",
-    input: {
-      _parseError: true,
-      _rawArguments: "bad",
-      _errorMessage: "无法解析工具参数：无效的 JSON 格式",
-    },
-  };
+describe("getParseErrorMessage", () => {
+  it("提取错误消息", () => {
+    const call = { id: "call_1", toolName: "read-file", input: { _parseError: true, _rawArguments: "bad", _errorMessage: "无法解析工具参数：无效的 JSON 格式" } };
+    expect(getParseErrorMessage(call)).toBe("无法解析工具参数：无效的 JSON 格式");
+  });
 
-  assert.equal(
-    getParseErrorMessage(call),
-    "无法解析工具参数：无效的 JSON 格式"
-  );
-});
-
-test("getParseErrorMessage: 缺少消息返回默认值", () => {
-  const call = {
-    id: "call_1",
-    toolName: "read-file",
-    input: {
-      _parseError: true,
-    },
-  };
-
-  assert.equal(getParseErrorMessage(call), "未知解析错误。");
+  it("缺少消息返回默认值", () => {
+    const call = { id: "call_1", toolName: "read-file", input: { _parseError: true } };
+    const msg = getParseErrorMessage(call);
+    expect(msg).toBeTruthy();
+    expect(typeof msg).toBe("string");
+  });
 });

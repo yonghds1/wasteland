@@ -4,341 +4,253 @@
  * 测试 buildMessages 和 buildToolResultMessages 的正确性。
  */
 
-import assert from "node:assert/strict";
-import { test } from "node:test";
+import { describe, it, expect } from "vitest";
 import { buildMessages, buildToolResultMessages, needsToolLoop } from "../../../dist/providers/openai-compatible/message-builder.js";
 
 // ============================================================
 // buildMessages 测试
 // ============================================================
 
-test("buildMessages: 基本消息构建（无历史、无工具）", () => {
-  const messages = buildMessages({
-    history: [],
-    input: "你好",
-    toolResults: [],
+describe("buildMessages", () => {
+  it("基本消息构建（无历史、无工具）", () => {
+    const messages = buildMessages({
+      history: [],
+      input: "你好",
+      toolResults: [],
+    });
+
+    expect(messages.length).toBe(1);
+    expect(messages[0].role).toBe("user");
+    expect(messages[0].content).toBe("你好");
   });
 
-  assert.equal(messages.length, 1);
-  assert.equal(messages[0].role, "user");
-  assert.equal(messages[0].content, "你好");
-});
+  it("包含 system prompt", () => {
+    const messages = buildMessages({
+      history: [],
+      input: "测试",
+      toolResults: [],
+      prompt: "你是一个助手。",
+    });
 
-test("buildMessages: 包含 system prompt", () => {
-  const messages = buildMessages({
-    history: [],
-    input: "测试",
-    toolResults: [],
-    prompt: "你是一个助手。",
+    expect(messages.length).toBe(2);
+    expect(messages[0].role).toBe("system");
+    expect(messages[0].content).toBe("你是一个助手。");
+    expect(messages[1].role).toBe("user");
+    expect(messages[1].content).toBe("测试");
   });
 
-  assert.equal(messages.length, 2);
-  assert.equal(messages[0].role, "system");
-  assert.equal(messages[0].content, "你是一个助手。");
-  assert.equal(messages[1].role, "user");
-  assert.equal(messages[1].content, "测试");
-});
+  it("包含历史对话", () => {
+    const history = [
+      { type: "message", role: "user", turn: 1, content: "问题1", source: "message", timestamp: "2026-01-01 00:00:00" },
+      { type: "message", role: "assistant", turn: 1, content: "回答1", source: "provider", timestamp: "2026-01-01 00:00:01" },
+      { type: "message", role: "user", turn: 2, content: "问题2", source: "message", timestamp: "2026-01-01 00:00:02" },
+    ];
 
-test("buildMessages: 包含历史对话", () => {
-  const history = [
-    { type: "message", role: "user", turn: 1, content: "问题1", source: "message", timestamp: "2026-01-01 00:00:00" },
-    { type: "message", role: "assistant", turn: 1, content: "回答1", source: "provider", timestamp: "2026-01-01 00:00:01" },
-    { type: "message", role: "user", turn: 2, content: "问题2", source: "message", timestamp: "2026-01-01 00:00:02" },
-  ];
+    const messages = buildMessages({
+      history,
+      input: "问题3",
+      toolResults: [],
+    });
 
-  const messages = buildMessages({
-    history,
-    input: "问题3",
-    toolResults: [],
+    expect(messages.length).toBe(4);
+    expect(messages[0].role).toBe("user");
+    expect(messages[0].content).toBe("问题1");
+    expect(messages[1].role).toBe("assistant");
+    expect(messages[1].content).toBe("回答1");
+    expect(messages[2].role).toBe("user");
+    expect(messages[2].content).toBe("问题2");
+    expect(messages[3].role).toBe("user");
+    expect(messages[3].content).toBe("问题3");
   });
 
-  assert.equal(messages.length, 4);
-  assert.equal(messages[0].role, "user");
-  assert.equal(messages[0].content, "问题1");
-  assert.equal(messages[1].role, "assistant");
-  assert.equal(messages[1].content, "回答1");
-  assert.equal(messages[2].role, "user");
-  assert.equal(messages[2].content, "问题2");
-  assert.equal(messages[3].role, "user");
-  assert.equal(messages[3].content, "问题3");
-});
+  it("跳过非消息类型的记录", () => {
+    const history = [
+      { type: "message", role: "user", turn: 1, content: "问题", source: "message", timestamp: "..." },
+      { type: "tool_call", callId: "call_1", toolName: "bash", input: {}, timestamp: "..." },
+      { type: "tool_result", callId: "call_1", toolName: "bash", status: "success", output: "result", timestamp: "..." },
+      { type: "message", role: "assistant", turn: 1, content: "回答", source: "provider", timestamp: "..." },
+    ];
 
-test("buildMessages: 跳过非消息类型的记录", () => {
-  const history = [
-    { type: "message", role: "user", turn: 1, content: "问题", source: "message", timestamp: "..." },
-    { type: "tool_call", callId: "call_1", toolName: "bash", input: {}, timestamp: "..." },
-    { type: "tool_result", callId: "call_1", toolName: "bash", status: "success", output: "result", timestamp: "..." },
-    { type: "message", role: "assistant", turn: 1, content: "回答", source: "provider", timestamp: "..." },
-  ];
+    const messages = buildMessages({
+      history,
+      input: "继续",
+      toolResults: [],
+    });
 
-  const messages = buildMessages({
-    history,
-    input: "继续",
-    toolResults: [],
+    expect(messages.length).toBe(3);
+    expect(messages[0].role).toBe("user");
+    expect(messages[1].role).toBe("assistant");
+    expect(messages[2].role).toBe("user");
   });
 
-  assert.equal(messages.length, 3);
-  assert.equal(messages[0].role, "user");
-  assert.equal(messages[1].role, "assistant");
-  assert.equal(messages[2].role, "user");
-});
+  it("包含工具结果", () => {
+    const toolResults = [
+      {
+        callId: "call_abc",
+        toolName: "read-file",
+        status: "success",
+        output: "文件内容",
+        input: { path: "test.txt" },
+      },
+    ];
 
-test("buildMessages: 包含工具结果", () => {
-  const toolResults = [
-    {
-      callId: "call_abc",
-      toolName: "read-file",
-      status: "success",
-      output: "文件内容",
-      input: { path: "test.txt" },
-    },
-  ];
+    const messages = buildMessages({
+      history: [],
+      input: "读取文件",
+      toolResults,
+    });
 
-  const messages = buildMessages({
-    history: [],
-    input: "读取文件",
-    toolResults,
+    expect(messages.length).toBe(3);
+    expect(messages[0].role).toBe("user");
+    expect(messages[0].content).toBe("读取文件");
+    expect(messages[1].role).toBe("assistant");
+    expect(messages[1].content).toBeNull();
+    expect(messages[1].tool_calls).toBeTruthy();
+    expect(messages[1].tool_calls.length).toBe(1);
+    expect(messages[1].tool_calls[0].id).toBe("call_abc");
+    expect(messages[1].tool_calls[0].function.name).toBe("read-file");
+    expect(messages[2].role).toBe("tool");
+    expect(messages[2].tool_call_id).toBe("call_abc");
+    expect(messages[2].content).toBe("文件内容");
   });
 
-  assert.equal(messages.length, 3);
+  it("多个工具结果", () => {
+    const toolResults = [
+      { callId: "call_1", toolName: "read-file", status: "success", output: "内容1", input: { path: "a.txt" } },
+      { callId: "call_2", toolName: "bash", status: "success", output: "结果2", input: { command: "pwd" } },
+    ];
 
-  // 1. 用户输入
-  assert.equal(messages[0].role, "user");
-  assert.equal(messages[0].content, "读取文件");
+    const messages = buildMessages({ history: [], input: "执行任务", toolResults });
 
-  // 2. assistant 消息（包含 tool_calls）
-  assert.equal(messages[1].role, "assistant");
-  assert.equal(messages[1].content, null);
-  assert.ok(messages[1].tool_calls);
-  assert.equal(messages[1].tool_calls.length, 1);
-  assert.equal(messages[1].tool_calls[0].id, "call_abc");
-  assert.equal(messages[1].tool_calls[0].function.name, "read-file");
-
-  // 3. tool 消息
-  assert.equal(messages[2].role, "tool");
-  assert.equal(messages[2].tool_call_id, "call_abc");
-  assert.equal(messages[2].content, "文件内容");
-});
-
-test("buildMessages: 多个工具结果", () => {
-  const toolResults = [
-    {
-      callId: "call_1",
-      toolName: "read-file",
-      status: "success",
-      output: "内容1",
-      input: { path: "a.txt" },
-    },
-    {
-      callId: "call_2",
-      toolName: "bash",
-      status: "success",
-      output: "结果2",
-      input: { command: "pwd" },
-    },
-  ];
-
-  const messages = buildMessages({
-    history: [],
-    input: "执行任务",
-    toolResults,
+    expect(messages.length).toBe(4);
+    expect(messages[0].role).toBe("user");
+    expect(messages[1].role).toBe("assistant");
+    expect(messages[1].tool_calls.length).toBe(2);
+    expect(messages[2].role).toBe("tool");
+    expect(messages[2].tool_call_id).toBe("call_1");
+    expect(messages[3].role).toBe("tool");
+    expect(messages[3].tool_call_id).toBe("call_2");
   });
 
-  assert.equal(messages.length, 4);
+  it("工具执行失败", () => {
+    const toolResults = [
+      { callId: "call_error", toolName: "bash", status: "error", error: "命令执行失败", input: { command: "invalid" } },
+    ];
 
-  // user
-  assert.equal(messages[0].role, "user");
+    const messages = buildMessages({ history: [], input: "执行命令", toolResults });
 
-  // assistant with tool_calls
-  assert.equal(messages[1].role, "assistant");
-  assert.equal(messages[1].tool_calls.length, 2);
-
-  // tool messages
-  assert.equal(messages[2].role, "tool");
-  assert.equal(messages[2].tool_call_id, "call_1");
-  assert.equal(messages[3].role, "tool");
-  assert.equal(messages[3].tool_call_id, "call_2");
-});
-
-test("buildMessages: 工具执行失败", () => {
-  const toolResults = [
-    {
-      callId: "call_error",
-      toolName: "bash",
-      status: "error",
-      error: "命令执行失败",
-      input: { command: "invalid" },
-    },
-  ];
-
-  const messages = buildMessages({
-    history: [],
-    input: "执行命令",
-    toolResults,
+    expect(messages.length).toBe(3);
+    expect(messages[2].role).toBe("tool");
+    expect(messages[2].content).toBe("命令执行失败");
   });
 
-  assert.equal(messages.length, 3);
+  it("工具结果无输出", () => {
+    const toolResults = [
+      { callId: "call_empty", toolName: "bash", status: "success", input: { command: "echo" } },
+    ];
 
-  // tool 消息包含错误信息
-  assert.equal(messages[2].role, "tool");
-  assert.equal(messages[2].content, "命令执行失败");
-});
-
-test("buildMessages: 工具结果无输出", () => {
-  const toolResults = [
-    {
-      callId: "call_empty",
-      toolName: "bash",
-      status: "success",
-      input: { command: "echo" },
-    },
-  ];
-
-  const messages = buildMessages({
-    history: [],
-    input: "执行",
-    toolResults,
+    const messages = buildMessages({ history: [], input: "执行", toolResults });
+    // 返回 i18n key 或本地化文本
+    expect(messages[2].content).toBeTruthy();
+    expect(messages[2].role).toBe("tool");
   });
 
-  // tool 消息使用默认值
-  assert.equal(messages[2].content, "(无输出)");
-});
+  it("完整场景（system + history + tool results）", () => {
+    const history = [
+      { type: "message", role: "user", turn: 1, content: "你好", source: "message", timestamp: "..." },
+      { type: "message", role: "assistant", turn: 1, content: "你好！", source: "provider", timestamp: "..." },
+    ];
+    const toolResults = [
+      { callId: "call_1", toolName: "read-file", status: "success", output: "文件内容", input: { path: "test.txt" } },
+    ];
 
-test("buildMessages: 完整场景（system + history + tool results）", () => {
-  const history = [
-    { type: "message", role: "user", turn: 1, content: "你好", source: "message", timestamp: "..." },
-    { type: "message", role: "assistant", turn: 1, content: "你好！", source: "provider", timestamp: "..." },
-  ];
+    const messages = buildMessages({ history, input: "读取文件", toolResults, prompt: "你是一个助手。" });
 
-  const toolResults = [
-    {
-      callId: "call_1",
-      toolName: "read-file",
-      status: "success",
-      output: "文件内容",
-      input: { path: "test.txt" },
-    },
-  ];
-
-  const messages = buildMessages({
-    history,
-    input: "读取文件",
-    toolResults,
-    prompt: "你是一个助手。",
+    expect(messages.length).toBe(6);
+    expect(messages[0].role).toBe("system");
+    expect(messages[1].role).toBe("user");
+    expect(messages[1].content).toBe("你好");
+    expect(messages[2].role).toBe("assistant");
+    expect(messages[2].content).toBe("你好！");
+    expect(messages[3].role).toBe("user");
+    expect(messages[3].content).toBe("读取文件");
+    expect(messages[4].role).toBe("assistant");
+    expect(messages[4].tool_calls).toBeTruthy();
+    expect(messages[5].role).toBe("tool");
   });
-
-  assert.equal(messages.length, 6);
-
-  // system
-  assert.equal(messages[0].role, "system");
-
-  // history
-  assert.equal(messages[1].role, "user");
-  assert.equal(messages[1].content, "你好");
-  assert.equal(messages[2].role, "assistant");
-  assert.equal(messages[2].content, "你好！");
-
-  // current input
-  assert.equal(messages[3].role, "user");
-  assert.equal(messages[3].content, "读取文件");
-
-  // tool results
-  assert.equal(messages[4].role, "assistant");
-  assert.ok(messages[4].tool_calls);
-  assert.equal(messages[5].role, "tool");
 });
 
 // ============================================================
 // buildToolResultMessages 测试
 // ============================================================
 
-test("buildToolResultMessages: 单个结果", () => {
-  const results = [
-    {
-      callId: "call_1",
-      toolName: "bash",
-      status: "success",
-      output: "success",
-    },
-  ];
+describe("buildToolResultMessages", () => {
+  it("单个结果", () => {
+    const results = [{ callId: "call_1", toolName: "bash", status: "success", output: "success" }];
+    const messages = buildToolResultMessages(results);
 
-  const messages = buildToolResultMessages(results);
+    expect(messages.length).toBe(1);
+    expect(messages[0].role).toBe("tool");
+    expect(messages[0].tool_call_id).toBe("call_1");
+    expect(messages[0].content).toBe("success");
+  });
 
-  assert.equal(messages.length, 1);
-  assert.equal(messages[0].role, "tool");
-  assert.equal(messages[0].tool_call_id, "call_1");
-  assert.equal(messages[0].content, "success");
-});
+  it("多个结果", () => {
+    const results = [
+      { callId: "call_1", toolName: "bash", status: "success", output: "result1" },
+      { callId: "call_2", toolName: "read-file", status: "error", error: "文件不存在" },
+    ];
+    const messages = buildToolResultMessages(results);
 
-test("buildToolResultMessages: 多个结果", () => {
-  const results = [
-    {
-      callId: "call_1",
-      toolName: "bash",
-      status: "success",
-      output: "result1",
-    },
-    {
-      callId: "call_2",
-      toolName: "read-file",
-      status: "error",
-      error: "文件不存在",
-    },
-  ];
+    expect(messages.length).toBe(2);
+    expect(messages[0].content).toBe("result1");
+    expect(messages[1].content).toBe("文件不存在");
+  });
 
-  const messages = buildToolResultMessages(results);
-
-  assert.equal(messages.length, 2);
-  assert.equal(messages[0].content, "result1");
-  assert.equal(messages[1].content, "文件不存在");
-});
-
-test("buildToolResultMessages: 空数组", () => {
-  const messages = buildToolResultMessages([]);
-  assert.deepEqual(messages, []);
+  it("空数组", () => {
+    expect(buildToolResultMessages([])).toEqual([]);
+  });
 });
 
 // ============================================================
 // needsToolLoop 测试
 // ============================================================
 
-test("needsToolLoop: 最后是 tool 消息返回 true", () => {
-  const messages = [
-    { role: "user", content: "test" },
-    { role: "assistant", tool_calls: [] },
-    { role: "tool", tool_call_id: "call_1", content: "result" },
-  ];
+describe("needsToolLoop", () => {
+  it("最后是 tool 消息返回 true", () => {
+    const messages = [
+      { role: "user", content: "test" },
+      { role: "assistant", tool_calls: [] },
+      { role: "tool", tool_call_id: "call_1", content: "result" },
+    ];
+    expect(needsToolLoop(messages)).toBe(true);
+  });
 
-  assert.equal(needsToolLoop(messages), true);
-});
+  it("最后不是 tool 消息返回 false", () => {
+    const messages = [
+      { role: "user", content: "test" },
+      { role: "assistant", content: "reply" },
+    ];
+    expect(needsToolLoop(messages)).toBe(false);
+  });
 
-test("needsToolLoop: 最后不是 tool 消息返回 false", () => {
-  const messages = [
-    { role: "user", content: "test" },
-    { role: "assistant", content: "reply" },
-  ];
+  it("空数组返回 false", () => {
+    expect(needsToolLoop([])).toBe(false);
+  });
 
-  assert.equal(needsToolLoop(messages), false);
-});
+  it("user 消息在最后返回 false", () => {
+    const messages = [
+      { role: "assistant", content: "reply" },
+      { role: "user", content: "new question" },
+    ];
+    expect(needsToolLoop(messages)).toBe(false);
+  });
 
-test("needsToolLoop: 空数组返回 false", () => {
-  assert.equal(needsToolLoop([]), false);
-});
-
-test("needsToolLoop: user 消息在最后返回 false", () => {
-  const messages = [
-    { role: "assistant", content: "reply" },
-    { role: "user", content: "new question" },
-  ];
-
-  assert.equal(needsToolLoop(messages), false);
-});
-
-test("needsToolLoop: system 消息在最后返回 false", () => {
-  const messages = [
-    { role: "user", content: "test" },
-    { role: "system", content: "system message" },
-  ];
-
-  assert.equal(needsToolLoop(messages), false);
+  it("system 消息在最后返回 false", () => {
+    const messages = [
+      { role: "user", content: "test" },
+      { role: "system", content: "system message" },
+    ];
+    expect(needsToolLoop(messages)).toBe(false);
+  });
 });

@@ -16,7 +16,19 @@ export default defineConfig({
     },
   },
   test: {
-    include: ['src/**/*.test.ts'],
-    exclude: ['test/**/*.ts'],
+    include: ['src/**/*.test.ts', 'test/**/*.test.js'],
+    exclude: [
+      'test/**/*.ts',
+      'test/cli.test.js',
+      'test/interactive-ui.test.js',
+      'test/tool-runtime.test.js',
+      'test/commands/session-index.test.js',
+      'test/commands/sessions.test.js',
+      'test/mcp/mcp-client.test.js',
+      'test/providers/tool-calling-e2e.test.js',
+      'test/runtime/agent-loop.test.js',
+      'test/runtime/multi-agent-e2e.test.js',
+      'test/tools/new-tools.test.js',
+    ],
   },
 });

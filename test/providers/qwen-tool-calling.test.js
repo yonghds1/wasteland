@@ -4,8 +4,7 @@
  * 测试 Qwen provider 的基本功能和 tool calling 支持。
  */
 
-import assert from "node:assert/strict";
-import { test } from "node:test";
+import { describe, it, expect } from "vitest";
 import { createOpenAIProvider as createQwenProvider } from "../../dist/providers/openai.js";
 import { createDefaultToolRegistry } from "../../dist/tools/default-registry.js";
 
@@ -13,122 +12,111 @@ import { createDefaultToolRegistry } from "../../dist/tools/default-registry.js"
 // 配置验证测试
 // ============================================================
 
-test("createQwenProvider: 配置验证 - 缺少 model", () => {
-  assert.throws(
-    () => {
-      createQwenProvider({
-        baseUrl: "http://localhost:1234",
-        apiKey: "test-key",
-        // model: "qwen-test", // 缺少
-      });
-    },
-    /missingModel|缺少 model/
-  );
-});
-
-test("createQwenProvider: 成功创建 provider", () => {
-  const provider = createQwenProvider({
-    baseUrl: "http://localhost:1234",
-    apiKey: "test-key",
-    model: "qwen-test",
+describe("Qwen Provider 配置验证", () => {
+  it("缺少 model 抛出错误", () => {
+    expect(() => {
+      createQwenProvider({ baseUrl: "http://localhost:1234", apiKey: "test-key" });
+    }).toThrow(/missingModel|缺少 model/);
   });
 
-  assert.ok(provider);
-  assert.equal(provider.id, "openai-compatible");
-  assert.ok(provider.runStep);
-  assert.equal(typeof provider.runStep, "function");
-});
+  it("成功创建 provider", () => {
+    const provider = createQwenProvider({
+      baseUrl: "http://localhost:1234",
+      apiKey: "test-key",
+      model: "qwen-test",
+    });
 
-test("createQwenProvider: 配置验证 - 缺少 baseUrl", () => {
-  assert.throws(
-    () => {
-      createQwenProvider({
-        apiKey: "test-key",
-        model: "qwen-test",
-      });
-    },
-    /missingBaseUrl|缺少 baseUrl/
-  );
-});
-
-test("createQwenProvider: baseUrl 规范化 - 去除尾部斜杠", () => {
-  const provider = createQwenProvider({
-    baseUrl: "http://localhost:8080/",
-    apiKey: "test-key",
-    model: "qwen-test",
+    expect(provider).toBeTruthy();
+    expect(provider.id).toBe("openai-compatible");
+    expect(provider.runStep).toBeTruthy();
+    expect(typeof provider.runStep).toBe("function");
   });
 
-  assert.ok(provider);
+  it("缺少 baseUrl 抛出错误", () => {
+    expect(() => {
+      createQwenProvider({ apiKey: "test-key", model: "qwen-test" });
+    }).toThrow(/missingBaseUrl|缺少 baseUrl/);
+  });
+
+  it("baseUrl 规范化 - 去除尾部斜杠", () => {
+    const provider = createQwenProvider({
+      baseUrl: "http://localhost:8080/",
+      apiKey: "test-key",
+      model: "qwen-test",
+    });
+    expect(provider).toBeTruthy();
+  });
 });
 
 // ============================================================
 // 工具注册表测试
 // ============================================================
 
-test("createDefaultToolRegistry: 包含必要的工具", () => {
-  const { toolRegistry } = createDefaultToolRegistry();
+describe("DefaultToolRegistry", () => {
+  it("包含必要的工具", () => {
+    const { toolRegistry } = createDefaultToolRegistry();
+    const tools = toolRegistry.list();
 
-  const tools = toolRegistry.list();
-  assert.ok(tools.includes("read-file"));
-  assert.ok(tools.includes("bash"));
-  assert.ok(tools.includes("edit-file"));
-  assert.ok(tools.includes("write-file"));
-  assert.ok(tools.includes("glob"));
-  assert.ok(tools.includes("grep"));
-});
+    expect(tools).toContain("read-file");
+    expect(tools).toContain("bash");
+    expect(tools).toContain("edit-file");
+    expect(tools).toContain("write-file");
+    expect(tools).toContain("glob");
+    expect(tools).toContain("grep");
+  });
 
-test("createDefaultToolRegistry: 工具有正确的属性", () => {
-  const { toolRegistry } = createDefaultToolRegistry();
+  it("工具有正确的属性", () => {
+    const { toolRegistry } = createDefaultToolRegistry();
+    const readTool = toolRegistry.get("read-file");
 
-  const readTool = toolRegistry.get("read-file");
-  assert.ok(readTool);
-  assert.equal(readTool.name, "read-file");
-  // description 是可选的，不是必需的
-  assert.ok(readTool.riskLevel);
-  assert.ok(readTool.execute);
+    expect(readTool).toBeTruthy();
+    expect(readTool.name).toBe("read-file");
+    expect(readTool.riskLevel).toBeTruthy();
+    expect(readTool.execute).toBeTruthy();
+  });
 });
 
 // ============================================================
 // Provider 接口测试
 // ============================================================
 
-test("provider.runStep: 返回 Observable", () => {
-  const provider = createQwenProvider({
-    baseUrl: "http://localhost:1234",
-    apiKey: "test-key",
-    model: "qwen-test",
+describe("Provider 接口", () => {
+  it("runStep 返回 Observable", () => {
+    const provider = createQwenProvider({
+      baseUrl: "http://localhost:1234",
+      apiKey: "test-key",
+      model: "qwen-test",
+    });
+
+    const { toolRegistry } = createDefaultToolRegistry();
+
+    const turnContext = {
+      sessionId: "test",
+      turn: 1,
+      input: { turn: 1, content: "test", source: "message" },
+      history: [],
+      cwd: process.cwd(),
+      toolRegistry,
+      permissionMode: "default",
+      maxStepsPerTurn: 8,
+    };
+
+    const turnState = {
+      sessionId: "test",
+      turn: 1,
+      cwd: process.cwd(),
+      input: { turn: 1, content: "test", source: "message" },
+      history: [],
+      step: 0,
+      status: "running",
+      assistantChunks: [],
+      toolCalls: [],
+      toolResults: [],
+    };
+
+    const result = provider.runStep({ context: turnContext, state: turnState });
+    expect(result).toBeTruthy();
+    expect(result.subscribe).toBeTruthy();
+    expect(typeof result.subscribe).toBe("function");
   });
-
-  const { toolRegistry } = createDefaultToolRegistry();
-
-  // 创建最小化的 turnContext 和 turnState
-  const turnContext = {
-    sessionId: "test",
-    turn: 1,
-    input: { turn: 1, content: "test", source: "message" },
-    history: [],
-    cwd: process.cwd(),
-    toolRegistry,
-    permissionMode: "default",
-    maxStepsPerTurn: 8,
-  };
-
-  const turnState = {
-    sessionId: "test",
-    turn: 1,
-    cwd: process.cwd(),
-    input: { turn: 1, content: "test", source: "message" },
-    history: [],
-    step: 0,
-    status: "running",
-    assistantChunks: [],
-    toolCalls: [],
-    toolResults: [],
-  };
-
-  // runStep 应该返回一个 Observable
-  const result = provider.runStep({ context: turnContext, state: turnState });
-  assert.ok(result);
-  assert.ok(result.subscribe);
-  assert.equal(typeof result.subscribe, "function");
 });
