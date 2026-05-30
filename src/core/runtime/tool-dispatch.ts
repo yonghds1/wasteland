@@ -21,6 +21,25 @@ import type { SessionMessageRecord } from './event-types.js';
 import type { ProviderSettings } from '../../config/settings-types.js';
 import type { ProviderRegistry } from '../../providers/provider-registry.js';
 
+// ============================================================
+// Special Tool Handlers
+// ============================================================
+
+/**
+ * 特殊工具处理器类型
+ *
+ * 某些工具需要额外的上下文（如 Provider、Registry 等），
+ * 无法通过标准的 executeToolCall 路径执行。
+ * 这些工具通过 SpecialToolHandler 注册，在 dispatchToolCall 中优先处理。
+ */
+type SpecialToolHandler = (
+  params: DispatchToolCallParams,
+  requested$: Observable<RuntimeEvent>
+) => Observable<RuntimeEvent> | null;
+
+/** dispatchToolCall 参数类型（供 SpecialToolHandler 使用） */
+type DispatchToolCallParams = Parameters<typeof dispatchToolCall>[0];
+
 function createTimestamp(): string {
   return new Date().toISOString();
 }
@@ -80,6 +99,204 @@ function createToolResultRecord(params: {
     timestamp: createTimestamp(),
   };
 }
+
+// ============================================================
+// Special Tool Handlers
+// ============================================================
+
+/**
+ * spawn_agent 特殊处理器
+ *
+ * 处理子 Agent 创建，需要 Provider、Registry 等额外上下文。
+ * 发出 agent_spawned/agent_completed 生命周期事件。
+ */
+function handleSpawnAgent(params: DispatchToolCallParams, requested$: Observable<RuntimeEvent>): Observable<RuntimeEvent> | null {
+  if (!params.provider) return null;
+
+  const spawnTool = createSpawnAgentTool({
+    sessionId: params.session.id,
+    turn: params.turn,
+    cwd: params.cwd,
+    session: params.session,
+    sessionManager: params.sessionManager,
+    provider: params.provider,
+    toolRegistry: params.registry,
+    permissionGate: params.permissionGate,
+    history: params.history ?? [],
+    providerRegistry: params.providerRegistry,
+    providerSettings: params.providerSettings,
+    childAgentTimeout: params.childAgentTimeout,
+  });
+
+  // 权限检查
+  const decision = params.permissionGate.evaluate(params.call, spawnTool.riskLevel);
+
+  const permission$ = from(
+    params.sessionManager.appendRecord(
+      params.session,
+      createPermissionRecord({
+        session: params.session,
+        turn: params.turn,
+        call: params.call,
+        decision,
+      })
+    )
+  ).pipe(
+    map(
+      (): RuntimeEvent => ({
+        type: 'permission_decision',
+        sessionId: params.session.id,
+        turn: params.turn,
+        callId: params.call.id,
+        toolName: params.call.toolName,
+        decision: decision.decision,
+        mode: decision.mode,
+        reason: decision.reason,
+      })
+    )
+  );
+
+  if (decision.decision !== 'allow') {
+    const blockedStatus = decision.decision === 'deny' ? 'error' : 'blocked';
+    const failedRecord = createToolResultRecord({
+      session: params.session,
+      turn: params.turn,
+      call: params.call,
+      status: blockedStatus,
+      error: decision.reason,
+    });
+
+    const failed$ = from(params.sessionManager.appendRecord(params.session, failedRecord)).pipe(
+      map(
+        (): RuntimeEvent => ({
+          type: 'tool_failed',
+          sessionId: params.session.id,
+          turn: params.turn,
+          callId: params.call.id,
+          toolName: params.call.toolName,
+          status: blockedStatus,
+          error: decision.reason,
+        })
+      )
+    );
+
+    return concat(requested$, permission$, failed$) as Observable<RuntimeEvent>;
+  }
+
+  const started$ = of<RuntimeEvent>({
+    type: 'tool_started',
+    sessionId: params.session.id,
+    turn: params.turn,
+    callId: params.call.id,
+    toolName: params.call.toolName,
+  });
+
+  const input = params.call.input as SpawnAgentInput;
+
+  const result$ = defer(async () => {
+    const spawnedEvent: RuntimeEvent = {
+      type: 'agent_spawned',
+      parentId: params.session.id,
+      childId: '',
+      childSessionPath: '',
+      name: input.name ?? '',
+      task: input.task ?? '',
+    };
+
+    const result = await spawnTool.execute(params.call.input, {
+      sessionId: params.session.id,
+      turn: params.turn,
+      cwd: params.cwd,
+    });
+
+    const childId = (result as any).data?.childId ?? '';
+    const childSessionPath = (result as any).data?.sessionPath ?? '';
+
+    spawnedEvent.childId = childId;
+    spawnedEvent.childSessionPath = childSessionPath;
+
+    return { result, spawnedEvent, childId, childSessionPath };
+  }).pipe(
+    concatMap(({ result, spawnedEvent, childId, childSessionPath }) => {
+      if (result.status === 'success') {
+        const completedEvent: RuntimeEvent = {
+          type: 'agent_completed',
+          childId,
+          status: 'success',
+          result: result.output,
+          sessionPath: childSessionPath,
+        };
+
+        const resultRecord = createToolResultRecord({
+          session: params.session,
+          turn: params.turn,
+          call: params.call,
+          status: 'success',
+          output: result.output,
+        });
+
+        return from(params.sessionManager.appendRecord(params.session, resultRecord)).pipe(
+          map(
+            (): RuntimeEvent => ({
+              type: 'tool_result',
+              sessionId: params.session.id,
+              turn: params.turn,
+              callId: params.call.id,
+              toolName: params.call.toolName,
+              status: 'success',
+              output: result.output,
+            })
+          ),
+          map((toolEvent) => [spawnedEvent, completedEvent, toolEvent] as RuntimeEvent[])
+        );
+      }
+
+      const completedEvent: RuntimeEvent = {
+        type: 'agent_completed',
+        childId,
+        status: 'error',
+        error: result.error,
+        sessionPath: childSessionPath,
+      };
+
+      const failedRecord = createToolResultRecord({
+        session: params.session,
+        turn: params.turn,
+        call: params.call,
+        status: 'error',
+        error: result.error,
+      });
+
+      return from(params.sessionManager.appendRecord(params.session, failedRecord)).pipe(
+        map(
+          (): RuntimeEvent => ({
+            type: 'tool_failed',
+            sessionId: params.session.id,
+            turn: params.turn,
+            callId: params.call.id,
+            toolName: params.call.toolName,
+            status: 'error',
+            error: result.error,
+          })
+        ),
+        map((toolEvent) => [spawnedEvent, completedEvent, toolEvent] as RuntimeEvent[])
+      );
+    }),
+    concatMap((events) => from(events))
+  );
+
+  return concat(requested$, permission$, started$, result$);
+}
+
+/**
+ * 特殊工具处理器注册表
+ *
+ * 将工具名称映射到其处理器函数。
+ * dispatchToolCall 会优先检查此注册表，再回退到标准工具执行路径。
+ */
+const specialToolHandlers = new Map<string, SpecialToolHandler>([
+  ['spawn_agent', handleSpawnAgent],
+]);
 
 export function dispatchToolCall(params: {
   session: SessionMetadata;
@@ -159,187 +376,12 @@ export function dispatchToolCall(params: {
 
   const tool = params.registry.get(params.call.toolName);
 
-  // ---- 特殊处理：spawn_agent ----
-  // spawn_agent 需要额外的上下文，直接在这里处理
-  if (params.call.toolName === 'spawn_agent' && params.provider) {
-    const spawnTool = createSpawnAgentTool({
-      sessionId: params.session.id,
-      turn: params.turn,
-      cwd: params.cwd,
-      session: params.session,
-      sessionManager: params.sessionManager,
-      provider: params.provider,
-      toolRegistry: params.registry,
-      permissionGate: params.permissionGate,
-      history: params.history ?? [],
-      providerRegistry: params.providerRegistry,
-      providerSettings: params.providerSettings,
-      childAgentTimeout: params.childAgentTimeout,
-    });
-
-    // 权限检查
-    const decision = params.permissionGate.evaluate(params.call, spawnTool.riskLevel);
-
-    const permission$ = from(
-      params.sessionManager.appendRecord(
-        params.session,
-        createPermissionRecord({
-          session: params.session,
-          turn: params.turn,
-          call: params.call,
-          decision,
-        })
-      )
-    ).pipe(
-      map(
-        (): RuntimeEvent => ({
-          type: 'permission_decision',
-          sessionId: params.session.id,
-          turn: params.turn,
-          callId: params.call.id,
-          toolName: params.call.toolName,
-          decision: decision.decision,
-          mode: decision.mode,
-          reason: decision.reason,
-        })
-      )
-    );
-
-    if (decision.decision !== 'allow') {
-      const blockedStatus = decision.decision === 'deny' ? 'error' : 'blocked';
-      const failedRecord = createToolResultRecord({
-        session: params.session,
-        turn: params.turn,
-        call: params.call,
-        status: blockedStatus,
-        error: decision.reason,
-      });
-
-      const failed$ = from(params.sessionManager.appendRecord(params.session, failedRecord)).pipe(
-        map(
-          (): RuntimeEvent => ({
-            type: 'tool_failed',
-            sessionId: params.session.id,
-            turn: params.turn,
-            callId: params.call.id,
-            toolName: params.call.toolName,
-            status: blockedStatus,
-            error: decision.reason,
-          })
-        )
-      );
-
-      return concat(requested$, permission$, failed$);
-    }
-
-    const started$ = of<RuntimeEvent>({
-      type: 'tool_started',
-      sessionId: params.session.id,
-      turn: params.turn,
-      callId: params.call.id,
-      toolName: params.call.toolName,
-    });
-
-    const input = params.call.input as SpawnAgentInput;
-
-    const result$ = defer(async () => {
-      // 发出 agent_spawned 生命周期事件（执行前）
-      const spawnedEvent: RuntimeEvent = {
-        type: 'agent_spawned',
-        parentId: params.session.id,
-        childId: '', // 将在执行后填充
-        childSessionPath: '',
-        name: input.name ?? '',
-        task: input.task ?? '',
-      };
-
-      // 执行子 Agent
-      const result = await spawnTool.execute(params.call.input, {
-        sessionId: params.session.id,
-        turn: params.turn,
-        cwd: params.cwd,
-      });
-
-      // 从结果中提取子 Agent 信息
-      const childId = (result as any).data?.childId ?? '';
-      const childSessionPath = (result as any).data?.sessionPath ?? '';
-
-      // 填充 spawnedEvent 的子 Agent 信息
-      spawnedEvent.childId = childId;
-      spawnedEvent.childSessionPath = childSessionPath;
-
-      return { result, spawnedEvent, childId, childSessionPath };
-    }).pipe(
-      concatMap(({ result, spawnedEvent, childId, childSessionPath }) => {
-        // 发出 agent_spawned、agent_completed 和 tool_result/tool_failed
-        if (result.status === 'success') {
-          const completedEvent: RuntimeEvent = {
-            type: 'agent_completed',
-            childId,
-            status: 'success',
-            result: result.output,
-            sessionPath: childSessionPath,
-          };
-
-          const resultRecord = createToolResultRecord({
-            session: params.session,
-            turn: params.turn,
-            call: params.call,
-            status: 'success',
-            output: result.output,
-          });
-
-          return from(params.sessionManager.appendRecord(params.session, resultRecord)).pipe(
-            map(
-              (): RuntimeEvent => ({
-                type: 'tool_result',
-                sessionId: params.session.id,
-                turn: params.turn,
-                callId: params.call.id,
-                toolName: params.call.toolName,
-                status: 'success',
-                output: result.output,
-              })
-            ),
-            map((toolEvent) => [spawnedEvent, completedEvent, toolEvent] as RuntimeEvent[])
-          );
-        }
-
-        const completedEvent: RuntimeEvent = {
-          type: 'agent_completed',
-          childId,
-          status: 'error',
-          error: result.error,
-          sessionPath: childSessionPath,
-        };
-
-        const failedRecord = createToolResultRecord({
-          session: params.session,
-          turn: params.turn,
-          call: params.call,
-          status: 'error',
-          error: result.error,
-        });
-
-        return from(params.sessionManager.appendRecord(params.session, failedRecord)).pipe(
-          map(
-            (): RuntimeEvent => ({
-              type: 'tool_failed',
-              sessionId: params.session.id,
-              turn: params.turn,
-              callId: params.call.id,
-              toolName: params.call.toolName,
-              status: 'error',
-              error: result.error,
-            })
-          ),
-          map((toolEvent) => [spawnedEvent, completedEvent, toolEvent] as RuntimeEvent[])
-        );
-      }),
-      concatMap((events) => from(events))
-    );
-
-    return concat(requested$, permission$, started$, result$);
+  // ---- 特殊工具处理 ----
+  // 检查是否有注册的特殊处理器（如 spawn_agent）
+  const specialHandler = specialToolHandlers.get(params.call.toolName);
+  if (specialHandler) {
+    const result = specialHandler(params, requested$);
+    if (result) return result;
   }
 
   if (!tool) {
