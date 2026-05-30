@@ -20,10 +20,7 @@ export default defineConfig({
     exclude: [
       'test/**/*.ts',
       'test/cli.test.js',
-      'test/interactive-ui.test.js',
-      'test/mcp/mcp-client.test.js',
       'test/providers/tool-calling-e2e.test.js',
-      'test/runtime/multi-agent-e2e.test.js',
     ],
   },
 });

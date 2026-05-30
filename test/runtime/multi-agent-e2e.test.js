@@ -5,11 +5,10 @@
  * 需要环境变量 APP_CHAT_API_KEY（Qwen）或 OLLAMA_BASE_URL（Ollama）。
  */
 
-import assert from "node:assert/strict";
+import { describe, it, expect, beforeAll } from "vitest";
 import { mkdtemp, readdir } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { test } from "node:test";
 
 import { lastValueFrom, toArray } from "rxjs";
 
@@ -50,7 +49,7 @@ async function createTestRuntime(providerId, providerSettings = {}) {
 
   const providerRegistry = createDefaultProviderRegistry();
   const provider = providerRegistry.resolve(providerId, providerSettings);
-  const registry = createDefaultToolRegistry();
+  const { toolRegistry: registry } = createDefaultToolRegistry();
   const permissionGate = createPermissionGate({ mode: "bypass_permissions" });
 
   return {
@@ -68,7 +67,7 @@ async function createTestRuntime(providerId, providerSettings = {}) {
 // Qwen Provider 集成测试
 // ============================================================
 
-const qwenDescribe = hasQwen ? test : test.skip;
+const qwenDescribe = hasQwen ? describe : describe.skip;
 
 qwenDescribe("spawn_agent with Qwen: creates child agent and returns result", async () => {
   const { tempRoot, session, sessionManager, provider, providerRegistry, registry, permissionGate } =
@@ -110,25 +109,25 @@ qwenDescribe("spawn_agent with Qwen: creates child agent and returns result", as
 
     // 验证事件包含 agent 生命周期
     const eventTypes = events.map((e) => e.type);
-    assert.ok(eventTypes.includes("agent_spawned"), "应该有 agent_spawned 事件");
-    assert.ok(eventTypes.includes("agent_completed"), "应该有 agent_completed 事件");
+    expect(eventTypes.includes("agent_spawned").toBeTruthy(), "应该有 agent_spawned 事件");
+    expect(eventTypes.includes("agent_completed").toBeTruthy(), "应该有 agent_completed 事件");
 
     // 验证 agent_spawned 事件内容
     const spawnedEvent = events.find((e) => e.type === "agent_spawned");
-    assert.equal(spawnedEvent.name, "qwen-analyzer");
-    assert.equal(spawnedEvent.task, "请回复：你好，我是子 Agent");
-    assert.ok(spawnedEvent.childId, "应该有 childId");
-    assert.ok(spawnedEvent.childSessionPath, "应该有 childSessionPath");
+    expect(spawnedEvent.name).toBe("qwen-analyzer");
+    expect(spawnedEvent.task).toBe("请回复：你好，我是子 Agent");
+    expect(spawnedEvent.childId).toBeTruthy();
+    expect(spawnedEvent.childSessionPath).toBeTruthy();
 
     // 验证 agent_completed 事件内容
     const completedEvent = events.find((e) => e.type === "agent_completed");
-    assert.equal(completedEvent.status, "success");
-    assert.ok(completedEvent.result, "应该有结果");
+    expect(completedEvent.status).toBe("success");
+    expect(completedEvent.result).toBeTruthy();
 
     // 验证 tool_result 有输出
     const toolResult = events.find((e) => e.type === "tool_result");
-    assert.equal(toolResult.status, "success");
-    assert.ok(toolResult.output, "应该有输出内容");
+    expect(toolResult.status).toBe("success");
+    expect(toolResult.output).toBeTruthy();
 
     // 验证子 session 文件已创建
     await sessionManager.closeAll();
@@ -146,7 +145,7 @@ qwenDescribe("spawn_agent with Qwen: creates child agent and returns result", as
 // Ollama Provider 集成测试
 // ============================================================
 
-const ollamaDescribe = hasOllama ? test : test.skip;
+const ollamaDescribe = hasOllama ? describe : describe.skip;
 
 ollamaDescribe("spawn_agent with Ollama: creates child agent and returns result", async () => {
   const { tempRoot, session, sessionManager, provider, providerRegistry, registry, permissionGate } =
@@ -184,21 +183,21 @@ ollamaDescribe("spawn_agent with Ollama: creates child agent and returns result"
 
     // 验证事件包含 agent 生命周期
     const eventTypes = events.map((e) => e.type);
-    assert.ok(eventTypes.includes("agent_spawned"), "应该有 agent_spawned 事件");
-    assert.ok(eventTypes.includes("agent_completed"), "应该有 agent_completed 事件");
+    expect(eventTypes.includes("agent_spawned").toBeTruthy(), "应该有 agent_spawned 事件");
+    expect(eventTypes.includes("agent_completed").toBeTruthy(), "应该有 agent_completed 事件");
 
     // 验证 agent_spawned 事件内容
     const spawnedEvent = events.find((e) => e.type === "agent_spawned");
-    assert.equal(spawnedEvent.name, "ollama-analyzer");
+    expect(spawnedEvent.name).toBe("ollama-analyzer");
 
     // 验证 agent_completed 事件内容
     const completedEvent = events.find((e) => e.type === "agent_completed");
-    assert.equal(completedEvent.status, "success");
-    assert.ok(completedEvent.result, "应该有结果");
+    expect(completedEvent.status).toBe("success");
+    expect(completedEvent.result).toBeTruthy();
 
     // 验证 tool_result 有输出
     const toolResult = events.find((e) => e.type === "tool_result");
-    assert.equal(toolResult.status, "success");
+    expect(toolResult.status).toBe("success");
   } finally {
     const { rmSync } = await import("node:fs");
     rmSync(tempRoot, { recursive: true, force: true });
@@ -209,7 +208,7 @@ ollamaDescribe("spawn_agent with Ollama: creates child agent and returns result"
 // 模型选择测试（使用 mock provider）
 // ============================================================
 
-test("spawn_agent with model parameter: resolves correct provider", async () => {
+it("spawn_agent with model parameter: resolves correct provider", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-spawn-model-"));
   const sessionDir = path.join(tempRoot, "sessions");
   const sessionManager = new SessionManager(sessionDir);
@@ -252,11 +251,11 @@ test("spawn_agent with model parameter: resolves correct provider", async () => 
 
     // 验证子 Agent 成功创建并执行
     const eventTypes = events.map((e) => e.type);
-    assert.ok(eventTypes.includes("agent_spawned"), "应该有 agent_spawned 事件");
-    assert.ok(eventTypes.includes("agent_completed"), "应该有 agent_completed 事件");
+    expect(eventTypes.includes("agent_spawned").toBeTruthy(), "应该有 agent_spawned 事件");
+    expect(eventTypes.includes("agent_completed").toBeTruthy(), "应该有 agent_completed 事件");
 
     const completedEvent = events.find((e) => e.type === "agent_completed");
-    assert.equal(completedEvent.status, "success");
+    expect(completedEvent.status).toBe("success");
   } finally {
     await sessionManager.closeAll();
     const { rmSync } = await import("node:fs");
@@ -268,7 +267,7 @@ test("spawn_agent with model parameter: resolves correct provider", async () => 
 // 工具限制测试
 // ============================================================
 
-test("spawn_agent with tools parameter: limits child agent tools", async () => {
+it("spawn_agent with tools parameter: limits child agent tools", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-spawn-tools-"));
   const sessionDir = path.join(tempRoot, "sessions");
   const sessionManager = new SessionManager(sessionDir);
@@ -311,11 +310,11 @@ test("spawn_agent with tools parameter: limits child agent tools", async () => {
 
     // 验证子 Agent 成功创建
     const eventTypes = events.map((e) => e.type);
-    assert.ok(eventTypes.includes("agent_spawned"), "应该有 agent_spawned 事件");
-    assert.ok(eventTypes.includes("agent_completed"), "应该有 agent_completed 事件");
+    expect(eventTypes.includes("agent_spawned").toBeTruthy(), "应该有 agent_spawned 事件");
+    expect(eventTypes.includes("agent_completed").toBeTruthy(), "应该有 agent_completed 事件");
 
     const completedEvent = events.find((e) => e.type === "agent_completed");
-    assert.equal(completedEvent.status, "success");
+    expect(completedEvent.status).toBe("success");
   } finally {
     await sessionManager.closeAll();
     const { rmSync } = await import("node:fs");
@@ -327,7 +326,7 @@ test("spawn_agent with tools parameter: limits child agent tools", async () => {
 // 错误处理测试
 // ============================================================
 
-test("spawn_agent handles child agent errors gracefully", async () => {
+it("spawn_agent handles child agent errors gracefully", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-spawn-error-"));
   const sessionDir = path.join(tempRoot, "sessions");
   const sessionManager = new SessionManager(sessionDir);
@@ -372,13 +371,13 @@ test("spawn_agent handles child agent errors gracefully", async () => {
 
     // 验证 agent_spawned 仍然被发出
     const eventTypes = events.map((e) => e.type);
-    assert.ok(eventTypes.includes("agent_spawned"), "应该有 agent_spawned 事件");
+    expect(eventTypes.includes("agent_spawned").toBeTruthy(), "应该有 agent_spawned 事件");
 
     // 验证 agent_completed 以 error 状态发出
     const completedEvent = events.find((e) => e.type === "agent_completed");
     if (completedEvent) {
-      assert.equal(completedEvent.status, "error");
-      assert.ok(completedEvent.error, "应该有错误信息");
+      expect(completedEvent.status).toBe("error");
+      expect(completedEvent.error).toBeTruthy();
     }
   } finally {
     await sessionManager.closeAll();

@@ -1,6 +1,5 @@
-import assert from "node:assert/strict";
+import { describe, it, expect } from "vitest";
 import { PassThrough } from "node:stream";
-import { test } from "node:test";
 
 import { of } from "rxjs";
 
@@ -21,7 +20,7 @@ function streamToString(stream) {
   return () => output;
 }
 
-test("interactive input handles local slash commands without sending them to runtime", async () => {
+it("interactive input handles local slash commands without sending them to runtime", async () => {
   const input = new PassThrough();
   const output = new PassThrough();
   const getOutput = streamToString(output);
@@ -42,18 +41,18 @@ test("interactive input handles local slash commands without sending them to run
 
   const rendered = stripAnsi(getOutput());
 
-  assert.equal(turns.length, 1);
-  assert.equal(turns[0].content, "/read README.md");
-  assert.match(rendered, /Prompt: >\s+Replies: joe/);
-  assert.match(rendered, /\n> /);
-  assert.match(rendered, /local/);
-  assert.match(rendered, /│  Session commands/);
-  assert.match(rendered, /Current local tool syntax\n│  \/read <relative-path>\n│  \/bash <command>\n\n> /);
-  assert.match(rendered, /Session commands/);
-  assert.match(rendered, /Current local tool syntax/);
+  expect(turns.length).toBe(1);
+  expect(turns[0].content).toBe("/read README.md");
+  expect(rendered).toMatch(/Prompt: >\s+Replies: wasteland/);
+  expect(rendered).toMatch(/\n> /);
+  expect(rendered).toMatch(/local/);
+  expect(rendered).toMatch(/│  Session commands/);
+  expect(rendered).toMatch(/Current local tool syntax\n│  \/read <relative-path>\n│  \/bash <command>\n\n> /);
+  expect(rendered).toMatch(/Session commands/);
+  expect(rendered).toMatch(/Current local tool syntax/);
 });
 
-test("interactive renderer uses codex-like layout", async () => {
+it("interactive renderer uses codex-like layout", async () => {
   const stdout = new PassThrough();
   const stderr = new PassThrough();
   const getStdout = streamToString(stdout);
@@ -95,14 +94,14 @@ test("interactive renderer uses codex-like layout", async () => {
   const rendered = stripAnsi(getStdout());
 
   // Hermes 风格: ┊ {emoji} {verb:9} {detail}
-  assert.match(rendered, /read/);
-  assert.match(rendered, /joe/);
-  assert.match(rendered, /│  done/);
-  assert.match(rendered, /│  done\n\n$/);
-  assert.doesNotMatch(rendered, /assistant\[1\]/);
+  expect(rendered).toMatch(/read/);
+  expect(rendered).toMatch(/wasteland/);
+  expect(rendered).toMatch(/│  done/);
+  expect(rendered).toMatch(/│  done\n\n$/);
+  expect(rendered).not.toMatch(/assistant\[1\]/);
 });
 
-test("interactive renderer wraps streamed assistant output to panel width", async () => {
+it("interactive renderer wraps streamed assistant output to panel width", async () => {
   const stdout = new PassThrough();
   const stderr = new PassThrough();
   const getStdout = streamToString(stdout);
@@ -134,5 +133,5 @@ test("interactive renderer wraps streamed assistant output to panel width", asyn
   const rendered = stripAnsi(getStdout());
 
   // 新格式包含时间戳: joe HH:MM:SS.mmm
-  assert.match(rendered, /joe \d{2}:\d{2}:\d{2}\.\d{3}\n│  abcdefghijklmnopqrstuvwx\n│  yz1234\n\n$/);
+  expect(rendered).toMatch(/wasteland \d{2}:\d{2}:\d{2}\.\d{3}\n│  abcdefghijklmnopqrstuvwx\n│  yz1234\n\n$/);
 });
