@@ -239,8 +239,7 @@
         "role": "Parse model and default permissions by specified role",
         "debug": "Output debug trace to stderr",
         "debugFormat": "Debug output format: pretty (default) or jsonl",
-        "permissionMode": "Permission mode: default | accept_edits | bypass_permissions",
-        "multiAgent": "Enable multi-agent mode"
+        "permissionMode": "Permission mode: default | accept_edits | bypass_permissions"
       },
       "errors": {
         "permissionMode": "Permission mode not supported:",
@@ -254,7 +253,6 @@
         "message": "Message to send after resuming",
         "provider": "Specify Provider",
         "role": "Parse model and default permissions by specified role",
-        "multiAgent": "Enable multi-agent mode",
         "debug": "Enable debug mode",
         "debugFormat": "Debug output format: pretty (default) or jsonl",
         "permissionMode": "Permission mode: default | accept_edits | bypass_permissions"

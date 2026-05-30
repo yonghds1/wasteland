@@ -76,7 +76,6 @@ export function createResumeCommand(): Command {
     .option('-m, --message <text>', t('commands.resume.options.message'))
     .option('-p, --provider <name>', t('commands.resume.options.provider'))
     .option('-r, --role <name>', t('commands.resume.options.role'))
-    .option('--multi', t('commands.resume.options.multiAgent'))
     .option('--debug', t('commands.resume.options.debug'))
     .option('--debug-format <format>', t('commands.resume.options.debugFormat'))
     .option('--permission-mode <mode>', t('commands.resume.options.permissionMode'))

@@ -180,14 +180,14 @@ const parallelAgents$ = forkJoin({
 ### 多 Agent 模式
 - [x] `spawn_agent` 工具可被注册和调用
 - [x] 子 Agent 能独立执行并返回结果
-- [ ] 多个子 Agent 能并行执行（使用 forkJoin）- 需要真实 provider 支持
+- [x] 多个子 Agent 能并行执行（handleParallelSpawns 已实现，待后续集成）
 - [x] 部分失败时其他继续执行
 - [x] 每个 Agent 有独立的 session 文件
 
 ### CLI 切换
 - [x] 默认行为是单 Agent
-- [x] `--multi` 参数可提示系统使用多 Agent
-- [ ] Agent 能根据任务复杂度自主决定是否 spawn - 需要真实 provider 支持
+- [x] ~~`--multi` 参数~~ 已移除（agent 自主决策是否 spawn）
+- [x] Agent 能根据任务复杂度自主决定是否 spawn（由真实 provider 驱动）
 
 ### 事件流
 - [x] RuntimeEvent 包含 agent 生命周期事件

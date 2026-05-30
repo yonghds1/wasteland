@@ -227,8 +227,7 @@
         "role": "按指定 role 解析模型与默认权限",
         "debug": "输出调试追踪到 stderr",
         "debugFormat": "调试输出格式：pretty（默认）或 jsonl",
-        "permissionMode": "权限模式：default | accept_edits | bypass_permissions",
-        "multiAgent": "启用多 Agent 模式"
+        "permissionMode": "权限模式：default | accept_edits | bypass_permissions"
       },
       "errors": {
         "permissionMode": "当前不支持 permission mode:",
@@ -242,7 +241,6 @@
         "message": "恢复后发送的消息",
         "provider": "指定 Provider",
         "role": "按指定 role 解析模型与默认权限",
-        "multiAgent": "使用多 Agent 模式",
         "debug": "启用调试模式",
         "debugFormat": "调试输出格式：pretty（默认）或 jsonl",
         "permissionMode": "权限模式：default | accept_edits | bypass_permissions"

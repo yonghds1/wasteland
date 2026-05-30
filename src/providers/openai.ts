@@ -1,5 +1,5 @@
 /**
- * openai.ts - OpenAI 兼容 Provider 实现
+ * openai.ts - OpenAI 兼容 Provider 实现（SSE Streaming）
  *
  * 支持所有兼容 OpenAI Chat Completions API 的服务：
  * - OpenAI
@@ -9,19 +9,10 @@
  * - 智谱 GLM
  * - 京东云、小米等其他兼容服务
  *
- * ## 核心设计模式
+ * ## 核心设计
  *
- * ### 1. defer + API 调用
- * 使用 `defer` 包装异步 API 调用，确保每次订阅时都会发起新的请求。
- *
- * ### 2. concatMap + 流式事件
- * 将 API 返回的文本转换为流式事件流（chunk + final message）。
- *
- * ### 3. Tool Calling 支持
- * 使用 openai-compatible 模块处理工具调用：
- * - buildOpenAITools: 转换工具定义为 OpenAI 格式
- * - parseToolCalls: 解析 OpenAI tool_calls 响应
- * - buildMessages: 构建包含工具历史的消息
+ * 使用 SSE (Server-Sent Events) 流式传输，逐 token 输出响应。
+ * 工具调用参数通过累积 chunks 获取完整 JSON 后解析。
  *
  * ## 配置示例
  *
@@ -33,38 +24,26 @@
  *       "baseUrl": "https://api.openai.com/v1",
  *       "apiKey": "sk-xxx",
  *       "model": "gpt-4"
- *     },
- *     "ollama": {
- *       "type": "openai-compatible",
- *       "baseUrl": "http://localhost:11434/v1",
- *       "model": "qwen2.5:7b"
- *     },
- *     "jdcloud": {
- *       "type": "openai-compatible",
- *       "baseUrl": "https://modelservice.jdcloud.com/coding/openai/v1",
- *       "apiKey": { "$auth": "jdcloud_api_key" },
- *       "model": "GLM-5"
  *     }
  *   }
  * }
  * ```
  */
 
-import { defer, concatMap, from, type Observable } from 'rxjs';
+import { defer, concatMap, Observable, type Observer } from 'rxjs';
 
 import type { ProviderSettings } from '../config/settings-types.js';
 import { t } from '../locales/index.js';
-import { createAssistantTextEvents } from './assistant-events.js';
 import type { AgentProvider, ProviderStreamEvent } from './provider-types.js';
 import type { ProviderStepInput } from './provider-types.js';
 import {
   buildOpenAITools,
   buildMessages,
   parseToolCalls,
-  type OpenAIChatCompletionResponse,
   type OpenAIFunctionTool,
   type OpenAIMessage,
 } from './openai-compatible/index.js';
+import { parseSSEStream } from './sse-parser.js';
 
 // ============================================================
 // 类型定义
@@ -73,29 +52,37 @@ import {
 /** OpenAI 兼容 Provider 配置 */
 type OpenAIProviderConfig = {
   baseUrl: string;
-  apiKey?: string; // 可选，Ollama 等本地服务不需要
+  apiKey?: string;
   model: string;
 };
 
-/** OpenAI API 响应 */
-type OpenAIChatResponse = OpenAIChatCompletionResponse & {
-  choices?: Array<{
-    finish_reason?: 'stop' | 'tool_calls' | string;
-    message?: {
-      content?: unknown;
+/** OpenAI SSE 流式响应 chunk */
+type OpenAIStreamChunk = {
+  choices: Array<{
+    delta: {
+      content?: string;
       tool_calls?: Array<{
-        id: string;
-        type: 'function';
-        function: {
-          name: string;
-          arguments: string;
+        index: number;
+        id?: string;
+        type?: 'function';
+        function?: {
+          name?: string;
+          arguments?: string;
         };
       }>;
     };
+    finish_reason?: 'stop' | 'tool_calls' | null;
   }>;
   error?: {
     message?: string;
   };
+};
+
+/** 工具调用累积器 */
+type ToolCallAccumulator = {
+  id: string;
+  name: string;
+  arguments: string;
 };
 
 // ============================================================
@@ -121,10 +108,6 @@ function readNonEmptyString(
 
 /**
  * 解析 Provider 配置
- *
- * - baseUrl 和 model 必需
- * - apiKey 可选（Ollama 等本地服务不需要）
- * - baseUrl 直接使用用户配置的值，不做自动追加
  */
 function resolveOpenAIConfig(settings?: ProviderSettings): OpenAIProviderConfig {
   const apiKey = readNonEmptyString(settings, 'apiKey');
@@ -142,122 +125,164 @@ function resolveOpenAIConfig(settings?: ProviderSettings): OpenAIProviderConfig 
 }
 
 // ============================================================
-// 核心 API 调用
+// SSE Streaming 核心
 // ============================================================
 
 /**
- * 请求 OpenAI Chat Completion API
+ * 请求 OpenAI Chat Completion API（SSE 流式）
  *
- * 注意：apiKey 可选，Ollama 等本地服务不需要认证
+ * 返回 Observable<ProviderStreamEvent>，逐 token 发出事件。
  */
-async function requestOpenAICompletion(
+function requestOpenAIStreaming(
   config: OpenAIProviderConfig,
   messages: readonly OpenAIMessage[],
   tools?: readonly OpenAIFunctionTool[]
-): Promise<OpenAIChatResponse> {
-  const body: Record<string, unknown> = {
-    model: config.model,
-    messages,
-    stream: false,
-  };
+): Observable<ProviderStreamEvent> {
+  return new Observable<ProviderStreamEvent>((subscriber) => {
+    async function execute() {
+      const body: Record<string, unknown> = {
+        model: config.model,
+        messages,
+        stream: true,
+      };
 
-  if (tools && tools.length > 0) {
-    body.tools = tools;
-  }
+      if (tools && tools.length > 0) {
+        body.tools = tools;
+      }
 
-  // 构建 headers：apiKey 可选（Ollama 不需要）
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
 
-  if (config.apiKey) {
-    headers['Authorization'] = `Bearer ${config.apiKey}`;
-  }
+      if (config.apiKey) {
+        headers['Authorization'] = `Bearer ${config.apiKey}`;
+      }
 
-  const response = await fetch(`${config.baseUrl}/chat/completions`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(body),
-  });
+      const response = await fetch(`${config.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+      });
 
-  let payload: OpenAIChatResponse;
+      if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorPayload = await response.json() as { error?: { message?: string } };
+          if (errorPayload?.error?.message) {
+            errorMessage = errorPayload.error.message;
+          }
+        } catch {
+          // ignore parse error
+        }
+        subscriber.error(new Error(`${t('providers.openai.requestFailed')}${errorMessage}`));
+        return;
+      }
 
-  try {
-    payload = (await response.json()) as OpenAIChatResponse;
-  } catch {
-    if (!response.ok) {
-      throw new Error(`${t('providers.openai.requestFailed')} HTTP ${response.status}`);
+      if (!response.body) {
+        subscriber.error(new Error(t('providers.openai.invalidJson')));
+        return;
+      }
+
+      const reader = response.body.getReader();
+      const sse$ = parseSSEStream(reader);
+
+      // 工具调用累积器：Map<index, ToolCallAccumulator>
+      const toolCallMap = new Map<number, ToolCallAccumulator>();
+      let finished = false;
+
+      sse$.subscribe({
+        next(data) {
+          try {
+            const chunk = JSON.parse(data) as OpenAIStreamChunk;
+            const choice = chunk.choices?.[0];
+
+            if (!choice) return;
+
+            // 处理文本 delta
+            if (choice.delta?.content) {
+              subscriber.next({
+                type: 'assistant_chunk',
+                text: choice.delta.content,
+              });
+            }
+
+            // 处理工具调用 delta（增量累积）
+            if (choice.delta?.tool_calls) {
+              for (const tc of choice.delta.tool_calls) {
+                const idx = tc.index;
+                if (!toolCallMap.has(idx)) {
+                  toolCallMap.set(idx, {
+                    id: tc.id ?? '',
+                    name: tc.function?.name ?? '',
+                    arguments: '',
+                  });
+                }
+                const acc = toolCallMap.get(idx)!;
+                if (tc.id) acc.id = tc.id;
+                if (tc.function?.name) acc.name = tc.function.name;
+                if (tc.function?.arguments) acc.arguments += tc.function.arguments;
+              }
+            }
+
+            // 处理完成原因
+            if (choice.finish_reason === 'tool_calls' && !finished) {
+              finished = true;
+              // 发出累积的工具调用事件
+              const toolCalls = Array.from(toolCallMap.values())
+                .filter((tc) => tc.name)
+                .map((tc) => ({
+                  id: tc.id,
+                  toolName: tc.name,
+                  input: parseToolArguments(tc.arguments),
+                }));
+
+              for (const call of toolCalls) {
+                subscriber.next({ type: 'tool_call', call });
+              }
+            }
+
+            if (choice.finish_reason === 'stop' && !finished) {
+              finished = true;
+            }
+          } catch {
+            // 忽略解析错误的 chunk
+          }
+        },
+        error(err) {
+          subscriber.error(err);
+        },
+        complete() {
+          // 流结束：发出最终的 assistant_message
+          // 如果有工具调用，不需要 assistant_message
+          if (toolCallMap.size === 0) {
+            // 没有工具调用时，需要从累积的 chunks 中构建完整消息
+            // 但 streaming 模式下 chunks 已经发出，这里发出一个空的 final message
+            // 实际的文本已通过 assistant_chunk 发出
+            subscriber.next({ type: 'assistant_message', text: '' });
+          }
+          subscriber.complete();
+        },
+      });
     }
-    throw new Error(t('providers.openai.invalidJson'));
-  }
 
-  if (!response.ok) {
-    const errorMessage = payload?.error?.message;
-    throw new Error(
-      errorMessage
-        ? `${t('providers.openai.requestFailed')}${errorMessage}`
-        : `${t('providers.openai.requestFailed')} HTTP ${response.status}`
-    );
-  }
+    execute().catch((err) => subscriber.error(err));
 
-  return payload;
+    return () => {
+      // 清理由 parseSSEStream 内部处理
+    };
+  });
 }
 
 /**
- * 处理 OpenAI API 响应
+ * 解析工具调用参数 JSON，失败时返回空对象
  */
-function handleOpenAIResponse(payload: OpenAIChatResponse): Observable<ProviderStreamEvent> {
-  const choice = payload.choices?.[0];
-
-  if (!choice) {
-    throw new Error(t('providers.openai.missingChoices'));
+function parseToolArguments(argsJson: string): Record<string, unknown> {
+  if (!argsJson) return {};
+  try {
+    return JSON.parse(argsJson) as Record<string, unknown>;
+  } catch {
+    return {};
   }
-
-  const finishReason = choice.finish_reason;
-  const message = choice.message;
-
-  // 工具调用响应
-  if (finishReason === 'tool_calls' && message?.tool_calls) {
-    const toolCalls = parseToolCalls(message.tool_calls);
-    return from<ProviderStreamEvent[]>(
-      toolCalls.map((call) => ({ type: 'tool_call' as const, call }))
-    );
-  }
-
-  // 文本响应
-  if (message?.content !== undefined && message.content !== null) {
-    const text = extractTextContent(message.content);
-    return createAssistantTextEvents(text);
-  }
-
-  throw new Error(`${t('providers.openai.unexpectedResponse')}finish_reason=${finishReason}`);
-}
-
-/**
- * 提取文本内容
- */
-function extractTextContent(content: unknown): string {
-  if (typeof content === 'string') {
-    return content;
-  }
-
-  if (!Array.isArray(content)) {
-    throw new Error(t('providers.openai.contentNotString'));
-  }
-
-  const text = content
-    .map((part) => {
-      if (typeof part === 'string') return part;
-      if (isRecord(part) && typeof part.text === 'string') return part.text;
-      return '';
-    })
-    .join('');
-
-  if (text.length === 0) {
-    throw new Error(t('providers.openai.contentEmpty'));
-  }
-
-  return text;
 }
 
 // ============================================================
@@ -265,10 +290,9 @@ function extractTextContent(content: unknown): string {
 // ============================================================
 
 /**
- * 创建 OpenAI 兼容 Provider
+ * 创建 OpenAI 兼容 Provider（SSE 流式）
  *
- * 支持所有兼容 OpenAI Chat Completions API 的服务：
- * - OpenAI、Ollama（本地）、阿里云、智谱、京东云、小米等
+ * 支持所有兼容 OpenAI Chat Completions API 的服务。
  *
  * @param settings - Provider 配置
  * @returns AgentProvider 实例
@@ -290,8 +314,8 @@ export function createOpenAIProvider(settings?: ProviderSettings): AgentProvider
 
         const tools = context.toolRegistry ? buildOpenAITools(context.toolRegistry) : undefined;
 
-        return requestOpenAICompletion(config, messages, tools);
-      }).pipe(concatMap((response) => handleOpenAIResponse(response)));
+        return requestOpenAIStreaming(config, messages, tools);
+      }).pipe(concatMap((obs) => obs));
     },
   };
 }

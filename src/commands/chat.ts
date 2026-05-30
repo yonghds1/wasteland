@@ -33,8 +33,6 @@ type ChatOptions = {
   provider?: string;
   role?: string;
   permissionMode?: string;
-  /** 多 Agent 模式提示 */
-  multi?: boolean;
 };
 
 // ============================================================
@@ -138,7 +136,6 @@ export function createChatCommand(): Command {
     .option('--debug', t('commands.chat.options.debug'))
     .option('--debug-format <format>', t('commands.chat.options.debugFormat'))
     .option('--permission-mode <mode>', t('commands.chat.options.permissionMode'))
-    .option('--multi', t('commands.chat.options.multiAgent'))
     .action(async (options: ChatOptions) => {
       const cwd = process.cwd();
 

@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createQwenProvider } from "../../dist/providers/qwen.js";
 import { createOpenAIProvider } from "../../dist/providers/openai.js";
+import { createOllamaProvider } from "../../dist/providers/ollama.js";
 import { createDefaultToolRegistry } from "../../dist/tools/default-registry.js";
 import { ToolRegistry } from "../../dist/tools/tool-registry.js";
 import { firstValueFrom, toArray } from "rxjs";

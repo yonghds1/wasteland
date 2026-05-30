@@ -15,7 +15,7 @@ import { checkReadBeforeEdit } from './file-audit.js';
 import type { PermissionGate } from './permission-gate.js';
 import { SessionManager, type SessionMetadata } from './session-manager.js';
 import type { TurnState } from './turn-state.js';
-import { createSpawnAgentTool } from '../../tools/spawn-agent.js';
+import { createSpawnAgentTool, type SpawnAgentInput } from '../../tools/spawn-agent.js';
 import type { AgentProvider } from '../../providers/provider-types.js';
 import type { SessionMessageRecord } from './event-types.js';
 import type { ProviderSettings } from '../../config/settings-types.js';
@@ -240,15 +240,47 @@ export function dispatchToolCall(params: {
       toolName: params.call.toolName,
     });
 
-    const result$ = defer(() =>
-      spawnTool.execute(params.call.input, {
+    const input = params.call.input as SpawnAgentInput;
+
+    const result$ = defer(async () => {
+      // 发出 agent_spawned 生命周期事件（执行前）
+      const spawnedEvent: RuntimeEvent = {
+        type: 'agent_spawned',
+        parentId: params.session.id,
+        childId: '', // 将在执行后填充
+        childSessionPath: '',
+        name: input.name ?? '',
+        task: input.task ?? '',
+      };
+
+      // 执行子 Agent
+      const result = await spawnTool.execute(params.call.input, {
         sessionId: params.session.id,
         turn: params.turn,
         cwd: params.cwd,
-      })
-    ).pipe(
-      concatMap((result) => {
+      });
+
+      // 从结果中提取子 Agent 信息
+      const childId = (result as any).data?.childId ?? '';
+      const childSessionPath = (result as any).data?.sessionPath ?? '';
+
+      // 填充 spawnedEvent 的子 Agent 信息
+      spawnedEvent.childId = childId;
+      spawnedEvent.childSessionPath = childSessionPath;
+
+      return { result, spawnedEvent, childId, childSessionPath };
+    }).pipe(
+      concatMap(({ result, spawnedEvent, childId, childSessionPath }) => {
+        // 发出 agent_spawned、agent_completed 和 tool_result/tool_failed
         if (result.status === 'success') {
+          const completedEvent: RuntimeEvent = {
+            type: 'agent_completed',
+            childId,
+            status: 'success',
+            result: result.output,
+            sessionPath: childSessionPath,
+          };
+
           const resultRecord = createToolResultRecord({
             session: params.session,
             turn: params.turn,
@@ -268,9 +300,18 @@ export function dispatchToolCall(params: {
                 status: 'success',
                 output: result.output,
               })
-            )
+            ),
+            map((toolEvent) => [spawnedEvent, completedEvent, toolEvent] as RuntimeEvent[])
           );
         }
+
+        const completedEvent: RuntimeEvent = {
+          type: 'agent_completed',
+          childId,
+          status: 'error',
+          error: result.error,
+          sessionPath: childSessionPath,
+        };
 
         const failedRecord = createToolResultRecord({
           session: params.session,
@@ -291,9 +332,11 @@ export function dispatchToolCall(params: {
               status: 'error',
               error: result.error,
             })
-          )
+          ),
+          map((toolEvent) => [spawnedEvent, completedEvent, toolEvent] as RuntimeEvent[])
         );
-      })
+      }),
+      concatMap((events) => from(events))
     );
 
     return concat(requested$, permission$, started$, result$);

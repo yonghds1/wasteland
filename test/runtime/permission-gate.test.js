@@ -11,7 +11,7 @@ describe("PermissionGate", () => {
   let createPermissionGate;
 
   before(async () => {
-    const mod = await import("../../dist/runtime/permission-gate.js");
+    const mod = await import("../../dist/core/runtime/permission-gate.js");
     createPermissionGate = mod.createPermissionGate;
   });
 

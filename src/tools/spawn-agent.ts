@@ -67,6 +67,21 @@ function mapModelToActualModel(model: string, providerId: string): string {
       sonnet: 'llama3.2',
       opus: 'llama3.3:70b',
     },
+    openai: {
+      haiku: 'gpt-4o-mini',
+      sonnet: 'gpt-4o',
+      opus: 'o1',
+    },
+    'openai-compatible': {
+      haiku: 'gpt-4o-mini',
+      sonnet: 'gpt-4o',
+      opus: 'o1',
+    },
+    anthropic: {
+      haiku: 'claude-haiku-4-5-20251001',
+      sonnet: 'claude-sonnet-4-6',
+      opus: 'claude-opus-4-8',
+    },
   };
 
   // 如果是已知的通用名称，尝试映射

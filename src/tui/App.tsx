@@ -10,6 +10,7 @@ import { ConfigPage } from './components/config/ConfigPage.js';
 import { AppContext, type AppState, type PageName, type FocusArea } from './context/AppContext.js';
 import { useRuntimeEvents } from './hooks/useRuntimeEvents.js';
 import { useUserInput } from './hooks/useUserInput.js';
+import { executeLocalCommand } from '../core/shared/local-commands.js';
 import type { TuiRuntimeContext, TuiFullConfig } from './types.js';
 
 // 初始状态
@@ -68,8 +69,8 @@ export function App({ runtime }: AppProps): React.ReactElement {
   // 订阅 runtime 事件
   useRuntimeEvents(runtime.events$, runtime.debug$, setState);
 
-  // 用户输入处理
-  const { sendMessage } = useUserInput(runtime.input$);
+  // 用户输入处理（带本地命令拦截）
+  const { sendMessage: rawSendMessage } = useUserInput(runtime.input$);
 
   // 页面切换（重置焦点到 header）
   const setCurrentPage = useCallback((page: PageName) => {
@@ -89,6 +90,55 @@ export function App({ runtime }: AppProps): React.ReactElement {
   const setExitConfirmPending = useCallback((pending: boolean) => {
     setState((prev) => ({ ...prev, exitConfirmPending: pending }));
   }, []);
+
+  // 本地命令拦截的 sendMessage 包装
+  const sendMessage = useCallback(
+    (content: string) => {
+      // 检查是否为本地命令（以 / 开头）
+      if (content.startsWith('/')) {
+        const result = executeLocalCommand({ command: content });
+
+        if (result.handled) {
+          // 添加系统消息到 TUI 显示
+          if (result.output) {
+            const output = result.output;
+            setState((prev) => ({
+              ...prev,
+              session: {
+                ...prev.session,
+                messages: [
+                  ...prev.session.messages,
+                  {
+                    id: `local-${Date.now()}`,
+                    timestamp: new Date().toISOString(),
+                    agentId: 'system',
+                    type: 'system' as const,
+                    content: output,
+                  },
+                ],
+              },
+            }));
+          }
+
+          // 处理清屏
+          if (result.action === 'clear') {
+            setState((prev) => ({ ...prev, session: { ...prev.session, messages: [] } }));
+          }
+
+          // 处理退出（由 ExitConfirm 组件处理）
+          if (result.action === 'exit') {
+            setExitConfirmPending(true);
+          }
+
+          return;
+        }
+      }
+
+      // 非本地命令，发送到 agent loop
+      rawSendMessage(content);
+    },
+    [rawSendMessage, setExitConfirmPending]
+  );
 
   const setShowHelp = useCallback((show: boolean) => {
     setState((prev) => ({ ...prev, showHelp: show }));

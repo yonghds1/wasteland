@@ -17,7 +17,7 @@ describe("SessionIndex", () => {
   before(async () => {
     tempDir = await mkdtemp(join(tmpdir(), "joe-test-sessions-"));
 
-    const mod = await import("../../dist/runtime/session-index.js");
+    const mod = await import("../../dist/core/runtime/session-index.js");
     SessionIndex = mod.SessionIndex;
   });
 

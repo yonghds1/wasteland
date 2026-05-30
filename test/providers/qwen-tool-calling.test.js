@@ -6,7 +6,7 @@
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createQwenProvider } from "../../dist/providers/qwen.js";
+import { createOpenAIProvider as createQwenProvider } from "../../dist/providers/openai.js";
 import { createDefaultToolRegistry } from "../../dist/tools/default-registry.js";
 
 // ============================================================

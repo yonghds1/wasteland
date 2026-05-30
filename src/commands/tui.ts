@@ -15,8 +15,12 @@ import { initI18n, t } from '../locales/index.js';
 export function createTuiCommand(): Command {
   return new Command('tui')
     .description(t('commands.tui.description'))
+    .option('-r, --role <name>', t('commands.chat.options.role'))
+    .option('-p, --provider <name>', t('commands.chat.options.provider'))
+    .option('--permission-mode <mode>', t('commands.chat.options.permissionMode'))
+    .option('--debug', t('commands.chat.options.debug'))
     .option('--attach <session>', t('commands.tui.options.attach'))
-    .action(async (_options) => {
+    .action(async (options) => {
       // 初始化 i18n
       const loadedSettings = await loadWastelandSettings({ cwd: process.cwd(), env: process.env });
       const language = loadedSettings.settings.runtime.language;
@@ -46,7 +50,7 @@ export function createTuiCommand(): Command {
 
       try {
         // 创建 TUI 运行时
-        const runtime = await createTuiRuntime(process.cwd());
+        const runtime = await createTuiRuntime(process.cwd(), options.role);
 
         try {
           // 启动 TUI

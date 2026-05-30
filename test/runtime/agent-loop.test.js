@@ -18,13 +18,13 @@ describe("AgentLoop", () => {
   let tempDir;
 
   before(async () => {
-    const loopMod = await import("../../dist/runtime/agent-loop.js");
+    const loopMod = await import("../../dist/core/runtime/agent-loop.js");
     runAgentLoop = loopMod.runAgentLoop;
 
-    const sessionMod = await import("../../dist/runtime/session-manager.js");
+    const sessionMod = await import("../../dist/core/runtime/session-manager.js");
     SessionManager = sessionMod.SessionManager;
 
-    const permMod = await import("../../dist/runtime/permission-gate.js");
+    const permMod = await import("../../dist/core/runtime/permission-gate.js");
     createPermissionGate = permMod.createPermissionGate;
 
     tempDir = await mkdtemp(join(tmpdir(), "joe-agent-loop-"));

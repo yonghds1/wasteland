@@ -6,9 +6,9 @@ import { test } from "node:test";
 
 import { lastValueFrom, toArray } from "rxjs";
 
-import { createPermissionGate } from "../dist/runtime/permission-gate.js";
-import { SessionManager } from "../dist/runtime/session-manager.js";
-import { dispatchToolCall } from "../dist/runtime/tool-dispatch.js";
+import { createPermissionGate } from "../dist/core/runtime/permission-gate.js";
+import { SessionManager } from "../dist/core/runtime/session-manager.js";
+import { dispatchToolCall } from "../dist/core/runtime/tool-dispatch.js";
 import { ToolRegistry } from "../dist/tools/tool-registry.js";
 
 test("permission gate applies default and bypass permission modes", () => {
@@ -206,16 +206,32 @@ test("spawn_agent creates child agent with independent session", async () => {
     }).pipe(toArray()),
   );
 
-  // 验证事件序列
-  assert.deepEqual(events.map((event) => event.type), [
+  // 验证事件序列（包含 agent 生命周期事件）
+  const eventTypes = events.map((event) => event.type);
+  assert.deepEqual(eventTypes, [
     "tool_call_requested",
     "permission_decision",
     "tool_started",
+    "agent_spawned",
+    "agent_completed",
     "tool_result",
   ]);
 
-  // 验证返回结果包含内容
-  assert.ok(events[3].output, "应该有输出");
+  // 验证 agent_spawned 事件内容
+  const spawnedEvent = events.find((e) => e.type === "agent_spawned");
+  assert.equal(spawnedEvent.name, "analyzer");
+  assert.equal(spawnedEvent.task, "你好");
+  assert.ok(spawnedEvent.childId, "应该有 childId");
+  assert.ok(spawnedEvent.childSessionPath, "应该有 childSessionPath");
+
+  // 验证 agent_completed 事件内容
+  const completedEvent = events.find((e) => e.type === "agent_completed");
+  assert.equal(completedEvent.status, "success");
+  assert.ok(completedEvent.sessionPath, "应该有 sessionPath");
+
+  // 验证 tool_result 返回结果包含内容
+  const toolResult = events.find((e) => e.type === "tool_result");
+  assert.ok(toolResult.output, "应该有输出");
 
   // 强制写入缓冲区
   await sessionManager.closeAll();
@@ -334,16 +350,19 @@ test("spawn_agent respects tools parameter to limit child agent tools", async ()
     }).pipe(toArray()),
   );
 
-  // 验证事件序列
+  // 验证事件序列（包含 agent 生命周期事件）
   assert.deepEqual(events.map((event) => event.type), [
     "tool_call_requested",
     "permission_decision",
     "tool_started",
+    "agent_spawned",
+    "agent_completed",
     "tool_result",
   ]);
 
   // 验证返回成功
-  assert.equal(events[3].status, "success");
+  const toolResult = events.find((e) => e.type === "tool_result");
+  assert.equal(toolResult.status, "success");
 
   await sessionManager.closeAll();
 });
