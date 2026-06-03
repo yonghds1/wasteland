@@ -32,7 +32,8 @@ export type SSEEvent = string;
 export function parseSSEStream(reader: ReadableStreamDefaultReader<Uint8Array>): Observable<SSEEvent> {
   return new Observable<SSEEvent>((subscriber) => {
     const decoder = new TextDecoder();
-    let buffer = '';
+    const bufferParts: string[] = [];
+    let bufferLength = 0;
 
     async function readStream() {
       try {
@@ -41,25 +42,39 @@ export function parseSSEStream(reader: ReadableStreamDefaultReader<Uint8Array>):
 
           if (done) {
             // 流结束，处理 buffer 中剩余的数据
-            if (buffer.trim()) {
-              processBuffer(buffer, subscriber);
+            const remaining = bufferParts.join('');
+            if (remaining.trim()) {
+              processBuffer(remaining, subscriber);
             }
             subscriber.complete();
             return;
           }
 
           // 解码 Uint8Array 并追加到 buffer
-          buffer += decoder.decode(value, { stream: true });
+          const decoded = decoder.decode(value, { stream: true });
+          bufferParts.push(decoded);
+          bufferLength += decoded.length;
 
-          // 按 \n\n 分割为独立的 SSE 事件
-          const parts = buffer.split('\n\n');
+          // 当 buffer 足够大时才处理，减少 split 操作
+          if (bufferLength > 8192) {
+            const fullBuffer = bufferParts.join('');
+            bufferParts.length = 0;
+            bufferLength = 0;
 
-          // 最后一个部分可能不完整，保留在 buffer 中
-          buffer = parts.pop() ?? '';
+            // 按 \n\n 分割为独立的 SSE 事件
+            const parts = fullBuffer.split('\n\n');
 
-          // 处理完整的事件
-          for (const part of parts) {
-            processPart(part, subscriber);
+            // 最后一个部分可能不完整，保留在 buffer 中
+            const lastPart = parts.pop() ?? '';
+            if (lastPart) {
+              bufferParts.push(lastPart);
+              bufferLength = lastPart.length;
+            }
+
+            // 处理完整的事件
+            for (const part of parts) {
+              processPart(part, subscriber);
+            }
           }
         }
       } catch (err) {
