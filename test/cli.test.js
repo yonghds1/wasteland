@@ -1,16 +1,21 @@
-import assert from "node:assert/strict";
+import { describe, it, expect } from "vitest";
 import { execFile, spawn } from "node:child_process";
 import { createServer } from "node:http";
 import { mkdir, mkdtemp, readFile, readdir, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
-const cliPath = fileURLToPath(new URL("../bin/joe.js", import.meta.url));
+const srcCliPath = fileURLToPath(new URL("../src/cli.ts", import.meta.url));
+const tsxCliPath = fileURLToPath(new URL("../node_modules/.bin/tsx", import.meta.url));
 const isolatedHomeDir = path.join(os.tmpdir(), `joe-test-home-${process.pid}`);
+
+// Helper: build CLI command args using tsx to run from source
+function cliArgs(...args) {
+  return [tsxCliPath, srcCliPath, ...args];
+}
 
 function createCleanEnv(overrides = {}) {
   const env = {
@@ -95,7 +100,7 @@ async function createJsonServer(handler) {
 
 function runCliWithInput(args, input, env = process.env) {
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [cliPath, ...args], {
+    const child = spawn(process.execPath, cliArgs(...args), {
       env,
       stdio: ["pipe", "pipe", "pipe"],
     });
@@ -126,77 +131,76 @@ function runCliWithInput(args, input, env = process.env) {
   });
 }
 
-test("shows help output", async () => {
-  const { stdout } = await execFileAsync(process.execPath, [cliPath, "--help"]);
+it("shows help output", async () => {
+  const { stdout } = await execFileAsync(process.execPath, cliArgs("--help"));
 
-  assert.match(stdout, /Usage: joe/);
-  assert.match(stdout, /chat/);
-  assert.match(stdout, /config/);
-  assert.match(stdout, /current/);
+  expect(stdout).toMatch(/Usage: joe/);
+  expect(stdout).toMatch(/chat/);
+  expect(stdout).toMatch(/config/);
+  expect(stdout).toMatch(/current/);
 });
 
-test("fails before entering runtime when provider is unsupported", async () => {
-  await assert.rejects(
-    execFileAsync(process.execPath, [cliPath, "chat", "--provider", "missing", "--message", "你好"]),
-    /当前不支持 provider: missing/,
-  );
+it("fails before entering runtime when provider is unsupported", async () => {
+  await expect(
+    execFileAsync(process.execPath, cliArgs("chat", "--provider", "missing", "--message", "你好")),
+  ).rejects.toThrow(/当前不支持 provider: missing/);
 });
 
-test("prints the rxjs chat reply for one-shot input", async () => {
-  const { stdout } = await execFileAsync(process.execPath, [cliPath, "chat", "--provider", "local", "--message", "你好"]);
+it("prints the rxjs chat reply for one-shot input", async () => {
+  const { stdout } = await execFileAsync(process.execPath, cliArgs("chat", "--provider", "local", "--message", "你好"));
 
-  assert.equal(stdout.trim(), "assistant[1]> 你好，我已经收到你的输入：你好");
+  expect(stdout.trim()).toBe("assistant[1]> 你好，我已经收到你的输入：你好");
 });
 
-test("reads stdin through the same runtime path", async () => {
+it("reads stdin through the same runtime path", async () => {
   const { stdout } = await runCliWithInput(["chat", "--provider", "local"], "hello");
 
-  assert.equal(stdout.trim(), "assistant[1]> 你好，我已经收到你的输入：hello");
+  expect(stdout.trim()).toBe("assistant[1]> 你好，我已经收到你的输入：hello");
 });
 
-test("persists a local session transcript for one-shot chat", async () => {
+it("persists a local session transcript for one-shot chat", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-session-"));
   const sessionDir = path.join(tempRoot, "sessions");
   const env = createCleanEnv({
     JOE_SESSION_DIR: sessionDir,
   });
 
-  const { stdout } = await execFileAsync(process.execPath, [cliPath, "chat", "--provider", "local", "--message", "你好"], {
+  const { stdout } = await execFileAsync(process.execPath, cliArgs("chat", "--provider", "local", "--message", "你好"), {
     env,
   });
 
-  assert.equal(stdout.trim(), "assistant[1]> 你好，我已经收到你的输入：你好");
+  expect(stdout.trim()).toBe("assistant[1]> 你好，我已经收到你的输入：你好");
 
   const files = await readdir(sessionDir);
 
-  assert.equal(files.length, 1);
+  expect(files.length).toBe(1);
 
   const transcript = await readFile(path.join(sessionDir, files[0]), "utf8");
 
-  assert.match(transcript, /"type":"session"/);
-  assert.match(transcript, /"role":"user"/);
-  assert.match(transcript, /"role":"assistant"/);
-  assert.match(transcript, /"type":"session_end"/);
+  expect(transcript).toMatch(/"type":"session"/);
+  expect(transcript).toMatch(/"role":"user"/);
+  expect(transcript).toMatch(/"role":"assistant"/);
+  expect(transcript).toMatch(/"type":"session_end"/);
 });
 
-test("supports legacy RX_CLI_SESSION_DIR for session transcript output", async () => {
+it("supports legacy RX_CLI_SESSION_DIR for session transcript output", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-session-legacy-"));
   const sessionDir = path.join(tempRoot, "sessions");
   const env = createCleanEnv({
     RX_CLI_SESSION_DIR: sessionDir,
   });
 
-  await execFileAsync(process.execPath, [cliPath, "chat", "--message", "你好"], {
+  await execFileAsync(process.execPath, cliArgs("chat", "--message", "你好"), {
     cwd: tempRoot,
     env,
   });
 
   const files = await readdir(sessionDir);
 
-  assert.equal(files.length, 1);
+  expect(files.length).toBe(1);
 });
 
-test("routes a local tool call through the main chat runtime path", async () => {
+it("routes a local tool call through the main chat runtime path", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-read-file-"));
   const sessionDir = path.join(tempRoot, "sessions");
   const env = createCleanEnv({
@@ -205,38 +209,38 @@ test("routes a local tool call through the main chat runtime path", async () => 
 
   await writeFile(path.join(tempRoot, "note.txt"), "hello from tool\n", "utf8");
 
-  const { stdout } = await execFileAsync(process.execPath, [cliPath, "chat", "--message", "/read note.txt"], {
+  const { stdout } = await execFileAsync(process.execPath, cliArgs("chat", "--message", "/read note.txt"), {
     cwd: tempRoot,
     env,
   });
 
-  assert.match(stdout, /tool\[1\]> request read-file/);
-  assert.match(stdout, /permission\[1\]> read-file: allow \(default\)/);
-  assert.match(stdout, /tool\[1\]> start read-file/);
+  expect(stdout).toMatch(/tool\[1\]> request read-file/);
+  expect(stdout).toMatch(/permission\[1\]> read-file: allow \(default\)/);
+  expect(stdout).toMatch(/tool\[1\]> start read-file/);
   // 新格式包含文件元数据头和行号
-  assert.match(stdout, /tool\[1\]> result read-file: 📄 note\.txt/);
-  assert.match(stdout, /1│hello from tool/);
-  assert.match(stdout, /assistant\[1\]> 工具 read-file 已完成。/);
+  expect(stdout).toMatch(/tool\[1\]> result read-file: 📄 note\.txt/);
+  expect(stdout).toMatch(/1│hello from tool/);
+  expect(stdout).toMatch(/assistant\[1\]> 工具 read-file 已完成。/);
 
   const files = await readdir(sessionDir);
   const transcript = await readFile(path.join(sessionDir, files[0]), "utf8");
 
-  assert.match(transcript, /"type":"tool_call"/);
-  assert.match(transcript, /"type":"permission"/);
-  assert.match(transcript, /"type":"tool_result"/);
-  assert.match(transcript, /"toolName":"read-file"/);
+  expect(transcript).toMatch(/"type":"tool_call"/);
+  expect(transcript).toMatch(/"type":"permission"/);
+  expect(transcript).toMatch(/"type":"tool_result"/);
+  expect(transcript).toMatch(/"toolName":"read-file"/);
 });
 
-test("blocks execute-risk tools in default permission mode", async () => {
-  const { stdout } = await execFileAsync(process.execPath, [cliPath, "chat", "--provider", "local", "--message", "/bash pwd"]);
+it("blocks execute-risk tools in default permission mode", async () => {
+  const { stdout } = await execFileAsync(process.execPath, cliArgs("chat", "--provider", "local", "--message", "/bash pwd"));
 
-  assert.match(stdout, /tool\[1\]> request bash/);
-  assert.match(stdout, /permission\[1\]> bash: ask \(default\)/);
-  assert.match(stdout, /tool\[1\]> failed bash: 模式 default 对 execute 工具要求确认。/);
-  assert.match(stdout, /assistant\[1\]> 工具 bash 未执行：模式 default 对 execute 工具要求确认。/);
+  expect(stdout).toMatch(/tool\[1\]> request bash/);
+  expect(stdout).toMatch(/permission\[1\]> bash: ask \(default\)/);
+  expect(stdout).toMatch(/tool\[1\]> failed bash: 模式 default 对 execute 工具要求确认。/);
+  expect(stdout).toMatch(/assistant\[1\]> 工具 bash 未执行：模式 default 对 execute 工具要求确认。/);
 });
 
-test("allows execute-risk tools in bypass_permissions mode", async () => {
+it("allows execute-risk tools in bypass_permissions mode", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-bash-tool-"));
   const sessionDir = path.join(tempRoot, "sessions");
   const env = createCleanEnv({
@@ -245,27 +249,27 @@ test("allows execute-risk tools in bypass_permissions mode", async () => {
 
   const { stdout } = await execFileAsync(
     process.execPath,
-    [cliPath, "chat", "--permission-mode", "bypass_permissions", "--message", "/bash pwd"],
+    cliArgs("chat", "--permission-mode", "bypass_permissions", "--message", "/bash pwd"),
     {
       cwd: tempRoot,
       env,
     },
   );
 
-  assert.match(stdout, /tool\[1\]> request bash/);
-  assert.match(stdout, /permission\[1\]> bash: allow \(bypass_permissions\)/);
-  assert.match(stdout, /tool\[1\]> start bash/);
-  assert.match(stdout, new RegExp(`tool\\[1\\]> result bash: ${tempRoot.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
-  assert.match(stdout, /assistant\[1\]> 工具 bash 已完成。/);
+  expect(stdout).toMatch(/tool\[1\]> request bash/);
+  expect(stdout).toMatch(/permission\[1\]> bash: allow \(bypass_permissions\)/);
+  expect(stdout).toMatch(/tool\[1\]> start bash/);
+  expect(stdout).toMatch(new RegExp(`tool\\[1\\]> result bash: ${tempRoot.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
+  expect(stdout).toMatch(/assistant\[1\]> 工具 bash 已完成。/);
 
   const files = await readdir(sessionDir);
   const transcript = await readFile(path.join(sessionDir, files[0]), "utf8");
 
-  assert.match(transcript, /"toolName":"bash"/);
-  assert.match(transcript, /"status":"success"/);
+  expect(transcript).toMatch(/"toolName":"bash"/);
+  expect(transcript).toMatch(/"status":"success"/);
 });
 
-test("renders debug trace to stderr without polluting stdout", async () => {
+it("renders debug trace to stderr without polluting stdout", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-debug-trace-"));
   const sessionDir = path.join(tempRoot, "sessions");
   const env = createCleanEnv({
@@ -276,22 +280,22 @@ test("renders debug trace to stderr without polluting stdout", async () => {
 
   const { stdout, stderr } = await execFileAsync(
     process.execPath,
-    [cliPath, "chat", "--debug", "--message", "/read note.txt"],
+    cliArgs("chat", "--debug", "--message", "/read note.txt"),
     {
       cwd: tempRoot,
       env,
     },
   );
 
-  assert.match(stdout, /tool\[1\]> request read-file/);
-  assert.match(stdout, /assistant\[1\]> 工具 read-file 已完成。/);
-  assert.doesNotMatch(stdout, /trace /);
-  assert.match(stderr, /trace session\.start mode=single provider=local/);
-  assert.match(stderr, /trace turn=1 step=1 provider\.event type=tool_call toolName=read-file/);
-  assert.match(stderr, /trace turn=1 step=2 turn\.complete contentLength=/);
+  expect(stdout).toMatch(/tool\[1\]> request read-file/);
+  expect(stdout).toMatch(/assistant\[1\]> 工具 read-file 已完成。/);
+  expect(stdout).not.toMatch(/trace /);
+  expect(stderr).toMatch(/trace session\.start mode=single provider=local/);
+  expect(stderr).toMatch(/trace turn=1 step=1 provider\.event type=tool_call toolName=read-file/);
+  expect(stderr).toMatch(/trace turn=1 step=2 turn\.complete contentLength=/);
 });
 
-test("loads project .wasteland/settings.json for runtime defaults", async () => {
+it("loads project .wasteland/settings.json for runtime defaults", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-project-config-"));
   await writeJsonFile(path.join(tempRoot, ".wasteland", "settings.json"), {
     runtime: {
@@ -301,18 +305,18 @@ test("loads project .wasteland/settings.json for runtime defaults", async () => 
 
   const { stdout } = await execFileAsync(
     process.execPath,
-    [cliPath, "chat", "--message", "/bash pwd"],
+    cliArgs("chat", "--message", "/bash pwd"),
     {
       cwd: tempRoot,
       env: createCleanEnv(),
     },
   );
 
-  assert.match(stdout, /permission\[1\]> bash: allow \(bypass_permissions\)/);
-  assert.match(stdout, /assistant\[1\]> 工具 bash 已完成。/);
+  expect(stdout).toMatch(/permission\[1\]> bash: allow \(bypass_permissions\)/);
+  expect(stdout).toMatch(/assistant\[1\]> 工具 bash 已完成。/);
 });
 
-test("loads project .wasteland/settings.json above user ~/.wasteland/settings.json", async () => {
+it("loads project .wasteland/settings.json above user ~/.wasteland/settings.json", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-project-over-user-config-"));
   const tempHome = await mkdtemp(path.join(os.tmpdir(), "joe-project-over-user-home-"));
 
@@ -329,7 +333,7 @@ test("loads project .wasteland/settings.json above user ~/.wasteland/settings.js
 
   const { stdout } = await execFileAsync(
     process.execPath,
-    [cliPath, "chat", "--message", "/bash pwd"],
+    cliArgs("chat", "--message", "/bash pwd"),
     {
       cwd: tempRoot,
       env: createCleanEnv({
@@ -339,11 +343,11 @@ test("loads project .wasteland/settings.json above user ~/.wasteland/settings.js
     },
   );
 
-  assert.match(stdout, /permission\[1\]> bash: ask \(default\)/);
-  assert.match(stdout, /assistant\[1\]> 工具 bash 未执行：模式 default 对 execute 工具要求确认。/);
+  expect(stdout).toMatch(/permission\[1\]> bash: ask \(default\)/);
+  expect(stdout).toMatch(/assistant\[1\]> 工具 bash 未执行：模式 default 对 execute 工具要求确认。/);
 });
 
-test("loads user ~/.wasteland/settings.json when project config is absent", async () => {
+it("loads user ~/.wasteland/settings.json when project config is absent", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-user-config-project-"));
   const tempHome = await mkdtemp(path.join(os.tmpdir(), "joe-user-config-home-"));
 
@@ -355,7 +359,7 @@ test("loads user ~/.wasteland/settings.json when project config is absent", asyn
 
   const { stdout } = await execFileAsync(
     process.execPath,
-    [cliPath, "chat", "--message", "/bash pwd"],
+    cliArgs("chat", "--message", "/bash pwd"),
     {
       cwd: tempRoot,
       env: createCleanEnv({
@@ -365,20 +369,20 @@ test("loads user ~/.wasteland/settings.json when project config is absent", asyn
     },
   );
 
-  assert.match(stdout, /permission\[1\]> bash: allow \(bypass_permissions\)/);
+  expect(stdout).toMatch(/permission\[1\]> bash: allow \(bypass_permissions\)/);
 });
 
-test("loads qwen api key from project .wasteland/auth.json via generic $auth ref", async () => {
+it("loads qwen api key from project .wasteland/auth.json via generic $auth ref", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-project-auth-qwen-"));
   const server = await createJsonServer(async (request, body, response) => {
-    assert.equal(request.method, "POST");
-    assert.equal(request.url, "/compatible-mode/v1/chat/completions");
-    assert.equal(request.headers.authorization, "Bearer project-auth-secret");
+    expect(request.method).toBe("POST");
+    expect(request.url).toBe("/compatible-mode/v1/chat/completions");
+    expect(request.headers.authorization).toBe("Bearer project-auth-secret");
 
     const payload = JSON.parse(body);
 
-    assert.equal(payload.model, "qwen3-max");
-    assert.deepEqual(payload.messages, [
+    expect(payload.model).toBe("qwen3-max");
+    expect(payload.messages).toEqual([
       {
         role: "user",
         content: "你好",
@@ -424,20 +428,20 @@ test("loads qwen api key from project .wasteland/auth.json via generic $auth ref
 
     const { stdout } = await execFileAsync(
       process.execPath,
-      [cliPath, "chat", "--message", "你好"],
+      cliArgs("chat", "--message", "你好"),
       {
         cwd: tempRoot,
         env: createCleanEnv(),
       },
     );
 
-    assert.equal(stdout.trim(), "assistant[1]> 这是来自 project auth 的回复。");
+    expect(stdout.trim()).toBe("assistant[1]> 这是来自 project auth 的回复。");
   } finally {
     await server.close();
   }
 });
 
-test("finds project config dir from .wasteland/auth.json even when settings.json is absent", async () => {
+it("finds project config dir from .wasteland/auth.json even when settings.json is absent", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-project-auth-only-"));
   const nestedDir = path.join(tempRoot, "packages", "demo");
   const tempHome = await mkdtemp(path.join(os.tmpdir(), "joe-project-auth-only-home-"));
@@ -461,7 +465,7 @@ test("finds project config dir from .wasteland/auth.json even when settings.json
 
   const { stdout } = await execFileAsync(
     process.execPath,
-    [cliPath, "current"],
+    cliArgs("current"),
     {
       cwd: nestedDir,
       env: createCleanEnv({
@@ -473,13 +477,13 @@ test("finds project config dir from .wasteland/auth.json even when settings.json
 
   const payload = JSON.parse(stdout);
 
-  assert.equal(payload.cwd, nestedDir);
-  assert.equal(payload.sources.user, path.join(tempHome, ".wasteland", "settings.json"));
-  assert.equal(payload.sources.projectAuth, path.join(tempRoot, ".wasteland", "auth.json"));
-  assert.equal(payload.resolved.provider.settings.apiKey, "***");
+  expect(payload.cwd).toBe(nestedDir);
+  expect(payload.sources.user).toBe(path.join(tempHome, ".wasteland", "settings.json"));
+  expect(payload.sources.projectAuth).toBe(path.join(tempRoot, ".wasteland", "auth.json"));
+  expect(payload.resolved.provider.settings.apiKey).toBe("***");
 });
 
-test("config current reports auth.json sources and redacts secrets", async () => {
+it("config current reports auth.json sources and redacts secrets", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-config-auth-sources-"));
   const tempHome = await mkdtemp(path.join(os.tmpdir(), "joe-config-auth-home-"));
 
@@ -504,7 +508,7 @@ test("config current reports auth.json sources and redacts secrets", async () =>
 
   const { stdout } = await execFileAsync(
     process.execPath,
-    [cliPath, "current"],
+    cliArgs("current"),
     {
       cwd: tempRoot,
       env: createCleanEnv({
@@ -516,13 +520,13 @@ test("config current reports auth.json sources and redacts secrets", async () =>
 
   const payload = JSON.parse(stdout);
 
-  assert.equal(payload.sources.userAuth, path.join(tempHome, ".wasteland", "auth.json"));
-  assert.equal(payload.sources.projectAuth, path.join(tempRoot, ".wasteland", "auth.json"));
-  assert.equal(payload.resolved.provider.name, "qwen");
-  assert.equal(payload.resolved.provider.settings.apiKey, "***");
+  expect(payload.sources.userAuth).toBe(path.join(tempHome, ".wasteland", "auth.json"));
+  expect(payload.sources.projectAuth).toBe(path.join(tempRoot, ".wasteland", "auth.json"));
+  expect(payload.resolved.provider.name).toBe("qwen");
+  expect(payload.resolved.provider.settings.apiKey).toBe("***");
 });
 
-test("chat --role resolves model provider and role permission mode", async () => {
+it("chat --role resolves model provider and role permission mode", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-role-explicit-"));
 
   await writeJsonFile(path.join(tempRoot, ".wasteland", "settings.json"), {
@@ -556,18 +560,18 @@ test("chat --role resolves model provider and role permission mode", async () =>
 
   const { stdout } = await execFileAsync(
     process.execPath,
-    [cliPath, "chat", "--role", "coder", "--message", "/bash pwd"],
+    cliArgs("chat", "--role", "coder", "--message", "/bash pwd"),
     {
       cwd: tempRoot,
       env: createCleanEnv(),
     },
   );
 
-  assert.match(stdout, /permission\[1\]> bash: allow \(bypass_permissions\)/);
-  assert.match(stdout, /assistant\[1\]> 工具 bash 已完成。/);
+  expect(stdout).toMatch(/permission\[1\]> bash: allow \(bypass_permissions\)/);
+  expect(stdout).toMatch(/assistant\[1\]> 工具 bash 已完成。/);
 });
 
-test("chat uses runtime.defaultRole when role is not passed", async () => {
+it("chat uses runtime.defaultRole when role is not passed", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-role-default-"));
 
   await writeJsonFile(path.join(tempRoot, ".wasteland", "settings.json"), {
@@ -593,18 +597,18 @@ test("chat uses runtime.defaultRole when role is not passed", async () => {
 
   const { stdout } = await execFileAsync(
     process.execPath,
-    [cliPath, "chat", "--message", "/bash pwd"],
+    cliArgs("chat", "--message", "/bash pwd"),
     {
       cwd: tempRoot,
       env: createCleanEnv(),
     },
   );
 
-  assert.match(stdout, /permission\[1\]> bash: allow \(bypass_permissions\)/);
-  assert.match(stdout, /assistant\[1\]> 工具 bash 已完成。/);
+  expect(stdout).toMatch(/permission\[1\]> bash: allow \(bypass_permissions\)/);
+  expect(stdout).toMatch(/assistant\[1\]> 工具 bash 已完成。/);
 });
 
-test("config current prints resolved role model provider and redacts secrets", async () => {
+it("config current prints resolved role model provider and redacts secrets", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-config-current-"));
 
   await writeJsonFile(path.join(tempRoot, ".wasteland", "settings.json"), {
@@ -636,7 +640,7 @@ test("config current prints resolved role model provider and redacts secrets", a
 
   const { stdout } = await execFileAsync(
     process.execPath,
-    [cliPath, "config", "current"],
+    cliArgs("config", "current"),
     {
       cwd: tempRoot,
       env: createCleanEnv(),
@@ -645,18 +649,18 @@ test("config current prints resolved role model provider and redacts secrets", a
 
   const payload = JSON.parse(stdout);
 
-  assert.equal(payload.defaults.role, "chat");
-  assert.equal(payload.resolved.role.name, "chat");
-  assert.equal(payload.resolved.model.name, "chat_model");
-  assert.equal(payload.resolved.provider.name, "qwen");
-  assert.equal(payload.resolved.provider.settings.apiKey, "***");
-  assert.equal(payload.resolved.provider.settings.model, "qwen3-max");
-  assert.equal(payload.resolved.provider.settings.temperature, 0.2);
-  assert.equal(payload.resolved.runtime.maxStepsPerTurn, 12);
-  assert.equal(payload.resolved.runtime.debug, true);
+  expect(payload.defaults.role).toBe("chat");
+  expect(payload.resolved.role.name).toBe("chat");
+  expect(payload.resolved.model.name).toBe("chat_model");
+  expect(payload.resolved.provider.name).toBe("qwen");
+  expect(payload.resolved.provider.settings.apiKey).toBe("***");
+  expect(payload.resolved.provider.settings.model).toBe("qwen3-max");
+  expect(payload.resolved.provider.settings.temperature).toBe(0.2);
+  expect(payload.resolved.runtime.maxStepsPerTurn).toBe(12);
+  expect(payload.resolved.runtime.debug).toBe(true);
 });
 
-test("top-level current aliases config current", async () => {
+it("top-level current aliases config current", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-current-alias-"));
 
   await writeJsonFile(path.join(tempRoot, ".wasteland", "settings.json"), {
@@ -681,7 +685,7 @@ test("top-level current aliases config current", async () => {
 
   const { stdout } = await execFileAsync(
     process.execPath,
-    [cliPath, "current"],
+    cliArgs("current"),
     {
       cwd: tempRoot,
       env: createCleanEnv(),
@@ -690,11 +694,11 @@ test("top-level current aliases config current", async () => {
 
   const payload = JSON.parse(stdout);
 
-  assert.equal(payload.resolved.role.name, "chat");
-  assert.equal(payload.resolved.model.name, "chat_model");
+  expect(payload.resolved.role.name).toBe("chat");
+  expect(payload.resolved.model.name).toBe("chat_model");
 });
 
-test("dev shim accepts nested joe current form", async () => {
+it("dev shim accepts nested joe current form", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-dev-shim-current-"));
 
   await writeJsonFile(path.join(tempRoot, ".wasteland", "settings.json"), {
@@ -705,7 +709,7 @@ test("dev shim accepts nested joe current form", async () => {
 
   const { stdout } = await execFileAsync(
     process.execPath,
-    [cliPath, "joe", "current"],
+    cliArgs("joe", "current"),
     {
       cwd: tempRoot,
       env: createCleanEnv(),
@@ -714,40 +718,40 @@ test("dev shim accepts nested joe current form", async () => {
 
   const payload = JSON.parse(stdout);
 
-  assert.equal(payload.resolved.provider.name, "local");
+  expect(payload.resolved.provider.name).toBe("local");
 });
 
-test("persists default session transcripts under .wasteland/sessions", async () => {
+it("persists default session transcripts under .wasteland/sessions", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-session-default-"));
 
   const { stdout } = await execFileAsync(
     process.execPath,
-    [cliPath, "chat", "--message", "你好"],
+    cliArgs("chat", "--message", "你好"),
     {
       cwd: tempRoot,
       env: createCleanEnv(),
     },
   );
 
-  assert.equal(stdout.trim(), "assistant[1]> 你好，我已经收到你的输入：你好");
+  expect(stdout.trim()).toBe("assistant[1]> 你好，我已经收到你的输入：你好");
 
   const sessionDir = path.join(tempRoot, ".wasteland", "sessions");
   const files = await readdir(sessionDir);
 
-  assert.equal(files.length, 1);
+  expect(files.length).toBe(1);
 });
 
-test("resolves generic $auth ref from process env before auth.json", async () => {
+it("resolves generic $auth ref from process env before auth.json", async () => {
   const server = await createJsonServer(async (request, body, response) => {
-    assert.equal(request.method, "POST");
-    assert.equal(request.url, "/compatible-mode/v1/chat/completions");
-    assert.equal(request.headers.authorization, "Bearer env-secret");
+    expect(request.method).toBe("POST");
+    expect(request.url).toBe("/compatible-mode/v1/chat/completions");
+    expect(request.headers.authorization).toBe("Bearer env-secret");
 
     const payload = JSON.parse(body);
 
-    assert.equal(payload.model, "qwen3-max");
-    assert.equal(payload.stream, false);
-    assert.deepEqual(payload.messages, [
+    expect(payload.model).toBe("qwen3-max");
+    expect(payload.stream).toBe(false);
+    expect(payload.messages).toEqual([
       {
         role: "user",
         content: "你好",
@@ -795,7 +799,7 @@ test("resolves generic $auth ref from process env before auth.json", async () =>
 
     const { stdout } = await execFileAsync(
       process.execPath,
-      [cliPath, "chat", "--message", "你好"],
+      cliArgs("chat", "--message", "你好"),
       {
         cwd: tempRoot,
         env: createCleanEnv({
@@ -804,106 +808,106 @@ test("resolves generic $auth ref from process env before auth.json", async () =>
       },
     );
 
-    assert.equal(stdout.trim(), "assistant[1]> 这是来自 qwen stub 的回复。");
+    expect(stdout.trim()).toBe("assistant[1]> 这是来自 qwen stub 的回复。");
   } finally {
     await server.close();
   }
 });
 
-test("renders JSONL debug format to stderr with --debug --debug-format jsonl", async () => {
+it("renders JSONL debug format to stderr with --debug --debug-format jsonl", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-debug-jsonl-"));
 
   const { stdout, stderr } = await execFileAsync(
     process.execPath,
-    [cliPath, "chat", "--debug", "--debug-format", "jsonl", "--message", "你好"],
+    cliArgs("chat", "--debug", "--debug-format", "jsonl", "--message", "你好"),
     {
       cwd: tempRoot,
       env: createCleanEnv(),
     },
   );
 
-  assert.equal(stdout.trim(), "assistant[1]> 你好，我已经收到你的输入：你好");
+  expect(stdout.trim()).toBe("assistant[1]> 你好，我已经收到你的输入：你好");
 
   // Each line should be valid JSON
   const lines = stderr.trim().split("\n");
-  assert.ok(lines.length > 0, "stderr should have JSONL output");
+  expect(lines.length > 0).toBeTruthy();
 
   for (const line of lines) {
     const parsed = JSON.parse(line);
-    assert.ok(parsed.timestamp, "each line should have timestamp");
-    assert.ok(parsed.sessionId, "each line should have sessionId");
-    assert.ok(parsed.scope, "each line should have scope");
-    assert.ok(parsed.phase, "each line should have phase");
-    assert.ok(parsed.message, "each line should have message");
+    expect(parsed.timestamp).toBeTruthy();
+    expect(parsed.sessionId).toBeTruthy();
+    expect(parsed.scope).toBeTruthy();
+    expect(parsed.phase).toBeTruthy();
+    expect(parsed.message).toBeTruthy();
   }
 });
 
-test("persists JSONL trace file in .wasteland/traces directory", async () => {
+it("persists JSONL trace file in .wasteland/traces directory", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-debug-jsonl-file-"));
 
   const { stdout, stderr } = await execFileAsync(
     process.execPath,
-    [cliPath, "chat", "--debug", "--debug-format", "jsonl", "--message", "你好"],
+    cliArgs("chat", "--debug", "--debug-format", "jsonl", "--message", "你好"),
     {
       cwd: tempRoot,
       env: createCleanEnv(),
     },
   );
 
-  assert.equal(stdout.trim(), "assistant[1]> 你好，我已经收到你的输入：你好");
+  expect(stdout.trim()).toBe("assistant[1]> 你好，我已经收到你的输入：你好");
 
   // Check trace file was created
   const traceDir = path.join(tempRoot, ".wasteland", "traces");
   const traceFiles = await readdir(traceDir);
 
-  assert.equal(traceFiles.length, 1, "should have one trace file");
+  expect(traceFiles.length).toBe(1, "should have one trace file");
 
   const traceFile = traceFiles[0];
-  assert.match(traceFile, /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}_[a-f0-9]{6}\.jsonl$/, "trace file should match timestamp_shortId.jsonl format");
+  expect(traceFile).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}_[a-f0-9]{6}\.jsonl$/);
 
   // Verify trace file content
   const traceContent = await readFile(path.join(traceDir, traceFile), "utf8");
   const traceLines = traceContent.trim().split("\n");
 
-  assert.ok(traceLines.length > 0, "trace file should have content");
+  expect(traceLines.length > 0).toBeTruthy();
 
   for (const line of traceLines) {
     const parsed = JSON.parse(line);
-    assert.ok(parsed.timestamp, "each line should have timestamp");
-    assert.ok(parsed.sessionId, "each line should have sessionId");
+    expect(parsed.timestamp).toBeTruthy();
+    expect(parsed.sessionId).toBeTruthy();
   }
 });
 
-test("session ID uses timestamp prefix format", async () => {
+it("session ID uses timestamp prefix format", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-session-id-format-"));
   const sessionDir = path.join(tempRoot, "sessions");
   const env = createCleanEnv({
     JOE_SESSION_DIR: sessionDir,
   });
 
-  await execFileAsync(process.execPath, [cliPath, "chat", "--message", "你好"], {
+  await execFileAsync(process.execPath, cliArgs("chat", "--message", "你好"), {
     cwd: tempRoot,
     env,
   });
 
   const files = await readdir(sessionDir);
-  assert.equal(files.length, 1);
+  expect(files.length).toBe(1);
 
   const sessionFile = files[0];
   // Format: 2026-05-23T14-30-00_abc123.jsonl
-  assert.match(
+  expect(
     sessionFile,
     /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}_[a-f0-9]{6}\.jsonl$/,
     "session file should match timestamp_shortId.jsonl format",
   );
 });
 
-test("JSONL output can be piped to jq for parsing", async () => {
+it("JSONL output can be piped to jq for parsing", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-debug-jsonl-jq-"));
 
   const { stdout, stderr } = await execFileAsync(
     process.execPath,
-    [cliPath, "chat", "--debug", "--debug-format", "jsonl", "--message", "你好"],
+    cliArgs("chat", "--debug", "--debug-format", "jsonl", "--message", "你好"),
     {
       cwd: tempRoot,
       env: createCleanEnv(),
@@ -916,35 +920,35 @@ test("JSONL output can be piped to jq for parsing", async () => {
     .map((line) => JSON.parse(line))
     .filter((event) => event.phase === "session.start");
 
-  assert.ok(sessionStartEvents.length > 0, "should have session.start event");
-  assert.equal(sessionStartEvents[0].scope, "session");
-  assert.equal(sessionStartEvents[0].data.mode, "single");
+  expect(sessionStartEvents.length > 0).toBeTruthy();
+  expect(sessionStartEvents[0].scope).toBe("session");
+  expect(sessionStartEvents[0].data.mode).toBe("single");
 });
 
-test("pretty debug format is default when --debug is used without --debug-format", async () => {
+it("pretty debug format is default when --debug is used without --debug-format", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-debug-pretty-default-"));
 
   const { stdout, stderr } = await execFileAsync(
     process.execPath,
-    [cliPath, "chat", "--debug", "--message", "你好"],
+    cliArgs("chat", "--debug", "--message", "你好"),
     {
       cwd: tempRoot,
       env: createCleanEnv(),
     },
   );
 
-  assert.equal(stdout.trim(), "assistant[1]> 你好，我已经收到你的输入：你好");
+  expect(stdout.trim()).toBe("assistant[1]> 你好，我已经收到你的输入：你好");
 
   // Pretty format should have "trace" prefix, not JSON
-  assert.match(stderr, /trace session\.start/);
-  assert.doesNotMatch(stderr, /"timestamp"/);
+  expect(stderr).toMatch(/trace session\.start/);
+  expect(stderr).not.toMatch(/"timestamp"/);
 });
 
 // ============================================================
 // 新工具测试：glob、grep、list-directory、web-fetch
 // ============================================================
 
-test("glob tool finds files matching pattern", async () => {
+it("glob tool finds files matching pattern", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-glob-tool-"));
   const sessionDir = path.join(tempRoot, "sessions");
 
@@ -961,20 +965,20 @@ test("glob tool finds files matching pattern", async () => {
 
   const { stdout } = await execFileAsync(
     process.execPath,
-    [cliPath, "chat", "--permission-mode", "bypass_permissions", "--message", "/glob *.ts"],
+    cliArgs("chat", "--permission-mode", "bypass_permissions", "--message", "/glob *.ts"),
     {
       cwd: tempRoot,
       env,
     },
   );
 
-  assert.match(stdout, /tool\[1\]> request glob/);
-  assert.match(stdout, /tool\[1\]> result glob/);
+  expect(stdout).toMatch(/tool\[1\]> request glob/);
+  expect(stdout).toMatch(/tool\[1\]> result glob/);
   // glob *.ts 在根目录下应该找不到文件（因为 .ts 文件在 src/ 下）
-  assert.match(stdout, /no matches found/);
+  expect(stdout).toMatch(/no matches found/);
 });
 
-test("glob tool finds files in subdirectory", async () => {
+it("glob tool finds files in subdirectory", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-glob-subdir-"));
   const sessionDir = path.join(tempRoot, "sessions");
 
@@ -988,21 +992,21 @@ test("glob tool finds files in subdirectory", async () => {
 
   const { stdout } = await execFileAsync(
     process.execPath,
-    [cliPath, "chat", "--permission-mode", "bypass_permissions", "--message", "/glob src/*.ts"],
+    cliArgs("chat", "--permission-mode", "bypass_permissions", "--message", "/glob src/*.ts"),
     {
       cwd: tempRoot,
       env,
     },
   );
 
-  assert.match(stdout, /tool\[1\]> request glob/);
-  assert.match(stdout, /tool\[1\]> result glob/);
-  assert.match(stdout, /2 matches/);
-  assert.match(stdout, /main\.ts/);
-  assert.match(stdout, /utils\.ts/);
+  expect(stdout).toMatch(/tool\[1\]> request glob/);
+  expect(stdout).toMatch(/tool\[1\]> result glob/);
+  expect(stdout).toMatch(/2 matches/);
+  expect(stdout).toMatch(/main\.ts/);
+  expect(stdout).toMatch(/utils\.ts/);
 });
 
-test("grep tool searches text in files", async () => {
+it("grep tool searches text in files", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-grep-tool-"));
   const sessionDir = path.join(tempRoot, "sessions");
 
@@ -1016,20 +1020,20 @@ test("grep tool searches text in files", async () => {
 
   const { stdout } = await execFileAsync(
     process.execPath,
-    [cliPath, "chat", "--permission-mode", "bypass_permissions", "--message", "/grep TODO"],
+    cliArgs("chat", "--permission-mode", "bypass_permissions", "--message", "/grep TODO"),
     {
       cwd: tempRoot,
       env,
     },
   );
 
-  assert.match(stdout, /tool\[1\]> request grep/);
-  assert.match(stdout, /tool\[1\]> result grep/);
-  assert.match(stdout, /2 matches/);
-  assert.match(stdout, /TODO/);
+  expect(stdout).toMatch(/tool\[1\]> request grep/);
+  expect(stdout).toMatch(/tool\[1\]> result grep/);
+  expect(stdout).toMatch(/2 matches/);
+  expect(stdout).toMatch(/TODO/);
 });
 
-test("grep tool filters by include pattern", async () => {
+it("grep tool filters by include pattern", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-grep-include-"));
   const sessionDir = path.join(tempRoot, "sessions");
 
@@ -1042,19 +1046,19 @@ test("grep tool filters by include pattern", async () => {
 
   const { stdout } = await execFileAsync(
     process.execPath,
-    [cliPath, "chat", "--permission-mode", "bypass_permissions", "--message", "/grep export"],
+    cliArgs("chat", "--permission-mode", "bypass_permissions", "--message", "/grep export"),
     {
       cwd: tempRoot,
       env,
     },
   );
 
-  assert.match(stdout, /tool\[1\]> request grep/);
-  assert.match(stdout, /tool\[1\]> result grep/);
-  assert.match(stdout, /export/);
+  expect(stdout).toMatch(/tool\[1\]> request grep/);
+  expect(stdout).toMatch(/tool\[1\]> result grep/);
+  expect(stdout).toMatch(/export/);
 });
 
-test("list-directory tool lists directory contents", async () => {
+it("list-directory tool lists directory contents", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-listdir-tool-"));
   const sessionDir = path.join(tempRoot, "sessions");
 
@@ -1068,23 +1072,23 @@ test("list-directory tool lists directory contents", async () => {
 
   const { stdout } = await execFileAsync(
     process.execPath,
-    [cliPath, "chat", "--permission-mode", "bypass_permissions", "--message", "/list-directory"],
+    cliArgs("chat", "--permission-mode", "bypass_permissions", "--message", "/list-directory"),
     {
       cwd: tempRoot,
       env,
     },
   );
 
-  assert.match(stdout, /tool\[1\]> request list-directory/);
-  assert.match(stdout, /tool\[1\]> result list-directory/);
+  expect(stdout).toMatch(/tool\[1\]> request list-directory/);
+  expect(stdout).toMatch(/tool\[1\]> result list-directory/);
   // 注意：sessions 目录也会被列出，所以是 4 个条目
-  assert.match(stdout, /\d+ entries/);
-  assert.match(stdout, /src/);
-  assert.match(stdout, /package\.json/);
-  assert.match(stdout, /README\.md/);
+  expect(stdout).toMatch(/\d+ entries/);
+  expect(stdout).toMatch(/src/);
+  expect(stdout).toMatch(/package\.json/);
+  expect(stdout).toMatch(/README\.md/);
 });
 
-test("list-directory tool shows hidden files when requested", async () => {
+it("list-directory tool shows hidden files when requested", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-listdir-hidden-"));
   const sessionDir = path.join(tempRoot, "sessions");
 
@@ -1098,23 +1102,23 @@ test("list-directory tool shows hidden files when requested", async () => {
   // 不显示隐藏文件
   const { stdout } = await execFileAsync(
     process.execPath,
-    [cliPath, "chat", "--permission-mode", "bypass_permissions", "--message", "/list-directory"],
+    cliArgs("chat", "--permission-mode", "bypass_permissions", "--message", "/list-directory"),
     {
       cwd: tempRoot,
       env,
     },
   );
 
-  assert.match(stdout, /tool\[1\]> result list-directory/);
+  expect(stdout).toMatch(/tool\[1\]> result list-directory/);
   // sessions 目录 + visible.txt = 2 个条目（隐藏文件 .gitignore 不显示）
-  assert.match(stdout, /\d+ entries/);
-  assert.match(stdout, /visible\.txt/);
+  expect(stdout).toMatch(/\d+ entries/);
+  expect(stdout).toMatch(/visible\.txt/);
 });
 
-test("web-fetch tool fetches HTTP content", async () => {
+it("web-fetch tool fetches HTTP content", async () => {
   const server = await createJsonServer(async (request, body, response) => {
-    assert.equal(request.method, "GET");
-    assert.equal(request.url, "/test");
+    expect(request.method).toBe("GET");
+    expect(request.url).toBe("/test");
 
     response.statusCode = 200;
     response.setHeader("Content-Type", "application/json");
@@ -1134,29 +1138,29 @@ test("web-fetch tool fetches HTTP content", async () => {
 
     const { stdout } = await execFileAsync(
       process.execPath,
-      [cliPath, "chat", "--permission-mode", "bypass_permissions", "--message", `/web-fetch ${server.baseUrl}/test`],
+      cliArgs("chat", "--permission-mode", "bypass_permissions", "--message", `/web-fetch ${server.baseUrl}/test`),
       {
         cwd: tempRoot,
         env,
       },
     );
 
-    assert.match(stdout, /tool\[1\]> request web-fetch/);
-    assert.match(stdout, /tool\[1\]> result web-fetch/);
-    assert.match(stdout, /200 OK/);
-    assert.match(stdout, /Hello from test server/);
+    expect(stdout).toMatch(/tool\[1\]> request web-fetch/);
+    expect(stdout).toMatch(/tool\[1\]> result web-fetch/);
+    expect(stdout).toMatch(/200 OK/);
+    expect(stdout).toMatch(/Hello from test server/);
   } finally {
     await server.close();
   }
 });
 
-test("web-fetch tool handles POST requests", async () => {
+it("web-fetch tool handles POST requests", async () => {
   const server = await createJsonServer(async (request, body, response) => {
-    assert.equal(request.method, "POST");
-    assert.equal(request.url, "/api");
+    expect(request.method).toBe("POST");
+    expect(request.url).toBe("/api");
 
     const payload = JSON.parse(body);
-    assert.equal(payload.name, "test");
+    expect(payload.name).toBe("test");
 
     response.statusCode = 200;
     response.setHeader("Content-Type", "application/json");
@@ -1176,22 +1180,22 @@ test("web-fetch tool handles POST requests", async () => {
 
     const { stdout } = await execFileAsync(
       process.execPath,
-      [cliPath, "chat", "--permission-mode", "bypass_permissions", "--message", `/web-fetch ${server.baseUrl}/api POST {"name":"test"}`],
+      cliArgs("chat", "--permission-mode", "bypass_permissions", "--message", `/web-fetch ${server.baseUrl}/api POST {"name":"test"}`),
       {
         cwd: tempRoot,
         env,
       },
     );
 
-    assert.match(stdout, /tool\[1\]> result web-fetch/);
-    assert.match(stdout, /200 OK/);
-    assert.match(stdout, /success/);
+    expect(stdout).toMatch(/tool\[1\]> result web-fetch/);
+    expect(stdout).toMatch(/200 OK/);
+    expect(stdout).toMatch(/success/);
   } finally {
     await server.close();
   }
 });
 
-test("web-fetch tool rejects invalid URLs", async () => {
+it("web-fetch tool rejects invalid URLs", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "joe-webfetch-invalid-"));
   const sessionDir = path.join(tempRoot, "sessions");
 
@@ -1201,7 +1205,7 @@ test("web-fetch tool rejects invalid URLs", async () => {
 
   const { stdout } = await execFileAsync(
     process.execPath,
-    [cliPath, "chat", "--permission-mode", "bypass_permissions", "--message", "/web-fetch not-a-url"],
+    cliArgs("chat", "--permission-mode", "bypass_permissions", "--message", "/web-fetch not-a-url"),
     {
       cwd: tempRoot,
       env,
@@ -1209,6 +1213,6 @@ test("web-fetch tool rejects invalid URLs", async () => {
   );
 
   // 工具执行失败时，输出为 "failed" 而不是 "result: error"
-  assert.match(stdout, /tool\[1\]> failed web-fetch/);
-  assert.match(stdout, /无效.*URL|需要有效的/);
+  expect(stdout).toMatch(/tool\[1\]> failed web-fetch/);
+  expect(stdout).toMatch(/无效.*URL|需要有效的/);
 });

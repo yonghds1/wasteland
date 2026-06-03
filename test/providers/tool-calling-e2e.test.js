@@ -4,8 +4,7 @@
  * 测试真实模型 provider 的 tool calling 功能，验证多步工具调用循环。
  */
 
-import assert from "node:assert/strict";
-import { test } from "node:test";
+import { describe, it, expect } from "vitest";
 import { createQwenProvider } from "../../dist/providers/qwen.js";
 import { createOpenAIProvider } from "../../dist/providers/openai.js";
 import { createOllamaProvider } from "../../dist/providers/ollama.js";
@@ -62,7 +61,7 @@ async function collectEvents(observable) {
 // Qwen Provider Tool Calling 测试
 // ============================================================
 
-test("Qwen Provider: 基本 tool calling 能力", async () => {
+it("Qwen Provider: 基本 tool calling 能力", async () => {
   // 跳过如果没有配置 API Key
   if (!process.env.APP_CHAT_API_KEY) {
     console.log("跳过 Qwen 测试：缺少 APP_CHAT_API_KEY");
@@ -90,13 +89,13 @@ test("Qwen Provider: 基本 tool calling 能力", async () => {
     const hasToolCall = eventTypes.includes("tool_call");
     const hasAssistantMessage = eventTypes.includes("assistant_message");
 
-    assert.ok(hasToolCall || hasAssistantMessage, "应该有 tool_call 或 assistant_message");
+    expect(hasToolCall || hasAssistantMessage).toBeTruthy();
 
     if (hasToolCall) {
       const toolCallEvent = events.find(e => e.type === "tool_call");
       console.log("工具调用:", toolCallEvent.call.toolName);
-      assert.ok(toolCallEvent.call.toolName, "工具调用应该有工具名称");
-      assert.ok(toolCallEvent.call.id, "工具调用应该有调用 ID");
+      expect(toolCallEvent.call.toolName).toBeTruthy();
+      expect(toolCallEvent.call.id).toBeTruthy();
     }
   } catch (error) {
     console.error("Qwen 测试失败:", error.message);
@@ -104,7 +103,7 @@ test("Qwen Provider: 基本 tool calling 能力", async () => {
   }
 });
 
-test("Qwen Provider: 多步工具调用循环", async () => {
+it("Qwen Provider: 多步工具调用循环", async () => {
   // 跳过如果没有配置 API Key
   if (!process.env.APP_CHAT_API_KEY) {
     console.log("跳过 Qwen 测试：缺少 APP_CHAT_API_KEY");
@@ -130,15 +129,15 @@ test("Qwen Provider: 多步工具调用循环", async () => {
 
     // 应该有 tool_call
     const hasToolCall = eventTypes.includes("tool_call");
-    assert.ok(hasToolCall, "应该有 tool_call 事件");
+    expect(hasToolCall).toBeTruthy();
 
     if (hasToolCall) {
       const toolCallEvent = events.find(e => e.type === "tool_call");
       console.log("工具调用:", toolCallEvent.call.toolName);
 
       // 验证工具调用参数
-      assert.ok(toolCallEvent.call.toolName, "工具调用应该有工具名称");
-      assert.ok(toolCallEvent.call.input, "工具调用应该有输入参数");
+      expect(toolCallEvent.call.toolName).toBeTruthy();
+      expect(toolCallEvent.call.input).toBeTruthy();
     }
   } catch (error) {
     console.error("Qwen 多步测试失败:", error.message);
@@ -150,7 +149,7 @@ test("Qwen Provider: 多步工具调用循环", async () => {
 // Ollama Provider Tool Calling 测试
 // ============================================================
 
-test("Ollama Provider: 基本 tool calling 能力", async () => {
+it("Ollama Provider: 基本 tool calling 能力", async () => {
   // 跳过如果没有配置 Ollama
   if (!process.env.OLLAMA_BASE_URL) {
     console.log("跳过 Ollama 测试：缺少 OLLAMA_BASE_URL");
@@ -177,13 +176,13 @@ test("Ollama Provider: 基本 tool calling 能力", async () => {
     const hasToolCall = eventTypes.includes("tool_call");
     const hasAssistantMessage = eventTypes.includes("assistant_message");
 
-    assert.ok(hasToolCall || hasAssistantMessage, "应该有 tool_call 或 assistant_message");
+    expect(hasToolCall || hasAssistantMessage).toBeTruthy();
 
     if (hasToolCall) {
       const toolCallEvent = events.find(e => e.type === "tool_call");
       console.log("工具调用:", toolCallEvent.call.toolName);
-      assert.ok(toolCallEvent.call.toolName, "工具调用应该有工具名称");
-      assert.ok(toolCallEvent.call.id, "工具调用应该有调用 ID");
+      expect(toolCallEvent.call.toolName).toBeTruthy();
+      expect(toolCallEvent.call.id).toBeTruthy();
     }
   } catch (error) {
     console.error("Ollama 测试失败:", error.message);
@@ -195,7 +194,7 @@ test("Ollama Provider: 基本 tool calling 能力", async () => {
 // 工具注册表测试
 // ============================================================
 
-test("工具注册表: 包含所有必要工具", () => {
+it("工具注册表: 包含所有必要工具", () => {
   const { toolRegistry } = createDefaultToolRegistry();
   const tools = toolRegistry.list();
 
@@ -214,33 +213,33 @@ test("工具注册表: 包含所有必要工具", () => {
   ];
 
   for (const toolName of requiredTools) {
-    assert.ok(tools.includes(toolName), `应该包含工具: ${toolName}`);
+    expect(tools.includes(toolName)).toBeTruthy();
   }
 });
 
-test("工具注册表: 工具有正确的属性", () => {
+it("工具注册表: 工具有正确的属性", () => {
   const { toolRegistry } = createDefaultToolRegistry();
 
   // 测试 read-file 工具
   const readTool = toolRegistry.get("read-file");
-  assert.ok(readTool, "read-file 工具应该存在");
-  assert.equal(readTool.name, "read-file");
-  assert.ok(readTool.riskLevel, "read-file 工具应该有风险级别");
-  assert.ok(readTool.execute, "read-file 工具应该有执行函数");
+  expect(readTool).toBeTruthy();
+  expect(readTool.name).toBe("read-file");
+  expect(readTool.riskLevel).toBeTruthy();
+  expect(readTool.execute).toBeTruthy();
 
   // 测试 bash 工具
   const bashTool = toolRegistry.get("bash");
-  assert.ok(bashTool, "bash 工具应该存在");
-  assert.equal(bashTool.name, "bash");
-  assert.ok(bashTool.riskLevel, "bash 工具应该有风险级别");
-  assert.ok(bashTool.execute, "bash 工具应该有执行函数");
+  expect(bashTool).toBeTruthy();
+  expect(bashTool.name).toBe("bash");
+  expect(bashTool.riskLevel).toBeTruthy();
+  expect(bashTool.execute).toBeTruthy();
 });
 
 // ============================================================
 // Provider 接口测试
 // ============================================================
 
-test("Provider 接口: runStep 返回 Observable", () => {
+it("Provider 接口: runStep 返回 Observable", () => {
   const provider = createQwenProvider({
     baseUrl: "http://localhost:1234",
     apiKey: "test-key",
@@ -253,12 +252,12 @@ test("Provider 接口: runStep 返回 Observable", () => {
 
   const result = provider.runStep({ context, state });
 
-  assert.ok(result, "runStep 应该返回值");
-  assert.ok(result.subscribe, "runStep 应该返回 Observable");
-  assert.equal(typeof result.subscribe, "function");
+  expect(result).toBeTruthy();
+  expect(result.subscribe).toBeTruthy();
+  expect(typeof result.subscribe).toBe("function");
 });
 
-test("Provider 接口: 有正确的 id", () => {
+it("Provider 接口: 有正确的 id", () => {
   const qwenProvider = createQwenProvider({
     baseUrl: "http://localhost:1234",
     apiKey: "test-key",
@@ -270,19 +269,19 @@ test("Provider 接口: 有正确的 id", () => {
     model: "test-model",
   });
 
-  assert.equal(qwenProvider.id, "openai-compatible");
-  assert.equal(ollamaProvider.id, "openai-compatible");
+  expect(qwenProvider.id).toBe("openai-compatible");
+  expect(ollamaProvider.id).toBe("openai-compatible");
 });
 
 // ============================================================
 // 工具执行测试
 // ============================================================
 
-test("工具执行: read-file 工具", async () => {
+it("工具执行: read-file 工具", async () => {
   const { toolRegistry } = createDefaultToolRegistry();
   const readTool = toolRegistry.get("read-file");
 
-  assert.ok(readTool, "read-file 工具应该存在");
+  expect(readTool).toBeTruthy();
 
   // 测试读取 package.json
   const result = await readTool.execute(
@@ -290,22 +289,22 @@ test("工具执行: read-file 工具", async () => {
     { sessionId: "test", turn: 1, cwd: process.cwd() }
   );
 
-  assert.ok(result, "应该有执行结果");
-  assert.ok(result.status, "应该有状态");
-  assert.ok(result.output, "应该有输出");
+  expect(result).toBeTruthy();
+  expect(result.status).toBeTruthy();
+  expect(result.output).toBeTruthy();
 
   if (result.status === "success") {
     // 输出格式是带行号的文本，不是纯 JSON
-    assert.ok(result.output.includes("package.json"), "输出应该包含文件名");
-    assert.ok(result.output.includes('"name": "wasteland"'), "输出应该包含 package.json 内容");
+    expect(result.output.includes("package.json")).toBeTruthy();
+    expect(result.output.includes('"name": "wasteland"')).toBeTruthy();
   }
 });
 
-test("工具执行: bash 工具", async () => {
+it("工具执行: bash 工具", async () => {
   const { toolRegistry } = createDefaultToolRegistry();
   const bashTool = toolRegistry.get("bash");
 
-  assert.ok(bashTool, "bash 工具应该存在");
+  expect(bashTool).toBeTruthy();
 
   // 测试执行简单命令
   const result = await bashTool.execute(
@@ -313,20 +312,20 @@ test("工具执行: bash 工具", async () => {
     { sessionId: "test", turn: 1, cwd: process.cwd() }
   );
 
-  assert.ok(result, "应该有执行结果");
-  assert.ok(result.status, "应该有状态");
-  assert.ok(result.output, "应该有输出");
+  expect(result).toBeTruthy();
+  expect(result.status).toBeTruthy();
+  expect(result.output).toBeTruthy();
 
   if (result.status === "success") {
-    assert.ok(result.output.includes("hello world"), "输出应该包含 'hello world'");
+    expect(result.output.includes("hello world")).toBeTruthy();
   }
 });
 
-test("工具执行: glob 工具", async () => {
+it("工具执行: glob 工具", async () => {
   const { toolRegistry } = createDefaultToolRegistry();
   const globTool = toolRegistry.get("glob");
 
-  assert.ok(globTool, "glob 工具应该存在");
+  expect(globTool).toBeTruthy();
 
   // 测试查找 TypeScript 文件
   const result = await globTool.execute(
@@ -334,14 +333,14 @@ test("工具执行: glob 工具", async () => {
     { sessionId: "test", turn: 1, cwd: process.cwd() }
   );
 
-  assert.ok(result, "应该有执行结果");
-  assert.ok(result.status, "应该有状态");
-  assert.ok(result.output, "应该有输出");
+  expect(result).toBeTruthy();
+  expect(result.status).toBeTruthy();
+  expect(result.output).toBeTruthy();
 
   if (result.status === "success") {
     // 输出格式是带 emoji 的文本列表
-    assert.ok(result.output.includes("src/"), "输出应该包含 src/ 目录");
-    assert.ok(result.output.includes(".ts"), "输出应该包含 .ts 文件");
+    expect(result.output.includes("src/")).toBeTruthy();
+    expect(result.output.includes(".ts")).toBeTruthy();
   }
 });
 
@@ -349,22 +348,19 @@ test("工具执行: glob 工具", async () => {
 // 错误处理测试
 // ============================================================
 
-test("错误处理: 缺少 model", () => {
-  assert.throws(
-    () => {
+it("错误处理: 缺少 model", () => {
+  expect(() => {
       createQwenProvider({
         baseUrl: "http://localhost:1234",
         apiKey: "test-key",
         // model: "test-model", // 缺少
       });
-    },
-    /missingModel|缺少 model/
-  );
+}).toThrow(/missingModel|缺少 model/);
 });
 
-test("错误处理: 工具不存在", () => {
+it("错误处理: 工具不存在", () => {
   const { toolRegistry } = createDefaultToolRegistry();
 
   const tool = toolRegistry.get("non-existent-tool");
-  assert.equal(tool, undefined, "不存在的工具应该返回 undefined");
+  expect(tool).toBe(undefined);
 });

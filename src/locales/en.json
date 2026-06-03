@@ -624,6 +624,17 @@
     },
     "grep": {
       "needPattern": "grep tool requires a non-empty pattern field. Example: { \"pattern\": \"TODO\", \"include\": \"*.ts\" }"
+    },
+    "git": {
+      "needSubcommand": "git tool requires a non-empty subcommand. Example: { \"subcommand\": \"status\" }",
+      "needCommitMessage": "git commit requires a non-empty message field. Example: { \"subcommand\": \"commit\", \"message\": \"feat: add new feature\" }",
+      "blockedSubcommand": "git command \"{{command}}\" is blocked for safety reasons.",
+      "forcePushDenied": "Force push is not allowed for safety reasons.",
+      "unsupportedSubcommand": "Unsupported git subcommand: \"{{subcommand}}\". Supported: status, diff, log, add, commit, branch, checkout, push, pull.",
+      "timeout": "Git command timed out. Please try again."
+    },
+    "webSearch": {
+      "needQuery": "web-search tool requires a non-empty query parameter. Example: { \"query\": \"TypeScript best practices\" }"
     }
   },
   "runtime": {

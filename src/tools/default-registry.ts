@@ -2,10 +2,12 @@ import { createBashTool } from './bash.js';
 import { createEditFileTool } from './edit-file.js';
 import { createGlobTool } from './glob.js';
 import { createGrepTool } from './grep.js';
+import { createGitTool } from './git.js';
 import { createListDirectoryTool } from './list-directory.js';
 import { ToolRegistry } from './tool-registry.js';
 import { createReadFileTool } from './read-file.js';
 import { createWebFetchTool } from './web-fetch.js';
+import { createWebSearchTool } from './web-search.js';
 import { createWriteFileTool } from './write-file.js';
 import { createAskUserTool } from './ask-user.js';
 import { createHttpRequestTool } from './http-request.js';
@@ -74,11 +76,13 @@ export function createDefaultToolRegistry(mcpServers?: MCPServersConfig): Create
     createGrepTool(),
     createListDirectoryTool(),
     createWebFetchTool(),
+    createWebSearchTool(),
     createBashTool(),
     createEditFileTool(),
     createWriteFileTool(),
     createAskUserTool(),
     createHttpRequestTool(),
+    createGitTool(),
     createSpawnAgentPlaceholder(),
   ];
 

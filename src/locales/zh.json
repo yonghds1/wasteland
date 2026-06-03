@@ -612,6 +612,17 @@
     },
     "grep": {
       "needPattern": "grep 工具需要非空 pattern 字段。示例：{ \"pattern\": \"TODO\", \"include\": \"*.ts\" }"
+    },
+    "git": {
+      "needSubcommand": "git 工具需要非空 subcommand 字段。示例：{ \"subcommand\": \"status\" }",
+      "needCommitMessage": "git commit 需要非空 message 字段。示例：{ \"subcommand\": \"commit\", \"message\": \"feat: add new feature\" }",
+      "blockedSubcommand": "git 命令 \"{{command}}\" 因安全原因被禁止。",
+      "forcePushDenied": "出于安全考虑，禁止 force push。",
+      "unsupportedSubcommand": "不支持的 git 子命令: \"{{subcommand}}\"。支持的子命令: status, diff, log, add, commit, branch, checkout, push, pull。",
+      "timeout": "Git 命令执行超时，请重试。"
+    },
+    "webSearch": {
+      "needQuery": "web-search 工具需要非空 query 参数。示例：{ \"query\": \"TypeScript best practices\" }"
     }
   },
   "runtime": {

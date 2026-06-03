@@ -16,13 +16,13 @@
 | grep | `grep.ts` | read | 在文件中搜索文本（支持正则） |
 | list-directory | `list-directory.ts` | read | 列出目录内容（支持递归） |
 | web-fetch | `web-fetch.ts` | execute | HTTP 请求（支持 GET/POST） |
+| web-search | `web-search.ts` | read | 网络搜索（DuckDuckGo） |
 | bash | `bash.ts` | execute | 执行 shell 命令 |
 | edit-file | `edit-file.ts` | write | 编辑文件（read-before-edit 安全检查） |
 | write-file | `write-file.ts` | write | 写入文件（read-before-write 安全检查） |
+| git | `git.ts` | execute | Git 版本控制操作 |
 | spawn_agent | `spawn-agent.ts` | execute | 创建子 Agent（占位，实际由 dispatchToolCall 拦截） |
 
 ## 后续可继续扩展
 
-- `git.ts` — Git 操作工具
-- `web-search.ts` — 网络搜索工具
 - `clipboard.ts` — 剪贴板工具
