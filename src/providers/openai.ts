@@ -46,6 +46,63 @@ import {
 import { parseSSEStream } from './sse-parser.js';
 
 // ============================================================
+// 重试配置
+// ============================================================
+
+/** 最大重试次数 */
+const MAX_RETRIES = 3;
+
+/** 基础重试延迟（毫秒） */
+const BASE_RETRY_DELAY = 1000;
+
+/**
+ * 带重试的 fetch 请求
+ *
+ * @param url - 请求 URL
+ * @param options - fetch 选项
+ * @param retries - 剩余重试次数
+ * @returns Response 对象
+ */
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  retries = MAX_RETRIES
+): Promise<Response> {
+  try {
+    const response = await fetch(url, options);
+
+    // 429 Rate Limit - 等待 Retry-After 或指数退避
+    if (response.status === 429) {
+      if (retries > 0) {
+        const retryAfter = response.headers.get('Retry-After');
+        const delay = retryAfter
+          ? parseInt(retryAfter, 10) * 1000
+          : BASE_RETRY_DELAY * Math.pow(2, MAX_RETRIES - retries);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        return fetchWithRetry(url, options, retries - 1);
+      }
+    }
+
+    // 503 Service Unavailable - 指数退避重试
+    if (response.status === 503 && retries > 0) {
+      const delay = BASE_RETRY_DELAY * Math.pow(2, MAX_RETRIES - retries);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      return fetchWithRetry(url, options, retries - 1);
+    }
+
+    return response;
+  } catch (error) {
+    // 网络错误 - 指数退避重试
+    if (retries > 0) {
+      const delay = BASE_RETRY_DELAY * Math.pow(2, MAX_RETRIES - retries);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      return fetchWithRetry(url, options, retries - 1);
+    }
+    throw error;
+  }
+}
+
+// ============================================================
 // 类型定义
 // ============================================================
 
@@ -158,7 +215,7 @@ function requestOpenAIStreaming(
         headers['Authorization'] = `Bearer ${config.apiKey}`;
       }
 
-      const response = await fetch(`${config.baseUrl}/chat/completions`, {
+      const response = await fetchWithRetry(`${config.baseUrl}/chat/completions`, {
         method: 'POST',
         headers,
         body: JSON.stringify(body),
