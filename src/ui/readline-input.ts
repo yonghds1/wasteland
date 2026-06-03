@@ -264,6 +264,7 @@ export async function readPipedInput(stdin: Readable = process.stdin): Promise<s
  * @param params.intro - 欢迎信息
  * @param params.promptText - 提示符文本
  * @returns InteractiveTurnStream 对象
+ * @deprecated 使用 CliInputAdapter 代替。这个函数保留用于向后兼容。
  */
 export function createInteractiveTurnStream(params?: {
   input?: Readable;
