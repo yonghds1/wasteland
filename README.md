@@ -15,9 +15,34 @@ Immortan Joe's War Machine - 一个基于 TypeScript、Commander 和 RxJS 的多
 
 ## 快速开始
 
+### 安装
+
 ```bash
 npm install
-npm run dev -- --help
+```
+
+### 配置 Provider
+
+```bash
+# 方式 1: 环境变量
+export jdcloud_api_key='your-jdcloud-api-key'
+export xiaomi_api_key='your-xiaomi-api-key'
+
+# 方式 2: 配置文件
+# 编辑 .wasteland/auth.json
+```
+
+### 基础使用
+
+```bash
+# 单次消息模式
+wasteland chat --provider jdcloud --message "你好"
+
+# 交互模式
+wasteland chat --provider jdcloud
+
+# 查看配置
+wasteland config current
 ```
 
 ## 可用脚本
@@ -30,20 +55,58 @@ npm run dev -- --help
 - `npm run check`：统一运行 typecheck 与测试
 - `./scripts/create-aliases.sh [skin-id]`：根据皮肤配置创建角色别名（如 `joe`），postinstall 时自动执行
 
-## 示例
+## 使用示例
+
+### 基础对话
 
 ```bash
-npm run chat -- --message "你好"
-npm run dev -- chat --role coder --message "/bash pwd"
-npm run dev -- config current
-npm run chat -- --message "/read package.json"
-npm run chat -- --message "/bash pwd"
-npm run chat -- --permission-mode bypass_permissions --message "/bash pwd"
-printf 'hello' | npm run dev -- chat
-npm run dev -- chat
+# 单次消息
+wasteland chat --provider jdcloud --message "你好"
 
-# 多 Agent 模式（需要 Provider 支持 spawn_agent 工具）
-npm run chat -- --multi --message "分析并重构 UserService"
+# 交互模式
+wasteland chat --provider jdcloud
+
+# 使用管道输入
+echo "列出当前目录" | wasteland chat --provider jdcloud
+```
+
+### Tool Calling
+
+```bash
+# 读取文件
+wasteland chat --provider jdcloud --message "读取 package.json"
+
+# 执行命令
+wasteland chat --provider jdcloud --message "列出当前目录"
+
+# 搜索文件
+wasteland chat --provider jdcloud --message "搜索所有 .ts 文件"
+```
+
+### 多 Agent
+
+```bash
+# 创建子 Agent
+wasteland chat --provider jdcloud --message "创建一个子 Agent 来分析代码"
+
+# 并行执行
+wasteland chat --provider jdcloud --message "同时执行：1. 读取 README.md 2. 列出目录"
+```
+
+### 会话管理
+
+```bash
+# 列出会话
+wasteland sessions
+
+# 查看会话详情
+wasteland sessions show <session-id>
+
+# 恢复会话
+wasteland resume <session-id>
+
+# 删除会话
+wasteland sessions delete <session-id> --confirm
 ```
 
 ## 多 Agent 模式
@@ -408,15 +471,24 @@ dist/           构建产物
 
 ## 文档
 
+### 用户指南
+
+- [快速开始](./docs/user-guide/getting-started.md) - 安装和基础使用
+- [配置指南](./docs/user-guide/configuration.md) - 配置选项详解
+- [工具使用指南](./docs/user-guide/tools.md) - 所有内建工具
+- [多 Agent 指南](./docs/user-guide/multi-agent.md) - 多 Agent 协作
+
+### 架构文档
+
 - [**wasteland 核心架构规范**](./docs/architecture/wasteland-spec.md) ⭐ 唯一事实来源
-- [文档索引](./docs/README.md)
+- [Input/Output 适配器架构](./docs/architecture/input-output-adapters.md) - Adapter Pattern
 - [智能体 CLI 架构](./docs/architecture/agent-cli.md)
 - [多 Agent 协作架构](./docs/architecture/multi-agent-architecture.md)
 - [配置层与 `.wasteland` 目录](./docs/architecture/configuration.md)
-- [多角色配置方案](./docs/architecture/multi-role-configuration.md)
-- [运行时分层与契约](./docs/architecture/runtime-boundaries.md)
 - [技能系统架构](./docs/architecture/skills.md)
-- [项目结构规划](./docs/project-structure.md)
+
+### 实施文档
+
 - [Phase 1：Agent Runtime 实施方案](./docs/implementation/phase-1-agent-runtime.md)
 - [Phase 2：工具运行时与权限闸门](./docs/implementation/phase-2-agent-tool-runtime.md)
 - [Phase 3：多步 Agent Loop 与调试追踪](./docs/implementation/phase-3-multi-step-agent-loop.md)
