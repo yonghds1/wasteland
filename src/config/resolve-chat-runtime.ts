@@ -230,9 +230,27 @@ export function resolveChatRuntime(params: {
   cwd?: string;
 }): ResolvedChatRuntime {
   const role = resolveRole(params.settings, params.roleName ?? params.settings.runtime.defaultRole);
-  const model = resolveModel(params.settings, role);
-  const providerName =
+  let model = resolveModel(params.settings, role);
+  let providerName =
     params.providerName ?? model?.config.provider ?? params.settings.defaultProvider;
+
+  // 当指定 provider 时，检查 model 是否匹配
+  // 如果不匹配，查找该 provider 下的第一个 model
+  if (params.providerName && model && model.config.provider !== params.providerName) {
+    // 查找指定 provider 下的第一个 model
+    const matchingModelName = Object.entries(params.settings.models).find(
+      ([_name, config]) => config.provider === params.providerName
+    )?.[0];
+
+    if (matchingModelName) {
+      model = {
+        name: matchingModelName,
+        config: params.settings.models[matchingModelName],
+      };
+    }
+    // 如果找不到匹配的 model，继续使用原来的 model（让后续错误处理）
+  }
+
   const providerSettings = params.settings.providers[providerName] ?? {};
 
   // 解析提示词模板
