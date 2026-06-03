@@ -20,7 +20,8 @@ import { createPermissionGate } from '../core/runtime/permission-gate.js';
 import { SessionManager } from '../core/runtime/session-manager.js';
 import { renderRuntimeEvents } from '../ui/terminal-renderer.js';
 import { renderDebugTrace } from '../ui/debug-renderer.js';
-import { createInteractiveTurnStream, createSingleTurnInput } from '../ui/readline-input.js';
+import { CliInputAdapter } from '../ui/cli-input-adapter.js';
+import { createSingleTurnInput } from '../ui/readline-input.js';
 import type { ChatInputTurn, RuntimeMode } from '../core/runtime/event-types.js';
 import { detectTTY } from '../ui/tty-detect.js';
 import { createSkillRegistry } from '../skills/skill-discovery.js';
@@ -253,12 +254,14 @@ export function createResumeCommand(): Command {
             childAgentTimeout,
           });
 
-          const interactive = createInteractiveTurnStream();
-          interactive.prompt();
+          // 使用 CliInputAdapter 替代 createInteractiveTurnStream
+          const inputAdapter = new CliInputAdapter({
+            skillExecutor,
+          });
 
           const work: Promise<void>[] = [
             renderRuntimeEvents(run.events$, {
-              onTurnComplete: interactive.prompt,
+              onTurnComplete: () => inputAdapter.prompt(),
               style: renderStyle,
             }),
           ];
@@ -282,7 +285,7 @@ export function createResumeCommand(): Command {
           }
 
           // 订阅用户输入
-          interactive.turns$.subscribe({
+          inputAdapter.input$.subscribe({
             next: (turn) => {
               inputSubject.next(turn);
             },
@@ -294,12 +297,11 @@ export function createResumeCommand(): Command {
           try {
             await Promise.all(work);
           } catch (error) {
-            interactive.close();
-            await interactive.done;
+            inputAdapter.destroy();
             throw error;
           }
 
-          await interactive.done;
+          await inputAdapter.done;
         }
       } finally {
         await stopMCP();

@@ -42,6 +42,8 @@ export type CliInputAdapterParams = {
   skillExecutor?: SkillExecutor;
   /** 本地命令回调（可选，默认使用 executeLocalCommand） */
   onCommand?: (result: LocalCommandResult) => void;
+  /** 用户输入桥接器（用于 ask-user 工具） */
+  userInputBridge?: { isPending: () => boolean; provideInput: (input: string) => void };
 };
 
 // ============================================================
@@ -79,12 +81,14 @@ export class CliInputAdapter implements InputAdapter {
   private renderPrompt: () => void;
   private skillExecutor?: SkillExecutor;
   private onCommand?: (result: LocalCommandResult) => void;
+  private userInputBridge?: { isPending: () => boolean; provideInput: (input: string) => void };
 
   constructor(params?: CliInputAdapterParams) {
     const input = params?.input ?? process.stdin;
     this.output = params?.output ?? process.stdout;
     this.skillExecutor = params?.skillExecutor;
     this.onCommand = params?.onCommand;
+    this.userInputBridge = params?.userInputBridge;
 
     const intro = params?.intro ?? createInteractiveIntro();
     const promptText = params?.promptText ?? '> ';
@@ -109,6 +113,19 @@ export class CliInputAdapter implements InputAdapter {
     const close$ = fromEvent(this.rl, 'close');
 
     this.input$ = fromEvent<string>(this.rl, 'line').pipe(
+      // ---- tap: 处理 ask-user 输入路由 ----
+      // 如果 UserInputBridge 有待处理的输入请求，路由输入到它
+      tap((line) => {
+        if (this.userInputBridge?.isPending()) {
+          this.userInputBridge.provideInput(line.trim());
+          this.renderPrompt();
+        }
+      }),
+
+      // ---- filter: 过滤 ask-user 输入 ----
+      // 如果 UserInputBridge 有待处理的输入请求，不创建新 turn
+      filter(() => !this.userInputBridge?.isPending()),
+
       // 去除首尾空白
       map((line) => line.trim()),
 

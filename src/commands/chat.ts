@@ -14,8 +14,8 @@ import { runAgentLoop } from '@core/runtime/agent-loop.js';
 import { UserInputBridge } from '@core/runtime/user-input-bridge.js';
 import { initializeRuntime, type RuntimeEnvironment } from '@core/shared/initialize-runtime.js';
 import { renderDebugTrace, type DebugFormat } from '@ui/debug-renderer.js';
+import { CliInputAdapter } from '@ui/cli-input-adapter.js';
 import {
-  createInteractiveTurnStream,
   createSingleTurnInput,
   readPipedInput,
 } from '@ui/readline-input.js';
@@ -203,15 +203,15 @@ export function createChatCommand(): Command {
       // 创建用户输入桥接器（用于 ask-user 工具）
       const userInputBridge = new UserInputBridge();
 
-      const interactive = createInteractiveTurnStream({
+      // 使用 CliInputAdapter 替代 createInteractiveTurnStream
+      const inputAdapter = new CliInputAdapter({
+        skillExecutor: runtime.skillExecutor,
         userInputBridge,
       });
 
-      interactive.prompt();
-
       try {
         await runChatSession({
-          input$: interactive.turns$,
+          input$: inputAdapter.input$,
           runtime,
           cwd,
           mode: 'interactive',
@@ -222,17 +222,16 @@ export function createChatCommand(): Command {
           maxStepsPerTurn,
           prompt: runtime.resolvedRuntime.prompt,
           render: {
-            onTurnComplete: interactive.prompt,
+            onTurnComplete: () => inputAdapter.prompt(),
             style: renderStyle,
           },
           userInputBridge,
         });
       } catch (error) {
-        interactive.close();
-        await interactive.done;
+        inputAdapter.destroy();
         throw error;
       }
 
-      await interactive.done;
+      await inputAdapter.done;
     });
 }
