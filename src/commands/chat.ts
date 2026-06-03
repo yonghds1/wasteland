@@ -15,11 +15,11 @@ import { UserInputBridge } from '@core/runtime/user-input-bridge.js';
 import { initializeRuntime, type RuntimeEnvironment } from '@core/shared/initialize-runtime.js';
 import { renderDebugTrace, type DebugFormat } from '@ui/debug-renderer.js';
 import { CliInputAdapter } from '@ui/cli-input-adapter.js';
+import { CliOutputAdapter } from '@ui/cli-output-adapter.js';
 import {
   createSingleTurnInput,
   readPipedInput,
 } from '@ui/readline-input.js';
-import { renderRuntimeEvents } from '@ui/terminal-renderer.js';
 import { detectTTY } from '@ui/tty-detect.js';
 import { t } from '../locales/index.js';
 
@@ -73,10 +73,7 @@ async function runChatSession(params: {
   permissionMode: ReturnType<typeof resolvePermissionMode>;
   maxStepsPerTurn: number;
   prompt?: string;
-  render?: {
-    onTurnComplete?: () => void;
-    style?: 'classic' | 'interactive';
-  };
+  outputAdapter?: CliOutputAdapter;
   userInputBridge?: UserInputBridge;
 }): Promise<void> {
   const { runtime } = params;
@@ -99,7 +96,9 @@ async function runChatSession(params: {
       userInputBridge: params.userInputBridge,
     });
 
-    const work: Promise<void>[] = [renderRuntimeEvents(run.events$, params.render)];
+    // 使用 CliOutputAdapter 处理事件
+    const outputAdapter = params.outputAdapter ?? new CliOutputAdapter();
+    const work: Promise<void>[] = [outputAdapter.handleEvents(run.events$)];
 
     if (params.debug) {
       const traceDir =
@@ -161,6 +160,9 @@ export function createChatCommand(): Command {
       const renderStyle = tty.stdoutIsTTY ? 'interactive' : 'classic';
 
       if (options.message?.trim()) {
+        // 创建输出适配器
+        const outputAdapter = new CliOutputAdapter({ style: renderStyle });
+
         await runChatSession({
           input$: createSingleTurnInput(options.message, 'message'),
           runtime,
@@ -172,7 +174,7 @@ export function createChatCommand(): Command {
           permissionMode,
           maxStepsPerTurn,
           prompt: runtime.resolvedRuntime.prompt,
-          render: { style: renderStyle },
+          outputAdapter,
         });
         return;
       }
@@ -180,6 +182,9 @@ export function createChatCommand(): Command {
       const pipedInput = await readPipedInput(process.stdin);
 
       if (pipedInput) {
+        // 创建输出适配器
+        const outputAdapter = new CliOutputAdapter({ style: 'classic' });
+
         await runChatSession({
           input$: createSingleTurnInput(pipedInput, 'stdin'),
           runtime,
@@ -191,7 +196,7 @@ export function createChatCommand(): Command {
           permissionMode,
           maxStepsPerTurn,
           prompt: runtime.resolvedRuntime.prompt,
-          render: { style: 'classic' },
+          outputAdapter,
         });
         return;
       }
@@ -209,6 +214,12 @@ export function createChatCommand(): Command {
         userInputBridge,
       });
 
+      // 创建输出适配器
+      const outputAdapter = new CliOutputAdapter({
+        style: renderStyle,
+        onTurnComplete: () => inputAdapter.prompt(),
+      });
+
       try {
         await runChatSession({
           input$: inputAdapter.input$,
@@ -221,10 +232,7 @@ export function createChatCommand(): Command {
           permissionMode,
           maxStepsPerTurn,
           prompt: runtime.resolvedRuntime.prompt,
-          render: {
-            onTurnComplete: () => inputAdapter.prompt(),
-            style: renderStyle,
-          },
+          outputAdapter,
           userInputBridge,
         });
       } catch (error) {
