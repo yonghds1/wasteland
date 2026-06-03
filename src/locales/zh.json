@@ -185,6 +185,7 @@
         "notFound": "Session 不存在: {{id}}",
         "error": "查看 session 失败: {{error}}",
         "title": "Session 详情: {{id}}",
+        "time": "时间",
         "provider": "Provider",
         "mode": "模式",
         "cwd": "工作目录",

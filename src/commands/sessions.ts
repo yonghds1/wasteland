@@ -21,7 +21,14 @@ function formatDateTime(dateStr: string): string {
   }
 
   try {
-    const date = new Date(dateStr);
+    // 处理 "2026-06-03 20:47:24" 格式（添加 T 以便正确解析）
+    const normalizedDateStr = dateStr.includes('T') ? dateStr : dateStr.replace(' ', 'T');
+    const date = new Date(normalizedDateStr);
+
+    if (isNaN(date.getTime())) {
+      return dateStr;
+    }
+
     const lang = getLanguage();
     const locale = lang === 'zh' ? 'zh-CN' : 'en-US';
     return date.toLocaleString(locale, {

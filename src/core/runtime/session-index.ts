@@ -123,7 +123,7 @@ function extractChildName(sessionId: string): string | null {
  */
 async function readSessionSummaryFast(
   filePath: string
-): Promise<{ firstUserMessage?: string; providerId?: string; mode?: string; cwd?: string }> {
+): Promise<{ firstUserMessage?: string; providerId?: string; mode?: string; cwd?: string; createdAt?: string }> {
   try {
     const content = await readFile(filePath, 'utf8');
     const lines = content.split('\n').filter((line) => line.trim().length > 0);
@@ -132,6 +132,7 @@ async function readSessionSummaryFast(
     let providerId: string | undefined;
     let mode: string | undefined;
     let cwd: string | undefined;
+    let createdAt: string | undefined;
 
     for (const line of lines) {
       try {
@@ -143,6 +144,7 @@ async function readSessionSummaryFast(
           providerId = sessionRecord.provider;
           mode = sessionRecord.mode;
           cwd = sessionRecord.cwd;
+          createdAt = sessionRecord.timestamp;
         }
 
         // 获取第一条用户消息
@@ -160,7 +162,7 @@ async function readSessionSummaryFast(
       }
     }
 
-    return { firstUserMessage, providerId, mode, cwd };
+    return { firstUserMessage, providerId, mode, cwd, createdAt };
   } catch {
     return {};
   }
@@ -276,7 +278,7 @@ export class SessionIndex {
         sessions.push({
           id: info.id,
           path: filePath,
-          createdAt: info.id.replace('T', ' ').replace('_', ' ').substring(0, 19),
+          createdAt: summary.createdAt || info.id.replace('_', ' ').substring(0, 19),
           updatedAt: new Date(info.mtimeMs).toISOString(),
           messageCount: 0, // 快速模式不计算消息数
           firstUserMessage: summary.firstUserMessage,

@@ -197,6 +197,7 @@
         "notFound": "Session not found: {{id}}",
         "error": "Failed to show session: {{error}}",
         "title": "Session details: {{id}}",
+        "time": "Time",
         "provider": "Provider",
         "mode": "Mode",
         "cwd": "Working directory",
