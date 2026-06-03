@@ -18,7 +18,9 @@
   "config": {
     "cannotParsePromptTemplate": "Cannot parse promptTemplate: {{template}}",
     "roleNotDefined": "Role not defined: {{roleName}}. Available sub-roles: {{availableRoles}}",
-    "modelNotDefined": "Role {{roleName}} references undefined model: {{modelName}}. Available models: {{availableModels}}"
+    "modelNotDefined": "Role {{roleName}} references undefined model: {{modelName}}. Available models: {{availableModels}}",
+    "providerNoModels": "Provider \"{{providerName}}\" has no configured models. Available models: {{availableModels}}",
+    "providerMultipleModels": "Warning: Provider \"{{providerName}}\" has multiple models: {{modelNames}}. Auto-selected: {{selectedModel}}"
   },
   "mcp": {
     "serverStarted": "[MCP] Server {{name}} started: {{serverInfo}} v{{version}}",

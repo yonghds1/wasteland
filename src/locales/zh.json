@@ -18,7 +18,9 @@
   "config": {
     "cannotParsePromptTemplate": "无法解析 promptTemplate: {{template}}",
     "roleNotDefined": "当前未定义角色: {{roleName}}。可用的子角色: {{availableRoles}}",
-    "modelNotDefined": "角色 {{roleName}} 引用了未定义的 model: {{modelName}}。可用的 models: {{availableModels}}"
+    "modelNotDefined": "角色 {{roleName}} 引用了未定义的 model: {{modelName}}。可用的 models: {{availableModels}}",
+    "providerNoModels": "Provider \"{{providerName}}\" 没有配置任何 model。可用的 models: {{availableModels}}",
+    "providerMultipleModels": "警告: Provider \"{{providerName}}\" 有多个 model: {{modelNames}}。已自动选择: {{selectedModel}}"
   },
   "mcp": {
     "serverStarted": "[MCP] 服务器 {{name}} 已启动: {{serverInfo}} v{{version}}",

@@ -234,21 +234,47 @@ export function resolveChatRuntime(params: {
   let providerName =
     params.providerName ?? model?.config.provider ?? params.settings.defaultProvider;
 
-  // 当指定 provider 时，检查 model 是否匹配
-  // 如果不匹配，查找该 provider 下的第一个 model
-  if (params.providerName && model && model.config.provider !== params.providerName) {
-    // 查找指定 provider 下的第一个 model
-    const matchingModelName = Object.entries(params.settings.models).find(
-      ([_name, config]) => config.provider === params.providerName
-    )?.[0];
+  // 当指定 provider 时，智能匹配 model
+  if (params.providerName) {
+    // 查找该 provider 下的所有 model
+    const matchingModels = Object.entries(params.settings.models)
+      .filter(([_, config]) => config.provider === params.providerName);
 
-    if (matchingModelName) {
-      model = {
-        name: matchingModelName,
-        config: params.settings.models[matchingModelName],
-      };
+    if (matchingModels.length === 0) {
+      // 没有匹配的 model，报错
+      throw new Error(
+        t('config.providerNoModels', {
+          providerName: params.providerName,
+          availableModels: Object.keys(params.settings.models).join(', '),
+        })
+      );
     }
-    // 如果找不到匹配的 model，继续使用原来的 model（让后续错误处理）
+
+    // 检查当前 model 是否已经匹配该 provider
+    const currentModelMatches = model && model.config.provider === params.providerName;
+
+    if (!currentModelMatches) {
+      if (matchingModels.length === 1) {
+        // 只有一个 model，自动选择（静默）
+        model = {
+          name: matchingModels[0][0],
+          config: matchingModels[0][1],
+        };
+      } else {
+        // 多个 model，使用第一个，但发出警告
+        console.warn(
+          t('config.providerMultipleModels', {
+            providerName: params.providerName,
+            modelNames: matchingModels.map(([n]) => n).join(', '),
+            selectedModel: matchingModels[0][0],
+          })
+        );
+        model = {
+          name: matchingModels[0][0],
+          config: matchingModels[0][1],
+        };
+      }
+    }
   }
 
   const providerSettings = params.settings.providers[providerName] ?? {};
