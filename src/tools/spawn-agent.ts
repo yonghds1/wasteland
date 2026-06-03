@@ -276,7 +276,7 @@ export function createSpawnAgentTool(context: SpawnAgentContext): AgentTool {
         if (result.success) {
           return {
             status: 'success',
-            output: result.content || '子 Agent 执行完成',
+            output: result.content || t('tools.spawnAgent.executionComplete'),
             data: {
               sessionPath: childSession.path,
               childId: childSession.id,
@@ -285,7 +285,7 @@ export function createSpawnAgentTool(context: SpawnAgentContext): AgentTool {
         } else {
           return {
             status: 'error',
-            error: result.error || '子 Agent 执行失败',
+            error: result.error || t('tools.spawnAgent.executionFailed'),
             data: {
               sessionPath: childSession.path,
               childId: childSession.id,
@@ -307,6 +307,10 @@ export function createSpawnAgentTool(context: SpawnAgentContext): AgentTool {
  *
  * 当主 Agent 在一个 turn 中发出多个 spawn_agent 调用时，
  * 使用 forkJoin 并行执行所有子 Agent。
+ *
+ * @deprecated 此函数当前未被使用。并行 spawn 支持需要在 tool-dispatch.ts 中
+ * 通过 RxJS merge 操作符实现，而不是在此处处理。
+ * TODO: 实现真正的并行 spawn 支持，或删除此函数。
  *
  * @param calls - 工具调用列表
  * @param context - 执行上下文

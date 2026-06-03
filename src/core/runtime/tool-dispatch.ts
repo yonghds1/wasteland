@@ -20,6 +20,7 @@ import type { AgentProvider } from '../../providers/provider-types.js';
 import type { SessionMessageRecord } from './event-types.js';
 import type { ProviderSettings } from '../../config/settings-types.js';
 import type { ProviderRegistry } from '../../providers/provider-registry.js';
+import type { UserInputBridge } from './user-input-bridge.js';
 
 // ============================================================
 // Special Tool Handlers
@@ -289,6 +290,137 @@ function handleSpawnAgent(params: DispatchToolCallParams, requested$: Observable
 }
 
 /**
+ * ask-user 特殊处理器
+ *
+ * 处理用户输入请求，暂停 agent loop 等待用户响应。
+ * 发出 user_input_requested/user_input_received 生命周期事件。
+ */
+function handleAskUser(params: DispatchToolCallParams, requested$: Observable<RuntimeEvent>): Observable<RuntimeEvent> | null {
+  if (!params.userInputBridge) return null;
+
+  const input = params.call.input as { question: string; options?: string[] };
+
+  // 权限检查（ask-user 是只读工具，自动允许）
+  const decision = params.permissionGate.evaluate(params.call, 'read');
+
+  const permission$ = from(
+    params.sessionManager.appendRecord(
+      params.session,
+      createPermissionRecord({
+        session: params.session,
+        turn: params.turn,
+        call: params.call,
+        decision,
+      })
+    )
+  ).pipe(
+    map(
+      (): RuntimeEvent => ({
+        type: 'permission_decision',
+        sessionId: params.session.id,
+        turn: params.turn,
+        callId: params.call.id,
+        toolName: params.call.toolName,
+        decision: decision.decision,
+        mode: decision.mode,
+        reason: decision.reason,
+      })
+    )
+  );
+
+  if (decision.decision !== 'allow') {
+    const blockedStatus = decision.decision === 'deny' ? 'error' : 'blocked';
+    const failedRecord = createToolResultRecord({
+      session: params.session,
+      turn: params.turn,
+      call: params.call,
+      status: blockedStatus,
+      error: decision.reason,
+    });
+
+    const failed$ = from(params.sessionManager.appendRecord(params.session, failedRecord)).pipe(
+      map(
+        (): RuntimeEvent => ({
+          type: 'tool_failed',
+          sessionId: params.session.id,
+          turn: params.turn,
+          callId: params.call.id,
+          toolName: params.call.toolName,
+          status: blockedStatus,
+          error: decision.reason,
+        })
+      )
+    );
+
+    return concat(requested$, permission$, failed$);
+  }
+
+  const started$ = of<RuntimeEvent>({
+    type: 'tool_started',
+    sessionId: params.session.id,
+    turn: params.turn,
+    callId: params.call.id,
+    toolName: params.call.toolName,
+  });
+
+  // 发出 user_input_requested 事件，然后等待用户输入
+  const result$ = defer(async () => {
+    // 发出请求事件
+    const requestedEvent: RuntimeEvent = {
+      type: 'user_input_requested',
+      sessionId: params.session.id,
+      turn: params.turn,
+      callId: params.call.id,
+      question: input.question,
+      options: input.options,
+    };
+
+    // 等待用户输入
+    const answer = await params.userInputBridge!.requestInput();
+
+    // 发出响应事件
+    const receivedEvent: RuntimeEvent = {
+      type: 'user_input_received',
+      sessionId: params.session.id,
+      turn: params.turn,
+      callId: params.call.id,
+      answer,
+    };
+
+    return { requestedEvent, receivedEvent, answer };
+  }).pipe(
+    concatMap(({ requestedEvent, receivedEvent, answer }) => {
+      // 记录工具结果
+      const resultRecord = createToolResultRecord({
+        session: params.session,
+        turn: params.turn,
+        call: params.call,
+        status: 'success',
+        output: answer,
+      });
+
+      return from(params.sessionManager.appendRecord(params.session, resultRecord)).pipe(
+        map(
+          (): RuntimeEvent => ({
+            type: 'tool_result',
+            sessionId: params.session.id,
+            turn: params.turn,
+            callId: params.call.id,
+            toolName: params.call.toolName,
+            status: 'success',
+            output: answer,
+          })
+        ),
+        map((toolEvent) => [requestedEvent, receivedEvent, toolEvent] as RuntimeEvent[])
+      );
+    }),
+    concatMap((events) => from(events))
+  );
+
+  return concat(requested$, permission$, started$, result$);
+}
+
+/**
  * 特殊工具处理器注册表
  *
  * 将工具名称映射到其处理器函数。
@@ -296,6 +428,7 @@ function handleSpawnAgent(params: DispatchToolCallParams, requested$: Observable
  */
 const specialToolHandlers = new Map<string, SpecialToolHandler>([
   ['spawn_agent', handleSpawnAgent],
+  ['ask-user', handleAskUser],
 ]);
 
 export function dispatchToolCall(params: {
@@ -317,6 +450,8 @@ export function dispatchToolCall(params: {
   providerSettings?: ProviderSettings;
   /** 子 Agent 执行超时（毫秒） */
   childAgentTimeout?: number;
+  /** 用户输入桥接器（用于 ask-user 工具） */
+  userInputBridge?: UserInputBridge;
 }): Observable<RuntimeEvent> {
   // ---- read-before-edit 检查 ----
   // 对于 edit-file 和 write-file，检查是否已读取过目标文件

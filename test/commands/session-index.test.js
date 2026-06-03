@@ -43,7 +43,7 @@ describe("SessionIndex", () => {
     it("列出单个 session", async () => {
       const testDir = await mkdtemp(join(tmpdir(), "joe-single-"));
       try {
-        const id = "2026-05-27T10-00-00_abc123";
+        const id = "2026-05-27_100000_abc123";
         await createMockSessionInDir(testDir, id, [
           { type: "session", timestamp: "2026-05-27T10:00:00Z", cwd: "/test", provider: "local", mode: "single" },
           { type: "message", role: "user", content: "Hello world", timestamp: "2026-05-27T10:00:01Z" },
@@ -67,9 +67,9 @@ describe("SessionIndex", () => {
     it("列出多个 session 并按时间排序", async () => {
       const testDir = await mkdtemp(join(tmpdir(), "joe-multi-"));
       try {
-        const id1 = "2026-05-27T08-00-00_aaa111";
-        const id2 = "2026-05-27T10-00-00_bbb222";
-        const id3 = "2026-05-27T09-00-00_ccc333";
+        const id1 = "2026-05-27_080000_aaa111";
+        const id2 = "2026-05-27_100000_bbb222";
+        const id3 = "2026-05-27_090000_ccc333";
 
         await createMockSessionInDir(testDir, id1, [{ type: "session", timestamp: "2026-05-27T08:00:00Z" }, { type: "message", role: "user", content: "First session" }]);
         await createMockSessionInDir(testDir, id2, [{ type: "session", timestamp: "2026-05-27T10:00:00Z" }, { type: "message", role: "user", content: "Second session" }]);
@@ -95,8 +95,8 @@ describe("SessionIndex", () => {
     it("忽略子 Agent session 文件", async () => {
       const testDir = await mkdtemp(join(tmpdir(), "joe-child-"));
       try {
-        const parentId = "2026-05-27T10-00-00_abc123";
-        const childId = "2026-05-27T10-00-00_abc123-child-agent1";
+        const parentId = "2026-05-27_100000_abc123";
+        const childId = "2026-05-27_100000_abc123-child-agent1";
 
         await createMockSessionInDir(testDir, parentId, [{ type: "session", timestamp: "2026-05-27T10:00:00Z" }, { type: "message", role: "user", content: "Parent session" }]);
         await createMockSessionInDir(testDir, childId, [{ type: "session", timestamp: "2026-05-27T10:00:01Z" }, { type: "message", role: "user", content: "Child session" }], `${childId}.jsonl`);
@@ -116,8 +116,8 @@ describe("SessionIndex", () => {
     it("按 provider 过滤", async () => {
       const testDir = await mkdtemp(join(tmpdir(), "joe-filter-"));
       try {
-        await createMockSessionInDir(testDir, "2026-05-27T10-00-00_aaa111", [{ type: "session", timestamp: "2026-05-27T10:00:00Z", provider: "local" }, { type: "message", role: "user", content: "Local session" }]);
-        await createMockSessionInDir(testDir, "2026-05-27T10-00-01_bbb222", [{ type: "session", timestamp: "2026-05-27T10:00:01Z", provider: "ollama" }, { type: "message", role: "user", content: "Ollama session" }]);
+        await createMockSessionInDir(testDir, "2026-05-27_100000_aaa111", [{ type: "session", timestamp: "2026-05-27T10:00:00Z", provider: "local" }, { type: "message", role: "user", content: "Local session" }]);
+        await createMockSessionInDir(testDir, "2026-05-27_100001_bbb222", [{ type: "session", timestamp: "2026-05-27T10:00:01Z", provider: "ollama" }, { type: "message", role: "user", content: "Ollama session" }]);
 
         const index = new SessionIndex(testDir);
         const sessions = await index.listSessions({ provider: "local" });
@@ -132,8 +132,8 @@ describe("SessionIndex", () => {
     it("搜索消息内容", async () => {
       const testDir = await mkdtemp(join(tmpdir(), "joe-search-"));
       try {
-        await createMockSessionInDir(testDir, "2026-05-27T10-00-00_aaa111", [{ type: "session", timestamp: "2026-05-27T10:00:00Z" }, { type: "message", role: "user", content: "How to use RxJS?" }]);
-        await createMockSessionInDir(testDir, "2026-05-27T10-00-01_bbb222", [{ type: "session", timestamp: "2026-05-27T10:00:01Z" }, { type: "message", role: "user", content: "TypeScript generics" }]);
+        await createMockSessionInDir(testDir, "2026-05-27_100000_aaa111", [{ type: "session", timestamp: "2026-05-27T10:00:00Z" }, { type: "message", role: "user", content: "How to use RxJS?" }]);
+        await createMockSessionInDir(testDir, "2026-05-27_100001_bbb222", [{ type: "session", timestamp: "2026-05-27T10:00:01Z" }, { type: "message", role: "user", content: "TypeScript generics" }]);
 
         const index = new SessionIndex(testDir);
         const sessions = await index.listSessions({ search: "RxJS" });
@@ -149,9 +149,10 @@ describe("SessionIndex", () => {
       const testDir = await mkdtemp(join(tmpdir(), "joe-page-"));
       try {
         for (let i = 1; i <= 5; i++) {
-          const id = `2026-05-27T${String(10 + i).padStart(2, "0")}-00-00_${String(i).padStart(6, "0")}`;
+          const hour = String(10 + i).padStart(2, "0");
+          const id = `2026-05-27_${hour}0000_${String(i).padStart(6, "0")}`;
           await createMockSessionInDir(testDir, id, [
-            { type: "session", timestamp: `2026-05-27T${String(10 + i).padStart(2, "0")}:00:00Z` },
+            { type: "session", timestamp: `2026-05-27T${hour}:00:00Z` },
             { type: "message", role: "user", content: `Session ${i}` },
           ]);
         }
@@ -176,7 +177,7 @@ describe("SessionIndex", () => {
     it("获取 session 详情", async () => {
       const testDir = await mkdtemp(join(tmpdir(), "joe-detail-"));
       try {
-        const id = "2026-05-27T10-00-00_abc123";
+        const id = "2026-05-27_100000_abc123";
         await createMockSessionInDir(testDir, id, [
           { type: "session", timestamp: "2026-05-27T10:00:00Z", cwd: "/test", provider: "local", mode: "single" },
           { type: "message", role: "user", content: "Hello" },
@@ -202,7 +203,7 @@ describe("SessionIndex", () => {
       const testDir = await mkdtemp(join(tmpdir(), "joe-notfound-"));
       try {
         const index = new SessionIndex(testDir);
-        const session = await index.getSession("2026-05-27T10-00-00_nonexist");
+        const session = await index.getSession("2026-05-27_100000_nonexist");
         expect(session).toBeNull();
       } finally {
         await rm(testDir, { recursive: true, force: true });
@@ -214,8 +215,8 @@ describe("SessionIndex", () => {
     it("获取最新 session", async () => {
       const testDir = await mkdtemp(join(tmpdir(), "joe-latest-"));
       try {
-        const id1 = "2026-05-27T08-00-00_aaa111";
-        const id2 = "2026-05-27T10-00-00_bbb222";
+        const id1 = "2026-05-27_080000_aaa111";
+        const id2 = "2026-05-27_100000_bbb222";
 
         await createMockSessionInDir(testDir, id1, [{ type: "session", timestamp: "2026-05-27T08:00:00Z" }, { type: "message", role: "user", content: "Old session" }]);
         await createMockSessionInDir(testDir, id2, [{ type: "session", timestamp: "2026-05-27T10:00:00Z" }, { type: "message", role: "user", content: "New session" }]);
@@ -250,8 +251,8 @@ describe("SessionIndex", () => {
     it("删除 session 及其子 Agent", async () => {
       const testDir = await mkdtemp(join(tmpdir(), "joe-delete-"));
       try {
-        const parentId = "2026-05-27T10-00-00_abc123";
-        const childId = "2026-05-27T10-00-00_abc123-child-agent1";
+        const parentId = "2026-05-27_100000_abc123";
+        const childId = "2026-05-27_100000_abc123-child-agent1";
 
         await createMockSessionInDir(testDir, parentId, [{ type: "session", timestamp: "2026-05-27T10:00:00Z" }, { type: "message", role: "user", content: "Parent" }]);
         await createMockSessionInDir(testDir, childId, [{ type: "session", timestamp: "2026-05-27T10:00:01Z" }, { type: "message", role: "user", content: "Child" }], `${childId}.jsonl`);
@@ -271,7 +272,7 @@ describe("SessionIndex", () => {
       const testDir = await mkdtemp(join(tmpdir(), "joe-delete-notfound-"));
       try {
         const index = new SessionIndex(testDir);
-        const success = await index.deleteSession("2026-05-27T10-00-00_nonexist");
+        const success = await index.deleteSession("2026-05-27_100000_nonexist");
         expect(success).toBe(false);
       } finally {
         await rm(testDir, { recursive: true, force: true });
@@ -283,12 +284,12 @@ describe("SessionIndex", () => {
     it("统计信息正确", async () => {
       const testDir = await mkdtemp(join(tmpdir(), "joe-stats-"));
       try {
-        await createMockSessionInDir(testDir, "2026-05-27T08-00-00_aaa111", [
+        await createMockSessionInDir(testDir, "2026-05-27_080000_aaa111", [
           { type: "session", timestamp: "2026-05-27T08:00:00Z" },
           { type: "message", role: "user", content: "Session 1" },
           { type: "message", role: "assistant", content: "Reply 1" },
         ]);
-        await createMockSessionInDir(testDir, "2026-05-27T10-00-00_bbb222", [
+        await createMockSessionInDir(testDir, "2026-05-27_100000_bbb222", [
           { type: "session", timestamp: "2026-05-27T10:00:00Z" },
           { type: "message", role: "user", content: "Session 2" },
         ]);

@@ -612,6 +612,8 @@
     },
     "spawnAgent": {
       "noResponse": "Child agent did not return a response.",
+      "executionComplete": "Child agent execution completed",
+      "executionFailed": "Child agent execution failed",
       "roleUser": "User",
       "roleAssistant": "Assistant",
       "historyHeader": "## Previous Conversation History",
@@ -624,6 +626,7 @@
   "runtime": {
     "noFinalMessage": "Current provider did not return a final message.",
     "maxStepsReached": "Current turn has reached the maximum tool steps limit...",
+    "maxTurnsReached": "Session has reached the maximum turns limit ({{maxTurns}} turns).",
     "noToolRegistry": "Current runtime is not configured with tool registry or permission gate.",
     "readBeforeEdit": "read-before-edit check failed.",
     "toolNotFound": "Tool not found:",

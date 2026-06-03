@@ -600,6 +600,8 @@
     },
     "spawnAgent": {
       "noResponse": "子 Agent 未返回响应",
+      "executionComplete": "子 Agent 执行完成",
+      "executionFailed": "子 Agent 执行失败",
       "roleUser": "用户",
       "roleAssistant": "助手",
       "historyHeader": "## 之前的对话历史",
@@ -612,6 +614,7 @@
   "runtime": {
     "noFinalMessage": "当前 provider 未返回最终消息。",
     "maxStepsReached": "当前单轮已达到最大工具步数限制...",
+    "maxTurnsReached": "会话已达到最大轮次限制（{{maxTurns}} 轮）。",
     "noToolRegistry": "当前运行时未配置 tool registry 或 permission gate。",
     "readBeforeEdit": "read-before-edit 检查未通过。",
     "toolNotFound": "未找到工具:",

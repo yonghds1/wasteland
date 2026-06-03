@@ -64,6 +64,31 @@
 
 ## [未发布]
 
+### 新增
+
+- **ask-user 工具**
+  - 允许 Agent 向用户提问并获取输入
+  - `UserInputBridge` 桥接机制：agent loop 与 UI 层之间的输入路由
+  - RuntimeEvent 扩展：`user_input_requested`、`user_input_received` 事件
+  - UI 集成：交互模式下自动检测用户输入请求并路由响应
+  - 权限控制：ask-user 为只读工具，自动允许执行
+  - 端到端测试：验证完整的用户交互流程
+
+- **Session Resume 功能**
+  - `sessions` 命令：列出历史会话，支持搜索、过滤和排序
+  - `sessions show <id>`：查看会话详情和完整消息历史
+  - `sessions delete <id>`：删除会话及其子 Agent 会话
+  - `sessions stats`：查看会话统计信息
+  - `resume` 命令：恢复之前的会话，支持交互模式和单次消息模式
+  - SessionIndex：高效的会话索引和检索系统
+  - 端到端测试：验证完整的会话恢复流程
+
+- **测试基础设施**
+  - 迁移到 vitest 测试框架
+  - 更新 package.json test 脚本使用 vitest
+  - 修复测试文件语法错误
+  - 添加条件检查避免跳过测试失败
+
 ### 计划
 
 - CI/CD 流水线

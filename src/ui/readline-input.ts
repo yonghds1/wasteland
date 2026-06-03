@@ -36,6 +36,7 @@ import type { Readable, Writable } from 'node:stream';
 import { filter, from, fromEvent, map, scan, takeUntil, tap, type Observable } from 'rxjs';
 
 import type { ChatInputTurn } from '../core/runtime/event-types.js';
+import type { UserInputBridge } from '../core/runtime/user-input-bridge.js';
 import type { SkillExecutor } from '../skills/skill-executor.js';
 import {
   ANSI,
@@ -271,6 +272,8 @@ export function createInteractiveTurnStream(params?: {
   promptText?: string;
   /** 技能执行器（用于 /skills 命令和技能检测） */
   skillExecutor?: SkillExecutor;
+  /** 用户输入桥接器（用于 ask-user 工具） */
+  userInputBridge?: UserInputBridge;
 }): InteractiveTurnStream {
   // 解构参数，提供默认值
   const input = params?.input ?? process.stdin;
@@ -308,6 +311,19 @@ export function createInteractiveTurnStream(params?: {
 
   // turns$: 主输入流
   const turns$ = fromEvent<string>(rl, 'line').pipe(
+    // ---- tap: 处理 ask-user 输入路由 ----
+    // 如果 UserInputBridge 有待处理的输入请求，路由输入到它
+    tap((line) => {
+      if (params?.userInputBridge?.isPending()) {
+        params.userInputBridge.provideInput(line.trim());
+        renderPrompt();
+      }
+    }),
+
+    // ---- filter: 过滤 ask-user 输入 ----
+    // 如果 UserInputBridge 有待处理的输入请求，不创建新 turn
+    filter(() => !params?.userInputBridge?.isPending()),
+
     // ---- map: 去除首尾空白 ----
     // 每次用户按回车，readline 发出 "line" 事件
     // map 将原始行转换为 trimmed 行

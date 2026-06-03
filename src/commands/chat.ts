@@ -11,6 +11,7 @@ import { Command } from 'commander';
 import { resolveDefaultTraceDir } from '@config/paths.js';
 import type { ChatInputTurn, RuntimeMode } from '@core/runtime/event-types.js';
 import { runAgentLoop } from '@core/runtime/agent-loop.js';
+import { UserInputBridge } from '@core/runtime/user-input-bridge.js';
 import { initializeRuntime, type RuntimeEnvironment } from '@core/shared/initialize-runtime.js';
 import { renderDebugTrace, type DebugFormat } from '@ui/debug-renderer.js';
 import {
@@ -76,6 +77,7 @@ async function runChatSession(params: {
     onTurnComplete?: () => void;
     style?: 'classic' | 'interactive';
   };
+  userInputBridge?: UserInputBridge;
 }): Promise<void> {
   const { runtime } = params;
 
@@ -94,6 +96,7 @@ async function runChatSession(params: {
       providerSettings: runtime.resolvedRuntime.providerConfig,
       skillExecutor: runtime.skillExecutor,
       childAgentTimeout: runtime.loadedSettings.settings.runtime.childAgentTimeout,
+      userInputBridge: params.userInputBridge,
     });
 
     const work: Promise<void>[] = [renderRuntimeEvents(run.events$, params.render)];
@@ -197,7 +200,12 @@ export function createChatCommand(): Command {
         throw new Error(t('commands.chat.errors.emptyStdin'));
       }
 
-      const interactive = createInteractiveTurnStream();
+      // 创建用户输入桥接器（用于 ask-user 工具）
+      const userInputBridge = new UserInputBridge();
+
+      const interactive = createInteractiveTurnStream({
+        userInputBridge,
+      });
 
       interactive.prompt();
 
@@ -217,6 +225,7 @@ export function createChatCommand(): Command {
             onTurnComplete: interactive.prompt,
             style: renderStyle,
           },
+          userInputBridge,
         });
       } catch (error) {
         interactive.close();

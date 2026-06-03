@@ -363,4 +363,21 @@ export type RuntimeEvent =
       turn: number;
       skillName: string;
       result: SkillResult;
+    }
+  | {
+      /** 用户输入请求事件（ask-user 工具触发） */
+      type: 'user_input_requested';
+      sessionId: string;
+      turn: number;
+      callId: string;
+      question: string;
+      options?: string[];
+    }
+  | {
+      /** 用户输入响应事件（用户回答后触发） */
+      type: 'user_input_received';
+      sessionId: string;
+      turn: number;
+      callId: string;
+      answer: string;
     };

@@ -380,13 +380,30 @@ dist/           构建产物
 - JSON 和 TypeScript 格式支持
 - TUI 日志增强：显示技能调用详情
 
+**ask-user 工具已完成**：
+
+- `ask-user` 工具：允许 Agent 向用户提问并获取输入
+- `UserInputBridge`：agent loop 与 UI 层之间的输入桥接机制
+- RuntimeEvent 扩展：`user_input_requested`、`user_input_received` 事件
+- UI 集成：交互模式下自动检测用户输入请求并路由响应
+- 端到端测试：验证完整的用户交互流程
+
+**Session Resume 功能已完成**：
+
+- `sessions` 命令：列出历史会话，支持搜索、过滤和排序
+- `sessions show <id>`：查看会话详情和完整消息历史
+- `sessions delete <id>`：删除会话及其子 Agent 会话
+- `sessions stats`：查看会话统计信息
+- `resume` 命令：恢复之前的会话，支持交互模式和单次消息模式
+- SessionIndex：高效的会话索引和检索系统
+- 端到端测试：验证完整的会话恢复流程
+
 下一阶段会继续补：
 
 - 真实模型 provider 的 tool calling 支持
 - 多 Agent 并行执行的端到端测试
 - 更多内建工具与更完整权限策略
 - provider registry 与真实模型接入
-- session index / `resume` / `sessions`
 - MCP 客户端与 registry
 
 ## 文档

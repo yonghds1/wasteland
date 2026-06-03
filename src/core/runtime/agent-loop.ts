@@ -37,6 +37,7 @@ import {
 import { t } from '../../locales/index.js';
 
 import { createDebugTraceEvent, type DebugTraceEvent } from './debug-events.js';
+import { UserInputBridge } from './user-input-bridge.js';
 import type { AgentProvider } from '../../providers/provider-types.js';
 import type { ToolRegistry } from '../../tools/tool-registry.js';
 import type {
@@ -159,6 +160,8 @@ type AgentRun = {
   events$: Observable<RuntimeEvent>;
   /** 调试追踪流：用于调试的详细事件流 */
   debug$: Observable<DebugTraceEvent>;
+  /** 用户输入桥接器（用于 ask-user 工具） */
+  userInputBridge: UserInputBridge;
 };
 
 // ============================================================
@@ -308,6 +311,8 @@ function runTurnLoop(params: {
   providerSettings?: ProviderSettings;
   /** 子 Agent 执行超时（毫秒） */
   childAgentTimeout?: number;
+  /** 用户输入桥接器（用于 ask-user 工具） */
+  userInputBridge?: UserInputBridge;
 }): Observable<RuntimeEvent> {
   // defer 延迟执行，确保每次递归时重新评估条件
   return defer(() => {
@@ -571,6 +576,8 @@ function runTurnLoop(params: {
             providerRegistry: params.providerRegistry,
             providerSettings: params.providerSettings,
             childAgentTimeout: params.childAgentTimeout,
+            // 用户输入支持
+            userInputBridge: params.userInputBridge,
           }).pipe(
             // tap 用于副作用：更新状态和记录追踪
             // 注意：这里更新外层的 state 变量，这是关键！
@@ -843,6 +850,7 @@ export function runAgentLoop(params: {
   cwd: string;
   mode: RuntimeMode;
   maxStepsPerTurn?: number;
+  maxTurns?: number;
   /** 可选：已有的 session（用于子 Agent） */
   existingSession?: SessionMetadata;
   /** 可选：技能执行器 */
@@ -855,12 +863,19 @@ export function runAgentLoop(params: {
   providerSettings?: ProviderSettings;
   /** 可选：子 Agent 执行超时（毫秒） */
   childAgentTimeout?: number;
+  /** 可选：用户输入桥接器（用于 ask-user 工具） */
+  userInputBridge?: UserInputBridge;
 }): AgentRun {
   // 创建调试追踪的 Subject
   // 使用 ReplaySubject 确保所有事件都能被订阅者接收
   const debugSubject = new ReplaySubject<DebugTraceEvent>();
   const trace = createTraceEmitter(debugSubject);
   const maxStepsPerTurn = params.maxStepsPerTurn ?? 8;
+  const maxTurns = params.maxTurns ?? 20;
+
+  // 用户输入桥接器（用于 ask-user 工具）
+  // 如果未提供，创建新的实例
+  const userInputBridge = params.userInputBridge ?? new UserInputBridge();
 
   // ---- 主事件流 ----
   // 使用 defer 延迟执行异步的会话创建
@@ -909,8 +924,39 @@ export function runAgentLoop(params: {
 
       // ---- Turn 处理阶段 ----
       // 使用 concatMap 顺序处理每个用户输入
+      let turnCount = 0;
       const turns$ = params.input$.pipe(
+        // 检查 maxTurns 限制
+        tap((turn) => {
+          turnCount++;
+          if (turnCount > maxTurns) {
+            trace({
+              sessionId: session.id,
+              turn: turn.turn,
+              step: 0,
+              scope: 'turn',
+              phase: 'turn.max_turns',
+              message: 'session reached max turns limit',
+              data: {
+                maxTurns,
+                currentTurn: turnCount,
+              },
+            });
+          }
+        }),
+        // 使用 takeWhile 在达到限制时停止处理
+        // 注意：takeWhile 在第 maxTurns+1 个 turn 时会 complete 流
         concatMap((turn) => {
+          // 如果超过 maxTurns，发出警告并完成
+          if (turnCount > maxTurns) {
+            return of<RuntimeEvent>({
+              type: 'assistant_message',
+              sessionId: session.id,
+              turn: turn.turn,
+              content: t('runtime.maxTurnsReached', { maxTurns: String(maxTurns) }),
+            });
+          }
+
           // 创建历史快照（用于传递给 Provider）
           const historySnapshot = [...history];
           const context = createTurnContext({
@@ -974,6 +1020,7 @@ export function runAgentLoop(params: {
             providerRegistry: params.providerRegistry,
             providerSettings: params.providerSettings,
             childAgentTimeout: params.childAgentTimeout,
+            userInputBridge,
           });
 
           // concat 确保先处理 user$，再处理 assistant$
@@ -987,6 +1034,9 @@ export function runAgentLoop(params: {
         from(params.sessionManager.appendRecord(session, createSessionEndRecord(session.id)))
       ).pipe(
         tap(() => {
+          // 清理用户输入桥接器
+          userInputBridge.destroy();
+
           trace({
             sessionId: session.id,
             scope: 'session',
@@ -1043,5 +1093,7 @@ export function runAgentLoop(params: {
     }),
     // asObservable(): 将 Subject 转换为 Observable，防止外部调用 next
     debug$: debugSubject.asObservable(),
+    // 用户输入桥接器
+    userInputBridge,
   };
 }

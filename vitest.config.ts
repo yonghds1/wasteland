@@ -21,6 +21,9 @@ export default defineConfig({
       'test/**/*.ts',
       'test/cli.test.js',
       'test/providers/tool-calling-e2e.test.js',
+      'test/manual/**',
     ],
+    globals: true,
+    environment: 'node',
   },
 });

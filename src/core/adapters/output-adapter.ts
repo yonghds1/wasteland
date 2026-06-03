@@ -132,6 +132,23 @@ export type DisplayEvent =
       /** 会话结束 */
       type: 'session_ended';
       sessionId: string;
+    }
+  | {
+      /** 用户输入请求（ask-user 工具触发） */
+      type: 'user_input_requested';
+      sessionId: string;
+      turn: number;
+      callId: string;
+      question: string;
+      options?: string[];
+    }
+  | {
+      /** 用户输入响应（用户回答后触发） */
+      type: 'user_input_received';
+      sessionId: string;
+      turn: number;
+      callId: string;
+      answer: string;
     };
 
 // ============================================================
@@ -295,6 +312,25 @@ export class DefaultOutputAdapter implements OutputAdapter {
         return {
           type: 'session_ended',
           sessionId: event.sessionId,
+        };
+
+      case 'user_input_requested':
+        return {
+          type: 'user_input_requested',
+          sessionId: event.sessionId,
+          turn: event.turn,
+          callId: event.callId,
+          question: event.question,
+          options: event.options,
+        };
+
+      case 'user_input_received':
+        return {
+          type: 'user_input_received',
+          sessionId: event.sessionId,
+          turn: event.turn,
+          callId: event.callId,
+          answer: event.answer,
         };
 
       default: {

@@ -70,6 +70,8 @@ async function createTestRuntime(providerId, providerSettings = {}) {
 const qwenDescribe = hasQwen ? describe : describe.skip;
 
 qwenDescribe("spawn_agent with Qwen: creates child agent and returns result", async () => {
+  if (!hasQwen) return; // Skip if no API key
+
   const { tempRoot, session, sessionManager, provider, providerRegistry, registry, permissionGate } =
     await createTestRuntime("openai-compatible", {
       type: "openai-compatible",
@@ -109,8 +111,8 @@ qwenDescribe("spawn_agent with Qwen: creates child agent and returns result", as
 
     // 验证事件包含 agent 生命周期
     const eventTypes = events.map((e) => e.type);
-    expect(eventTypes.includes("agent_spawned").toBeTruthy(), "应该有 agent_spawned 事件");
-    expect(eventTypes.includes("agent_completed").toBeTruthy(), "应该有 agent_completed 事件");
+    expect(eventTypes.includes("agent_spawned")).toBeTruthy("应该有 agent_spawned 事件");
+    expect(eventTypes.includes("agent_completed")).toBeTruthy("应该有 agent_completed 事件");
 
     // 验证 agent_spawned 事件内容
     const spawnedEvent = events.find((e) => e.type === "agent_spawned");
@@ -148,6 +150,8 @@ qwenDescribe("spawn_agent with Qwen: creates child agent and returns result", as
 const ollamaDescribe = hasOllama ? describe : describe.skip;
 
 ollamaDescribe("spawn_agent with Ollama: creates child agent and returns result", async () => {
+  if (!hasOllama) return; // Skip if no Ollama URL
+
   const { tempRoot, session, sessionManager, provider, providerRegistry, registry, permissionGate } =
     await createTestRuntime("ollama", {
       baseUrl: OLLAMA_BASE_URL,
@@ -183,8 +187,8 @@ ollamaDescribe("spawn_agent with Ollama: creates child agent and returns result"
 
     // 验证事件包含 agent 生命周期
     const eventTypes = events.map((e) => e.type);
-    expect(eventTypes.includes("agent_spawned").toBeTruthy(), "应该有 agent_spawned 事件");
-    expect(eventTypes.includes("agent_completed").toBeTruthy(), "应该有 agent_completed 事件");
+    expect(eventTypes.includes("agent_spawned")).toBeTruthy("应该有 agent_spawned 事件");
+    expect(eventTypes.includes("agent_completed")).toBeTruthy("应该有 agent_completed 事件");
 
     // 验证 agent_spawned 事件内容
     const spawnedEvent = events.find((e) => e.type === "agent_spawned");
@@ -251,8 +255,8 @@ it("spawn_agent with model parameter: resolves correct provider", async () => {
 
     // 验证子 Agent 成功创建并执行
     const eventTypes = events.map((e) => e.type);
-    expect(eventTypes.includes("agent_spawned").toBeTruthy(), "应该有 agent_spawned 事件");
-    expect(eventTypes.includes("agent_completed").toBeTruthy(), "应该有 agent_completed 事件");
+    expect(eventTypes.includes("agent_spawned")).toBeTruthy("应该有 agent_spawned 事件");
+    expect(eventTypes.includes("agent_completed")).toBeTruthy("应该有 agent_completed 事件");
 
     const completedEvent = events.find((e) => e.type === "agent_completed");
     expect(completedEvent.status).toBe("success");
@@ -310,8 +314,8 @@ it("spawn_agent with tools parameter: limits child agent tools", async () => {
 
     // 验证子 Agent 成功创建
     const eventTypes = events.map((e) => e.type);
-    expect(eventTypes.includes("agent_spawned").toBeTruthy(), "应该有 agent_spawned 事件");
-    expect(eventTypes.includes("agent_completed").toBeTruthy(), "应该有 agent_completed 事件");
+    expect(eventTypes.includes("agent_spawned")).toBeTruthy("应该有 agent_spawned 事件");
+    expect(eventTypes.includes("agent_completed")).toBeTruthy("应该有 agent_completed 事件");
 
     const completedEvent = events.find((e) => e.type === "agent_completed");
     expect(completedEvent.status).toBe("success");
@@ -371,7 +375,7 @@ it("spawn_agent handles child agent errors gracefully", async () => {
 
     // 验证 agent_spawned 仍然被发出
     const eventTypes = events.map((e) => e.type);
-    expect(eventTypes.includes("agent_spawned").toBeTruthy(), "应该有 agent_spawned 事件");
+    expect(eventTypes.includes("agent_spawned")).toBeTruthy("应该有 agent_spawned 事件");
 
     // 验证 agent_completed 以 error 状态发出
     const completedEvent = events.find((e) => e.type === "agent_completed");

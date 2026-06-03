@@ -582,6 +582,32 @@ export async function renderRuntimeEvents(
 
             break;
           }
+          case 'user_input_requested': {
+            if (style === 'interactive') {
+              flushTurnSpacing(event.turn);
+              stdout.write('\n');
+              stdout.write(`${paint('?', ANSI.bold, ANSI.cyan)} ${paint(event.question, ANSI.bold, ANSI.white)}\n`);
+              if (event.options && event.options.length > 0) {
+                stdout.write(`${paint('Options:', ANSI.dim)} ${event.options.join(', ')}\n`);
+              }
+              stdout.write(`${paint('> ', ANSI.bold, ANSI.cyan)}`);
+            } else {
+              stdout.write(`\n[ask-user] ${event.question}\n`);
+              if (event.options && event.options.length > 0) {
+                stdout.write(`Options: ${event.options.join(', ')}\n`);
+              }
+              stdout.write('Your answer: ');
+            }
+            break;
+          }
+          case 'user_input_received': {
+            if (style === 'interactive') {
+              stdout.write(`${paint(event.answer, ANSI.green)}\n\n`);
+            } else {
+              stdout.write(`${event.answer}\n`);
+            }
+            break;
+          }
           default: {
             stderr.write(`${t('ui.terminal.unhandledEvent')}${JSON.stringify(event)}\n`);
           }
