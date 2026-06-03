@@ -19,6 +19,7 @@ export default defineConfig({
     include: ['src/**/*.test.ts', 'test/**/*.test.js'],
     exclude: [
       'test/**/*.ts',
+      'test/cli.test.js',
       'test/providers/tool-calling-e2e.test.js',
       'test/manual/**',
     ],

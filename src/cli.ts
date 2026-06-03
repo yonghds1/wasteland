@@ -40,8 +40,9 @@ export async function run(argv = process.argv): Promise<void> {
   await ensureRoleAliases();
 
   // 初始化 i18n
+  let loadedSettings;
   try {
-    const loadedSettings = await loadWastelandSettings({ cwd: process.cwd(), env: process.env });
+    loadedSettings = await loadWastelandSettings({ cwd: process.cwd(), env: process.env });
     const language = loadedSettings.settings.runtime.language;
     await initI18n(language);
   } catch {
@@ -49,7 +50,14 @@ export async function run(argv = process.argv): Promise<void> {
     await initI18n('en');
   }
 
+  // 将已加载的配置存储到全局，避免重复加载
+  // initializeRuntime() 会优先使用此配置
+  (globalThis as Record<string, unknown>).__wasteland_loaded_settings = loadedSettings;
+
   await createProgram().parseAsync(argv);
+
+  // 清理全局配置
+  delete (globalThis as Record<string, unknown>).__wasteland_loaded_settings;
 }
 
 void run();

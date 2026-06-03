@@ -93,8 +93,11 @@ export async function initializeRuntime(
 ): Promise<RuntimeEnvironment> {
   const { cwd, roleName, providerName, env = process.env } = params;
 
-  // 1. 加载配置
-  const loadedSettings = await loadWastelandSettings({ cwd, env });
+  // 1. 加载配置（优先使用已加载的配置，避免重复加载）
+  const preloadedSettings = (globalThis as Record<string, unknown>).__wasteland_loaded_settings;
+  const loadedSettings = preloadedSettings
+    ? (preloadedSettings as LoadedWastelandSettings)
+    : await loadWastelandSettings({ cwd, env });
 
   // 2. 解析运行时配置
   const resolvedRuntime = resolveChatRuntime({
