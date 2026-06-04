@@ -10,7 +10,7 @@
  * - 流式消息末尾显示 ▌ 光标 + ● 流式中 状态
  */
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Text, Box, useInput } from 'ink';
 import { useAppContext, type Message } from '../../context/AppContext.js';
 import {
@@ -277,24 +277,63 @@ interface MessageListProps {
   width?: number;
 }
 
+// 打字机效果：批量显示配置
+const TYPEWRITER_BATCH_SIZE = 5; // 每次显示的字符数
+const TYPEWRITER_INTERVAL_MS = 16; // 60fps
+
 export function MessageList({ height = 20, width = 80 }: MessageListProps): React.ReactElement {
   const { state } = useAppContext();
   const { messages, streamingContent, streamingMessageId } = state.session;
+
+  // 打字机效果：显示缓冲区
+  const [displayContent, setDisplayContent] = useState('');
+  const displayContentRef = useRef(displayContent);
 
   // 滚动状态
   const [scrollOffset, setScrollOffset] = useState(0);
   // 是否自动滚动到底部
   const [autoScroll, setAutoScroll] = useState(true);
 
+  // 打字机效果：逐步显示流式内容
+  useEffect(() => {
+    // 如果流式内容完成，直接显示全部内容
+    if (!streamingMessageId && streamingContent.length > 0) {
+      setDisplayContent(streamingContent);
+      return;
+    }
+
+    // 逐步显示流式内容
+    if (streamingContent.length > displayContentRef.current.length) {
+      const timer = setTimeout(() => {
+        const nextLength = Math.min(
+          displayContentRef.current.length + TYPEWRITER_BATCH_SIZE,
+          streamingContent.length
+        );
+        const newContent = streamingContent.slice(0, nextLength);
+        displayContentRef.current = newContent;
+        setDisplayContent(newContent);
+      }, TYPEWRITER_INTERVAL_MS);
+      return () => clearTimeout(timer);
+    }
+  }, [streamingContent, streamingMessageId]);
+
+  // 流式消息结束时，重置显示缓冲区
+  useEffect(() => {
+    if (!streamingMessageId) {
+      displayContentRef.current = '';
+      setDisplayContent('');
+    }
+  }, [streamingMessageId]);
+
   // 计算消息区可用高度：减去标题行和状态行
   const contentHeight = Math.max(height - 2, 5);
   // 计算内容宽度：减去滚动条(1)和边距(2)
   const contentWidth = Math.max(width - 3, 20);
 
-  // 将消息转换为逻辑行
+  // 将消息转换为逻辑行（使用显示缓冲区实现打字机效果）
   const lines = useMemo(() => {
-    return messagesToLines(messages, contentWidth, streamingContent, streamingMessageId);
-  }, [messages, contentWidth, streamingContent, streamingMessageId]);
+    return messagesToLines(messages, contentWidth, displayContent, streamingMessageId);
+  }, [messages, contentWidth, displayContent, streamingMessageId]);
 
   const totalLines = lines.length;
 
