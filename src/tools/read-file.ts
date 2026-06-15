@@ -1,8 +1,23 @@
 import { readFile, stat } from 'node:fs/promises';
 import { relative, resolve } from 'node:path';
+import { z } from 'zod';
+import { zodToJsonSchema } from '@alcyone-labs/zod-to-json-schema';
 
 import { t } from '../locales/index.js';
 import type { AgentTool, ToolExecutionResult } from './tool-types.js';
+import type { JsonSchema } from './tool-types.js';
+
+// ============================================================
+// Zod Schema
+// ============================================================
+
+export const readFileInputSchema = z.object({
+  path: z.string().min(1).describe('文件路径（相对于工作目录）'),
+  offset: z.number().int().positive().optional().describe('起始行号（从 1 开始）'),
+  limit: z.number().int().positive().optional().describe('读取行数'),
+});
+
+export type ReadFileInput = z.infer<typeof readFileInputSchema>;
 
 // ============================================================
 // 配置常量
@@ -246,10 +261,17 @@ export function createReadFileTool(): AgentTool {
   return {
     name: 'read-file',
     riskLevel: 'read',
+    description: '读取文件内容，支持分页读取大文件',
+    inputSchema: zodToJsonSchema(readFileInputSchema) as JsonSchema,
 
     async execute(input, context): Promise<ToolExecutionResult> {
+      const parsed = readFileInputSchema.safeParse(input);
+      if (!parsed.success) {
+        return { status: 'error', error: parsed.error.issues.map(i => i.message).join(', ') };
+      }
+
       // 解析路径
-      const targetPath = resolveReadablePath(context.cwd, input.path);
+      const targetPath = resolveReadablePath(context.cwd, parsed.data.path);
 
       if (!targetPath) {
         return {
@@ -260,10 +282,6 @@ export function createReadFileTool(): AgentTool {
 
       const relativePath = relative(context.cwd, targetPath);
 
-      // 解析可选参数
-      const offset = parseOptionalNumber(input.offset);
-      const limit = parseOptionalNumber(input.limit);
-
       try {
         // 读取文件内容和元数据
         const [content, stats] = await Promise.all([
@@ -271,7 +289,7 @@ export function createReadFileTool(): AgentTool {
           stat(targetPath),
         ]);
 
-        return processFileContent(content, relativePath, stats.size, offset, limit);
+        return processFileContent(content, relativePath, stats.size, parsed.data.offset, parsed.data.limit);
       } catch (error) {
         return {
           status: 'error',

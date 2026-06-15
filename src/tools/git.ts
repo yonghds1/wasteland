@@ -20,9 +20,12 @@
 
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { z } from 'zod';
+import { zodToJsonSchema } from '@alcyone-labs/zod-to-json-schema';
 
 import { t } from '../locales/index.js';
 import type { AgentTool, ToolExecutionResult } from './tool-types.js';
+import type { JsonSchema } from './tool-types.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -43,14 +46,18 @@ const BLOCKED_SUBCOMMANDS = new Set(['push --force', 'push -f', 'rebase', 'reset
 // 类型定义
 // ============================================================
 
-type GitInput = {
-  /** Git 子命令 */
-  subcommand: string;
-  /** 子命令的参数数组 */
-  args?: string[];
-  /** commit 信息（仅 commit 时需要） */
-  message?: string;
-};
+// ============================================================
+// Zod Schema
+// ============================================================
+
+export const gitInputSchema = z.object({
+  subcommand: z.enum(['status', 'diff', 'log', 'add', 'commit', 'branch', 'checkout', 'push', 'pull'])
+    .describe('Git 子命令'),
+  args: z.array(z.string()).optional().describe('子命令的参数数组'),
+  message: z.string().optional().describe('commit 信息（仅 commit 时需要）'),
+});
+
+export type GitInput = z.infer<typeof gitInputSchema>;
 
 // ============================================================
 // 辅助函数
@@ -237,24 +244,19 @@ export function createGitTool(): AgentTool {
   return {
     name: 'git',
     riskLevel: 'execute',
+    description: '执行 Git 版本控制操作',
+    inputSchema: zodToJsonSchema(gitInputSchema) as JsonSchema,
 
     async execute(input, context): Promise<ToolExecutionResult> {
-      // 解析输入参数
-      const { subcommand, args = [], message } = input as GitInput;
-
-      // 验证子命令
-      if (typeof subcommand !== 'string' || subcommand.trim().length === 0) {
-        return {
-          status: 'error',
-          error: t('tools.git.needSubcommand'),
-        };
+      const parsed = gitInputSchema.safeParse(input);
+      if (!parsed.success) {
+        return { status: 'error', error: parsed.error.issues.map(i => i.message).join(', ') };
       }
 
-      // 清理子命令
-      const cleanSubcommand = subcommand.trim().toLowerCase();
+      const { subcommand, args = [], message } = parsed.data;
 
       // 验证子命令是否允许
-      const validation = validateSubcommand(cleanSubcommand, args);
+      const validation = validateSubcommand(subcommand, args);
       if (!validation.allowed) {
         return {
           status: 'error',
@@ -264,8 +266,8 @@ export function createGitTool(): AgentTool {
 
       // 处理 commit 子命令的特殊参数
       let finalArgs = [...args];
-      if (cleanSubcommand === 'commit') {
-        if (typeof message !== 'string' || message.trim().length === 0) {
+      if (subcommand === 'commit') {
+        if (!message || message.trim().length === 0) {
           return {
             status: 'error',
             error: t('tools.git.needCommitMessage'),
@@ -276,16 +278,16 @@ export function createGitTool(): AgentTool {
 
       try {
         // 执行 Git 命令
-        const { stdout, stderr } = await executeGit(context.cwd, cleanSubcommand, finalArgs);
+        const { stdout, stderr } = await executeGit(context.cwd, subcommand, finalArgs);
 
         // 格式化输出
-        const output = formatOutput(cleanSubcommand, finalArgs, stdout, stderr);
+        const output = formatOutput(subcommand, finalArgs, stdout, stderr);
 
         return {
           status: 'success',
           output,
           data: {
-            subcommand: cleanSubcommand,
+            subcommand,
             args: finalArgs,
             output: stdout,
           },
@@ -299,7 +301,7 @@ export function createGitTool(): AgentTool {
           if (errorMessage.includes('fatal:') || errorMessage.includes('error:')) {
             return {
               status: 'error',
-              error: formatError(cleanSubcommand, finalArgs, errorMessage),
+              error: formatError(subcommand, finalArgs, errorMessage),
             };
           }
 
@@ -313,13 +315,13 @@ export function createGitTool(): AgentTool {
 
           return {
             status: 'error',
-            error: formatError(cleanSubcommand, finalArgs, errorMessage),
+            error: formatError(subcommand, finalArgs, errorMessage),
           };
         }
 
         return {
           status: 'error',
-          error: formatError(cleanSubcommand, finalArgs, String(error)),
+          error: formatError(subcommand, finalArgs, String(error)),
         };
       }
     },

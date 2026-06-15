@@ -20,9 +20,25 @@
 
 import { readFile, writeFile } from 'node:fs/promises';
 import { relative, resolve } from 'node:path';
+import { z } from 'zod';
+import { zodToJsonSchema } from '@alcyone-labs/zod-to-json-schema';
 
 import { t } from '../locales/index.js';
 import type { AgentTool } from './tool-types.js';
+import type { JsonSchema } from './tool-types.js';
+
+// ============================================================
+// Zod Schema
+// ============================================================
+
+export const editFileInputSchema = z.object({
+  path: z.string().min(1).describe('要编辑的文件路径（相对于工作目录）'),
+  old_string: z.string().describe('要替换的原始字符串'),
+  new_string: z.string().describe('替换后的新字符串'),
+  replace_all: z.boolean().default(false).describe('是否替换所有匹配项（默认 false）'),
+});
+
+export type EditFileInput = z.infer<typeof editFileInputSchema>;
 
 /**
  * 解析可编辑的文件路径
@@ -58,10 +74,17 @@ export function createEditFileTool(): AgentTool {
   return {
     name: 'edit-file',
     riskLevel: 'write',
+    description: '精确编辑文件内容，通过字符串替换修改',
+    inputSchema: zodToJsonSchema(editFileInputSchema) as JsonSchema,
 
     async execute(input, context) {
+      const parsed = editFileInputSchema.safeParse(input);
+      if (!parsed.success) {
+        return { status: 'error', error: parsed.error.issues.map(i => i.message).join(', ') };
+      }
+
       // 解析路径
-      const targetPath = resolveEditablePath(context.cwd, input.path);
+      const targetPath = resolveEditablePath(context.cwd, parsed.data.path);
 
       if (!targetPath) {
         return {
@@ -70,24 +93,12 @@ export function createEditFileTool(): AgentTool {
         };
       }
 
-      // 验证参数
-      const oldString = typeof input.old_string === 'string' ? input.old_string : '';
-      const newString = typeof input.new_string === 'string' ? input.new_string : '';
-      const replaceAll = input.replace_all === true;
-
-      if (oldString.length === 0) {
-        return {
-          status: 'error',
-          error: t('tools.editFile.needOldString'),
-        };
-      }
-
       try {
         // 读取文件内容
         const content = await readFile(targetPath, 'utf8');
 
         // 检查匹配次数
-        const matchCount = countMatches(content, oldString);
+        const matchCount = countMatches(content, parsed.data.old_string);
 
         if (matchCount === 0) {
           return {
@@ -96,7 +107,7 @@ export function createEditFileTool(): AgentTool {
           };
         }
 
-        if (matchCount > 1 && !replaceAll) {
+        if (matchCount > 1 && !parsed.data.replace_all) {
           return {
             status: 'error',
             error: t('tools.editFile.multipleMatches', { count: String(matchCount) }),
@@ -104,16 +115,16 @@ export function createEditFileTool(): AgentTool {
         }
 
         // 执行替换
-        const newContent = replaceAll
-          ? content.split(oldString).join(newString)
-          : content.replace(oldString, newString);
+        const newContent = parsed.data.replace_all
+          ? content.split(parsed.data.old_string).join(parsed.data.new_string)
+          : content.replace(parsed.data.old_string, parsed.data.new_string);
 
         // 写入文件
         await writeFile(targetPath, newContent, 'utf8');
 
         return {
           status: 'success',
-          output: t('tools.editFile.success', { count: String(replaceAll ? matchCount : 1) }),
+          output: t('tools.editFile.success', { count: String(parsed.data.replace_all ? matchCount : 1) }),
         };
       } catch (error) {
         return {

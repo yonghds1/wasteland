@@ -19,7 +19,23 @@
  * - engine: 搜索引擎（可选，默认 "duckduckgo"）
  */
 
+import { z } from 'zod';
+import { zodToJsonSchema } from '@alcyone-labs/zod-to-json-schema';
+
 import type { AgentTool, ToolExecutionResult } from './tool-types.js';
+import type { JsonSchema } from './tool-types.js';
+
+// ============================================================
+// Zod Schema
+// ============================================================
+
+export const webSearchInputSchema = z.object({
+  query: z.string().min(1).describe('搜索关键词'),
+  maxResults: z.number().int().positive().max(20).default(5).describe('最大结果数量（默认 5，最大 20）'),
+  engine: z.enum(['duckduckgo']).default('duckduckgo').describe('搜索引擎（默认 duckduckgo）'),
+});
+
+export type WebSearchInput = z.infer<typeof webSearchInputSchema>;
 
 // ============================================================
 // 配置常量
@@ -282,41 +298,26 @@ export function createWebSearchTool(): AgentTool {
   return {
     name: 'web-search',
     riskLevel: 'read',
+    description: '使用搜索引擎搜索网络信息',
+    inputSchema: zodToJsonSchema(webSearchInputSchema) as JsonSchema,
 
     async execute(input): Promise<ToolExecutionResult> {
-      // 验证搜索查询
-      const query = validateQuery(input.query);
-
-      if (query === null) {
-        return {
-          status: 'error',
-          error: 'web-search 工具需要非空 query 参数。示例：{ "query": "TypeScript best practices" }',
-        };
-      }
-
-      // 解析参数
-      const maxResults = parseMaxResults(input.maxResults);
-      const engine = typeof input.engine === 'string' ? input.engine.toLowerCase() : 'duckduckgo';
-
-      // 验证搜索引擎
-      if (engine !== 'duckduckgo') {
-        return {
-          status: 'error',
-          error: `不支持的搜索引擎: "${engine}"。当前仅支持 "duckduckgo"。`,
-        };
+      const parsed = webSearchInputSchema.safeParse(input);
+      if (!parsed.success) {
+        return { status: 'error', error: parsed.error.issues.map(i => i.message).join(', ') };
       }
 
       try {
         const startTime = Date.now();
-        const results = await searchDuckDuckGo(query, maxResults);
+        const results = await searchDuckDuckGo(parsed.data.query, parsed.data.maxResults);
         const duration = Date.now() - startTime;
 
         return {
           status: 'success',
-          output: formatResults(query, results, engine, duration),
+          output: formatResults(parsed.data.query, results, parsed.data.engine, duration),
           data: {
-            query,
-            engine,
+            query: parsed.data.query,
+            engine: parsed.data.engine,
             results,
             duration,
           },

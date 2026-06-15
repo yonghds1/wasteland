@@ -29,6 +29,8 @@
 
 import { catchError, defaultIfEmpty, filter, map, take, timeout } from 'rxjs/operators';
 import { forkJoin, from, lastValueFrom, of } from 'rxjs';
+import { z } from 'zod';
+import { zodToJsonSchema } from '@alcyone-labs/zod-to-json-schema';
 
 import { t } from '../locales/index.js';
 import { runAgentLoop } from '../core/runtime/agent-loop.js';
@@ -40,12 +42,25 @@ import type {
   ToolExecutionResult,
   ToolInput,
 } from './tool-types.js';
+import type { JsonSchema } from './tool-types.js';
 import type { AgentProvider } from '../providers/provider-types.js';
 import type { SessionManager } from '../core/runtime/session-manager.js';
 import type { ToolRegistry } from './tool-registry.js';
 import type { PermissionGate } from '../core/runtime/permission-gate.js';
 import type { ProviderSettings } from '../config/settings-types.js';
 import type { ProviderRegistry } from '../providers/provider-registry.js';
+
+// ============================================================
+// Zod Schema
+// ============================================================
+
+export const spawnAgentInputSchema = z.object({
+  name: z.string().min(1).describe('子 Agent 标识'),
+  task: z.string().min(1).describe('任务描述'),
+  model: z.string().optional().describe('模型选择（haiku/sonnet/opus 或具体模型名）'),
+  tools: z.array(z.string()).optional().describe('限定子 Agent 可用的工具集'),
+  inheritHistory: z.boolean().default(false).describe('是否继承父 Agent 的历史上下文'),
+});
 
 /**
  * 将通用模型名称映射到实际模型名称
@@ -97,18 +112,7 @@ function mapModelToActualModel(model: string, providerId: string): string {
 /**
  * spawn_agent 工具的输入参数
  */
-export type SpawnAgentInput = {
-  /** 子 Agent 标识 */
-  name: string;
-  /** 任务描述 */
-  task: string;
-  /** 可选：模型选择（haiku/sonnet/opus 或具体模型名如 qwen-max） */
-  model?: string;
-  /** 可选：限定工具集 - 限制子 Agent 可用的工具列表 */
-  tools?: string[];
-  /** 可选：是否继承父 Agent 的历史上下文，默认 false */
-  inheritHistory?: boolean;
-};
+export type SpawnAgentInput = z.infer<typeof spawnAgentInputSchema>;
 
 /**
  * spawn_agent 工具的执行上下文（扩展版）
@@ -138,19 +142,19 @@ export function createSpawnAgentTool(context: SpawnAgentContext): AgentTool {
   return {
     name: 'spawn_agent',
     riskLevel: 'execute',
+    description: '创建并运行子 Agent 执行任务',
+    inputSchema: zodToJsonSchema(spawnAgentInputSchema) as JsonSchema,
 
     async execute(
       input: ToolInput,
       _toolContext: ToolExecutionContext
     ): Promise<ToolExecutionResult> {
-      const { name, task, tools, model, inheritHistory } = input as SpawnAgentInput;
-
-      if (!name || !task) {
-        return {
-          status: 'error',
-          error: "spawn_agent requires 'name' and 'task' parameters",
-        };
+      const parsed = spawnAgentInputSchema.safeParse(input);
+      if (!parsed.success) {
+        return { status: 'error', error: parsed.error.issues.map(i => i.message).join(', ') };
       }
+
+      const { name, task, tools, model, inheritHistory } = parsed.data;
 
       try {
         // 1. 创建子 Agent session

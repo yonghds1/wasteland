@@ -39,7 +39,7 @@ describe("git 工具", () => {
 
     expect(result).toBeTruthy();
     expect(result.status).toBe("error");
-    expect(result.error).toMatch(/subcommand|needSubcommand/);
+    expect(result.error).toMatch(/subcommand|needSubcommand|Invalid|Required/i);
   });
 
   it("空 subcommand 参数", async () => {
@@ -51,7 +51,7 @@ describe("git 工具", () => {
 
     expect(result).toBeTruthy();
     expect(result.status).toBe("error");
-    expect(result.error).toMatch(/subcommand|needSubcommand/);
+    expect(result.error).toMatch(/subcommand|needSubcommand|Invalid|Expected/i);
   });
 
   it("执行 git status 命令", async () => {
@@ -114,8 +114,8 @@ describe("git 工具", () => {
 
     expect(result).toBeTruthy();
     expect(result.status).toBe("error");
-    // Match either translated message or i18n key
-    expect(result.error).toMatch(/rebase|禁止|blocked|blockedSubcommand/);
+    // Zod enum validation catches invalid subcommand before rebase check
+    expect(result.error).toMatch(/rebase|禁止|blocked|blockedSubcommand|Invalid|Expected/i);
   });
 
   it("不支持的子命令", async () => {
@@ -127,7 +127,8 @@ describe("git 工具", () => {
 
     expect(result).toBeTruthy();
     expect(result.status).toBe("error");
-    expect(result.error).toMatch(/cherry-pick|unsupported/);
+    // Zod enum validation catches invalid subcommand
+    expect(result.error).toMatch(/cherry-pick|unsupported|Invalid|Expected/i);
   });
 });
 
@@ -164,7 +165,7 @@ describe("web-search 工具", () => {
 
     expect(result).toBeTruthy();
     expect(result.status).toBe("error");
-    expect(result.error).toMatch(/query/);
+    expect(result.error).toMatch(/query|Required|Invalid/i);
   });
 
   it("空 query 参数", async () => {
@@ -176,7 +177,7 @@ describe("web-search 工具", () => {
 
     expect(result).toBeTruthy();
     expect(result.status).toBe("error");
-    expect(result.error).toMatch(/query/);
+    expect(result.error).toMatch(/query|Required|Too small|Invalid/i);
   });
 
   it("不支持的搜索引擎", async () => {
@@ -188,7 +189,7 @@ describe("web-search 工具", () => {
 
     expect(result).toBeTruthy();
     expect(result.status).toBe("error");
-    expect(result.error).toMatch(/google|搜索引擎/);
+    expect(result.error).toMatch(/google|搜索引擎|Invalid|Expected/i);
   });
 
   it("默认使用 duckduckgo 搜索引擎", async () => {

@@ -117,6 +117,23 @@ export type ToolExecutionResult = ToolSuccessResult | ToolErrorResult;
 export type ToolRunStatus = ToolExecutionResult['status'] | 'blocked';
 
 /**
+ * JSON Schema 类型（用于工具参数描述）
+ *
+ * 符合 JSON Schema 规范的子集，用于描述工具参数结构。
+ * 可通过 zod-to-json-schema 从 Zod Schema 自动生成。
+ */
+export type JsonSchema = {
+  type: string;
+  description?: string;
+  properties?: Record<string, JsonSchema>;
+  required?: string[];
+  items?: JsonSchema;
+  enum?: string[];
+  default?: unknown;
+  [key: string]: unknown;
+};
+
+/**
  * Agent 工具接口
  *
  * 定义一个工具必须实现的方法和属性。
@@ -124,20 +141,14 @@ export type ToolRunStatus = ToolExecutionResult['status'] | 'blocked';
  *
  * @property name - 工具名称，用于识别和调用
  * @property riskLevel - 风险等级，影响权限决策
+ * @property description - 工具描述（展示给 LLM）
+ * @property inputSchema - 参数 Schema（展示给 LLM，通过 zodToJsonSchema 生成）
  * @method execute - 执行工具，返回 Promise 包含执行结果
- *
- * @example
- * const tool: AgentTool = {
- *   name: "read-file",
- *   riskLevel: "read",
- *   async execute(input, context) {
- *     const content = await fs.readFile(input.path as string);
- *     return { status: "success", output: content };
- *   },
- * };
  */
 export interface AgentTool {
   readonly name: string;
   readonly riskLevel: ToolRiskLevel;
+  readonly description?: string;
+  readonly inputSchema?: JsonSchema;
   execute(input: ToolInput, context: ToolExecutionContext): Promise<ToolExecutionResult>;
 }

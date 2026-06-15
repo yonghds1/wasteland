@@ -26,7 +26,7 @@ describe("ask-user 工具", () => {
     const tool = createAskUserTool();
     expect(tool).toBeTruthy();
     expect(tool.name).toBe("ask-user");
-    expect(tool.riskLevel).toBe("low");
+    expect(tool.riskLevel).toBe("read");
     expect(tool.execute).toBeTruthy();
   });
 
@@ -65,7 +65,7 @@ describe("ask-user 工具", () => {
 
     expect(result).toBeTruthy();
     expect(result.status).toBe("error");
-    expect(result.error).toMatch(/question|missingQuestion/);
+    expect(result.error).toMatch(/question|Required|missing|Invalid|invalid_type/i);
   });
 });
 
@@ -102,7 +102,7 @@ describe("http-request 工具", () => {
 
     expect(result).toBeTruthy();
     expect(result.status).toBe("error");
-    expect(result.error).toContain("url");
+    expect(result.error).toMatch(/url|Invalid|Required/i);
   });
 
   it("无效的 URL", async () => {
@@ -114,7 +114,7 @@ describe("http-request 工具", () => {
 
     expect(result).toBeTruthy();
     expect(result.status).toBe("error");
-    expect(result.error).toContain("无效");
+    expect(result.error).toMatch(/无效|Invalid|invalid/i);
   });
 });
 

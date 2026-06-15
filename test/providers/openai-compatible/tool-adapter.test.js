@@ -25,6 +25,11 @@ describe("buildOpenAITools", () => {
       name: "read-file",
       description: "读取文件",
       riskLevel: "read",
+      inputSchema: {
+        type: "object",
+        properties: { path: { type: "string", description: "文件路径" } },
+        required: ["path"],
+      },
       execute: async () => ({ status: "success", output: "" }),
     });
 
@@ -33,7 +38,7 @@ describe("buildOpenAITools", () => {
     expect(tools.length).toBe(1);
     expect(tools[0].type).toBe("function");
     expect(tools[0].function.name).toBe("read-file");
-    expect(tools[0].function.description).toBeTruthy();
+    expect(tools[0].function.description).toBe("读取文件");
     expect(tools[0].function.parameters).toBeTruthy();
     expect(tools[0].function.parameters.type).toBe("object");
     expect(tools[0].function.parameters.properties.path).toBeTruthy();
@@ -54,7 +59,22 @@ describe("buildOpenAITools", () => {
 
   it("edit-file 参数 Schema 正确", () => {
     const registry = new ToolRegistry();
-    registry.register({ name: "edit-file", description: "编辑文件", riskLevel: "write", execute: async () => ({ status: "success", output: "" }) });
+    registry.register({
+      name: "edit-file",
+      description: "编辑文件",
+      riskLevel: "write",
+      inputSchema: {
+        type: "object",
+        properties: {
+          path: { type: "string" },
+          old_string: { type: "string" },
+          new_string: { type: "string" },
+          replace_all: { type: "boolean" },
+        },
+        required: ["path", "old_string", "new_string"],
+      },
+      execute: async () => ({ status: "success", output: "" }),
+    });
 
     const tools = buildOpenAITools(registry);
     const params = tools[0].function.parameters;
@@ -68,7 +88,23 @@ describe("buildOpenAITools", () => {
 
   it("spawn_agent 参数 Schema 正确", () => {
     const registry = new ToolRegistry();
-    registry.register({ name: "spawn_agent", description: "创建子 Agent", riskLevel: "write", execute: async () => ({ status: "success", output: "" }) });
+    registry.register({
+      name: "spawn_agent",
+      description: "创建子 Agent",
+      riskLevel: "write",
+      inputSchema: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          task: { type: "string" },
+          model: { type: "string" },
+          tools: { type: "array", items: { type: "string" } },
+          inheritHistory: { type: "boolean" },
+        },
+        required: ["name", "task"],
+      },
+      execute: async () => ({ status: "success", output: "" }),
+    });
 
     const tools = buildOpenAITools(registry);
     const params = tools[0].function.parameters;

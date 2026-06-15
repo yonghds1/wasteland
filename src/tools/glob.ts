@@ -18,8 +18,22 @@
 
 import { glob } from 'node:fs/promises';
 import { relative, resolve } from 'node:path';
+import { z } from 'zod';
+import { zodToJsonSchema } from '@alcyone-labs/zod-to-json-schema';
 
 import type { AgentTool, ToolExecutionResult } from './tool-types.js';
+import type { JsonSchema } from './tool-types.js';
+
+// ============================================================
+// Zod Schema
+// ============================================================
+
+export const globInputSchema = z.object({
+  pattern: z.string().min(1).describe('文件匹配模式（glob pattern，如 "*.ts"、"src/**"）'),
+  cwd: z.string().optional().describe('搜索根目录（默认当前工作目录）'),
+});
+
+export type GlobInput = z.infer<typeof globInputSchema>;
 
 // ============================================================
 // 辅助函数
@@ -83,32 +97,29 @@ export function createGlobTool(): AgentTool {
   return {
     name: 'glob',
     riskLevel: 'read',
+    description: '使用 glob 模式查找文件',
+    inputSchema: zodToJsonSchema(globInputSchema) as JsonSchema,
 
     async execute(input, context): Promise<ToolExecutionResult> {
-      // 解析 glob 模式
-      const pattern = resolvePattern(input.pattern);
-
-      if (pattern === null) {
-        return {
-          status: 'error',
-          error: 'glob 工具需要非空 pattern 字段。示例：{ "pattern": "**/*.ts" }',
-        };
+      const parsed = globInputSchema.safeParse(input);
+      if (!parsed.success) {
+        return { status: 'error', error: parsed.error.issues.map(i => i.message).join(', ') };
       }
 
       // 解析搜索目录
-      const searchDir = resolveSearchDir(context.cwd, input.cwd);
+      const searchDir = resolveSearchDir(context.cwd, parsed.data.cwd);
 
       try {
         // 使用 Node.js 内置 glob 函数
         const files: string[] = [];
 
-        for await (const file of glob(pattern, { cwd: searchDir })) {
+        for await (const file of glob(parsed.data.pattern, { cwd: searchDir })) {
           files.push(resolve(searchDir, file));
         }
 
         return {
           status: 'success',
-          output: formatResult(files, searchDir, pattern),
+          output: formatResult(files, searchDir, parsed.data.pattern),
         };
       } catch (error) {
         return {

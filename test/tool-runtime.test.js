@@ -160,7 +160,7 @@ describe("tool-runtime", () => {
     );
 
     expect(events[events.length - 1].type).toBe("tool_failed");
-    expect(events[events.length - 1].error).toMatch(/requires.*name.*task/i);
+    expect(events[events.length - 1].error).toMatch(/requires.*name.*task|Required|Invalid/i);
   });
 
   it("spawn_agent respects tools parameter to limit child agent tools", async () => {

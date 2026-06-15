@@ -20,8 +20,23 @@
 
 import { readdir, stat } from 'node:fs/promises';
 import { join, relative, resolve } from 'node:path';
+import { z } from 'zod';
+import { zodToJsonSchema } from '@alcyone-labs/zod-to-json-schema';
 
 import type { AgentTool, ToolExecutionResult } from './tool-types.js';
+import type { JsonSchema } from './tool-types.js';
+
+// ============================================================
+// Zod Schema
+// ============================================================
+
+export const listDirectoryInputSchema = z.object({
+  path: z.string().optional().describe('目录路径（默认当前工作目录）'),
+  recursive: z.boolean().default(false).describe('是否递归列出子目录'),
+  showHidden: z.boolean().default(false).describe('是否显示隐藏文件'),
+});
+
+export type ListDirectoryInput = z.infer<typeof listDirectoryInputSchema>;
 
 // ============================================================
 // 配置常量
@@ -299,13 +314,19 @@ export function createListDirectoryTool(): AgentTool {
   return {
     name: 'list-directory',
     riskLevel: 'read',
+    description: '列出目录内容，支持递归和隐藏文件',
+    inputSchema: zodToJsonSchema(listDirectoryInputSchema) as JsonSchema,
 
     async execute(input, context): Promise<ToolExecutionResult> {
+      const parsed = listDirectoryInputSchema.safeParse(input);
+      if (!parsed.success) {
+        return { status: 'error', error: parsed.error.issues.map(i => i.message).join(', ') };
+      }
+
       // 解析目录路径
-      const targetPath =
-        typeof input.path === 'string' && input.path.trim().length > 0
-          ? resolve(context.cwd, input.path)
-          : context.cwd;
+      const targetPath = parsed.data.path
+        ? resolve(context.cwd, parsed.data.path)
+        : context.cwd;
 
       // 验证路径存在且是目录
       try {
@@ -313,7 +334,7 @@ export function createListDirectoryTool(): AgentTool {
         if (!s.isDirectory()) {
           return {
             status: 'error',
-            error: `路径 "${input.path}" 不是一个目录。`,
+            error: `路径 "${parsed.data.path}" 不是一个目录。`,
           };
         }
       } catch {
@@ -323,21 +344,18 @@ export function createListDirectoryTool(): AgentTool {
         };
       }
 
-      const recursive = input.recursive === true;
-      const showHidden = input.showHidden === true;
-
       try {
         let entries: DirEntry[];
 
-        if (recursive) {
-          entries = await listRecursive(targetPath, targetPath, showHidden, MAX_DEPTH);
+        if (parsed.data.recursive) {
+          entries = await listRecursive(targetPath, targetPath, parsed.data.showHidden, MAX_DEPTH);
         } else {
-          entries = await listSingleDir(targetPath, targetPath, showHidden);
+          entries = await listSingleDir(targetPath, targetPath, parsed.data.showHidden);
         }
 
         return {
           status: 'success',
-          output: formatResult(entries, targetPath, recursive),
+          output: formatResult(entries, targetPath, parsed.data.recursive),
         };
       } catch (error) {
         return {

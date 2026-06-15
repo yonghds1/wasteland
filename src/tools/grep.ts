@@ -21,9 +21,25 @@
 
 import { readFile, stat } from 'node:fs/promises';
 import { join, relative, resolve } from 'node:path';
+import { z } from 'zod';
+import { zodToJsonSchema } from '@alcyone-labs/zod-to-json-schema';
 
 import { t } from '../locales/index.js';
 import type { AgentTool, ToolExecutionResult } from './tool-types.js';
+import type { JsonSchema } from './tool-types.js';
+
+// ============================================================
+// Zod Schema
+// ============================================================
+
+export const grepInputSchema = z.object({
+  pattern: z.string().min(1).describe('搜索模式（支持正则表达式）'),
+  path: z.string().optional().describe('搜索路径（默认当前工作目录）'),
+  include: z.string().optional().describe('文件包含模式（如 "*.ts"）'),
+  ignoreCase: z.boolean().default(false).describe('是否忽略大小写'),
+});
+
+export type GrepInput = z.infer<typeof grepInputSchema>;
 
 // ============================================================
 // 配置常量
@@ -272,21 +288,17 @@ export function createGrepTool(): AgentTool {
   return {
     name: 'grep',
     riskLevel: 'read',
+    description: '在文件中搜索匹配指定模式的文本行',
+    inputSchema: zodToJsonSchema(grepInputSchema) as JsonSchema,
 
     async execute(input, context): Promise<ToolExecutionResult> {
-      // 解析搜索模式
-      const pattern = resolvePattern(input.pattern);
-
-      if (pattern === null) {
-        return {
-          status: 'error',
-          error: t('tools.grep.needPattern'),
-        };
+      const parsed = grepInputSchema.safeParse(input);
+      if (!parsed.success) {
+        return { status: 'error', error: parsed.error.issues.map(i => i.message).join(', ') };
       }
 
       // 编译正则表达式
-      const ignoreCase = input.ignoreCase === true;
-      const compiled = compilePattern(pattern, ignoreCase);
+      const compiled = compilePattern(parsed.data.pattern, parsed.data.ignoreCase);
 
       if ('error' in compiled) {
         return {
@@ -296,10 +308,9 @@ export function createGrepTool(): AgentTool {
       }
 
       // 解析搜索路径
-      const searchDir =
-        typeof input.path === 'string' && input.path.trim().length > 0
-          ? resolve(context.cwd, input.path)
-          : context.cwd;
+      const searchDir = parsed.data.path
+        ? resolve(context.cwd, parsed.data.path)
+        : context.cwd;
 
       // 验证路径存在且是目录
       try {
@@ -307,7 +318,7 @@ export function createGrepTool(): AgentTool {
         if (!s.isDirectory()) {
           return {
             status: 'error',
-            error: `路径 "${input.path}" 不是一个目录。`,
+            error: `路径 "${parsed.data.path}" 不是一个目录。`,
           };
         }
       } catch {
@@ -319,12 +330,7 @@ export function createGrepTool(): AgentTool {
 
       try {
         // 收集文件
-        const include =
-          typeof input.include === 'string' && input.include.trim().length > 0
-            ? input.include.trim()
-            : undefined;
-
-        const files = await collectFiles(searchDir, include);
+        const files = await collectFiles(searchDir, parsed.data.include);
 
         // 在所有文件中搜索
         const allMatches: GrepMatch[] = [];
@@ -340,7 +346,7 @@ export function createGrepTool(): AgentTool {
 
         return {
           status: 'success',
-          output: formatResult(allMatches.slice(0, MAX_MATCHES), pattern),
+          output: formatResult(allMatches.slice(0, MAX_MATCHES), parsed.data.pattern),
         };
       } catch (error) {
         return {

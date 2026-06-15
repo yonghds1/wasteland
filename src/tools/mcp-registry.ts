@@ -48,6 +48,7 @@
 
 import type {
   AgentTool,
+  JsonSchema,
   ToolExecutionContext,
   ToolExecutionResult,
   ToolInput,
@@ -293,6 +294,7 @@ export class MCPToolRegistry {
    * 将 MCP 工具转换为 AgentTool 接口
    *
    * 这允许 MCP 工具与现有的 ToolRegistry 集成。
+   * MCP Server 返回的 inputSchema 会直接传递给 AgentTool。
    */
   toAgentTools(): AgentTool[] {
     const tools: AgentTool[] = [];
@@ -306,6 +308,8 @@ export class MCPToolRegistry {
       const tool: AgentTool = {
         name: fullName,
         riskLevel: 'execute', // MCP 工具默认为执行级别
+        description: lookup.tool.description,
+        inputSchema: lookup.tool.inputSchema as JsonSchema,
         async execute(
           input: ToolInput,
           _context: ToolExecutionContext

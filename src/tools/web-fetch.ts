@@ -20,7 +20,25 @@
  * - timeout: 超时时间（可选，默认 30000ms）
  */
 
+import { z } from 'zod';
+import { zodToJsonSchema } from '@alcyone-labs/zod-to-json-schema';
+
 import type { AgentTool, ToolExecutionResult } from './tool-types.js';
+import type { JsonSchema } from './tool-types.js';
+
+// ============================================================
+// Zod Schema
+// ============================================================
+
+export const webFetchInputSchema = z.object({
+  url: z.string().url().describe('请求 URL（支持 http/https）'),
+  method: z.enum(['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD']).default('GET').describe('HTTP 方法'),
+  headers: z.record(z.string(), z.string()).optional().describe('自定义请求头'),
+  body: z.union([z.string(), z.record(z.string(), z.unknown())]).optional().describe('请求体（POST/PUT/PATCH 时使用）'),
+  timeout: z.number().int().positive().max(120000).optional().describe('超时时间（毫秒，默认 30000）'),
+});
+
+export type WebFetchInput = z.infer<typeof webFetchInputSchema>;
 
 // ============================================================
 // 配置常量
@@ -170,37 +188,26 @@ export function createWebFetchTool(): AgentTool {
   return {
     name: 'web-fetch',
     riskLevel: 'execute',
+    description: '从 URL 获取内容并返回文本响应',
+    inputSchema: zodToJsonSchema(webFetchInputSchema) as JsonSchema,
 
     async execute(input): Promise<ToolExecutionResult> {
-      // 验证 URL
-      const url = validateUrl(input.url);
-
-      if (url === null) {
-        return {
-          status: 'error',
-          error:
-            'web-fetch 工具需要有效的 HTTP/HTTPS URL。示例：{ "url": "https://api.example.com/data" }',
-        };
+      const parsed = webFetchInputSchema.safeParse(input);
+      if (!parsed.success) {
+        return { status: 'error', error: parsed.error.issues.map(i => i.message).join(', ') };
       }
 
-      // 解析参数
-      const method =
-        typeof input.method === 'string' &&
-        ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD'].includes(input.method.toUpperCase())
-          ? input.method.toUpperCase()
-          : 'GET';
-
-      const headers = parseHeaders(input.headers);
-      const timeout = parseTimeout(input.timeout);
+      const url = new URL(parsed.data.url);
+      const headers: Record<string, string> = { ...DEFAULT_HEADERS, ...parsed.data.headers };
+      const timeout = parsed.data.timeout ?? DEFAULT_TIMEOUT;
 
       // 请求体（仅用于 POST/PUT/PATCH）
       let body: string | undefined;
-      if (['POST', 'PUT', 'PATCH'].includes(method)) {
-        if (typeof input.body === 'string') {
-          body = input.body;
-        } else if (typeof input.body === 'object' && input.body !== null) {
-          body = JSON.stringify(input.body);
-          // 自动设置 Content-Type
+      if (['POST', 'PUT', 'PATCH'].includes(parsed.data.method)) {
+        if (typeof parsed.data.body === 'string') {
+          body = parsed.data.body;
+        } else if (typeof parsed.data.body === 'object' && parsed.data.body !== null) {
+          body = JSON.stringify(parsed.data.body);
           if (!headers['Content-Type']) {
             headers['Content-Type'] = 'application/json';
           }
@@ -215,7 +222,7 @@ export function createWebFetchTool(): AgentTool {
         const timeoutId = setTimeout(() => controller.abort(), timeout);
 
         const response = await fetch(url.toString(), {
-          method,
+          method: parsed.data.method,
           headers,
           body,
           signal: controller.signal,

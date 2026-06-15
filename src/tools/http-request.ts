@@ -2,57 +2,51 @@
  * http-request.ts - HTTP 请求工具
  *
  * 发送 HTTP 请求，支持 GET/POST/PUT/DELETE 等方法。
+ *
+ * @deprecated 建议使用 web-fetch 工具替代
  */
 
-import type { AgentTool, ToolRiskLevel, ToolExecutionResult } from './tool-types.js';
+import { z } from 'zod';
+import { zodToJsonSchema } from '@alcyone-labs/zod-to-json-schema';
 
-type HttpRequestInput = {
-  url: string;
-  method?: string;
-  headers?: Record<string, string>;
-  body?: string;
-  timeout?: number;
-};
+import type { AgentTool, ToolExecutionResult } from './tool-types.js';
+import type { JsonSchema } from './tool-types.js';
+
+// ============================================================
+// Zod Schema
+// ============================================================
+
+export const httpRequestInputSchema = z.object({
+  url: z.string().url().describe('请求 URL'),
+  method: z.enum(['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD']).default('GET').describe('HTTP 方法'),
+  headers: z.record(z.string(), z.string()).optional().describe('请求头'),
+  body: z.string().optional().describe('请求体'),
+  timeout: z.number().int().positive().max(120000).default(30000).describe('超时时间（毫秒）'),
+});
+
+export type HttpRequestInput = z.infer<typeof httpRequestInputSchema>;
 
 export function createHttpRequestTool(): AgentTool {
   return {
     name: 'http-request',
-    riskLevel: 'execute' as ToolRiskLevel,
+    riskLevel: 'execute',
+    description: '发送 HTTP 请求（建议使用 web-fetch 替代）',
+    inputSchema: zodToJsonSchema(httpRequestInputSchema) as JsonSchema,
 
-    async execute(input: unknown): Promise<ToolExecutionResult> {
-      const {
-        url,
-        method = 'GET',
-        headers = {},
-        body,
-        timeout = 30000,
-      } = input as HttpRequestInput;
-
-      if (!url || typeof url !== 'string') {
-        return {
-          status: 'error',
-          error: '缺少 url 参数',
-        };
-      }
-
-      // 验证 URL 格式
-      try {
-        new URL(url);
-      } catch {
-        return {
-          status: 'error',
-          error: `无效的 URL: ${url}`,
-        };
+    async execute(input): Promise<ToolExecutionResult> {
+      const parsed = httpRequestInputSchema.safeParse(input);
+      if (!parsed.success) {
+        return { status: 'error', error: parsed.error.issues.map(i => i.message).join(', ') };
       }
 
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeout);
+        const timeoutId = setTimeout(() => controller.abort(), parsed.data.timeout);
 
-        const response = await fetch(url, {
-          method: method.toUpperCase(),
-          headers,
-          body: method.toUpperCase() !== 'GET' ? body : undefined,
+        const response = await fetch(parsed.data.url, {
+          method: parsed.data.method,
+          headers: (parsed.data.headers ?? {}) as Record<string, string>,
+          body: parsed.data.method !== 'GET' ? parsed.data.body : undefined,
           signal: controller.signal,
         });
 
@@ -66,7 +60,7 @@ export function createHttpRequestTool(): AgentTool {
 
         return {
           status: 'success',
-          output: `HTTP ${method.toUpperCase()} ${url}\n状态码: ${response.status}\n\n${responseBody}`,
+          output: `HTTP ${parsed.data.method} ${parsed.data.url}\n状态码: ${response.status}\n\n${responseBody}`,
           data: {
             statusCode: response.status,
             headers: responseHeaders,

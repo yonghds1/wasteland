@@ -43,10 +43,12 @@
     "node": ">=20"
   },
   "dependencies": {
+    "@alcyone-labs/zod-to-json-schema": "^4.0.10",
     "commander": "^14.0.2",
     "ink": "^7.0.3",
     "react": "^19.2.6",
-    "rxjs": "^7.8.2"
+    "rxjs": "^7.8.2",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
