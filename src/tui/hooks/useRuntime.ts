@@ -9,6 +9,7 @@ import { Subject } from 'rxjs';
 
 import { initializeRuntime } from '@core/shared/initialize-runtime.js';
 import { runAgentLoop } from '@core/runtime/agent-loop.js';
+import { UserInputBridge } from '@core/runtime/user-input-bridge.js';
 import { loadSkin } from '../../skins/index.js';
 import { initI18n, t } from '../../locales/index.js';
 import type { TuiRuntimeContext, TuiConfig, TuiFullConfig } from '../types.js';
@@ -20,6 +21,8 @@ import type { Skin } from '../../skins/index.js';
  */
 interface InternalTuiRuntimeContext extends TuiRuntimeContext {
   stopMCP?: () => Promise<void>;
+  stopA2A?: () => Promise<void>;
+  userInputBridge?: UserInputBridge;
 }
 
 /**
@@ -29,16 +32,19 @@ interface InternalTuiRuntimeContext extends TuiRuntimeContext {
  *
  * @param cwd - 当前工作目录
  * @param roleName - 角色名称（可选）
+ * @param providerName - Provider 名称（可选，对应 --provider 选项）
  * @returns TUI 运行时上下文
  */
 export async function createTuiRuntime(
   cwd: string,
-  roleName?: string
+  roleName?: string,
+  providerName?: string
 ): Promise<TuiRuntimeContext> {
   // 1. 使用 initializeRuntime() 统一初始化
   const runtime = await initializeRuntime({
     cwd,
     roleName,
+    providerName,
   });
 
   // 2. 初始化 i18n（TUI 特有）
@@ -55,7 +61,10 @@ export async function createTuiRuntime(
     providerId: runtime.provider.id,
   });
 
-  // 5. 启动 Agent 循环
+  // 5. 创建用户输入桥接器（用于 ask-user 工具）
+  const userInputBridge = new UserInputBridge();
+
+  // 6. 启动 Agent 循环
   const run = runAgentLoop({
     input$,
     provider: runtime.provider,
@@ -71,6 +80,7 @@ export async function createTuiRuntime(
     providerSettings: runtime.resolvedRuntime.providerConfig,
     skillExecutor: runtime.skillExecutor,
     childAgentTimeout: runtime.loadedSettings.settings.runtime.childAgentTimeout,
+    userInputBridge,
   });
 
   // 6. 构建 TUI 配置
@@ -114,7 +124,9 @@ export async function createTuiRuntime(
     sessionManager: runtime.sessionManager,
     providerId: runtime.provider.id,
     stopMCP: runtime.mcpManager.stopMCP,
+    stopA2A: runtime.a2aManager.stopA2A,
     skin,
+    userInputBridge,
   } as InternalTuiRuntimeContext;
 }
 
@@ -127,10 +139,20 @@ export async function cleanupTuiRuntime(runtime: TuiRuntimeContext): Promise<voi
   // 完成 input$ 流
   runtime.input$.complete();
 
-  // 停止 MCP 服务器
+  // 清理用户输入桥接器
   const internal = runtime as InternalTuiRuntimeContext;
+  if (internal.userInputBridge) {
+    internal.userInputBridge.destroy();
+  }
+
+  // 停止 MCP 服务器
   if (internal.stopMCP) {
     await internal.stopMCP();
+  }
+
+  // 停止 A2A 服务器
+  if (internal.stopA2A) {
+    await internal.stopA2A();
   }
 
   // 关闭所有会话

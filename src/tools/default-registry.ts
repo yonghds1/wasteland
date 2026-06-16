@@ -14,6 +14,8 @@ import { createHttpRequestTool } from './http-request.js';
 import type { MCPServersConfig } from '../config/settings-types.js';
 import { MCPToolRegistry } from './mcp-registry.js';
 import { t } from '../locales/index.js';
+import { A2AAgentRegistry } from '../acp/a2a-registry.js';
+import { createA2ASpawnAgentTool } from './a2a-spawn-agent.js';
 
 /**
  * 创建 spawn_agent 的占位工具定义
@@ -56,19 +58,29 @@ export type CreateToolRegistryResult = {
   toolRegistry: ToolRegistry;
   /** MCP 注册表（用于 MCP 工具调用，可选） */
   mcpRegistry?: MCPToolRegistry;
+  /** A2A Agent 注册表（用于远程 Agent 调用，可选） */
+  a2aRegistry?: A2AAgentRegistry;
   /** 启动 MCP 服务器 */
   startMCP: () => Promise<void>;
   /** 停止 MCP 服务器 */
   stopMCP: () => Promise<void>;
+  /** 启动 A2A Agent 发现 */
+  startA2A: () => Promise<void>;
+  /** 停止 A2A Agent */
+  stopA2A: () => Promise<void>;
 };
 
 /**
  * 创建默认工具注册表
  *
  * @param mcpServers - MCP 服务器配置（可选）
- * @returns 包含 ToolRegistry 和 MCP 相关控制的对象
+ * @param a2aAgents - A2A Agent 配置列表（可选）
+ * @returns 包含 ToolRegistry、MCP 和 A2A 相关控制的对象
  */
-export function createDefaultToolRegistry(mcpServers?: MCPServersConfig): CreateToolRegistryResult {
+export function createDefaultToolRegistry(
+  mcpServers?: MCPServersConfig,
+  a2aAgents?: Array<{ name: string; url: string; token?: string }>
+): CreateToolRegistryResult {
   // 内置工具（硬编码，安全可靠）
   const builtinTools = [
     createReadFileTool(),
@@ -103,9 +115,41 @@ export function createDefaultToolRegistry(mcpServers?: MCPServersConfig): Create
 
   const toolRegistry = new ToolRegistry(builtinTools);
 
+  // A2A support
+  let a2aRegistry: A2AAgentRegistry | null = null;
+  let a2aStarted = false;
+
+  if (a2aAgents && a2aAgents.length > 0) {
+    a2aRegistry = new A2AAgentRegistry();
+    for (const agent of a2aAgents) {
+      a2aRegistry.register({
+        name: agent.name,
+        url: agent.url,
+        description: `Remote A2A agent: ${agent.name}`,
+        capabilities: {
+          streaming: false,
+          pushNotifications: false,
+          stateTransitionHistory: false,
+        },
+        skills: [],
+      });
+    }
+
+    // Replace the local spawn_agent placeholder with A2A-aware version
+    const localSpawnTool = toolRegistry.get('spawn_agent');
+    if (localSpawnTool) {
+      const a2aSpawnTool = createA2ASpawnAgentTool({
+        localSpawnTool,
+        a2aRegistry,
+      });
+      toolRegistry.register(a2aSpawnTool);
+    }
+  }
+
   return {
     toolRegistry,
     mcpRegistry,
+    a2aRegistry: a2aRegistry ?? undefined,
     startMCP: async () => {
       if (mcpRegistry && !mcpStarted) {
         await mcpRegistry.startAll();
@@ -122,6 +166,17 @@ export function createDefaultToolRegistry(mcpServers?: MCPServersConfig): Create
       if (mcpRegistry && mcpStarted) {
         await mcpRegistry.stopAll();
         mcpStarted = false;
+      }
+    },
+    startA2A: async () => {
+      if (a2aRegistry && !a2aStarted) {
+        a2aStarted = true;
+      }
+    },
+    stopA2A: async () => {
+      if (a2aRegistry && a2aStarted) {
+        a2aRegistry.clear();
+        a2aStarted = false;
       }
     },
   };

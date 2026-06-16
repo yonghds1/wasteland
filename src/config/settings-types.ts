@@ -68,6 +68,23 @@ export type MCPServerConfig = {
 export type MCPServersConfig = Record<string, MCPServerConfig>;
 
 /**
+ * A2A Agent 配置
+ */
+export type A2AAgentConfig = {
+  /** Agent 名称 */
+  name: string;
+  /** Agent 端点 URL */
+  url: string;
+  /** 可选：认证 token */
+  token?: string;
+};
+
+/**
+ * A2A Agent 配置列表
+ */
+export type A2AAgentsConfig = A2AAgentConfig[];
+
+/**
  * 子角色配置
  * 子角色可以被用户自定义覆盖，但主角色 immortan-joe 完全内置不可覆盖
  */
@@ -99,6 +116,8 @@ export type RawWastelandSettings = {
   };
   /** MCP 服务器配置 */
   mcpServers?: MCPServersConfig;
+  /** A2A Agent 配置 */
+  a2aAgents?: A2AAgentsConfig;
 };
 
 export type ResolvedWastelandSettings = {
@@ -122,6 +141,7 @@ export type ResolvedWastelandSettings = {
     language: string;
   };
   mcpServers: MCPServersConfig;
+  a2aAgents: A2AAgentsConfig;
 };
 
 export type LoadedWastelandSettings = {
@@ -151,4 +171,5 @@ export const DEFAULT_WASTELAND_SETTINGS: ResolvedWastelandSettings = {
     language: 'en',
   },
   mcpServers: {},
+  a2aAgents: [],
 };

@@ -10,6 +10,8 @@ import {
   type LoadedWastelandSettings,
   type MCPServerConfig,
   type MCPServersConfig,
+  type A2AAgentsConfig,
+  type A2AAgentConfig,
   type ModelSettings,
   type ProviderSettings,
   type RawWastelandSettings,
@@ -397,6 +399,19 @@ function mergeSettings(
     }
   }
 
+  // 合并 a2aAgents（按 name 去重，后者覆盖前者）
+  const mergedA2AAgents: A2AAgentsConfig = [...(base.a2aAgents ?? [])];
+  if (next.a2aAgents) {
+    for (const agent of next.a2aAgents) {
+      const existingIndex = mergedA2AAgents.findIndex(a => a.name === agent.name);
+      if (existingIndex >= 0) {
+        mergedA2AAgents[existingIndex] = agent;
+      } else {
+        mergedA2AAgents.push(agent);
+      }
+    }
+  }
+
   return {
     defaultProvider: next.defaultProvider ?? base.defaultProvider,
     providers: mergedProviders,
@@ -413,6 +428,7 @@ function mergeSettings(
       language: next.runtime?.language ?? base.runtime.language,
     },
     mcpServers: mergedMCPServers,
+    a2aAgents: mergedA2AAgents,
   };
 }
 
@@ -543,6 +559,11 @@ function resolveSettingsAuthRefs(
       ...settings.runtime,
     },
     mcpServers: resolvedMCPServers,
+    a2aAgents: resolveAuthRefsInValue({
+      value: settings.a2aAgents,
+      auth,
+      env,
+    }) as A2AAgentsConfig,
   };
 }
 
@@ -566,6 +587,7 @@ function applyEnvironmentOverrides(
       language: settings.runtime.language,
     },
     mcpServers: { ...settings.mcpServers },
+    a2aAgents: [...settings.a2aAgents],
   } satisfies ResolvedWastelandSettings;
 
   const providerEnv = env.WASTELAND_PROVIDER ?? env.JOE_PROVIDER;

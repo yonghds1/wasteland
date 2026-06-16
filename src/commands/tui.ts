@@ -50,7 +50,7 @@ export function createTuiCommand(): Command {
 
       try {
         // 创建 TUI 运行时
-        const runtime = await createTuiRuntime(process.cwd(), options.role);
+        const runtime = await createTuiRuntime(process.cwd(), options.role, options.provider);
 
         try {
           // 启动 TUI

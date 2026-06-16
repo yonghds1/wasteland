@@ -37,6 +37,10 @@ vi.mock('@core/shared/initialize-runtime.js', () => ({
       startMCP: vi.fn().mockResolvedValue(undefined),
       stopMCP: vi.fn().mockResolvedValue(undefined),
     },
+    a2aManager: {
+      startA2A: vi.fn().mockResolvedValue(undefined),
+      stopA2A: vi.fn().mockResolvedValue(undefined),
+    },
     loadedSettings: {
       settings: {
         runtime: {
@@ -97,14 +101,15 @@ describe('createTuiRuntime', () => {
     expect(context.providerId).toBe('local');
   });
 
-  it('应该支持 roleName 参数', async () => {
+  it('应该支持 roleName 和 providerName 参数', async () => {
     const { initializeRuntime } = await import('@core/shared/initialize-runtime.js');
 
-    await createTuiRuntime('/test', 'developer');
+    await createTuiRuntime('/test', 'developer', 'ollama');
 
     expect(initializeRuntime).toHaveBeenCalledWith({
       cwd: '/test',
       roleName: 'developer',
+      providerName: 'ollama',
     });
   });
 });

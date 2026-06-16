@@ -51,6 +51,11 @@ export type RuntimeEnvironment = {
     startMCP: () => Promise<void>;
     stopMCP: () => Promise<void>;
   };
+  /** A2A 管理器（启动/停止） */
+  a2aManager: {
+    startA2A: () => Promise<void>;
+    stopA2A: () => Promise<void>;
+  };
   /** 加载的配置 */
   loadedSettings: LoadedWastelandSettings;
 };
@@ -82,7 +87,7 @@ export type InitializeRuntimeParams = {
  * - 创建 Provider
  * - 创建 SessionManager
  * - 创建 PermissionGate
- * - 创建 ToolRegistry（含 MCP）
+ * - 创建 ToolRegistry（含 MCP 和 A2A）
  * - 创建 SkillExecutor
  *
  * @param params - 初始化参数
@@ -127,9 +132,13 @@ export async function initializeRuntime(
     mode: resolvedRuntime.permissionMode,
   });
 
-  // 6. 创建 ToolRegistry（含 MCP）
+  // 6. 创建 ToolRegistry（含 MCP 和 A2A）
   const mcpServers = loadedSettings.settings.mcpServers;
-  const { toolRegistry, startMCP, stopMCP } = createDefaultToolRegistry(mcpServers);
+  const a2aAgents = loadedSettings.settings.a2aAgents;
+  const { toolRegistry, startMCP, stopMCP, startA2A, stopA2A } = createDefaultToolRegistry(
+    mcpServers,
+    a2aAgents,
+  );
 
   // 7. 创建 SkillExecutor
   const skillRegistry = await createSkillRegistry({
@@ -150,6 +159,16 @@ export async function initializeRuntime(
     );
   }
 
+  // 9. 启动 A2A（可选，失败不阻塞）
+  try {
+    await startA2A();
+  } catch (error) {
+    // A2A 启动失败不阻塞运行时初始化
+    console.warn(
+      `A2A startup failed: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+
   return {
     sessionManager,
     skillExecutor,
@@ -159,6 +178,7 @@ export async function initializeRuntime(
     permissionGate,
     resolvedRuntime,
     mcpManager: { startMCP, stopMCP },
+    a2aManager: { startA2A, stopA2A },
     loadedSettings,
   };
 }

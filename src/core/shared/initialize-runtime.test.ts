@@ -57,6 +57,8 @@ vi.mock('../../tools/default-registry.js', () => ({
     toolRegistry: { get: vi.fn(), list: vi.fn() },
     startMCP: vi.fn().mockResolvedValue(undefined),
     stopMCP: vi.fn().mockResolvedValue(undefined),
+    startA2A: vi.fn().mockResolvedValue(undefined),
+    stopA2A: vi.fn().mockResolvedValue(undefined),
   }),
 }));
 
@@ -163,6 +165,7 @@ describe('RuntimeEnvironment type', () => {
       permissionGate: {} as any,
       resolvedRuntime: {} as any,
       mcpManager: { startMCP: async () => {}, stopMCP: async () => {} },
+      a2aManager: { startA2A: async () => {}, stopA2A: async () => {} },
       loadedSettings: {} as any,
     };
 
