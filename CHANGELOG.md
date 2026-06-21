@@ -5,6 +5,74 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.4.0] - 2026-06-21
+
+### 新增
+
+- **web-search 增强**
+  - cheerio HTML 解析：使用 cheerio 替换正则表达式解析，提升稳定性
+  - 内存 LRU 缓存：避免重复搜索，提升性能
+  - 缓存管理：clearSearchCache() 和 getCacheSize() 函数
+
+### 改进
+
+- **web-search 工具**
+  - 重构 HTML 解析逻辑：从正则表达式迁移到 cheerio
+  - 添加搜索结果缓存：基于查询字符串的 LRU 缓存
+  - 保持向后兼容：搜索结果格式完全一致
+
+### 依赖
+
+- 新增 `cheerio` 依赖（HTML 解析库）
+
+## [0.3.0] - 2026-06-21
+
+### 新增
+
+- **MCP 协议完善**
+  - 传输抽象层：创建 Transport 接口，支持 stdio 和 SSE 两种传输方式
+  - SSE 传输支持：通过 HTTP Server-Sent Events 连接远程 MCP 服务器
+  - Resources 功能：resources/list 和 resources/read 方法
+  - Prompts 功能：prompts/list 和 prompts/get 方法
+  - Resources 工具：mcp-resource-list 和 mcp-resource-read
+  - Prompts 工具：mcp-prompt-list 和 mcp-prompt-get
+
+### 改进
+
+- **MCP 客户端**
+  - 重构 MCPClient 使用 Transport 接口，解耦传输逻辑
+  - 支持配置：`{ "url": "https://..." }` 格式（SSE 模式）
+  - 初始化握手时声明 resources 和 prompts 能力
+
+### 配置
+
+- MCP 服务器配置支持 `url` 字段（SSE 模式）
+- MCP 服务器配置支持 `headers` 字段（SSE 认证）
+
+## [0.2.0] - 2026-06-16
+
+### 新增
+
+- **并行 Agent 执行**
+  - 多个 spawn_agent 调用可并行执行
+  - 基于 RxJS 的 Buffer + Batch 模式（符合业界标准）
+  - Fail-fast 策略：一个 Agent 失败，取消其他 Agent
+  - 可配置并发上限（settings.json: parallel.maxConcurrency，默认 -1 无限制）
+  - 并行结果按 tool_call.id 排序，保持事件顺序
+  - TUI Footer 并行状态栏显示
+
+### 改进
+
+- **Agent 运行时**
+  - 优化 provider 事件处理：使用 toArray 缓冲事件，支持批量处理
+  - 工具调用分发：spawn_agent 并行执行，其他工具串行执行
+  - 状态管理：支持按 ID 排序的工具结果累积
+
+### 配置
+
+- 新增 `parallel.maxConcurrency` 配置项
+- 新增 `WASTELAND_MAX_CONCURRENCY` 环境变量
+
 ## [0.1.0] - 2026-05-29
 
 ### 新增

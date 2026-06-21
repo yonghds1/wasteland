@@ -5,7 +5,10 @@ Immortan Joe's War Machine - 一个基于 TypeScript、Commander 和 RxJS 的多
 **核心特性**：
 - 基于 RxJS 的响应式 Agent 运行时
 - 支持单 Agent 和多 Agent（主从编排）模式
+- **并行 Agent 执行**：多个 spawn_agent 调用可并行执行，提升多 Agent 系统效率
 - 完整的工具系统和权限控制
+- **MCP 协议支持**：支持 stdio 和 SSE 传输，Resources 和 Prompts 功能
+- **web-search 增强**：使用 cheerio 进行 HTML 解析，支持 LRU 缓存
 - Session 持久化和追踪
 
 ## 环境要求
