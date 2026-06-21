@@ -5,7 +5,8 @@
  *
  * ## 功能特性
  * - 支持 DuckDuckGo 搜索（默认，无需 API 密钥）
- * - 可扩展支持其他搜索引擎
+ * - 使用 cheerio 进行 HTML 解析（稳定可靠）
+ * - 内存 LRU 缓存（避免重复搜索）
  * - 返回结构化结果（标题、摘要、URL）
  * - 支持结果数量限制
  * - 超时处理
@@ -21,9 +22,11 @@
 
 import { z } from 'zod';
 import { zodToJsonSchema } from '@alcyone-labs/zod-to-json-schema';
+import * as cheerio from 'cheerio';
 
 import type { AgentTool, ToolExecutionResult } from './tool-types.js';
 import type { JsonSchema } from './tool-types.js';
+import { LRUCache } from './lru-cache.js';
 
 // ============================================================
 // Zod Schema
@@ -52,6 +55,12 @@ const MAX_ALLOWED_RESULTS = 20;
 
 /** 默认 User-Agent */
 const USER_AGENT = 'wasteland/0.1.0 (CLI Tool)';
+
+/** 缓存最大容量 */
+const CACHE_MAX_SIZE = 100;
+
+/** 搜索结果缓存（模块级别，全局共享） */
+const searchCache = new LRUCache<SearchResult[]>(CACHE_MAX_SIZE);
 
 // ============================================================
 // 类型定义
@@ -110,6 +119,15 @@ async function searchDuckDuckGo(
   query: string,
   maxResults: number
 ): Promise<SearchResult[]> {
+  // 生成缓存键（基于查询和结果数量）
+  const cacheKey = `${query}:${maxResults}`;
+
+  // 检查缓存
+  const cached = searchCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
   // DuckDuckGo HTML 搜索端点
   const searchUrl = new URL('https://html.duckduckgo.com/html/');
   searchUrl.searchParams.set('q', query);
@@ -133,7 +151,12 @@ async function searchDuckDuckGo(
     }
 
     const html = await response.text();
-    return parseDuckDuckGoHTML(html, maxResults);
+    const results = parseDuckDuckGoHTML(html, maxResults);
+
+    // 缓存结果
+    searchCache.set(cacheKey, results);
+
+    return results;
   } catch (error) {
     clearTimeout(timeoutId);
     if (error instanceof Error) {
@@ -149,6 +172,8 @@ async function searchDuckDuckGo(
 /**
  * 解析 DuckDuckGo HTML 响应
  *
+ * 使用 cheerio 解析 HTML，提取搜索结果
+ *
  * @param html - HTML 内容
  * @param maxResults - 最大结果数量
  * @returns 解析后的搜索结果
@@ -156,48 +181,40 @@ async function searchDuckDuckGo(
 function parseDuckDuckGoHTML(html: string, maxResults: number): SearchResult[] {
   const results: SearchResult[] = [];
 
-  // 使用正则表达式提取搜索结果
-  // DuckDuckGo HTML 结果格式：<a class="result__a" href="...">title</a>
-  // <a class="result__snippet">snippet</a>
+  // 使用 cheerio 解析 HTML
+  const $ = cheerio.load(html);
 
-  const resultRegex = /<a[^>]*class="result__a"[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi;
-  const snippetRegex = /<a[^>]*class="result__snippet"[^>]*>([\s\S]*?)<\/a>/gi;
+  // DuckDuckGo HTML 结果格式：
+  // <div class="result">
+  //   <a class="result__a" href="...">title</a>
+  //   <a class="result__snippet">snippet</a>
+  // </div>
 
-  const titles: string[] = [];
-  const urls: string[] = [];
-  const snippets: string[] = [];
+  // 提取所有结果
+  $('.result').each((index, element) => {
+    if (results.length >= maxResults) {
+      return false; // 停止遍历
+    }
 
-  // 提取标题和 URL
-  let match;
-  while ((match = resultRegex.exec(html)) !== null && urls.length < maxResults) {
-    const url = match[1];
-    const title = match[2].replace(/<[^>]*>/g, '').trim();
+    const $element = $(element);
+    const $titleLink = $element.find('.result__a');
+    const $snippet = $element.find('.result__snippet');
+
+    const title = $titleLink.text().trim();
+    const rawUrl = $titleLink.attr('href') || '';
+    const snippet = $snippet.text().trim();
 
     // DuckDuckGo 的 URL 可能是重定向 URL，提取实际 URL
-    const actualUrl = extractActualUrl(url);
+    const url = extractActualUrl(rawUrl);
 
-    if (title && actualUrl) {
-      titles.push(title);
-      urls.push(actualUrl);
+    if (title && url) {
+      results.push({
+        title: title || 'Untitled',
+        url,
+        snippet: snippet || '',
+      });
     }
-  }
-
-  // 提取摘要
-  while ((match = snippetRegex.exec(html)) !== null && snippets.length < urls.length) {
-    const snippet = match[1].replace(/<[^>]*>/g, '').trim();
-    if (snippet) {
-      snippets.push(snippet);
-    }
-  }
-
-  // 组装结果
-  for (let i = 0; i < Math.min(urls.length, maxResults); i++) {
-    results.push({
-      title: titles[i] || 'Untitled',
-      url: urls[i],
-      snippet: snippets[i] || '',
-    });
-  }
+  });
 
   return results;
 }
@@ -253,6 +270,24 @@ function formatResults(
     .join('\n\n');
 
   return `${header}\n\n${body}`;
+}
+
+/**
+ * 清空搜索缓存
+ *
+ * 用于测试或手动缓存失效
+ */
+export function clearSearchCache(): void {
+  searchCache.clear();
+}
+
+/**
+ * 获取缓存大小
+ *
+ * 用于监控和调试
+ */
+export function getCacheSize(): number {
+  return searchCache.size;
 }
 
 // ============================================================
