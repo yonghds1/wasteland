@@ -88,3 +88,21 @@ export function recordToolResult(state: TurnState, result: TurnToolResult): Turn
     toolResults: [...state.toolResults, result],
   };
 }
+
+/**
+ * 按 callId 排序记录工具结果
+ * 用于并行执行时确保结果顺序正确
+ */
+export function recordToolResultSorted(state: TurnState, result: TurnToolResult): TurnState {
+  const newResults = [...state.toolResults, result];
+  // 按 callId 排序，保持与 toolCalls 顺序一致
+  newResults.sort((a, b) => {
+    const aIndex = state.toolCalls.findIndex((tc) => tc.id === a.callId);
+    const bIndex = state.toolCalls.findIndex((tc) => tc.id === b.callId);
+    return aIndex - bIndex;
+  });
+  return {
+    ...state,
+    toolResults: newResults,
+  };
+}

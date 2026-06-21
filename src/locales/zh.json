@@ -639,7 +639,8 @@
     "permissionAcceptEditsAllows": "模式 accept_edits 允许 {{count}} 工具。",
     "permissionDefault": "模式 default 允许 read 工具。",
     "permissionDefaultRequires": "模式 default 对 {{count}} 工具要求确认。",
-    "permissionRuleHit": "工具规则命中："
+    "permissionRuleHit": "工具规则命中：",
+    "parallelAgentsRunning": "正在运行 {{count}} 个 Agent: {{names}}"
   },
   "providers": {
     "typeEmpty": "provider type 不能为空。",

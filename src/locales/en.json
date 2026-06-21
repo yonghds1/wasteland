@@ -651,7 +651,8 @@
     "permissionAcceptEditsAllows": "Mode accept_edits allows {{count}} tools.",
     "permissionDefault": "Mode default allows read tools.",
     "permissionDefaultRequires": "Mode default requires confirmation for {{count}} tools.",
-    "permissionRuleHit": "Tool rule hit:"
+    "permissionRuleHit": "Tool rule hit:",
+    "parallelAgentsRunning": "Running {{count}} agents: {{names}}"
   },
   "providers": {
     "typeEmpty": "provider type cannot be empty.",

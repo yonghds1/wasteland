@@ -1,14 +1,24 @@
 /**
  * Footer - 底部状态栏
  *
- * 使用分段样式（不同颜色区分不同提示）
- * 上下文相关提示更醒目
+ * 参考 OpenCode 的设计：
+ * - 左侧：快捷键提示
+ * - 中间：页面特定提示
+ * - 右侧：模型信息、Token 用量
  */
 
 import React from 'react';
 import { Text, Box } from 'ink';
 import { useAppContext } from '../../context/AppContext.js';
-import { PRIMARY, SECONDARY, SUCCESS, WARNING, BORDER, SEPARATORS } from '../../utils/colors.js';
+import {
+  PRIMARY,
+  SECONDARY,
+  SUCCESS,
+  WARNING,
+  MUTED,
+  BORDER_DIM,
+  SEPARATORS,
+} from '../../utils/colors.js';
 import { t } from '../../../locales/index.js';
 
 interface FooterProps {
@@ -21,7 +31,6 @@ export function Footer({ width }: FooterProps): React.ReactElement {
   // 根据模式返回不同的帮助文本
   const getModeHelp = () => {
     if (state.inputMode) {
-      // 输入模式
       return (
         <Box flexDirection="row" gap={1}>
           <Text bold color={SECONDARY}>
@@ -37,7 +46,6 @@ export function Footer({ width }: FooterProps): React.ReactElement {
     }
 
     if (state.filterMode) {
-      // 过滤模式
       return (
         <Box flexDirection="row" gap={1}>
           <Text bold color={SECONDARY}>
@@ -53,7 +61,6 @@ export function Footer({ width }: FooterProps): React.ReactElement {
     }
 
     if (state.editMode) {
-      // 编辑模式
       return (
         <Box flexDirection="row" gap={1}>
           <Text bold color={SECONDARY}>
@@ -67,7 +74,6 @@ export function Footer({ width }: FooterProps): React.ReactElement {
     }
 
     if (state.exitConfirmPending) {
-      // 退出确认状态
       return (
         <Box flexDirection="row" gap={1}>
           <Text bold color="red">
@@ -81,7 +87,6 @@ export function Footer({ width }: FooterProps): React.ReactElement {
     }
 
     if (state.showHelp) {
-      // 帮助页面
       return (
         <Box flexDirection="row" gap={1}>
           <Text bold color="cyan">
@@ -109,7 +114,6 @@ export function Footer({ width }: FooterProps): React.ReactElement {
 
   // 根据页面返回特定提示
   const getPageSpecificHelp = () => {
-    // 如果在特殊模式下，不显示页面特定提示
     if (
       state.inputMode ||
       state.filterMode ||
@@ -172,6 +176,10 @@ export function Footer({ width }: FooterProps): React.ReactElement {
     }
   };
 
+  // 计算并行 Agent 数量
+  const runningAgents = state.session.agents.filter((a) => a.status === 'running');
+  const parallelAgentCount = runningAgents.length;
+
   return (
     <Box
       flexDirection="row"
@@ -180,11 +188,27 @@ export function Footer({ width }: FooterProps): React.ReactElement {
       paddingX={1}
       borderStyle="single"
       borderTop
-      borderColor={BORDER}
+      borderColor={BORDER_DIM}
     >
+      {/* 左侧：快捷键提示 */}
       <Box flexDirection="row">{getModeHelp()}</Box>
 
+      {/* 右侧：并行状态 + 页面信息 + 模型 */}
       <Box flexDirection="row" gap={1}>
+        {/* 并行 Agent 状态（如果有多个运行中的 Agent） */}
+        {parallelAgentCount > 1 && (
+          <>
+            <Text color={SUCCESS}>⚡</Text>
+            <Text color={SUCCESS}>
+              {t('runtime.parallelAgentsRunning', {
+                count: String(parallelAgentCount),
+                names: runningAgents.map((a) => a.name).join(', '),
+              })}
+            </Text>
+            <Text dimColor>{SEPARATORS.item.trim()}</Text>
+          </>
+        )}
+
         {/* 页面特定提示 */}
         {getPageSpecificHelp()}
 
@@ -195,6 +219,16 @@ export function Footer({ width }: FooterProps): React.ReactElement {
         <Text bold color={PRIMARY}>
           {getPageName()}
         </Text>
+
+        {/* 分隔符 */}
+        <Text dimColor>{SEPARATORS.vertical}</Text>
+
+        {/* 模型信息（如果有） */}
+        {state.sessionMetadata.providerId && (
+          <Text color={MUTED}>
+            {state.sessionMetadata.providerId}
+          </Text>
+        )}
       </Box>
     </Box>
   );

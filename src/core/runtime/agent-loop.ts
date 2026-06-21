@@ -28,10 +28,14 @@ import {
   concat,
   concatMap,
   defer,
+  forkJoin,
   from,
+  lastValueFrom,
   map,
+  mergeMap,
   of,
   tap,
+  toArray,
 } from 'rxjs';
 
 import { t } from '../../locales/index.js';
@@ -437,254 +441,322 @@ function runTurnLoop(params: {
 
     // ---- Provider 执行阶段 ----
     // provider.runStep 返回一个 Observable<ProviderStreamEvent>
-    // 使用 concatMap 顺序处理每个事件，确保事件顺序正确
+    // 使用 toArray 缓冲所有事件，然后并行处理 spawn_agent 工具调用
     const provider$ = params.provider
       .runStep({
         context: params.context,
         state,
       })
       .pipe(
-        // concatMap: 对每个事件进行处理，返回新的 Observable
-        // 与 switchMap 不同，concatMap 保证事件按顺序处理
-        concatMap((event) => {
-          // 非 chunk 事件记录追踪
-          if (event.type !== 'assistant_chunk') {
-            params.trace({
-              sessionId: params.session.id,
-              turn: state.turn,
-              step: state.step,
-              scope: 'provider',
-              phase: 'provider.event',
-              message: 'provider emitted event',
-              data: {
-                type: event.type,
-                toolName: event.type === 'tool_call' ? event.call.toolName : undefined,
-              },
-            });
-          }
+        // toArray: 缓冲所有 provider 事件，等待流完成后一起处理
+        toArray(),
+        // concatMap: 处理缓冲的事件列表
+        // 使用 concatMap + from 将 Promise 转换为 Observable
+        concatMap((events) => from(processProviderEvents(events)).pipe(
+          // 确保返回类型是 Observable<RuntimeEvent>
+          mergeMap((obs) => obs)
+        ))
+      );
 
-          // ---- 处理 assistant_chunk 事件 ----
-          // assistant_chunk 是流式响应的文本片段，需要累积起来
-          if (event.type === 'assistant_chunk') {
-            // 将 chunk 追加到状态中
-            state = appendAssistantChunk(state, event.text);
+    // ---- 内部辅助函数：处理 provider 事件 ----
+    // 将所有事件缓冲后处理，支持 spawn_agent 并行执行
+    async function processProviderEvents(
+      events: Array<{ type: string; text?: string; call?: { id: string; toolName: string; input: Record<string, unknown> } }>
+    ): Promise<Observable<RuntimeEvent>> {
+      // 记录 provider 事件数量
+      params.trace({
+        sessionId: params.session.id,
+        turn: state.turn,
+        step: state.step,
+        scope: 'provider',
+        phase: 'provider.events',
+        message: `provider emitted ${events.length} events`,
+        data: {
+          eventCount: events.length,
+          toolCalls: events.filter((e) => e.type === 'tool_call').length,
+        },
+      });
 
-            // 发出 assistant_chunk RuntimeEvent 供 UI 显示
-            return of<RuntimeEvent>({
-              type: 'assistant_chunk',
-              sessionId: params.session.id,
-              turn: state.turn,
-              chunk: event.text,
-            });
-          }
+      // 分离 tool_call 事件和其他事件
+      const toolCallEvents: Array<{ event: { type: 'tool_call'; call: { id: string; toolName: string; input: Record<string, unknown> } }; index: number }> = [];
+      const nonToolEvents: Array<{ event: { type: string; text?: string; call?: { id: string; toolName: string; input: Record<string, unknown> } }; index: number }> = [];
 
-          // ---- 处理 assistant_message 事件 ----
-          // assistant_message 是 Provider 返回的最终完整消息，
-          // 表示当前 turn 完成，无需工具调用
-          if (event.type === 'assistant_message') {
-            // 标记 turn 为完成状态
-            state = completeTurnState(state, event.text);
-            // 标记 turn 完成
-            nextAction = 'complete';
+      events.forEach((event, index) => {
+        if (event.type === 'tool_call' && event.call) {
+          toolCallEvents.push({ event: event as { type: 'tool_call'; call: { id: string; toolName: string; input: Record<string, unknown> } }, index });
+        } else {
+          nonToolEvents.push({ event, index });
+        }
+      });
 
-            // 持久化消息并发出事件
-            // 使用 tap 在持久化完成后记录追踪
-            return persistAssistantMessage({
+      // 分离 spawn_agent 和其他工具
+      const spawnEvents = toolCallEvents.filter((tc) => tc.event.call.toolName === 'spawn_agent');
+      const otherEvents = toolCallEvents.filter((tc) => tc.event.call.toolName !== 'spawn_agent');
+
+      // ---- 第一步：处理非 tool 事件（更新 state） ----
+      const nonToolRuntimeEvents: RuntimeEvent[] = [];
+
+      for (const { event } of nonToolEvents) {
+        if (event.type === 'assistant_chunk' && event.text) {
+          state = appendAssistantChunk(state, event.text);
+          nonToolRuntimeEvents.push({
+            type: 'assistant_chunk',
+            sessionId: params.session.id,
+            turn: state.turn,
+            chunk: event.text,
+          });
+        } else if (event.type === 'assistant_message') {
+          const content = event.text ?? '';
+          state = completeTurnState(state, content);
+          nextAction = 'complete';
+
+          const persistEvent = await lastValueFrom(
+            persistAssistantMessage({
               session: params.session,
               sessionManager: params.sessionManager,
               history: params.history,
               turn: state.turn,
-              content: event.text,
-            }).pipe(
-              tap(() => {
-                params.trace({
-                  sessionId: params.session.id,
-                  turn: state.turn,
-                  step: state.step,
-                  scope: 'turn',
-                  phase: 'turn.complete',
-                  message: 'turn completed',
-                  data: {
-                    contentLength: event.text.length,
-                  },
-                });
-              })
-            );
-          }
-
-          // ---- 处理 tool_call 事件 ----
-          // tool_call 表示 Agent 想要调用工具
-          // 需要进行权限检查，然后执行工具
-          state = recordToolCall(state, event.call);
-          nextAction = 'tool';
-
-          // 检查是否配置了工具执行所需的基础设施
-          if (!params.toolRegistry || !params.permissionGate) {
-            const error = t('runtime.noToolRegistry');
-
-            // 记录错误结果
-            state = recordToolResult(state, {
-              callId: event.call.id,
-              toolName: event.call.toolName,
-              input: event.call.input,
-              status: 'error',
-              error,
-            });
-
-            params.trace({
-              sessionId: params.session.id,
-              turn: state.turn,
-              step: state.step,
-              scope: 'tool',
-              phase: 'tool.result',
-              message: 'tool execution failed before dispatch',
-              data: {
-                tool: event.call.toolName,
-                status: 'error',
-              },
-            });
-
-            // 发出失败事件
-            return of<RuntimeEvent>({
-              type: 'tool_failed',
-              sessionId: params.session.id,
-              turn: state.turn,
-              callId: event.call.id,
-              toolName: event.call.toolName,
-              status: 'error',
-              error,
-            });
-          }
-
-          // 记录开始时间用于计算耗时
-          const startedAt = Date.now();
-
-          // 分发工具调用
-          // dispatchToolCall 返回工具执行事件的 Observable
-          return dispatchToolCall({
-            session: params.session,
-            sessionManager: params.sessionManager,
-            turn: state.turn,
-            call: event.call,
-            registry: params.toolRegistry,
-            permissionGate: params.permissionGate,
-            cwd: params.cwd,
-            turnState: state,
-            // 多 Agent 支持
-            provider: params.provider,
-            history: params.history,
-            providerRegistry: params.providerRegistry,
-            providerSettings: params.providerSettings,
-            childAgentTimeout: params.childAgentTimeout,
-            // 用户输入支持
-            userInputBridge: params.userInputBridge,
-          }).pipe(
-            // tap 用于副作用：更新状态和记录追踪
-            // 注意：这里更新外层的 state 变量，这是关键！
-            // 工具执行结果必须累积到状态中，供下一次递归使用
-            tap((toolEvent) => {
-              if (toolEvent.type === 'tool_started') {
-                params.trace({
-                  sessionId: params.session.id,
-                  turn: state.turn,
-                  step: state.step,
-                  scope: 'tool',
-                  phase: 'call',
-                  message: 'tool execution started',
-                  data: {
-                    toolName: toolEvent.toolName,
-                    callId: toolEvent.callId,
-                  },
-                });
-
-                return;
-              }
-
-              if (toolEvent.type === 'permission_decision') {
-                params.trace({
-                  sessionId: params.session.id,
-                  turn: state.turn,
-                  step: state.step,
-                  scope: 'tool',
-                  phase: 'permission',
-                  message: 'permission decision resolved',
-                  data: {
-                    toolName: toolEvent.toolName,
-                    decision: toolEvent.decision,
-                    mode: toolEvent.mode,
-                    callId: toolEvent.callId,
-                  },
-                });
-
-                return;
-              }
-
-              // tool_result: 工具执行成功
-              // 更新状态，记录工具结果
-              if (toolEvent.type === 'tool_result') {
-                // 从 toolCalls 中查找原始 input
-                const originalCall = state.toolCalls.find((tc) => tc.id === toolEvent.callId);
-
-                state = recordToolResult(state, {
-                  callId: toolEvent.callId,
-                  toolName: toolEvent.toolName,
-                  input: originalCall?.input ?? {},
-                  status: toolEvent.status,
-                  output: toolEvent.output,
-                });
-
-                params.trace({
-                  sessionId: params.session.id,
-                  turn: state.turn,
-                  step: state.step,
-                  scope: 'tool',
-                  phase: 'success',
-                  message: 'tool execution completed',
-                  data: {
-                    toolName: toolEvent.toolName,
-                    status: toolEvent.status,
-                    ms: Date.now() - startedAt,
-                    callId: toolEvent.callId,
-                  },
-                });
-
-                return;
-              }
-
-              // tool_failed: 工具执行失败
-              // 同样需要更新状态，记录失败结果
-              if (toolEvent.type === 'tool_failed') {
-                // 从 toolCalls 中查找原始 input
-                const originalCall = state.toolCalls.find((tc) => tc.id === toolEvent.callId);
-
-                state = recordToolResult(state, {
-                  callId: toolEvent.callId,
-                  toolName: toolEvent.toolName,
-                  input: originalCall?.input ?? {},
-                  status: toolEvent.status,
-                  error: toolEvent.error,
-                });
-
-                params.trace({
-                  sessionId: params.session.id,
-                  turn: state.turn,
-                  step: state.step,
-                  scope: 'tool',
-                  phase: 'error',
-                  message: 'tool execution failed',
-                  data: {
-                    toolName: toolEvent.toolName,
-                    status: toolEvent.status,
-                    ms: Date.now() - startedAt,
-                    error: toolEvent.error,
-                    callId: toolEvent.callId,
-                  },
-                });
-              }
+              content,
             })
           );
+          nonToolRuntimeEvents.push(persistEvent);
+
+          params.trace({
+            sessionId: params.session.id,
+            turn: state.turn,
+            step: state.step,
+            scope: 'turn',
+            phase: 'turn.complete',
+            message: 'turn completed',
+            data: { contentLength: content.length },
+          });
+        }
+      }
+
+      // ---- 第二步：记录所有 tool_call 到 state ----
+      for (const { event } of toolCallEvents) {
+        state = recordToolCall(state, event.call);
+      }
+      if (toolCallEvents.length > 0) {
+        nextAction = 'tool';
+      }
+
+      // ---- 第三步：分发工具调用（spawn_agent 并行，其他串行） ----
+      const allToolResults: Array<{
+        runtimeEvents: RuntimeEvent[];
+        callId: string;
+        originalIndex: number;
+      }> = [];
+
+      // 并行分发 spawn_agent 调用
+      if (spawnEvents.length > 0) {
+        const spawnDispatches = spawnEvents.map(({ event, index }) =>
+          dispatchSingleToolCall(event.call, state, index).pipe(
+            tap((result) => {
+              allToolResults.push(result);
+            })
+          )
+        );
+
+        // 使用 forkJoin 并行执行所有 spawn_agent，fail-fast 策略
+        await lastValueFrom(forkJoin(spawnDispatches));
+      }
+
+      // 串行分发其他工具调用
+      if (otherEvents.length > 0) {
+        for (const { event, index } of otherEvents) {
+          const result = await lastValueFrom(dispatchSingleToolCall(event.call, state, index));
+          allToolResults.push(result);
+        }
+      }
+
+      // ---- 第四步：按原始顺序更新 state 并收集事件 ----
+      allToolResults.sort((a, b) => a.originalIndex - b.originalIndex);
+
+      const toolRuntimeEvents: RuntimeEvent[] = [];
+      for (const result of allToolResults) {
+        // 更新 state（按顺序）
+        for (const toolEvent of result.runtimeEvents) {
+          if (toolEvent.type === 'tool_result' || toolEvent.type === 'tool_failed') {
+            const originalCall = state.toolCalls.find((tc) => tc.id === result.callId);
+            state = recordToolResult(state, {
+              callId: result.callId,
+              toolName: toolEvent.type === 'tool_result' ? toolEvent.toolName : toolEvent.toolName,
+              input: originalCall?.input ?? {},
+              status: toolEvent.type === 'tool_result' ? toolEvent.status : toolEvent.status,
+              ...(toolEvent.type === 'tool_result'
+                ? { output: toolEvent.output }
+                : { error: toolEvent.error }),
+            });
+          }
+        }
+        toolRuntimeEvents.push(...result.runtimeEvents);
+      }
+
+      // 合并所有事件（按原始顺序）
+      const allRuntimeEvents: RuntimeEvent[] = [...nonToolEvents, ...toolCallEvents]
+        .sort((a, b) => a.index - b.index)
+        .flatMap(({ index }) => {
+          // 非 tool 事件
+          const nonToolIndex = nonToolEvents.findIndex((n) => n.index === index);
+          if (nonToolIndex >= 0) {
+            const event = nonToolRuntimeEvents[nonToolIndex];
+            return event ? [event] : [];
+          }
+          // tool 事件
+          const toolResult = allToolResults.find((r) => r.originalIndex === index);
+          return toolResult?.runtimeEvents ?? [];
+        });
+
+      // 使用 concat 将事件数组转换为 Observable
+      return allRuntimeEvents.length > 0
+        ? concat(...allRuntimeEvents.map((event) => of(event)))
+        : EMPTY;
+    }
+
+    // ---- 内部辅助函数：分发单个工具调用 ----
+    function dispatchSingleToolCall(
+      call: { id: string; toolName: string; input: Record<string, unknown> },
+      currentState: TurnState,
+      originalIndex: number
+    ): Observable<{
+      runtimeEvents: RuntimeEvent[];
+      callId: string;
+      originalIndex: number;
+    }> {
+      // 检查是否配置了工具执行所需的基础设施
+      if (!params.toolRegistry || !params.permissionGate) {
+        const error = t('runtime.noToolRegistry');
+
+        state = recordToolResult(state, {
+          callId: call.id,
+          toolName: call.toolName,
+          input: call.input,
+          status: 'error',
+          error,
+        });
+
+        params.trace({
+          sessionId: params.session.id,
+          turn: state.turn,
+          step: state.step,
+          scope: 'tool',
+          phase: 'tool.result',
+          message: 'tool execution failed before dispatch',
+          data: { tool: call.toolName, status: 'error' },
+        });
+
+        return of({
+          runtimeEvents: [
+            {
+              type: 'tool_failed' as const,
+              sessionId: params.session.id,
+              turn: state.turn,
+              callId: call.id,
+              toolName: call.toolName,
+              status: 'error' as const,
+              error,
+            },
+          ],
+          callId: call.id,
+          originalIndex,
+        });
+      }
+
+      // 记录开始时间用于计算耗时
+      const startedAt = Date.now();
+
+      // 分发工具调用
+      return dispatchToolCall({
+        session: params.session,
+        sessionManager: params.sessionManager,
+        turn: state.turn,
+        call,
+        registry: params.toolRegistry,
+        permissionGate: params.permissionGate,
+        cwd: params.cwd,
+        turnState: currentState,
+        // 多 Agent 支持
+        provider: params.provider,
+        history: params.history,
+        providerRegistry: params.providerRegistry,
+        providerSettings: params.providerSettings,
+        childAgentTimeout: params.childAgentTimeout,
+        // 用户输入支持
+        userInputBridge: params.userInputBridge,
+      }).pipe(
+        // 收集所有工具事件
+        toArray(),
+        map((toolEvents) => {
+          // 记录追踪
+          for (const toolEvent of toolEvents) {
+            if (toolEvent.type === 'tool_started') {
+              params.trace({
+                sessionId: params.session.id,
+                turn: state.turn,
+                step: state.step,
+                scope: 'tool',
+                phase: 'call',
+                message: 'tool execution started',
+                data: { toolName: toolEvent.toolName, callId: toolEvent.callId },
+              });
+            } else if (toolEvent.type === 'permission_decision') {
+              params.trace({
+                sessionId: params.session.id,
+                turn: state.turn,
+                step: state.step,
+                scope: 'tool',
+                phase: 'permission',
+                message: 'permission decision resolved',
+                data: {
+                  toolName: toolEvent.toolName,
+                  decision: toolEvent.decision,
+                  mode: toolEvent.mode,
+                  callId: toolEvent.callId,
+                },
+              });
+            } else if (toolEvent.type === 'tool_result') {
+              params.trace({
+                sessionId: params.session.id,
+                turn: state.turn,
+                step: state.step,
+                scope: 'tool',
+                phase: 'success',
+                message: 'tool execution completed',
+                data: {
+                  toolName: toolEvent.toolName,
+                  status: toolEvent.status,
+                  ms: Date.now() - startedAt,
+                  callId: toolEvent.callId,
+                },
+              });
+            } else if (toolEvent.type === 'tool_failed') {
+              params.trace({
+                sessionId: params.session.id,
+                turn: state.turn,
+                step: state.step,
+                scope: 'tool',
+                phase: 'error',
+                message: 'tool execution failed',
+                data: {
+                  toolName: toolEvent.toolName,
+                  status: toolEvent.status,
+                  ms: Date.now() - startedAt,
+                  error: toolEvent.error,
+                  callId: toolEvent.callId,
+                },
+              });
+            }
+          }
+
+          return {
+            runtimeEvents: toolEvents,
+            callId: call.id,
+            originalIndex,
+          };
         })
       );
+    }
 
     // ---- 后续处理阶段 (continuation$) ----
     // 使用 defer 延迟执行，根据 nextAction 决定后续行为

@@ -118,6 +118,11 @@ export type RawWastelandSettings = {
   mcpServers?: MCPServersConfig;
   /** A2A Agent 配置 */
   a2aAgents?: A2AAgentsConfig;
+  /** 并行执行配置 */
+  parallel?: {
+    /** 最大并发数，-1 表示无限制，默认 -1 */
+    maxConcurrency?: number;
+  };
 };
 
 export type ResolvedWastelandSettings = {
@@ -142,6 +147,9 @@ export type ResolvedWastelandSettings = {
   };
   mcpServers: MCPServersConfig;
   a2aAgents: A2AAgentsConfig;
+  parallel: {
+    maxConcurrency: number;
+  };
 };
 
 export type LoadedWastelandSettings = {
@@ -172,4 +180,7 @@ export const DEFAULT_WASTELAND_SETTINGS: ResolvedWastelandSettings = {
   },
   mcpServers: {},
   a2aAgents: [],
+  parallel: {
+    maxConcurrency: -1,
+  },
 };

@@ -294,6 +294,24 @@ async function parseSettings(raw: unknown, sourcePath: string): Promise<RawWaste
     settings.runtime = runtime;
   }
 
+  if ('parallel' in raw && raw.parallel !== undefined) {
+    if (!isRecord(raw.parallel)) {
+      throw new Error(`配置文件 ${sourcePath} 中 parallel 必须是对象。`);
+    }
+
+    const parallel: NonNullable<RawWastelandSettings['parallel']> = {};
+
+    if ('maxConcurrency' in raw.parallel && raw.parallel.maxConcurrency !== undefined) {
+      if (typeof raw.parallel.maxConcurrency !== 'number' || !Number.isInteger(raw.parallel.maxConcurrency)) {
+        throw new Error(`配置文件 ${sourcePath} 中 parallel.maxConcurrency 必须是整数。`);
+      }
+
+      parallel.maxConcurrency = raw.parallel.maxConcurrency;
+    }
+
+    settings.parallel = parallel;
+  }
+
   return settings;
 }
 
@@ -429,6 +447,9 @@ function mergeSettings(
     },
     mcpServers: mergedMCPServers,
     a2aAgents: mergedA2AAgents,
+    parallel: {
+      maxConcurrency: next.parallel?.maxConcurrency ?? base.parallel.maxConcurrency,
+    },
   };
 }
 
@@ -564,6 +585,9 @@ function resolveSettingsAuthRefs(
       auth,
       env,
     }) as A2AAgentsConfig,
+    parallel: {
+      ...settings.parallel,
+    },
   };
 }
 
@@ -588,6 +612,9 @@ function applyEnvironmentOverrides(
     },
     mcpServers: { ...settings.mcpServers },
     a2aAgents: [...settings.a2aAgents],
+    parallel: {
+      maxConcurrency: settings.parallel.maxConcurrency,
+    },
   } satisfies ResolvedWastelandSettings;
 
   const providerEnv = env.WASTELAND_PROVIDER ?? env.JOE_PROVIDER;
@@ -626,6 +653,17 @@ function applyEnvironmentOverrides(
       throw new Error('环境变量 WASTELAND_LANGUAGE 必须是 "en" 或 "zh"。');
     }
     resolved.runtime.language = lang;
+  }
+
+  const maxConcurrencyEnv = env.WASTELAND_MAX_CONCURRENCY ?? env.JOE_MAX_CONCURRENCY;
+  if (typeof maxConcurrencyEnv === 'string' && maxConcurrencyEnv.trim().length > 0) {
+    const parsed = Number.parseInt(maxConcurrencyEnv, 10);
+
+    if (!Number.isInteger(parsed)) {
+      throw new Error('环境变量 WASTELAND_MAX_CONCURRENCY 必须是整数（-1 表示无限制）。');
+    }
+
+    resolved.parallel.maxConcurrency = parsed;
   }
 
   return resolved;
