@@ -60,6 +60,12 @@ import {
   type MCPServerConfig,
 } from './mcp-client.js';
 import { t } from '../locales/index.js';
+import {
+  McpResourceListTool,
+  McpResourceReadTool,
+  McpPromptListTool,
+  McpPromptGetTool,
+} from './mcp-resources.js';
 
 // ============================================================
 // 类型定义
@@ -288,6 +294,39 @@ export class MCPToolRegistry {
    */
   getServers(): RegisteredServer[] {
     return Array.from(this.servers.values());
+  }
+
+  /**
+   * 获取所有已启动的 MCP 客户端
+   */
+  getStartedClients(): Map<string, MCPClient> {
+    const clients = new Map<string, MCPClient>();
+    for (const [name, server] of this.servers) {
+      if (server.started) {
+        clients.set(name, server.client);
+      }
+    }
+    return clients;
+  }
+
+  /**
+   * 获取 Resources 和 Prompts 工具
+   *
+   * 这些工具将 MCP Resources 和 Prompts 功能暴露为 AgentTool，
+   * 使 Agent 可以直接调用这些功能。
+   */
+  getResourceAndPromptTools(): AgentTool[] {
+    const clients = this.getStartedClients();
+    if (clients.size === 0) {
+      return [];
+    }
+
+    return [
+      new McpResourceListTool(clients),
+      new McpResourceReadTool(clients),
+      new McpPromptListTool(clients),
+      new McpPromptGetTool(clients),
+    ];
   }
 
   /**

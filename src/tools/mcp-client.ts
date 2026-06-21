@@ -2,10 +2,13 @@
  * mcp-client.ts - MCP (Model Context Protocol) 客户端实现
  *
  * 实现与 MCP Server 的通信，支持：
- * - stdio 传输层
+ * - stdio 传输层（本地进程）
+ * - SSE 传输层（远程服务器）
  * - JSON-RPC 2.0 消息格式
  * - 工具发现 (tools/list)
  * - 工具调用 (tools/call)
+ * - 资源访问 (resources/list, resources/read)
+ * - 提示词模板 (prompts/list, prompts/get)
  *
  * ## MCP 协议概述
  *
@@ -33,16 +36,19 @@
  *       "command": "claude",
  *       "args": ["--mcp"],
  *       "env": { "ANTHROPIC_API_KEY": "..." }
+ *     },
+ *     "remote-tool": {
+ *       "url": "https://mcp.example.com/sse"
  *     }
  *   }
  * }
  * ```
  */
 
-import { spawn, type ChildProcess } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import { t } from '../locales/index.js';
+import { type Transport, type JsonRpcMessage, createTransport } from './mcp-transport.js';
 
 // ============================================================
 // JSON-RPC 类型定义
@@ -153,22 +159,106 @@ export type MCPToolResult = {
   isError?: boolean;
 };
 
+/**
+ * MCP 资源定义
+ */
+export type MCPResourceDefinition = {
+  /** 资源 URI */
+  uri: string;
+  /** 资源名称 */
+  name: string;
+  /** 资源描述 */
+  description?: string;
+  /** 资源 MIME 类型 */
+  mimeType?: string;
+};
+
+/**
+ * MCP 资源内容
+ */
+export type MCPResourceContent = {
+  /** 资源 URI */
+  uri: string;
+  /** 资源 MIME 类型 */
+  mimeType?: string;
+  /** 文本内容 */
+  text?: string;
+  /** 二进制内容（Base64 编码） */
+  blob?: string;
+};
+
+/**
+ * MCP 资源读取结果
+ */
+export type MCPResourceResult = {
+  contents: MCPResourceContent[];
+};
+
+/**
+ * MCP 提示词模板定义
+ */
+export type MCPPromptDefinition = {
+  /** 提示词名称 */
+  name: string;
+  /** 提示词描述 */
+  description?: string;
+  /** 提示词参数定义 */
+  arguments?: Array<{
+    name: string;
+    description?: string;
+    required?: boolean;
+  }>;
+};
+
+/**
+ * MCP 提示词消息
+ */
+export type MCPPromptMessage = {
+  /** 角色 */
+  role: 'user' | 'assistant';
+  /** 消息内容 */
+  content: {
+    type: 'text' | 'image' | 'resource';
+    text?: string;
+    data?: string;
+    mimeType?: string;
+  };
+};
+
+/**
+ * MCP 提示词获取结果
+ */
+export type MCPPromptResult = {
+  /** 提示词描述 */
+  description?: string;
+  /** 提示词消息列表 */
+  messages: MCPPromptMessage[];
+};
+
 // ============================================================
 // MCP 客户端配置
 // ============================================================
 
 /**
  * MCP 服务器配置
+ *
+ * 支持两种传输方式：
+ * - stdio: 通过命令行启动本地进程
+ * - SSE: 通过 HTTP 连接远程服务器
  */
 export type MCPServerConfig = {
-  /** 命令路径 */
-  command: string;
-  /** 命令参数 */
+  /** 命令路径（stdio 模式） */
+  command?: string;
+  /** 命令参数（stdio 模式） */
   args?: string[];
-  /** 环境变量 */
+  /** 环境变量（stdio 模式） */
   env?: Record<string, string>;
-  /** 工作目录 */
+  /** 工作目录（stdio 模式） */
   cwd?: string;
+  /** 服务器 URL（SSE 模式） */
+  url?: string;
+  /** 请求头（SSE 模式，用于认证） */
+  headers?: Record<string, string>;
   /** 启动超时（毫秒，默认 10000） */
   startupTimeout?: number;
   /** 请求超时（毫秒，默认 300000） */
@@ -192,15 +282,25 @@ export type MCPClientConfig = {
 /**
  * MCP 客户端
  *
- * 负责与 MCP Server 进程通信，管理生命周期。
+ * 负责与 MCP Server 通信，管理生命周期。
+ * 支持 stdio（本地进程）和 SSE（远程服务器）两种传输方式。
  *
  * @example
  * ```typescript
+ * // stdio 方式（本地进程）
  * const client = new MCPClient({
  *   name: "coder",
  *   server: {
  *     command: "claude",
  *     args: ["--mcp"],
+ *   }
+ * });
+ *
+ * // SSE 方式（远程服务器）
+ * const client = new MCPClient({
+ *   name: "remote-tool",
+ *   server: {
+ *     url: "https://mcp.example.com/sse",
  *   }
  * });
  *
@@ -214,7 +314,7 @@ export class MCPClient extends EventEmitter {
   readonly name: string;
   readonly config: MCPServerConfig;
 
-  private process: ChildProcess | null = null;
+  private transport: Transport | null = null;
   private pendingRequests: Map<
     string | number,
     {
@@ -224,7 +324,6 @@ export class MCPClient extends EventEmitter {
     }
   > = new Map();
 
-  private buffer: string = '';
   private initialized = false;
   private capabilities: MCPServerCapabilities | null = null;
   private requestTimeout: number;
@@ -240,40 +339,38 @@ export class MCPClient extends EventEmitter {
    * 启动 MCP Server 并完成初始化握手
    */
   async start(): Promise<MCPInitializeResult> {
-    if (this.process) {
+    if (this.transport) {
       throw new Error(t('mcp.clientAlreadyStarted'));
     }
 
-    // 启动子进程
-    this.process = spawn(this.config.command, this.config.args ?? [], {
+    // 创建传输实例
+    this.transport = createTransport({
+      command: this.config.command,
+      args: this.config.args,
+      url: this.config.url,
+      env: this.config.env,
       cwd: this.config.cwd,
-      env: { ...process.env, ...this.config.env },
-      stdio: ['pipe', 'pipe', 'pipe'],
+      headers: this.config.headers,
+      startupTimeout: this.config.startupTimeout,
+      requestTimeout: this.config.requestTimeout,
     });
 
-    if (!this.process.stdin || !this.process.stdout) {
-      throw new Error(t('mcp.failedToCreateStdio'));
-    }
-
-    // 处理 stdout（JSON-RPC 响应）
-    this.process.stdout.on('data', (data: Buffer) => {
-      this.handleStdout(data);
+    // 注册传输事件处理器
+    this.transport.onMessage((message) => {
+      this.handleMessage(message);
     });
 
-    // 处理 stderr（日志/错误）
-    this.process.stderr?.on('data', (data: Buffer) => {
-      this.emit('log', data.toString('utf-8'));
+    this.transport.onError((error) => {
+      this.emit('error', error);
     });
 
-    // 处理进程退出
-    this.process.on('close', (code) => {
+    this.transport.onClose((code) => {
       this.emit('close', code);
       this.cleanup();
     });
 
-    this.process.on('error', (error) => {
-      this.emit('error', error);
-    });
+    // 连接到服务器
+    await this.transport.connect();
 
     // 执行初始化握手
     const startupTimeout = this.config.startupTimeout ?? 10000;
@@ -283,6 +380,8 @@ export class MCPClient extends EventEmitter {
         protocolVersion: '2024-11-05',
         capabilities: {
           tools: {},
+          resources: {},
+          prompts: {},
         },
         clientInfo: {
           name: 'wasteland',
@@ -305,7 +404,7 @@ export class MCPClient extends EventEmitter {
    * 停止 MCP Server
    */
   async stop(): Promise<void> {
-    if (!this.process) {
+    if (!this.transport) {
       return;
     }
 
@@ -319,14 +418,12 @@ export class MCPClient extends EventEmitter {
     // 发送 exit 通知
     this.sendNotification('exit');
 
-    // 给进程时间退出
+    // 给服务器时间处理
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    // 强制终止
-    if (this.process) {
-      this.process.kill('SIGTERM');
-      this.process = null;
-    }
+    // 断开传输连接
+    await this.transport.disconnect();
+    this.transport = null;
 
     this.cleanup();
   }
@@ -357,6 +454,58 @@ export class MCPClient extends EventEmitter {
   }
 
   /**
+   * 列出可用资源
+   */
+  async listResources(): Promise<MCPResourceDefinition[]> {
+    this.ensureInitialized();
+
+    const response = await this.sendRequest<{
+      resources: MCPResourceDefinition[];
+    }>('resources/list', {});
+
+    return response.resources;
+  }
+
+  /**
+   * 读取资源内容
+   */
+  async readResource(uri: string): Promise<MCPResourceResult> {
+    this.ensureInitialized();
+
+    return this.sendRequest<MCPResourceResult>('resources/read', {
+      uri,
+    });
+  }
+
+  /**
+   * 列出可用提示词模板
+   */
+  async listPrompts(): Promise<MCPPromptDefinition[]> {
+    this.ensureInitialized();
+
+    const response = await this.sendRequest<{
+      prompts: MCPPromptDefinition[];
+    }>('prompts/list', {});
+
+    return response.prompts;
+  }
+
+  /**
+   * 获取提示词模板内容
+   */
+  async getPrompt(
+    name: string,
+    args?: Record<string, unknown>
+  ): Promise<MCPPromptResult> {
+    this.ensureInitialized();
+
+    return this.sendRequest<MCPPromptResult>('prompts/get', {
+      name,
+      arguments: args,
+    });
+  }
+
+  /**
    * 获取服务器能力
    */
   getCapabilities(): MCPServerCapabilities | null {
@@ -375,36 +524,15 @@ export class MCPClient extends EventEmitter {
   // ============================================================
 
   private ensureInitialized(): void {
-    if (!this.initialized || !this.process) {
+    if (!this.initialized || !this.transport) {
       throw new Error(t('mcp.clientNotInitialized'));
     }
   }
 
-  private handleStdout(data: Buffer): void {
-    this.buffer += data.toString('utf-8');
-
-    // 解析完整的 JSON 消息（以换行分隔）
-    const lines = this.buffer.split('\n');
-    this.buffer = lines.pop() ?? '';
-
-    for (const line of lines) {
-      if (line.trim().length === 0) {
-        continue;
-      }
-
-      try {
-        const message = JSON.parse(line);
-        this.handleMessage(message);
-      } catch {
-        this.emit('error', new Error(t('mcp.failedToParseMessage', { line })));
-      }
-    }
-  }
-
-  private handleMessage(message: unknown): void {
+  private handleMessage(message: JsonRpcMessage): void {
     // 响应
-    if (typeof message === 'object' && message !== null && 'id' in message && 'result' in message) {
-      const response = message as JSONRPCResponse;
+    if ('id' in message && 'result' in message) {
+      const response = message as { id: string | number; result: unknown };
       const pending = this.pendingRequests.get(response.id);
       if (pending) {
         clearTimeout(pending.timeout);
@@ -415,8 +543,8 @@ export class MCPClient extends EventEmitter {
     }
 
     // 错误响应
-    if (typeof message === 'object' && message !== null && 'id' in message && 'error' in message) {
-      const error = message as JSONRPCError;
+    if ('id' in message && 'error' in message) {
+      const error = message as { id: string | number; error: { code: number; message: string } };
       const pending = this.pendingRequests.get(error.id);
       if (pending) {
         clearTimeout(pending.timeout);
@@ -427,13 +555,8 @@ export class MCPClient extends EventEmitter {
     }
 
     // 通知
-    if (
-      typeof message === 'object' &&
-      message !== null &&
-      'method' in message &&
-      !('id' in message)
-    ) {
-      const notification = message as JSONRPCNotification;
+    if ('method' in message && !('id' in message)) {
+      const notification = message as { method: string; params?: unknown };
       this.emit('notification', notification);
       return;
     }
@@ -441,13 +564,13 @@ export class MCPClient extends EventEmitter {
 
   private sendRequest<T>(method: string, params: unknown, timeoutMs?: number): Promise<T> {
     return new Promise((resolve, reject) => {
-      if (!this.process?.stdin) {
-        reject(new Error('MCP process not running'));
+      if (!this.transport) {
+        reject(new Error('MCP transport not connected'));
         return;
       }
 
       const id = randomUUID();
-      const request: JSONRPCRequest = {
+      const request: JsonRpcMessage = {
         jsonrpc: '2.0',
         id,
         method,
@@ -465,24 +588,24 @@ export class MCPClient extends EventEmitter {
         timeout: timeoutId,
       });
 
-      const message = JSON.stringify(request) + '\n';
-      this.process.stdin.write(message);
+      this.transport.send(request).catch(reject);
     });
   }
 
   private sendNotification(method: string, params?: unknown): void {
-    if (!this.process?.stdin) {
+    if (!this.transport) {
       return;
     }
 
-    const notification: JSONRPCNotification = {
+    const notification: JsonRpcMessage = {
       jsonrpc: '2.0',
       method,
       params,
     };
 
-    const message = JSON.stringify(notification) + '\n';
-    this.process.stdin.write(message);
+    this.transport.send(notification).catch(() => {
+      // 忽略通知发送错误
+    });
   }
 
   private cleanup(): void {
