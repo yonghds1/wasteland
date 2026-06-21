@@ -1,15 +1,24 @@
 /**
  * Header - 顶部状态栏 + Tab 导航
  *
- * 使用主题系统的颜色
- * 添加 Session 标识
- * 流式状态指示器更醒目
+ * 参考 OpenCode 的设计：
+ * - 使用主题系统的颜色
+ * - 添加 Session 标识
+ * - 流式状态指示器更醒目
  */
 
 import React from 'react';
 import { Text, Box } from 'ink';
 import { useAppContext, type PageName } from '../../context/AppContext.js';
-import { PRIMARY, BORDER, MUTED, SEPARATORS } from '../../utils/colors.js';
+import {
+  PRIMARY,
+  BORDER,
+  MUTED,
+  SEPARATORS,
+  BACKGROUND_DARKER,
+  BORDER_FOCUSED,
+  BORDER_DIM,
+} from '../../utils/colors.js';
 import { t } from '../../../locales/index.js';
 
 interface HeaderProps {
@@ -19,7 +28,7 @@ interface HeaderProps {
 export function Header({ width }: HeaderProps): React.ReactElement {
   const { state } = useAppContext();
 
-  // 在组件内部定义，确保 i18n 已初始化
+  // Tab 配置
   const TABS: { name: PageName; label: string; key: string }[] = [
     { name: 'session', label: t('tui.header.session'), key: '1' },
     { name: 'debug', label: t('tui.header.debug'), key: '2' },
@@ -33,6 +42,10 @@ export function Header({ width }: HeaderProps): React.ReactElement {
   const sessionId = state.sessionMetadata.id;
   const shortSessionId = sessionId.length > 16 ? `${sessionId.slice(0, 16)}...` : sessionId;
 
+  // 焦点状态
+  const isFocused = state.focusArea === 'header';
+  const borderColor = isFocused ? BORDER_FOCUSED : BORDER_DIM;
+
   return (
     <Box
       flexDirection="row"
@@ -41,8 +54,9 @@ export function Header({ width }: HeaderProps): React.ReactElement {
       paddingX={1}
       borderStyle="single"
       borderBottom
-      borderColor={state.focusArea === 'header' ? 'cyan' : BORDER}
+      borderColor={borderColor}
     >
+      {/* 左侧：标题 + Tab 导航 */}
       <Box flexDirection="row" gap={1}>
         {/* 标题 */}
         <Text bold color={PRIMARY}>
@@ -75,6 +89,7 @@ export function Header({ width }: HeaderProps): React.ReactElement {
         </Box>
       </Box>
 
+      {/* 右侧：Session + 状态 + 时间 */}
       <Box flexDirection="row" gap={1}>
         {/* Session 标识 */}
         <Text color={MUTED}>Session:</Text>
@@ -85,9 +100,7 @@ export function Header({ width }: HeaderProps): React.ReactElement {
 
         {/* 流式状态指示器 */}
         {state.session.isStreaming ? (
-          <Text bold color="green">
-            ●
-          </Text>
+          <Text bold color="green">●</Text>
         ) : (
           <Text color="gray">○</Text>
         )}

@@ -56,6 +56,58 @@ export const TOOL_MSG = theme.tool;
 export const SYSTEM_MSG = theme.system;
 
 // ============================================================
+// Background Colors (OpenCode style)
+// ============================================================
+
+/** Main background color */
+export const BACKGROUND = theme.background;
+
+/** Secondary background */
+export const BACKGROUND_SECONDARY = theme.backgroundSecondary;
+
+/** Darker background */
+export const BACKGROUND_DARKER = theme.backgroundDarker;
+
+// ============================================================
+// Text Colors (OpenCode style)
+// ============================================================
+
+/** Main text color */
+export const TEXT = theme.text;
+
+/** Emphasized text */
+export const TEXT_EMPHASIZED = theme.textEmphasized;
+
+// ============================================================
+// Border Colors (OpenCode style)
+// ============================================================
+
+/** Normal border color */
+export const BORDER_NORMAL = theme.borderNormal;
+
+/** Focused border color */
+export const BORDER_FOCUSED = theme.borderFocused;
+
+/** Dim border color */
+export const BORDER_DIM = theme.borderDim;
+
+// ============================================================
+// Message Border Colors (OpenCode style)
+// ============================================================
+
+/** Left border color for user messages */
+export const MSG_BORDER_USER = theme.messageBorderUser;
+
+/** Left border color for assistant messages */
+export const MSG_BORDER_ASSISTANT = theme.messageBorderAssistant;
+
+/** Left border color for tool messages */
+export const MSG_BORDER_TOOL = theme.messageBorderTool;
+
+/** Left border color for system messages */
+export const MSG_BORDER_SYSTEM = theme.messageBorderSystem;
+
+// ============================================================
 // Ink Color Names (for use with ink components)
 // ============================================================
 
@@ -80,6 +132,26 @@ export const TUI_COLORS = {
   assistant: ASSISTANT_MSG,
   tool: TOOL_MSG,
   system: SYSTEM_MSG,
+
+  // Backgrounds (OpenCode style)
+  background: BACKGROUND,
+  backgroundSecondary: BACKGROUND_SECONDARY,
+  backgroundDarker: BACKGROUND_DARKER,
+
+  // Text (OpenCode style)
+  text: TEXT,
+  textEmphasized: TEXT_EMPHASIZED,
+
+  // Borders (OpenCode style)
+  borderNormal: BORDER_NORMAL,
+  borderFocused: BORDER_FOCUSED,
+  borderDim: BORDER_DIM,
+
+  // Message borders (OpenCode style)
+  msgBorderUser: MSG_BORDER_USER,
+  msgBorderAssistant: MSG_BORDER_ASSISTANT,
+  msgBorderTool: MSG_BORDER_TOOL,
+  msgBorderSystem: MSG_BORDER_SYSTEM,
 
   // UI elements
   headerTitle: PRIMARY,

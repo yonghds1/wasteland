@@ -1,76 +1,63 @@
 /**
  * MessageList - 消息列表
  *
- * 显示会话消息，支持：
- * - 用户消息使用 cyan + ❯ 前缀
- * - 助手消息使用 green + ◆ 前缀
- * - 工具消息使用 magenta + emoji
- * - 系统消息使用 dim gray
- * - 消息分隔线（细线 ─）
- * - 流式消息末尾显示 ▌ 光标 + ● 流式中 状态
+ * 参考 OpenCode 的设计：
+ * - 左侧彩色粗边框区分消息类型
+ * - 用户消息：紫色边框
+ * - 助手消息：青色边框
+ * - 工具消息：灰色边框
+ * - 系统消息：橙色边框
+ * - 支持打字机效果和滚动
  */
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Text, Box, useInput } from 'ink';
 import { useAppContext, type Message } from '../../context/AppContext.js';
 import {
-  USER_MSG,
-  ASSISTANT_MSG,
-  TOOL_MSG,
-  SYSTEM_MSG,
+  TEXT,
+  TEXT_EMPHASIZED,
+  MSG_BORDER_USER,
+  MSG_BORDER_ASSISTANT,
+  MSG_BORDER_TOOL,
+  MSG_BORDER_SYSTEM,
+  BACKGROUND,
+  BACKGROUND_SECONDARY,
+  MUTED,
+  BORDER_DIM,
   PRIMARY,
-  USER_PREFIX,
-  ASSISTANT_PREFIX,
-  SYSTEM_PREFIX,
   STREAMING_CURSOR,
-  MESSAGE_SEPARATOR,
   TOOL_ICONS,
   TOOL_VERBS,
   SEPARATORS,
 } from '../../utils/colors.js';
 import { t } from '../../../locales/index.js';
 
-const TYPE_COLORS: Record<string, string> = {
-  user: USER_MSG,
-  assistant: ASSISTANT_MSG,
-  tool: TOOL_MSG,
-  system: SYSTEM_MSG,
+// ============================================================
+// 常量定义
+// ============================================================
+
+/** 左边框宽度 */
+const BORDER_WIDTH = 2;
+
+/** 消息类型到边框颜色的映射 */
+const BORDER_COLORS: Record<string, string> = {
+  user: MSG_BORDER_USER,
+  assistant: MSG_BORDER_ASSISTANT,
+  tool: MSG_BORDER_TOOL,
+  system: MSG_BORDER_SYSTEM,
 };
 
-function getTypeLabel(type: string): string {
-  switch (type) {
-    case 'user':
-      return t('tui.session.messages.user');
-    case 'assistant':
-      return t('tui.session.messages.assistant');
-    case 'tool':
-      return t('tui.session.messages.tool');
-    case 'system':
-      return t('tui.session.messages.system');
-    default:
-      return type;
-  }
-}
-
-const TYPE_PREFIXES: Record<string, string> = {
-  user: USER_PREFIX,
-  assistant: ASSISTANT_PREFIX,
-  tool: '',
-  system: SYSTEM_PREFIX,
+/** 消息类型标签 */
+const TYPE_LABELS: Record<string, string> = {
+  user: 'USER',
+  assistant: 'ASSISTANT',
+  tool: 'TOOL',
+  system: 'SYSTEM',
 };
 
-/**
- * 逻辑行类型
- */
-type LineType = 'header' | 'content' | 'tool-header' | 'separator';
-
-interface LogicalLine {
-  type: LineType;
-  content: string;
-  color?: string;
-  messageId: string;
-  isStreaming?: boolean;
-}
+// ============================================================
+// 工具函数
+// ============================================================
 
 /**
  * 按宽度换行文本
@@ -87,7 +74,6 @@ function wrapText(text: string, maxWidth: number): string[] {
     } else {
       let remaining = paragraph;
       while (remaining.length > maxWidth) {
-        // 尝试在空格或标点处断行
         let breakPoint = maxWidth;
         const searchStart = Math.max(0, maxWidth - 20);
         const spaceIndex = remaining.lastIndexOf(' ', maxWidth);
@@ -108,141 +94,36 @@ function wrapText(text: string, maxWidth: number): string[] {
 
 /**
  * 格式化工具消息预览
- * 格式: ┊ {emoji} {verb:9} {detail}  {duration}
  */
 function formatToolPreview(msg: Message): string {
-  // 从 content 中提取关键信息
   const content = msg.content || '';
-
-  // 尝试解析工具名和参数
   let toolName = 'tool';
   let detail = '';
-  const duration = '';
 
-  // 如果 content 包含路径信息
   const pathMatch = content.match(/path:\s*([^\n]+)/);
   if (pathMatch) {
     detail = pathMatch[1].trim();
   }
 
-  // 如果 content 包含命令信息
   const cmdMatch = content.match(/command:\s*([^\n]+)/);
   if (cmdMatch) {
     detail = cmdMatch[1].trim();
   }
 
-  // 从消息内容推断工具名
   const nameMatch = content.match(/^(\w+[-_]?\w*)/);
   if (nameMatch) {
     toolName = nameMatch[1];
   }
 
-  // 获取图标和动词
   const icon = TOOL_ICONS[toolName] || TOOL_ICONS.default;
   const verb = (TOOL_VERBS[toolName] || TOOL_VERBS.default).padEnd(9);
 
-  // 构建预览
-  let preview = `${SEPARATORS.tool} ${icon} ${verb}`;
+  let preview = `${icon} ${verb}`;
   if (detail) {
     preview += ` ${detail.slice(0, 40)}${detail.length > 40 ? '...' : ''}`;
   }
-  if (duration) {
-    preview += `  ${duration}`;
-  }
 
   return preview;
-}
-
-/**
- * 将消息列表转换为逻辑行
- */
-function messagesToLines(
-  messages: Message[],
-  width: number,
-  streamingContent: string,
-  streamingMessageId: string | null
-): LogicalLine[] {
-  const lines: LogicalLine[] = [];
-  const contentWidth = width - 2; // 减去左侧缩进
-
-  for (const msg of messages) {
-    const color = TYPE_COLORS[msg.type];
-    const prefix = TYPE_PREFIXES[msg.type];
-
-    if (msg.type === 'tool') {
-      // 工具消息：单行预览
-      const preview = formatToolPreview(msg);
-      lines.push({
-        type: 'tool-header',
-        content: `[${msg.timestamp.slice(11, 19)}] ${preview}`,
-        color,
-        messageId: msg.id,
-      });
-    } else {
-      // 普通消息：标题行 + 内容行
-      // 格式: [timestamp] prefix label
-      const label = getTypeLabel(msg.type);
-      const isStreaming = msg.id === streamingMessageId;
-      lines.push({
-        type: 'header',
-        content: `[${msg.timestamp.slice(11, 19)}] ${prefix} ${label}`,
-        color,
-        messageId: msg.id,
-        isStreaming,
-      });
-
-      // 内容行（自动换行）
-      const content = msg.content || '';
-      const wrappedLines = wrapText(content, contentWidth);
-      for (const line of wrappedLines) {
-        lines.push({
-          type: 'content',
-          content: `  ${line}`,
-          color,
-          messageId: msg.id,
-          isStreaming,
-        });
-      }
-    }
-
-    // 消息间细线分隔
-    lines.push({
-      type: 'separator',
-      content: MESSAGE_SEPARATOR,
-      messageId: msg.id,
-    });
-  }
-
-  // 添加流式内容（如果有）
-  if (streamingContent && streamingMessageId) {
-    // 查找最后一条 assistant 消息
-    const lastAssistantMsg = [...messages].reverse().find((m) => m.type === 'assistant');
-
-    if (!lastAssistantMsg || lastAssistantMsg.id !== streamingMessageId) {
-      // 新的流式消息
-      lines.push({
-        type: 'header',
-        content: `[${new Date().toISOString().slice(11, 19)}] ${ASSISTANT_PREFIX} ${t('tui.session.messages.assistant')}`,
-        color: TYPE_COLORS.assistant,
-        messageId: streamingMessageId,
-        isStreaming: true,
-      });
-    }
-
-    // 流式内容行
-    const wrappedLines = wrapText(streamingContent, contentWidth);
-    for (const line of wrappedLines) {
-      lines.push({
-        type: 'content',
-        content: `  ${line}`,
-        color: TYPE_COLORS.assistant,
-        messageId: streamingMessageId,
-        isStreaming: true,
-      });
-    }
-  }
-
-  return lines;
 }
 
 /**
@@ -272,14 +153,70 @@ function renderScrollbar(
   return bar;
 }
 
+// ============================================================
+// 消息项组件（OpenCode 风格）
+// ============================================================
+
+interface MessageItemProps {
+  message: Message;
+  width: number;
+  isStreaming: boolean;
+}
+
+function MessageItem({ message, width, isStreaming }: MessageItemProps): React.ReactElement {
+  const borderColor = BORDER_COLORS[message.type] || MUTED;
+  const typeLabel = TYPE_LABELS[message.type] || message.type.toUpperCase();
+  const contentWidth = width - BORDER_WIDTH - 2;
+
+  return (
+    <Box flexDirection="row" width={width}>
+      {/* 左侧粗边框（OpenCode 风格） */}
+      <Box width={BORDER_WIDTH} flexDirection="column" alignItems="center">
+        <Text color={borderColor}>│</Text>
+      </Box>
+
+      {/* 消息内容 */}
+      <Box flexDirection="column" width={contentWidth} paddingLeft={1} paddingRight={1}>
+        {/* 消息头部：类型标签 + 时间戳 */}
+        <Box justifyContent="space-between" width={contentWidth}>
+          <Text bold color={borderColor}>
+            {typeLabel}
+          </Text>
+          <Text dimColor color={MUTED}>
+            {message.timestamp.slice(11, 19)}
+          </Text>
+        </Box>
+
+        {/* 消息内容 */}
+        <Box marginTop={0}>
+          <Text color={TEXT}>{message.content}</Text>
+          {isStreaming && <Text color={PRIMARY}>{STREAMING_CURSOR}</Text>}
+        </Box>
+
+        {/* 工具调用详情 */}
+        {message.type === 'tool' && (
+          <Box flexDirection="column" marginTop={1} paddingLeft={2}>
+            <Text color={MUTED}>{SEPARATORS.branch}</Text>
+            <Text color={TEXT_EMPHASIZED}> {formatToolPreview(message)}</Text>
+          </Box>
+        )}
+      </Box>
+    </Box>
+  );
+}
+
+// ============================================================
+// 主组件
+// ============================================================
+
 interface MessageListProps {
   height?: number;
   width?: number;
 }
 
-// 打字机效果：批量显示配置
-const TYPEWRITER_BATCH_SIZE = 5; // 每次显示的字符数
-const TYPEWRITER_INTERVAL_MS = 16; // 60fps
+// 打字机效果配置
+const TYPEWRITER_BATCH_SIZE = 5;
+const TYPEWRITER_INTERVAL_MS = 16;
 
 export function MessageList({ height = 20, width = 80 }: MessageListProps): React.ReactElement {
   const { state } = useAppContext();
@@ -291,18 +228,15 @@ export function MessageList({ height = 20, width = 80 }: MessageListProps): Reac
 
   // 滚动状态
   const [scrollOffset, setScrollOffset] = useState(0);
-  // 是否自动滚动到底部
   const [autoScroll, setAutoScroll] = useState(true);
 
   // 打字机效果：逐步显示流式内容
   useEffect(() => {
-    // 如果流式内容完成，直接显示全部内容
     if (!streamingMessageId && streamingContent.length > 0) {
       setDisplayContent(streamingContent);
       return;
     }
 
-    // 逐步显示流式内容
     if (streamingContent.length > displayContentRef.current.length) {
       const timer = setTimeout(() => {
         const nextLength = Math.min(
@@ -325,17 +259,48 @@ export function MessageList({ height = 20, width = 80 }: MessageListProps): Reac
     }
   }, [streamingMessageId]);
 
-  // 计算消息区可用高度：减去标题行和状态行
+  // 计算尺寸
   const contentHeight = Math.max(height - 2, 5);
-  // 计算内容宽度：减去滚动条(1)和边距(2)
-  const contentWidth = Math.max(width - 3, 20);
+  const contentWidth = Math.max(width - BORDER_WIDTH - 3, 20);
 
-  // 将消息转换为逻辑行（使用显示缓冲区实现打字机效果）
-  const lines = useMemo(() => {
-    return messagesToLines(messages, contentWidth, displayContent, streamingMessageId);
-  }, [messages, contentWidth, displayContent, streamingMessageId]);
+  // 过滤要显示的消息
+  const displayMessages = useMemo(() => {
+    const filtered: Message[] = [];
+    let lastAssistantMessage: Message | null = null;
 
-  const totalLines = lines.length;
+    for (const msg of messages) {
+      if (msg.type === 'user' || msg.type === 'system') {
+        filtered.push(msg);
+      } else if (msg.type === 'assistant') {
+        lastAssistantMessage = msg;
+      } else if (msg.type === 'tool') {
+        // 工具消息：显示内容摘要
+        filtered.push(msg);
+      }
+    }
+
+    if (lastAssistantMessage) {
+      filtered.push(lastAssistantMessage);
+    }
+
+    return filtered;
+  }, [messages]);
+
+  // 计算总行数（用于滚动）
+  const totalLines = useMemo(() => {
+    let count = 0;
+    for (const msg of displayMessages) {
+      count += 2; // 标题行 + 空行
+      const wrappedLines = wrapText(msg.content, contentWidth);
+      count += wrappedLines.length;
+    }
+    if (streamingContent && streamingMessageId) {
+      count += 2;
+      const wrappedLines = wrapText(streamingContent, contentWidth);
+      count += wrappedLines.length;
+    }
+    return count;
+  }, [displayMessages, contentWidth, streamingContent, streamingMessageId]);
 
   // 自动滚动到底部
   useEffect(() => {
@@ -357,7 +322,6 @@ export function MessageList({ height = 20, width = 80 }: MessageListProps): Reac
         case 'down':
           setScrollOffset((prev) => {
             const next = Math.min(maxScroll, prev + 1);
-            // 如果滚动到底部，恢复自动滚动
             if (next >= maxScroll) setAutoScroll(true);
             return next;
           });
@@ -386,7 +350,7 @@ export function MessageList({ height = 20, width = 80 }: MessageListProps): Reac
     [totalLines, contentHeight]
   );
 
-  // 键盘事件处理 - 基于焦点区域激活
+  // 键盘事件处理
   useInput(
     (input, key) => {
       if (key.upArrow) {
@@ -414,16 +378,13 @@ export function MessageList({ height = 20, width = 80 }: MessageListProps): Reac
     }
   );
 
-  // 计算可见行
-  const visibleLines = lines.slice(scrollOffset, scrollOffset + contentHeight);
-
   // 滚动条
   const scrollbar = renderScrollbar(totalLines, contentHeight, scrollOffset, contentHeight);
 
   // 滚动状态指示
   const scrollInfo =
     totalLines > contentHeight
-      ? `行 ${scrollOffset + 1}-${Math.min(scrollOffset + contentHeight, totalLines)} / ${totalLines} (${Math.round(((scrollOffset + contentHeight) / totalLines) * 100)}%)`
+      ? `行 ${scrollOffset + 1}-${Math.min(scrollOffset + contentHeight, totalLines)} / ${totalLines}`
       : '';
 
   // 空状态
@@ -445,7 +406,7 @@ export function MessageList({ height = 20, width = 80 }: MessageListProps): Reac
       flexGrow={1}
       height={height}
       borderStyle="single"
-      borderColor={state.focusArea === 'messageList' ? 'cyan' : 'gray'}
+      borderColor={state.focusArea === 'messageList' ? 'cyan' : BORDER_DIM}
     >
       {/* 标题栏 */}
       <Box flexDirection="row" justifyContent="space-between" paddingX={1}>
@@ -460,17 +421,13 @@ export function MessageList({ height = 20, width = 80 }: MessageListProps): Reac
         <Box flexDirection="row" gap={1}>
           {state.session.isThinking && (
             <>
-              <Text bold color="yellow">
-                ●
-              </Text>
+              <Text bold color="yellow">●</Text>
               <Text color="yellow">{t('tui.session.messages.thinking')}</Text>
             </>
           )}
           {state.session.isStreaming && !state.session.isThinking && (
             <>
-              <Text bold color="green">
-                ●
-              </Text>
+              <Text bold color="green">●</Text>
               <Text color="green">{t('tui.session.messages.streaming')}</Text>
             </>
           )}
@@ -481,29 +438,29 @@ export function MessageList({ height = 20, width = 80 }: MessageListProps): Reac
       <Box flexDirection="row" flexGrow={1}>
         {/* 内容区域 */}
         <Box flexDirection="column" flexGrow={1}>
-          {visibleLines.map((line, idx) => {
-            if (line.type === 'separator') {
-              // 分隔线 - 使用 dim 细线
-              return (
-                <Text key={`sep-${idx}`} dimColor color="gray">
-                  {line.content}
-                </Text>
-              );
-            }
+          {displayMessages.map((msg) => (
+            <MessageItem
+              key={msg.id}
+              message={msg}
+              width={width}
+              isStreaming={msg.id === streamingMessageId}
+            />
+          ))}
 
-            const color = line.color as any;
-
-            // 判断是否是最后一条流式内容行
-            const isLastStreamingLine =
-              line.isStreaming && line.type === 'content' && idx === visibleLines.length - 1;
-
-            return (
-              <Text key={`${line.messageId}-${idx}`} color={color}>
-                {line.content}
-                {isLastStreamingLine ? STREAMING_CURSOR : ''}
-              </Text>
-            );
-          })}
+          {/* 流式消息 */}
+          {streamingContent && streamingMessageId && (
+            <MessageItem
+              message={{
+                id: streamingMessageId,
+                type: 'assistant',
+                agentId: 'assistant',
+                content: streamingContent,
+                timestamp: new Date().toISOString(),
+              }}
+              width={width}
+              isStreaming={true}
+            />
+          )}
         </Box>
 
         {/* 滚动条 */}

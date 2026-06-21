@@ -2,6 +2,7 @@
  * Theme Type Definitions
  *
  * Defines the Theme interface for the theming system.
+ * Inspired by OpenCode's comprehensive theme system.
  */
 
 /**
@@ -63,6 +64,42 @@ export interface Theme {
   system: string;
 
   // ============================================================
+  // Background Colors (OpenCode style)
+  // ============================================================
+
+  /** Main background color */
+  background: string;
+
+  /** Secondary background (cards, sidebars) */
+  backgroundSecondary: string;
+
+  /** Darker background (status bar, headers) */
+  backgroundDarker: string;
+
+  // ============================================================
+  // Text Colors (OpenCode style)
+  // ============================================================
+
+  /** Main text color */
+  text: string;
+
+  /** Emphasized text (bold, highlights) */
+  textEmphasized: string;
+
+  // ============================================================
+  // Border Colors (OpenCode style)
+  // ============================================================
+
+  /** Normal border color */
+  borderNormal: string;
+
+  /** Focused border color (primary) */
+  borderFocused: string;
+
+  /** Dim border color */
+  borderDim: string;
+
+  // ============================================================
   // UI Elements
   // ============================================================
 
@@ -75,4 +112,20 @@ export interface Theme {
     assistant: string;
     system: string;
   };
+
+  // ============================================================
+  // Message Border Colors (OpenCode style)
+  // ============================================================
+
+  /** Left border color for user messages */
+  messageBorderUser: string;
+
+  /** Left border color for assistant messages */
+  messageBorderAssistant: string;
+
+  /** Left border color for tool messages */
+  messageBorderTool: string;
+
+  /** Left border color for system messages */
+  messageBorderSystem: string;
 }
