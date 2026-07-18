@@ -5,6 +5,45 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.6.0] - 2026-06-21
+
+### 新增
+
+- **代码助手 A2A 适配器**
+  - Claude Code A2A 服务器：将 Claude Code 封装为 A2A 服务器
+  - 通用代码助手接口：CodeAssistantAdapter 接口
+  - ClaudeCodeAdapter：通过 CLI 调用 Claude Code
+  - CodexAdapter：通过 CLI 调用 OpenAI Codex
+  - 工具集成：createCodeAssistantTool 和 createCodeAssistantStreamTool
+
+### 改进
+
+- **A2A 协议**
+  - 完整的 A2A 服务器实现（Agent 发现、任务发送、SSE 订阅）
+  - 支持 Claude Code 流式输出解析
+  - 支持任务取消和状态查询
+
+## [0.5.0] - 2026-06-21
+
+### 新增
+
+- **A2A 协作支持**
+  - A2AClient SSE 支持：sendTaskStream 和 subscribeToTask 方法
+  - Webhook 推送通知：WebhookServer 和 WebhookClient 类
+  - SSE 流式响应：实时接收任务状态更新和 Artifact 更新
+  - Webhook 事件处理：支持任务完成、进度、错误等事件
+
+### 改进
+
+- **A2A 客户端**
+  - 重构 A2AClient 支持 SSE 流式响应
+  - 添加 Observable 支持（RxJS）
+  - 保持向后兼容：现有阻塞模式完全兼容
+
+### 依赖
+
+- 新增 `rxjs` 依赖（响应式编程库）
+
 ## [0.4.0] - 2026-06-21
 
 ### 新增

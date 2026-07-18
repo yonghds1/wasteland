@@ -380,4 +380,27 @@ export type RuntimeEvent =
       turn: number;
       callId: string;
       answer: string;
+    }
+  | {
+      /** 子 Agent 进度更新事件 */
+      type: 'agent_progress';
+      childId: string;
+      childName: string;
+      status: string;
+      message?: string;
+    }
+  | {
+      /** 子 Agent 思考事件 */
+      type: 'agent_thinking';
+      childId: string;
+      childName: string;
+      content: string;
+    }
+  | {
+      /** 子 Agent 工具调用事件 */
+      type: 'agent_tool_use';
+      childId: string;
+      childName: string;
+      toolName: string;
+      input?: Record<string, unknown>;
     };

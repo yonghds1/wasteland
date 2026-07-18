@@ -11,7 +11,6 @@ import {
   type MCPServerConfig,
   type MCPServersConfig,
   type A2AAgentsConfig,
-  type A2AAgentConfig,
   type ModelSettings,
   type ProviderSettings,
   type RawWastelandSettings,
@@ -26,6 +25,7 @@ import {
   resolveUserAuthPath,
   resolveUserSettingsPath,
 } from './paths.js';
+import { DEFAULT_LANGUAGE } from '../locales/index.js';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -45,7 +45,7 @@ async function getSupportedLanguages(): Promise<string[]> {
       .filter((file) => file.endsWith('.json') && file !== 'package.json')
       .map((file) => file.replace('.json', ''));
   } catch {
-    return ['en'];
+    return [DEFAULT_LANGUAGE];
   }
 }
 
@@ -213,6 +213,17 @@ async function parseSettings(raw: unknown, sourcePath: string): Promise<RawWaste
       }
 
       runtime.defaultRole = raw.runtime.defaultRole.trim();
+    }
+
+    if ('skinId' in raw.runtime && raw.runtime.skinId !== undefined) {
+      if (
+        typeof raw.runtime.skinId !== 'string' ||
+        raw.runtime.skinId.trim().length === 0
+      ) {
+        throw new Error(`配置文件 ${sourcePath} 中 runtime.skinId 必须是非空字符串。`);
+      }
+
+      runtime.skinId = raw.runtime.skinId.trim();
     }
 
     if ('defaultModel' in raw.runtime && raw.runtime.defaultModel !== undefined) {
@@ -437,6 +448,7 @@ function mergeSettings(
     subAgents: mergedSubAgents,
     runtime: {
       defaultRole: next.runtime?.defaultRole ?? base.runtime.defaultRole,
+      skinId: next.runtime?.skinId ?? base.runtime.skinId,
       defaultModel: next.runtime?.defaultModel ?? base.runtime.defaultModel,
       permissionMode: next.runtime?.permissionMode ?? base.runtime.permissionMode,
       maxStepsPerTurn: next.runtime?.maxStepsPerTurn ?? base.runtime.maxStepsPerTurn,
@@ -593,7 +605,8 @@ function resolveSettingsAuthRefs(
 
 function applyEnvironmentOverrides(
   settings: ResolvedWastelandSettings,
-  env: NodeJS.ProcessEnv
+  env: NodeJS.ProcessEnv,
+  supportedLanguages: readonly string[]
 ): ResolvedWastelandSettings {
   const resolved = {
     defaultProvider: settings.defaultProvider,
@@ -602,6 +615,7 @@ function applyEnvironmentOverrides(
     subAgents: { ...settings.subAgents },
     runtime: {
       defaultRole: settings.runtime.defaultRole,
+      skinId: settings.runtime.skinId,
       defaultModel: settings.runtime.defaultModel,
       permissionMode: settings.runtime.permissionMode,
       maxStepsPerTurn: settings.runtime.maxStepsPerTurn,
@@ -649,8 +663,10 @@ function applyEnvironmentOverrides(
   const langEnv = env.WASTELAND_LANGUAGE ?? env.JOE_LANGUAGE;
   if (typeof langEnv === 'string' && langEnv.trim().length > 0) {
     const lang = langEnv.trim();
-    if (lang !== 'en' && lang !== 'zh') {
-      throw new Error('环境变量 WASTELAND_LANGUAGE 必须是 "en" 或 "zh"。');
+    if (!supportedLanguages.includes(lang)) {
+      throw new Error(
+        `环境变量 WASTELAND_LANGUAGE 必须是以下之一: ${supportedLanguages.join(', ')}`
+      );
     }
     resolved.runtime.language = lang;
   }
@@ -694,13 +710,15 @@ export async function loadWastelandSettings(params?: {
     ...(projectAuth ?? {}),
   } satisfies AuthSettings;
 
+  const supportedLanguages = await getSupportedLanguages();
   const merged = applyEnvironmentOverrides(
     resolveSettingsAuthRefs(
       mergeSettings(mergeSettings(DEFAULT_WASTELAND_SETTINGS, userSettings), projectSettings),
       mergedAuth,
       processEnv
     ),
-    processEnv
+    processEnv,
+    supportedLanguages
   );
 
   return {

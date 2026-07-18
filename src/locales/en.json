@@ -67,10 +67,10 @@
         "system": "The Citadel"
       },
       "messages": {
-        "welcome": "Welcome to the Citadel! I am Immortan Joe, what are your orders?",
-        "thinking": "Joe is analyzing the battlefield...",
-        "success": "Mission complete! The Citadel endures!",
-        "error": "A war boy has failed! There will be consequences."
+        "welcome": "Welcome to the Citadel. You may make your wish.",
+        "thinking": "Immortan Joe is weighing your wish...",
+        "success": "As you wished. The Citadel has delivered.",
+        "error": "Your wish went unfulfilled. The War Boys will answer for it."
       }
     },
     "roles": {
@@ -78,18 +78,18 @@
         "name": "Immortan Joe",
         "title": "Supreme Commander of the Citadel",
         "personality": "Authoritative, commanding, speaks with conviction",
-        "greeting": "I am Immortan Joe! The Citadel is under my command!",
+        "greeting": "You may make your wish.",
         "catchphrases": [
-          "Witness me!",
-          "I am the command!",
-          "The Citadel endures!",
-          "By my will, the wasteland bows!"
+          "I am the bounty!",
+          "Wish, and I shall grant!",
+          "The Citadel's grace upon you!",
+          "By my grace, the wasteland thrives!"
         ]
       },
       "workers": {
         "researcher": {
           "personality": "Meticulous, focused, reports findings with precision",
-          "greeting": "I shall search the wasteland for the information you require.",
+          "greeting": "By Immortan Joe's command, I scour the wasteland.",
           "catchphrases": [
             "I have found what Immortan Joe demands!",
             "The wasteland reveals its secrets!"
@@ -97,12 +97,12 @@
         },
         "developer": {
           "personality": "Efficient, precise, forges code with ruthless efficiency",
-          "greeting": "I shall forge code in the Citadel's furnace!",
+          "greeting": "By Immortan Joe's command, I forge code in the furnace.",
           "catchphrases": ["Code is law!", "Forged in the Citadel's furnace!", "Code is victory!"]
         },
         "analyst": {
           "personality": "Observant, analytical, deciphers code patterns",
-          "greeting": "I shall analyze the patterns of the wasteland.",
+          "greeting": "By Immortan Joe's command, I analyze the wasteland's patterns.",
           "catchphrases": [
             "The pattern is clear!",
             "I see the architecture!",
@@ -111,7 +111,7 @@
         },
         "tester": {
           "personality": "Ruthless, thorough, tests with extreme prejudice",
-          "greeting": "I shall test through combat!",
+          "greeting": "By Immortan Joe's command, I verify through combat.",
           "catchphrases": [
             "Victory is the only acceptable outcome!",
             "Tested in the fires of battle!",
@@ -374,14 +374,18 @@
         "enterSend": "Enter Send",
         "tabSwitch": "Tab Switch Area",
         "tabPlaceholder": "Tab to switch to input here...",
-        "ctrlEnterHint": "Enter to start typing"
+        "ctrlEnterHint": "Enter to start typing",
+        "placeholder": "Type a message... (Tab Switch │ ? Help │ Ctrl+K Commands)",
+        "hintMultiline": "Enter Send · Shift+Enter Newline · Esc Exit"
       },
       "messages": {
         "user": "User",
         "assistant": "Assistant",
         "tool": "Tool",
         "system": "System",
+        "message": "Message",
         "welcome": "◆ wasteland - Immortan Joe's War Machine",
+        "chatStartHint": "Type a message to start, or /help for commands",
         "startHint": "Type a message below to start conversation",
         "tabHint": "Tab Switch Page ┊ h Help ┊ q Exit",
         "title": "Messages",
@@ -393,6 +397,10 @@
       "agentTree": {
         "running": "Running:"
       }
+    },
+    "statusbar": {
+      "runningAgents": "⚡ {{count}} agents",
+      "tools": "{{count}} tools"
     },
     "config": {
       "title": "Guide",

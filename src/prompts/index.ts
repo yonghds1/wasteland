@@ -33,5 +33,5 @@ export {
   isBuiltinRoleId,
   listBuiltinRoles,
   ROLE_WORKER,
-  ROLE_IMMORTAN_JOE,
+  ROLE_ORCHESTRATOR,
 } from './role-templates.js';

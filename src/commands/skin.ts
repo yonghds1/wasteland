@@ -26,7 +26,7 @@ export function createSkinCommand(): Command {
       const language = loadedSettings.settings.runtime.language;
       await initI18n(language);
 
-      const skins = await listSkins(undefined, language);
+      const skins = await listSkins(language);
 
       if (skins.length === 0) {
         console.log(t('commands.skin.list.empty'));
@@ -86,7 +86,7 @@ export function createSkinCommand(): Command {
         const language = loadedSettings.settings.runtime.language;
         await initI18n(language);
 
-        const skin = await loadSkin(skinId, undefined, language);
+        const skin = await loadSkin(skinId, language);
         console.log(t('commands.skin.load.success', { name: skin.name, id: skin.id }));
         console.log(t('commands.skin.load.command', { command: skin.cli.commandName }));
         console.log(t('commands.skin.load.aliases', { aliases: skin.cli.aliases.join(', ') }));
@@ -119,7 +119,7 @@ export function createSkinCommand(): Command {
         const language = loadedSettings.settings.runtime.language;
         await initI18n(language);
 
-        const skin = await loadSkin(skinId, undefined, language);
+        const skin = await loadSkin(skinId, language);
 
         console.log(`\n${t('commands.skin.info.title', { name: skin.name })}\n`);
         console.log(`${t('commands.skin.info.id')}: ${skin.id}`);

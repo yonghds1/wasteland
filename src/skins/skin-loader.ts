@@ -5,8 +5,6 @@
  * 支持多皮肤切换和自定义皮肤
  */
 
-import { readFile, readdir } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
 import { t, tArray, type Language } from '../locales/index.js';
 
 // ============================================================
@@ -90,8 +88,6 @@ export type SkinWorkflowConfig = {
   };
 };
 
-export type SkinTemplateConfig = Record<string, string>;
-
 export type Skin = {
   id: string;
   name: string;
@@ -101,7 +97,6 @@ export type Skin = {
   cli: SkinCLIConfig;
   ui: SkinUIConfig;
   roles: SkinRolesConfig;
-  templates: SkinTemplateConfig;
   workflow: SkinWorkflowConfig;
   metadata: {
     createdAt: string;
@@ -198,12 +193,6 @@ function getSkinWithLanguage(lang?: Language): Skin {
         },
       },
     },
-    templates: {
-      identity: '你是 {{role}}。',
-      goal: '你的目标是：{{goal}}',
-      backstory: '{{backstory}}',
-      constraints: '约束条件：\n{{constraints}}',
-    },
     workflow: {
       delegation: {
         strategy: 'sequential',
@@ -236,103 +225,28 @@ const DEFAULT_SKIN_ID = 'immortan-joe';
 
 let currentSkin: Skin | null = null;
 
-/**
- * 获取皮肤目录路径
- */
-function getSkinsDir(skinsDir?: string): string {
-  if (skinsDir) {
-    return resolve(skinsDir);
-  }
-  // 默认从 .wasteland/.skins/ 加载其他皮肤
-  return join(process.cwd(), '.wasteland', '.skins');
-}
-
-/**
- * 从文件读取并验证皮肤配置（无副作用）
- */
-async function readSkinFromFile(skinPath: string): Promise<Skin> {
-  const content = await readFile(skinPath, 'utf8');
-  const skin = JSON.parse(content) as Skin;
-  validateSkin(skin);
-  return skin;
-}
+/** 内置皮肤 id 列表 */
+const BUILTIN_SKIN_IDS = ['immortan-joe'];
 
 /**
  * 加载皮肤配置
  *
- * 加载逻辑：
- * 1. 如果 skinId 是 "immortan-joe"（内置默认皮肤）：
- *    - 优先尝试加载外部皮肤文件
- *    - 如果外部皮肤不存在，使用内置默认皮肤（根据 language 参数选择中文或英文）
- * 2. 其他 skinId：
- *    - 从外部皮肤目录加载
- *    - 如果不存在，抛出错误
+ * 皮肤内置化：仅支持内置皮肤（当前 immortan-joe）。
+ * 按 language 取对应语言的内置双语文案。
  */
 export async function loadSkin(
   skinId: string = DEFAULT_SKIN_ID,
-  skinsDir?: string,
   language?: string
 ): Promise<Skin> {
-  // 内置默认皮肤：优先使用外部文件，如果没有则使用内置的
   if (skinId === 'immortan-joe') {
-    return loadDefaultSkin(skinsDir, language);
-  }
-
-  // 其他皮肤：从外部目录加载
-  const dir = getSkinsDir(skinsDir);
-  const skinPath = join(dir, skinId, 'skin.json');
-
-  try {
-    const skin = await readSkinFromFile(skinPath);
+    const skin = getSkinWithLanguage(language);
     currentSkin = skin;
     return skin;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      throw new Error(t('skins.notFound', { skinId, skinPath }), { cause: error });
-    }
-    throw error;
-  }
-}
-
-/**
- * 加载 Immortan Joe 皮肤
- *
- * 优先加载外部皮肤文件，如果没有则使用内置默认皮肤
- */
-async function loadDefaultSkin(skinsDir?: string, language?: string): Promise<Skin> {
-  const dir = getSkinsDir(skinsDir);
-  const skinPath = join(dir, 'immortan-joe', 'skin.json');
-
-  try {
-    const skin = await readSkinFromFile(skinPath);
-    currentSkin = skin;
-    return skin;
-  } catch (error) {
-    // 外部皮肤不存在，使用内置默认皮肤（根据 language 参数选择语言）
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      const skin = getSkinWithLanguage(language);
-      currentSkin = skin;
-      return skin;
-    }
-    throw error;
-  }
-}
-
-/**
- * 验证皮肤配置
- */
-function validateSkin(skin: Skin): void {
-  if (!skin.id || !skin.name || !skin.cli || !skin.ui || !skin.roles) {
-    throw new Error(t('skins.incomplete'));
   }
 
-  if (!skin.cli.commandName) {
-    throw new Error(t('skins.missingCommandName'));
-  }
-
-  if (!skin.roles.main || !skin.roles.main.greeting) {
-    throw new Error(t('skins.missingGreeting'));
-  }
+  throw new Error(
+    t('skins.notFound', { skinId, skinPath: `(builtin: ${BUILTIN_SKIN_IDS.join(', ')})` })
+  );
 }
 
 /**
@@ -345,54 +259,15 @@ export function getCurrentSkin(): Skin | null {
 /**
  * 获取默认皮肤
  */
-export async function getDefaultSkin(skinsDir?: string): Promise<Skin> {
-  return loadSkin(DEFAULT_SKIN_ID, skinsDir);
+export async function getDefaultSkin(language?: string): Promise<Skin> {
+  return loadSkin(DEFAULT_SKIN_ID, language);
 }
 
 /**
- * 列出所有可用皮肤
+ * 列出所有可用皮肤（内置）
  */
-export async function listSkins(skinsDir?: string, language?: string): Promise<Skin[]> {
-  const skins: Skin[] = [];
-
-  // 1. 加载 Immortan Joe 皮肤（内置默认或外部）
-  try {
-    const dir = getSkinsDir(skinsDir);
-    const skinPath = join(dir, 'immortan-joe', 'skin.json');
-    const skin = await readSkinFromFile(skinPath);
-    skins.push(skin);
-  } catch {
-    // 外部 immortan-joe 皮肤不存在，使用内置默认（根据 language 参数选择语言）
-    const skin = getSkinWithLanguage(language);
-    skins.push(skin);
-  }
-
-  // 2. 加载 .wasteland/.skins/ 目录下的其他皮肤目录
-  try {
-    const dir = getSkinsDir(skinsDir);
-    const entries = await readdir(dir, { withFileTypes: true });
-    const skinDirs = entries.filter((e) => e.isDirectory() && e.name !== 'immortan-joe');
-
-    const loads = skinDirs.map(async (entry) => {
-      const skinPath = join(dir, entry.name, 'skin.json');
-      try {
-        return await readSkinFromFile(skinPath);
-      } catch {
-        return null;
-      }
-    });
-
-    const results = await Promise.all(loads);
-    for (const skin of results) {
-      if (skin) {
-        skins.push(skin);
-      }
-    }
-  } catch {
-    // .skins 目录不存在或无法读取，跳过
-  }
-
-  return skins;
+export async function listSkins(language?: string): Promise<Skin[]> {
+  return [getSkinWithLanguage(language)];
 }
 
 // ============================================================

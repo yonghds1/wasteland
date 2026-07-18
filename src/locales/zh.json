@@ -67,10 +67,10 @@
         "system": "圣殿"
       },
       "messages": {
-        "welcome": "欢迎来到圣殿！我是不死老乔，有什么命令？",
-        "thinking": "老乔正在分析战场...",
-        "success": "任务完成！圣殿永存！",
-        "error": "一个战争男孩失败了！将会被追责。"
+        "welcome": "欢迎来到圣殿，我允许你许愿。",
+        "thinking": "不死老乔正在审视你的愿望...",
+        "success": "如你所愿，圣殿已交付。",
+        "error": "你的愿望未能达成，War Boys 将受清算。"
       }
     },
     "roles": {
@@ -78,28 +78,28 @@
         "name": "不死老乔",
         "title": "圣殿最高指挥官",
         "personality": "威严、命令式、说话充满信念",
-        "greeting": "我是不死老乔！圣殿由我指挥！",
-        "catchphrases": ["见证我！", "我就是命令！", "圣殿永存！", "奉我之命，废土屈服！"]
+        "greeting": "我允许你许愿。",
+        "catchphrases": ["我即恩赐！", "许愿吧，我成全！", "圣殿之恩，降临于你！", "奉我之恩，废土得生！"]
       },
       "workers": {
         "researcher": {
           "personality": "细致、专注、精确报告发现",
-          "greeting": "我将在废土中搜索你所需的信息。",
+          "greeting": "奉不死老乔之命，我去废土搜寻。",
           "catchphrases": ["我找到了不死老乔所要的东西！", "废土揭示了它的秘密！"]
         },
         "developer": {
           "personality": "高效、精确、以残酷的效率编写代码",
-          "greeting": "我将在圣殿的熔炉中锻造代码！",
+          "greeting": "奉不死老乔之命，我在熔炉锻造代码。",
           "catchphrases": ["代码就是法律！", "在圣殿的熔炉中锻造！", "代码就是胜利！"]
         },
         "analyst": {
           "personality": "观察力强、善于分析、解读代码模式",
-          "greeting": "我将分析废土的模式。",
+          "greeting": "奉不死老乔之命，我分析废土的模式。",
           "catchphrases": ["模式已清晰！", "我看到了架构！", "废土在对我说话！"]
         },
         "tester": {
           "personality": "无情、彻底、以极端偏见测试",
-          "greeting": "我将通过战斗来测试！",
+          "greeting": "奉不死老乔之命，我以战斗验证。",
           "catchphrases": [
             "胜利是唯一可接受的结果！",
             "在战斗的烈火中测试！",
@@ -362,14 +362,18 @@
         "enterSend": "Enter 发送",
         "tabSwitch": "Tab 切换区域",
         "tabPlaceholder": "Tab 切换到此处输入...",
-        "ctrlEnterHint": "Enter 进入输入模式"
+        "ctrlEnterHint": "Enter 进入输入模式",
+        "placeholder": "输入消息... (Tab 切换 │ ? 帮助 │ Ctrl+K 命令)",
+        "hintMultiline": "Enter 发送 · Shift+Enter 换行 · Esc 退出"
       },
       "messages": {
         "user": "用户",
         "assistant": "助手",
         "tool": "工具",
         "system": "系统",
+        "message": "消息",
         "welcome": "◆ wasteland - 不死老乔的战争机器",
+        "chatStartHint": "输入消息开始对话，输入 /help 查看命令",
         "startHint": "在下方输入框输入消息开始对话",
         "tabHint": "Tab 切换页面 ┊ h 帮助 ┊ q 退出",
         "title": "消息",
@@ -381,6 +385,10 @@
       "agentTree": {
         "running": "运行:"
       }
+    },
+    "statusbar": {
+      "runningAgents": "⚡ {{count}} 个 agent",
+      "tools": "{{count}} 工具"
     },
     "config": {
       "title": "指南",

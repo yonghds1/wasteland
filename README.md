@@ -8,6 +8,8 @@ Immortan Joe's War Machine - 一个基于 TypeScript、Commander 和 RxJS 的多
 - **并行 Agent 执行**：多个 spawn_agent 调用可并行执行，提升多 Agent 系统效率
 - 完整的工具系统和权限控制
 - **MCP 协议支持**：支持 stdio 和 SSE 传输，Resources 和 Prompts 功能
+- **A2A 协作**：支持 SSE 流式响应和 Webhook 推送通知
+- **代码助手集成**：支持 Claude Code、Codex 等代码助手的 A2A 协议调用
 - **web-search 增强**：使用 cheerio 进行 HTML 解析，支持 LRU 缓存
 - Session 持久化和追踪
 

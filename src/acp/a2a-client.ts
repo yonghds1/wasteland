@@ -9,8 +9,10 @@
  * - POST /tasks/send              → Task      (发送)
  * - GET  /tasks/{id}              → Task      (查询)
  * - POST /tasks/{id}/cancel       → void      (取消)
+ * - GET  /tasks/{id}/subscribe    → SSE       (流式订阅)
  */
 
+import { Observable, type Subscriber } from 'rxjs';
 import type {
   AgentCard,
   Task,
@@ -19,6 +21,9 @@ import type {
   TaskCancelRequest,
   Message,
   TaskState,
+  SSEEvent,
+  TaskStatusUpdateEvent,
+  TaskArtifactUpdateEvent,
 } from './a2a-types.js';
 
 // ============================================================
@@ -251,6 +256,217 @@ export class A2AClient {
       method: 'POST',
       body: JSON.stringify(request),
     });
+  }
+
+  // ----------------------------------------------------------
+  // SSE Streaming
+  // ----------------------------------------------------------
+
+  /**
+   * 发送任务并接收 SSE 流式响应
+   *
+   * 发送任务后，通过 SSE 流接收任务状态更新和 Artifact 更新。
+   *
+   * @param task - 任务内容 (文本)
+   * @param options - 可选配置
+   * @returns SSE 事件的 Observable
+   */
+  sendTaskStream(
+    task: string,
+    options?: { sessionId?: string },
+  ): Observable<SSEEvent> {
+    return new Observable<SSEEvent>((subscriber) => {
+      const taskId = crypto.randomUUID();
+      const sessionId = options?.sessionId;
+
+      const request: TaskSendRequest = {
+        id: taskId,
+        sessionId,
+        message: this.createUserMessage(task),
+        configuration: {
+          blocking: false,
+        },
+      };
+
+      this.startSSEStream(
+        `${this.baseUrl}/tasks/send`,
+        request,
+        subscriber,
+      ).catch((error) => {
+        subscriber.error(error);
+      });
+
+      return () => {
+        // 清理逻辑（如果需要）
+      };
+    });
+  }
+
+  /**
+   * 订阅任务状态更新
+   *
+   * 通过 SSE 流接收指定任务的状态更新。
+   *
+   * @param taskId - 任务 ID
+   * @param sessionId - 会话 ID (可选)
+   * @returns SSE 事件的 Observable
+   */
+  subscribeToTask(
+    taskId: string,
+    sessionId?: string,
+  ): Observable<SSEEvent> {
+    return new Observable<SSEEvent>((subscriber) => {
+      const params = new URLSearchParams();
+      if (sessionId) {
+        params.set('sessionId', sessionId);
+      }
+
+      const url = `${this.baseUrl}/tasks/${taskId}/subscribe?${params.toString()}`;
+
+      this.startSSEStream(
+        url,
+        undefined,
+        subscriber,
+      ).catch((error) => {
+        subscriber.error(error);
+      });
+
+      return () => {
+        // 清理逻辑（如果需要）
+      };
+    });
+  }
+
+  /**
+   * 启动 SSE 流
+   */
+  private async startSSEStream(
+    url: string,
+    body: unknown,
+    subscriber: Subscriber<SSEEvent>,
+  ): Promise<void> {
+    const headers: Record<string, string> = {
+      Accept: 'text/event-stream',
+      'Cache-Control': 'no-cache',
+    };
+
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
+    }
+
+    const fetchOptions: RequestInit = {
+      method: body ? 'POST' : 'GET',
+      headers,
+    };
+
+    if (body) {
+      fetchOptions.body = JSON.stringify(body);
+      headers['Content-Type'] = 'application/json';
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
+
+    try {
+      const response = await globalThis.fetch(url, {
+        ...fetchOptions,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        let errorBody: unknown;
+        try {
+          errorBody = await response.json();
+        } catch {
+          errorBody = await response.text().catch(() => undefined);
+        }
+
+        throw new A2AClientError(
+          `A2A SSE request failed: ${response.status} ${response.statusText}`,
+          response.status,
+          'HTTP_ERROR',
+          errorBody,
+        );
+      }
+
+      if (!response.body) {
+        throw new A2AClientError(
+          'SSE response body is null',
+          undefined,
+          'SSE_ERROR',
+        );
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          break;
+        }
+
+        buffer += decoder.decode(value, { stream: true });
+
+        // 解析 SSE 事件
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+
+        let eventData = '';
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            eventData += line.slice(6);
+          } else if (line === '' && eventData) {
+            // 空行表示事件结束
+            try {
+              const event = JSON.parse(eventData) as SSEEvent;
+              subscriber.next(event);
+
+              // 如果是最终事件，完成流
+              if ('final' in event && event.final) {
+                subscriber.complete();
+                return;
+              }
+            } catch {
+              // 忽略解析错误
+            }
+            eventData = '';
+          }
+        }
+      }
+
+      subscriber.complete();
+    } catch (error) {
+      clearTimeout(timeoutId);
+
+      if (error instanceof A2AClientError) {
+        subscriber.error(error);
+        return;
+      }
+
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        subscriber.error(
+          new A2AClientError(
+            `SSE request timed out after ${this.timeoutMs}ms`,
+            undefined,
+            'REQUEST_TIMEOUT',
+          ),
+        );
+        return;
+      }
+
+      subscriber.error(
+        new A2AClientError(
+          `SSE request failed: ${error instanceof Error ? error.message : String(error)}`,
+          undefined,
+          'NETWORK_ERROR',
+          error,
+        ),
+      );
+    }
   }
 
   // ----------------------------------------------------------

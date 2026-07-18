@@ -129,8 +129,8 @@ async function runChatSession(params: {
 // Command Factory
 // ============================================================
 
-export function createChatCommand(): Command {
-  return new Command('chat')
+export function configureChatCommand(cmd: Command): Command {
+  return cmd
     .description(t('commands.chat.description'))
     .option('-m, --message <text>', t('commands.chat.options.once'))
     .option('-p, --provider <name>', t('commands.chat.options.provider'))
@@ -242,4 +242,8 @@ export function createChatCommand(): Command {
 
       await inputAdapter.done;
     });
+}
+
+export function createChatCommand(): Command {
+  return configureChatCommand(new Command('chat'));
 }

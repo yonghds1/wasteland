@@ -3,6 +3,7 @@
  */
 
 export {
+  DEFAULT_LANGUAGE,
   initI18n,
   setLanguage,
   getLanguage,

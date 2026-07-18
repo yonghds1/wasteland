@@ -1,0 +1,7 @@
+{"file": ".trellis/spec/backend/runtime-contracts.md", "reason": "Verify runtime contracts compliance"}
+{"file": ".trellis/spec/backend/tool-runtime-contracts.md", "reason": "Verify tool lifecycle compliance"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "Verify error handling patterns"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Verify code quality standards"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "Verify TUI state management patterns"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Verify component patterns"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Verify frontend quality standards"}

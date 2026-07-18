@@ -149,6 +149,29 @@ export type DisplayEvent =
       turn: number;
       callId: string;
       answer: string;
+    }
+  | {
+      /** 子 Agent 进度更新 */
+      type: 'agent_progress';
+      childId: string;
+      childName: string;
+      status: string;
+      message?: string;
+    }
+  | {
+      /** 子 Agent 思考 */
+      type: 'agent_thinking';
+      childId: string;
+      childName: string;
+      content: string;
+    }
+  | {
+      /** 子 Agent 工具调用 */
+      type: 'agent_tool_use';
+      childId: string;
+      childName: string;
+      toolName: string;
+      input?: Record<string, unknown>;
     };
 
 // ============================================================
@@ -331,6 +354,32 @@ export class DefaultOutputAdapter implements OutputAdapter {
           turn: event.turn,
           callId: event.callId,
           answer: event.answer,
+        };
+
+      case 'agent_progress':
+        return {
+          type: 'agent_progress',
+          childId: event.childId,
+          childName: event.childName,
+          status: event.status,
+          message: event.message,
+        };
+
+      case 'agent_thinking':
+        return {
+          type: 'agent_thinking',
+          childId: event.childId,
+          childName: event.childName,
+          content: event.content,
+        };
+
+      case 'agent_tool_use':
+        return {
+          type: 'agent_tool_use',
+          childId: event.childId,
+          childName: event.childName,
+          toolName: event.toolName,
+          input: event.input,
         };
 
       default: {

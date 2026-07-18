@@ -178,7 +178,7 @@ export type ResolvedPrompt = {
 /**
  * 内置角色模板 ID
  *
- * - role-immortan-joe: 唯一主角色（完全内置，不可覆盖），指挥子Agent执行任务
+ * - role-orchestrator: 主角色（任务编排器），指挥子 Agent 执行任务（可被用户覆盖）
  * - role-worker: 通用子角色模板，通过变量配置适配不同专业方向（可被用户覆盖）
  */
-export type BuiltinRoleId = 'role-immortan-joe' | 'role-worker';
+export type BuiltinRoleId = 'role-orchestrator' | 'role-worker';

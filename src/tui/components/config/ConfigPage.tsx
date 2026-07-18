@@ -94,7 +94,7 @@ export function ConfigPage({ height, width }: ConfigPageProps): React.ReactEleme
           </Text>
           <Text>
             {' '}
-            <Text color={WARNING}>"defaultRole"</Text>: <Text color={SUCCESS}>"immortan-joe"</Text>,
+            <Text color={WARNING}>"defaultRole"</Text>: <Text color={SUCCESS}>"orchestrator"</Text>,
           </Text>
           <Text>
             {' '}

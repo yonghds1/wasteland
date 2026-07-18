@@ -13,11 +13,18 @@ const __dirname = dirname(__filename);
 
 export type Language = string;
 
+/**
+ * 默认语言（单一来源 SSOT）
+ *
+ * 全局默认语言由此常量定义，所有「默认语言」均引用它，不散落字面量 'en'。
+ */
+export const DEFAULT_LANGUAGE: Language = 'en';
+
 type TranslationData = Record<string, unknown>;
 
 const translations: Record<Language, TranslationData> = {};
 
-let currentLanguage: Language = 'en';
+let currentLanguage: Language = DEFAULT_LANGUAGE;
 let isLoaded = false;
 const supportedLanguages: Language[] = [];
 
@@ -40,7 +47,7 @@ async function discoverLanguages(): Promise<Language[]> {
       .filter((file) => file.endsWith('.json') && file !== 'package.json')
       .map((file) => file.replace('.json', ''));
   } catch {
-    return ['en'];
+    return [DEFAULT_LANGUAGE];
   }
 }
 
@@ -54,7 +61,7 @@ export function getSupportedLanguages(): Language[] {
 /**
  * 初始化 i18n 模块
  */
-export async function initI18n(lang: Language = 'en'): Promise<void> {
+export async function initI18n(lang: Language = DEFAULT_LANGUAGE): Promise<void> {
   currentLanguage = lang;
 
   if (!isLoaded) {

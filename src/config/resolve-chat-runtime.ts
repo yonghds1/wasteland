@@ -4,6 +4,7 @@ import type {
   ProviderSettings,
   ResolvedWastelandSettings,
   RoleSettings,
+  SubAgentSettings,
 } from './settings-types.js';
 import { assemblePrompt, isBuiltinRoleId, ROLE_WORKER } from '../prompts/index.js';
 import { t, getLocalizedValue, getSupportedLanguages } from '../locales/index.js';
@@ -76,6 +77,36 @@ function localizePromptVariables(
  * @param cwd - 工作目录
  * @returns 提示词字符串
  */
+/**
+ * 为内置 orchestrator 动态注入子角色清单
+ *
+ * orchestrator 调度 subAgents，提示词的 agents 清单应反映实际 subAgents，
+ * 而非模板 default。从 settings.subAgents 生成（本地化 description）。
+ */
+function injectOrchestratorAgents(
+  config: RoleSettings,
+  subAgents: Record<string, SubAgentSettings>
+): RoleSettings {
+  // 用户已自定义 agents 清单，尊重用户配置
+  if (config.promptVariables?.agents) {
+    return config;
+  }
+  const entries = Object.entries(subAgents);
+  if (entries.length === 0) {
+    return config;
+  }
+  const agents = entries
+    .map(([name, cfg]) => {
+      const desc = getLocalizedValue(cfg as Record<string, unknown>, 'description');
+      return `- ${name}: ${desc || name}`;
+    })
+    .join('\n');
+  return {
+    ...config,
+    promptVariables: { ...(config.promptVariables ?? {}), agents },
+  };
+}
+
 function resolveRolePrompt(role: RoleSettings | undefined, cwd: string): string | undefined {
   if (!role) {
     return undefined;
@@ -154,11 +185,20 @@ function resolveRolePrompt(role: RoleSettings | undefined, cwd: string): string 
 }
 
 /**
- * 内置主角色配置
- * 完全内置，不可被用户覆盖
+ * 内置角色配置（功能性，可被用户在 subAgents 中覆盖）
  */
-const BUILTIN_MAIN_ROLE_CONFIG: RoleSettings = {
-  promptTemplate: 'role-immortan-joe',
+const BUILTIN_ORCHESTRATOR_CONFIG: RoleSettings = {
+  promptTemplate: 'role-orchestrator',
+};
+
+const BUILTIN_WORKER_CONFIG: RoleSettings = {
+  promptTemplate: 'role-worker',
+};
+
+/** 内置角色注册表：角色名 -> 默认配置 */
+const BUILTIN_ROLE_CONFIGS: Record<string, RoleSettings> = {
+  orchestrator: BUILTIN_ORCHESTRATOR_CONFIG,
+  worker: BUILTIN_WORKER_CONFIG,
 };
 
 function resolveRole(
@@ -169,28 +209,31 @@ function resolveRole(
     return undefined;
   }
 
-  // 内置主角色 immortan-joe，完全内置不可覆盖
-  if (requestedRoleName === 'immortan-joe') {
+  // 用户配置优先（主子角色皆可覆盖/新增）
+  const userRole = settings.subAgents[requestedRoleName];
+  if (userRole) {
     return {
-      name: 'immortan-joe',
-      config: BUILTIN_MAIN_ROLE_CONFIG,
+      name: requestedRoleName,
+      config: userRole,
     };
   }
 
-  // 查找子角色配置（可被用户覆盖）
-  const subAgent = settings.subAgents[requestedRoleName];
-
-  if (subAgent) {
+  // 内置角色
+  const builtinConfig = BUILTIN_ROLE_CONFIGS[requestedRoleName];
+  if (builtinConfig) {
     return {
       name: requestedRoleName,
-      config: subAgent,
+      config: builtinConfig,
     };
   }
 
   throw new Error(
     t('config.roleNotDefined', {
       roleName: requestedRoleName,
-      availableRoles: Object.keys(settings.subAgents).join(', '),
+      availableRoles: [
+        ...Object.keys(BUILTIN_ROLE_CONFIGS),
+        ...Object.keys(settings.subAgents),
+      ].join(', '),
     })
   );
 }
@@ -231,7 +274,7 @@ export function resolveChatRuntime(params: {
 }): ResolvedChatRuntime {
   const role = resolveRole(params.settings, params.roleName ?? params.settings.runtime.defaultRole);
   let model = resolveModel(params.settings, role);
-  let providerName =
+  const providerName =
     params.providerName ?? model?.config.provider ?? params.settings.defaultProvider;
 
   // 当指定 provider 时，智能匹配 model
@@ -281,7 +324,18 @@ export function resolveChatRuntime(params: {
 
   // 解析提示词模板
   const cwd = params.cwd ?? process.cwd();
-  const prompt = resolveRolePrompt(role?.config, cwd);
+  // 内置 orchestrator: 动态注入子角色清单（反映实际 subAgents）
+  const effectiveConfig =
+    role?.name === 'orchestrator'
+      ? injectOrchestratorAgents(role.config, params.settings.subAgents)
+      : role?.config;
+  const basePrompt = resolveRolePrompt(effectiveConfig, cwd);
+  // 按当前语言注入回复语言指令（所有角色统一）
+  const languageDirective =
+    params.settings.runtime.language === 'zh'
+      ? 'Always respond to the user in Simplified Chinese (简体中文).'
+      : 'Always respond to the user in English.';
+  const prompt = basePrompt ? `${basePrompt}\n\n${languageDirective}` : basePrompt;
 
   return {
     role,

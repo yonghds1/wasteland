@@ -1,5 +1,6 @@
 import type { PermissionMode } from '../core/runtime/permission-gate.js';
 import type { PromptTemplateRef } from '../prompts/prompt-types.js';
+import { DEFAULT_LANGUAGE } from '../locales/index.js';
 
 export type AuthRef = {
   $auth: string;
@@ -86,7 +87,7 @@ export type A2AAgentsConfig = A2AAgentConfig[];
 
 /**
  * 子角色配置
- * 子角色可以被用户自定义覆盖，但主角色 immortan-joe 完全内置不可覆盖
+ * 角色均可被用户自定义覆盖或新增（含主角色 orchestrator）
  */
 export type SubAgentSettings = RoleSettings & {
   /** 子角色描述，用于配置页面显示 */
@@ -98,13 +99,14 @@ export type RawWastelandSettings = {
   providers?: Record<string, ProviderSettings>;
   models?: Record<string, ModelSettings>;
   /**
-   * 子角色配置
-   * 注意：主角色 immortan-joe 完全内置，不在此配置中
-   * 用户可以在此配置自定义子角色或覆盖内置子角色
+   * 角色配置
+   * 用户可在此配置自定义角色或覆盖内置角色（含主角色 orchestrator）
    */
   subAgents?: Record<string, SubAgentSettings>;
   runtime?: {
     defaultRole?: string;
+    /** 皮肤主题 id，默认 immortan-joe，与角色独立 */
+    skinId?: string;
     defaultModel?: string;
     permissionMode?: PermissionMode;
     maxStepsPerTurn?: number;
@@ -130,12 +132,14 @@ export type ResolvedWastelandSettings = {
   providers: Record<string, ProviderSettings>;
   models: Record<string, ModelSettings>;
   /**
-   * 子角色配置（解析后）
-   * 主角色 immortan-joe 完全内置，不在此配置中
+   * 角色配置（解析后）
+   * 用户可覆盖内置角色或新增角色
    */
   subAgents: Record<string, SubAgentSettings>;
   runtime: {
     defaultRole?: string;
+    /** 皮肤主题 id，默认 immortan-joe，与角色独立 */
+    skinId: string;
     defaultModel?: string;
     permissionMode: PermissionMode;
     maxStepsPerTurn: number;
@@ -170,13 +174,14 @@ export const DEFAULT_WASTELAND_SETTINGS: ResolvedWastelandSettings = {
   models: {},
   subAgents: {},
   runtime: {
-    defaultRole: 'immortan-joe',
+    defaultRole: 'orchestrator',
+    skinId: 'immortan-joe',
     permissionMode: 'default',
     maxStepsPerTurn: 8,
     maxTurns: 20,
     childAgentTimeout: 120000,
     debug: false,
-    language: 'en',
+    language: DEFAULT_LANGUAGE,
   },
   mcpServers: {},
   a2aAgents: [],

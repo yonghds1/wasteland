@@ -15,7 +15,7 @@ import { useEffect, useRef } from 'react';
 import type { Subscription } from 'rxjs';
 import type { RuntimeEvent, DebugTraceEvent } from '../types.js';
 import type { AppState, AgentNode, Message, ToolCall, TraceEvent } from '../context/AppContext.js';
-import { t } from '../../locales/index.js';
+import { t, tArray } from '../../locales/index.js';
 
 /**
  * 从 sessionId 推断 Agent 深度
@@ -125,6 +125,16 @@ function processRuntimeEvent(
         type: 'assistant',
         content,
       });
+      // 主角色编排完成反应（有子角色参与时显示废土 success 文案）
+      if (agents.some((a) => a.id !== event.sessionId)) {
+        messages.push({
+          id: `msg-success-${event.turn}-${Date.now()}`,
+          timestamp: new Date().toISOString(),
+          agentId: event.sessionId,
+          type: 'system',
+          content: t('skin.ui.messages.success'),
+        });
+      }
       // 重置 chunk 累积器和流式状态
       chunkAccumulator.current = '';
       streamingContent = '';
@@ -206,6 +216,14 @@ function processRuntimeEvent(
         type: 'tool',
         content: t('tui.toolError', { error: event.error }),
       });
+      // 主角色失败反应（废土 error 文案）
+      messages.push({
+        id: `msg-error-${event.callId}-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        agentId: event.sessionId,
+        type: 'system',
+        content: t('skin.ui.messages.error'),
+      });
 
       toolStartTimes.delete(event.callId);
       break;
@@ -220,6 +238,18 @@ function processRuntimeEvent(
         status: 'running',
         startTime: Date.now(),
       });
+      // 子角色（War Boys）问候
+      const greetingKey = `skin.roles.workers.${event.name}.greeting`;
+      const greeting = t(greetingKey);
+      if (greeting && greeting !== greetingKey) {
+        messages.push({
+          id: `msg-agent-greeting-${event.childId}`,
+          timestamp: new Date().toISOString(),
+          agentId: event.childId,
+          type: 'system',
+          content: `[${event.name}] ${greeting}`,
+        });
+      }
       break;
     }
 
@@ -237,7 +267,68 @@ function processRuntimeEvent(
                 : 'failed',
           endTime: Date.now(),
         };
+        // 子角色（War Boys）完成口号（仅成功时，随机）
+        if (event.status === 'success') {
+          const agentName = agents[agentIndex].name;
+          const catchphrases = tArray(`skin.roles.workers.${agentName}.catchphrases`);
+          if (catchphrases.length > 0) {
+            const phrase = catchphrases[Math.floor(Math.random() * catchphrases.length)];
+            messages.push({
+              id: `msg-agent-phrase-${event.childId}-${Date.now()}`,
+              timestamp: new Date().toISOString(),
+              agentId: event.childId,
+              type: 'system',
+              content: `[${agentName}] ${phrase}`,
+            });
+          }
+        }
       }
+      break;
+    }
+
+    case 'agent_progress': {
+      // 更新 Agent 状态和消息
+      const progressAgentIndex = agents.findIndex((a) => a.id === event.childId);
+      if (progressAgentIndex >= 0) {
+        agents[progressAgentIndex] = {
+          ...agents[progressAgentIndex],
+          status: 'running',
+        };
+      }
+      // 添加进度消息
+      if (event.message) {
+        messages.push({
+          id: `agent-progress-${event.childId}-${Date.now()}`,
+          timestamp: new Date().toISOString(),
+          agentId: event.childId,
+          type: 'system',
+          content: `[${event.childName}] ${event.message}`,
+        });
+      }
+      break;
+    }
+
+    case 'agent_thinking': {
+      // 添加思考消息
+      messages.push({
+        id: `agent-thinking-${event.childId}-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        agentId: event.childId,
+        type: 'assistant',
+        content: event.content,
+      });
+      break;
+    }
+
+    case 'agent_tool_use': {
+      // 添加工具调用消息
+      messages.push({
+        id: `agent-tool-${event.childId}-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        agentId: event.childId,
+        type: 'tool',
+        content: `🔧 ${event.toolName}`,
+      });
       break;
     }
 

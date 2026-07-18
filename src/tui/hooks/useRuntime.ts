@@ -107,8 +107,8 @@ export async function createTuiRuntime(
   // 8. 加载皮肤配置（TUI 特有）
   let skin: Skin | null = null;
   try {
-    const skinId = runtime.loadedSettings.settings.runtime.defaultRole ?? 'immortan-joe';
-    skin = await loadSkin(skinId, undefined, language);
+    const skinId = runtime.loadedSettings.settings.runtime.skinId ?? 'immortan-joe';
+    skin = await loadSkin(skinId, language);
   } catch (error) {
     console.warn(t('tui.failedToLoadSkin'), error instanceof Error ? error.message : String(error));
   }

@@ -1,0 +1,7 @@
+{"file": ".trellis/spec/backend/runtime-contracts.md", "reason": "Runtime entry points and provider contract - needed for agent-loop modifications"}
+{"file": ".trellis/spec/backend/tool-runtime-contracts.md", "reason": "Tool lifecycle contracts and event ordering - needed for parallel dispatch"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "Error handling patterns - needed for fail-fast implementation"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "TUI state management patterns - needed for parallel status bar"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Component patterns - needed for Footer modifications"}
+{"file": ".trellis/tasks/06-16-brainstorm/research/spawn-agent-parallel-execution.md", "reason": "Internal research on spawn_agent architecture and parallelism blockers"}
+{"file": ".trellis/tasks/06-16-brainstorm/research/industry-parallel-tool-execution.md", "reason": "Industry research on parallel tool execution patterns"}
