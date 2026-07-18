@@ -276,6 +276,69 @@
           "role": "按指定 role 解析当前生效配置"
         }
       }
+    },
+    "init": {
+      "description": "首次运行配置向导：交互式生成 ~/.wasteland/settings.json 与 auth.json",
+      "options": {
+        "force": "覆盖已有的用户配置"
+      },
+      "existingConfig": "已检测到现有配置:",
+      "existingHint": "使用 --force 覆盖，或直接编辑上述文件。",
+      "nonInteractive": "首次初始化需要交互式终端。请直接在终端中运行:\n  wasteland init\n或手动创建 ~/.wasteland/settings.json 与 auth.json。",
+      "cancelled": "初始化已取消。",
+      "success": "配置写入完成，继续启动...",
+      "wizard": {
+        "title": "wasteland 首次初始化",
+        "subtitle": "请填写最小可运行配置。所有信息可稍后手动修改。",
+        "footer": "↑↓ 选择 · Enter 确认 · Backspace 删除 · Esc 清空 · Ctrl+C 取消",
+        "writing": "写入配置中...",
+        "providerType": {
+          "label": "选择 provider 协议类型",
+          "hint": "使用方向键选择，Enter 确认",
+          "openaiCompatible": "OpenAI 兼容 (DeepSeek / GLM / OpenAI / 自建等)",
+          "anthropic": "Anthropic 官方协议"
+        },
+        "providerName": {
+          "label": "Provider 名称",
+          "hint": "作为 settings.json 中 providers 的 key（英文/数字/下划线）"
+        },
+        "baseUrl": {
+          "label": "API baseUrl",
+          "hint": "示例: https://api.deepseek.com/v1"
+        },
+        "apiKey": {
+          "label": "API Key",
+          "hint": "输入内容将被掩码显示，写入 ~/.wasteland/auth.json"
+        },
+        "modelId": {
+          "label": "模型 ID",
+          "hint": "服务端识别的模型名，例如 deepseek-chat、gpt-4o、claude-sonnet-4-6"
+        },
+        "confirm": {
+          "title": "请确认以下配置",
+          "providerName": "Provider 名称",
+          "providerType": "协议类型",
+          "baseUrl": "baseUrl",
+          "apiKey": "apiKey",
+          "model": "model",
+          "enterToSubmit": "按 Enter 写入配置"
+        },
+        "done": {
+          "title": "✓ 初始化完成",
+          "enterToContinue": "按 Enter 继续"
+        },
+        "error": {
+          "title": "写入失败"
+        },
+        "errors": {
+          "emptyProviderName": "Provider 名称不能为空",
+          "invalidProviderName": "只允许字母、数字、下划线和短横线",
+          "emptyBaseUrl": "baseUrl 不能为空",
+          "invalidBaseUrl": "baseUrl 需以 http:// 或 https:// 开头",
+          "emptyApiKey": "API Key 不能为空",
+          "emptyModelId": "模型 ID 不能为空"
+        }
+      }
     }
   },
   "tui": {

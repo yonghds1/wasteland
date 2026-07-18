@@ -2,6 +2,52 @@
 
 本指南详细介绍 wasteland 的配置选项。
 
+## 首次使用
+
+无配置时首次运行 wasteland，会自动进入交互式初始化向导，引导你填写最小可运行配置：
+
+```bash
+wasteland          # 检测到无配置 → 自动进入 init wizard → 完成后进入 TUI
+wasteland init     # 显式重跑向导（已存在配置时报错）
+wasteland init --force  # 强制覆盖已有配置
+```
+
+向导会依次询问：
+
+1. **Provider 协议类型** — `openai-compatible`（DeepSeek/GLM/OpenAI/自建）或 `anthropic`（Anthropic 官方协议）
+2. **Provider 名称** — 用作 `settings.json` 中 `providers` 的 key
+3. **API baseUrl** — 端点地址，例如 `https://api.deepseek.com/v1`
+4. **API Key** — 输入将被掩码；写入 `~/.wasteland/auth.json`
+5. **模型 ID** — 服务端识别的模型名，如 `deepseek-chat`、`gpt-4o`、`claude-sonnet-4-6`
+
+向导写入的最小结构：
+
+```jsonc
+// ~/.wasteland/settings.json
+{
+  "runtime": { "defaultModel": "default" },
+  "providers": {
+    "<providerName>": {
+      "type": "openai-compatible",
+      "baseUrl": "<baseUrl>",
+      "apiKey": { "$auth": "<providerName>_api_key" }
+    }
+  },
+  "models": {
+    "default": { "provider": "<providerName>", "model": "<modelId>" }
+  }
+}
+```
+
+```jsonc
+// ~/.wasteland/auth.json
+{ "<providerName>_api_key": "<apiKey>" }
+```
+
+**非交互环境**（管道、CI）不会自动触发向导；如需在此类环境配置，请手动创建上述两个文件。
+
+---
+
 ## 配置文件位置
 
 wasteland 使用分层配置系统：

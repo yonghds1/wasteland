@@ -288,6 +288,69 @@
           "role": "Parse current effective configuration by specified role"
         }
       }
+    },
+    "init": {
+      "description": "First-run config wizard: interactively generate ~/.wasteland/settings.json and auth.json",
+      "options": {
+        "force": "Overwrite existing user configuration"
+      },
+      "existingConfig": "Existing configuration detected:",
+      "existingHint": "Use --force to overwrite, or edit the files above directly.",
+      "nonInteractive": "First-run init requires an interactive terminal. Run:\n  wasteland init\ndirectly, or manually create ~/.wasteland/settings.json and auth.json.",
+      "cancelled": "Init cancelled.",
+      "success": "Configuration written. Continuing startup...",
+      "wizard": {
+        "title": "wasteland First-Run Init",
+        "subtitle": "Fill in the minimum viable configuration. Everything can be edited later.",
+        "footer": "↑↓ select · Enter confirm · Backspace delete · Esc clear · Ctrl+C cancel",
+        "writing": "Writing configuration...",
+        "providerType": {
+          "label": "Select provider protocol type",
+          "hint": "Use arrow keys to select, Enter to confirm",
+          "openaiCompatible": "OpenAI-compatible (DeepSeek / GLM / OpenAI / self-hosted)",
+          "anthropic": "Anthropic official protocol"
+        },
+        "providerName": {
+          "label": "Provider name",
+          "hint": "Used as the key under providers in settings.json (letters/digits/underscore/dash)"
+        },
+        "baseUrl": {
+          "label": "API baseUrl",
+          "hint": "Example: https://api.deepseek.com/v1"
+        },
+        "apiKey": {
+          "label": "API Key",
+          "hint": "Input is masked; will be written to ~/.wasteland/auth.json"
+        },
+        "modelId": {
+          "label": "Model ID",
+          "hint": "Server-recognized model name, e.g. deepseek-chat, gpt-4o, claude-sonnet-4-6"
+        },
+        "confirm": {
+          "title": "Please confirm the configuration below",
+          "providerName": "Provider name",
+          "providerType": "Protocol type",
+          "baseUrl": "baseUrl",
+          "apiKey": "apiKey",
+          "model": "model",
+          "enterToSubmit": "Press Enter to write configuration"
+        },
+        "done": {
+          "title": "✓ Init complete",
+          "enterToContinue": "Press Enter to continue"
+        },
+        "error": {
+          "title": "Write failed"
+        },
+        "errors": {
+          "emptyProviderName": "Provider name cannot be empty",
+          "invalidProviderName": "Only letters, digits, underscore and dash are allowed",
+          "emptyBaseUrl": "baseUrl cannot be empty",
+          "invalidBaseUrl": "baseUrl must start with http:// or https://",
+          "emptyApiKey": "API Key cannot be empty",
+          "emptyModelId": "Model ID cannot be empty"
+        }
+      }
     }
   },
   "tui": {

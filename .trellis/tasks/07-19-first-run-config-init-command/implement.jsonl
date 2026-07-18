@@ -1,0 +1,6 @@
+{"file": ".trellis/spec/backend/directory-structure.md", "reason": "commands / config 目录规范，init 命令放置位置遵循此结构"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "InitWizard 中断/非TTY/写盘失败的错误处理路径遵循此规范"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "InitWizard.tsx Ink 组件的编写规范"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "InitWizard 内部多步骤状态机的状态管理规范"}
+{"file": ".trellis/spec/frontend/focus-management.md", "reason": "InitWizard 输入框/选择器的焦点切换规范"}
+{"file": "docs/user-guide/configuration.md", "reason": "生成的 settings.json / auth.json 需与文档结构一致；文档也需更新首次使用章节"}

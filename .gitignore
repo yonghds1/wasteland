@@ -24,3 +24,5 @@ dist/
 # Python
 **/__pycache__/
 **/*.pyc
+
+pnpm-lock.yaml

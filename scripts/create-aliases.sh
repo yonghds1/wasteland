@@ -65,7 +65,7 @@ print_info "清除旧的符号链接..."
 rm -f "$LOCAL_LINK_DIR"/*
 
 # 创建主命令符号链接（wasteland）
-ln -s "../wasteland.js" "$LOCAL_LINK_DIR/wasteland"
+ln -sf "../wasteland.js" "$LOCAL_LINK_DIR/wasteland"
 print_info "创建主命令链接: wasteland"
 
 # 获取角色别名
@@ -95,8 +95,13 @@ if [ ! -d "$NPM_BIN_DIR" ]; then
 fi
 
 for alias in "${ROLE_ALIASES[@]}"; do
+    # 跳过与主命令同名的别名（wasteland 已在上面创建）
+    if [ "$alias" = "wasteland" ]; then
+        continue
+    fi
+
     # 本地软链
-    ln -s "../wasteland.js" "$LOCAL_LINK_DIR/$alias"
+    ln -sf "../wasteland.js" "$LOCAL_LINK_DIR/$alias"
     print_info "创建本地链接: $alias -> wasteland.js"
 
     # 复制到 npm bin 目录（使全局可用）
