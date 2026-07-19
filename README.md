@@ -295,7 +295,7 @@ session transcript 默认写入 `.wasteland/sessions/`。
 
 ## 技能系统
 
-RxCLI 内置技能系统，支持高级工作流和自动化操作。
+wasteland 内置技能系统，支持高级工作流和自动化操作。
 
 ### 内置技能
 

@@ -15,7 +15,7 @@
 | **parse5** | HTML5 parser | ~2MB | Fast | Low-level HTML parsing |
 | **htmlparser2** | SAX-style | ~1MB | Very fast | Streaming, memory-efficient |
 
-**Recommendation for rx-cli**: `cheerio` is the best fit because:
+**Recommendation for wasteland**: `cheerio` is the best fit because:
 - Lightweight and fast
 - jQuery-like API (familiar to many developers)
 - Excellent for extracting data from HTML

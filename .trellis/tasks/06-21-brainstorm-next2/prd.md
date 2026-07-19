@@ -118,5 +118,5 @@ class LRUCache<T> {
 
 * 关键文件：`src/tools/web-search.ts`
 * 依赖：cheerio（npm 包）
-* 代码库路径：/home/ubuntu/workspace/rx-cli
+* 代码库路径：/home/ubuntu/workspace/wasteland
 * Trellis 管理：.trellis/ 目录

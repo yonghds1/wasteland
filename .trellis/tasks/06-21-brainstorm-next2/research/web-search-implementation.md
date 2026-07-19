@@ -1,6 +1,6 @@
-# Research: Web-Search Implementation in rx-cli
+# Research: Web-Search Implementation in wasteland
 
-- **Query**: Research the current web-search implementation in the rx-cli codebase
+- **Query**: Research the current web-search implementation in the wasteland codebase
 - **Scope**: Internal (codebase analysis) + External (industry best practices)
 - **Date**: 2026-06-21
 

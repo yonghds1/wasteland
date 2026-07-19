@@ -347,7 +347,7 @@ class ClaudeWebSearchTool implements WebSearchTool {
 
 ---
 
-## Recommendations for rx-cli Implementation
+## Recommendations for wasteland Implementation
 
 ### High Priority
 

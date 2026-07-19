@@ -141,5 +141,5 @@ class McpPromptGetTool implements AgentTool {
 
 * 关键文件：`src/tools/mcp-client.ts`, `src/tools/mcp-registry.ts`
 * 协议版本：`2024-11-05`
-* 代码库路径：/home/ubuntu/workspace/rx-cli
+* 代码库路径：/home/ubuntu/workspace/wasteland
 * Trellis 管理：.trellis/ 目录

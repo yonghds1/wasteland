@@ -1,8 +1,8 @@
-# Input Flow Analysis: CLI vs TUI in rx-cli
+# Input Flow Analysis: CLI vs TUI in wasteland
 
 ## Overview
 
-This analysis examines the input processing pipelines in rx-cli for both CLI (interactive readline) and TUI (Ink/React) modes, focusing on how user input flows from capture to agent-loop execution.
+This analysis examines the input processing pipelines in wasteland for both CLI (interactive readline) and TUI (Ink/React) modes, focusing on how user input flows from capture to agent-loop execution.
 
 ---
 

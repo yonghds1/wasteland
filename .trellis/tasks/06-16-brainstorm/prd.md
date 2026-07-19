@@ -210,5 +210,5 @@ parallel?: {
 * 配置路径：`src/config/settings-types.ts`
 * UI 组件：`src/tui/components/common/Footer.tsx`
 * 测试目录：`test/runtime/` 和 `test/tools/`
-* 代码库路径：/home/ubuntu/workspace/rx-cli
+* 代码库路径：/home/ubuntu/workspace/wasteland
 * Trellis 管理：.trellis/ 目录

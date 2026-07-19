@@ -1,4 +1,4 @@
-# Research: ACP/A2A Implementation in rx-cli
+# Research: ACP/A2A Implementation in wasteland
 
 - **Query**: What ACP (Agent Communication Protocol) features are currently implemented vs missing, how A2A is used, and what features are missing for agent-to-agent collaboration
 - **Scope**: internal + external

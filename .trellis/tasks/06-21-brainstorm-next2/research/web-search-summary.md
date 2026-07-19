@@ -6,7 +6,7 @@
 
 ## Executive Summary
 
-The rx-cli web-search tool currently supports **only DuckDuckGo** via HTML scraping with **regex-based parsing**. The implementation is functional but fragile, with no fallback mechanisms, caching, or retry logic.
+The wasteland web-search tool currently supports **only DuckDuckGo** via HTML scraping with **regex-based parsing**. The implementation is functional but fragile, with no fallback mechanisms, caching, or retry logic.
 
 ## Key Findings
 

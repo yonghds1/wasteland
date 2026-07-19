@@ -139,5 +139,5 @@ stream.on('event', (event) => {
 ## Technical Notes
 
 * 关键文件：`src/acp/a2a-client.ts`, `src/acp/a2a-types.ts`
-* 代码库路径：/home/ubuntu/workspace/rx-cli
+* 代码库路径：/home/ubuntu/workspace/wasteland
 * Trellis 管理：.trellis/ 目录
