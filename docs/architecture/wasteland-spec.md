@@ -5,34 +5,63 @@
 
 ## 1. 概述
 
-**wasteland** 是一个废土主题的多 Agent CLI 系统。灵感来自 Mad Max 世界观，主 Agent "Immortan Joe" 作为指挥官，管理多个子 Agent "War Boys" 协同完成任务。
+**wasteland** 是一个废土主题的多 Agent 系统，以 **TUI（Ink/React）为唯一主界面**，CLI 作为非交互 fallback。灵感来自 Mad Max 世界观，主 Agent "Immortan Joe" 作为指挥官，管理多个子 Agent "War Boys" 协同完成任务。
+
+项目强调**分层架构与 UI 分离**：Core 层不依赖任何具体 UI，UI 层（TUI / CLI）经 Adapter 接入 Core，可替换、可移除（见 [第 5 节 UI 分层与 Adapter 架构](#5-ui-分层与-adapter-架构)）。
 
 ### 技术栈
 
-| 组件 | 技术 |
+| 组件 | 技术 | 说明 |
+|------|------|------|
+| 语言 | TypeScript (ES2022, NodeNext) | |
+| TUI 框架 | Ink (React) | **唯一主界面** |
+| CLI 框架 | Commander | 非交互 fallback 与子命令路由 |
+| 响应式流 | RxJS | Core 与 UI 之间的数据流边界 |
+| 运行时 | Node.js >= 20 | |
+
+### 界面与命令
+
+**TUI 主入口**（默认）：
+
+- `wasteland` —— 无参数等价于 `wasteland tui`（`src/cli.ts` 在无参时自动追加 `tui`）
+- `wasteland tui` —— 显式启动 TUI Dashboard
+- `npm run dev` —— 开发模式（`tsx src/cli.ts`），默认启动 TUI
+
+**CLI fallback 与管理命令**：
+
+| 命令 | 说明 |
 |------|------|
-| 语言 | TypeScript (ES2022, NodeNext) |
-| CLI 框架 | Commander |
-| 响应式流 | RxJS |
-| TUI 框架 | Ink (React) |
-| 运行时 | Node.js >= 20 |
+| `wasteland tui` | TUI 主入口（`-r/--role`、`-p/--provider`、`--permission-mode`、`--debug`、`--attach <session>`） |
+| `wasteland chat` | **hidden**，非交互 fallback：单轮（`-m`）、stdin 管道、或交互式 readline |
+| `wasteland current` | 查看当前生效配置 |
+| `wasteland config` | 配置管理 |
+| `wasteland init` | 初始化项目（首次运行空配置 + 交互式终端时自动进入引导） |
+| `wasteland sessions` | 会话管理（`list` / `show` / `delete`） |
+| `wasteland resume <session-id>` | 恢复会话 |
+| `wasteland skin` | 皮肤管理（`list` / `show` / `load` / `info`） |
 
-### CLI 命令
+> 命令清单与 `src/cli.ts` 一致：`chat`（hidden）、`config`、`current`、`init`、`tui`、`sessions`、`resume`、`skin`。`chat` 已从 `--help` 隐藏，保留作非交互 fallback，体现 UI 可分离。
 
-- **主命令**: `wasteland`（`package.json` bin 字段注册，npm 安装时自动可用）
-- **角色别名**: 由 `scripts/create-aliases.sh` 根据皮肤配置**动态创建**的 symlink
-  - 默认创建 `joe`（Immortan Joe 的简写）
-  - 切换皮肤时，别名随皮肤角色配置变化
-  - 别名指向同一个 `bin/wasteland.js` 入口
+**`chat` 选项**（无 `--multi`）：
+
+- `-m, --message <text>`：单轮消息
+- `-p, --provider <name>`：指定 Provider
+- `-r, --role <name>`：指定角色
+- `--debug`：输出调试 trace
+- `--debug-format <format>`：`pretty`（默认）/ `jsonl`
+- `--permission-mode <mode>`：`default` / `accept_edits` / `bypass_permissions`
+
+**角色别名**：由 `scripts/create-aliases.sh`（经 `src/utils/symlink-manager.ts` 的 `ensureRoleAliases`）根据皮肤配置**动态创建**的 symlink，指向同一个 `bin/wasteland.js` 入口。默认创建 `joe`（Immortan Joe 的简写），切换皮肤时别名随角色配置变化。`postinstall` 与 `npm run aliases` / `aliases:switch` 均调用该脚本。
 
 ```
-wasteland chat [--message "..."] [--provider <type>] [--model <name>]
-wasteland tui
-wasteland config current
-wasteland sessions [list|show|delete]
+wasteland                          # 默认启动 TUI
+wasteland tui                      # 显式启动 TUI
+wasteland chat --message "..."     # hidden，非交互 fallback
+wasteland current
+wasteland sessions list
 wasteland resume <session-id>
-wasteland skin [list|show|load|info]
-joe chat --message "..."   # 动态别名，等同于 wasteland chat
+wasteland skin list
+joe chat --message "..."           # 动态别名，等同于 wasteland chat
 ```
 
 ## 2. Agent 架构模型
@@ -63,15 +92,15 @@ joe chat --message "..."   # 动态别名，等同于 wasteland chat
 ### 2.3 协作模式：严格层级
 
 ```
-用户 ──→ Main Agent (Immortan Joe)
+用户 ──-> Main Agent (Immortan Joe)
               │
-              ├── spawn ──→ Coder Agent ──→ 结果返回
-              ├── spawn ──→ Planner Agent ──→ 结果返回
-              ├── spawn ──→ Reviewer Agent ──→ 结果返回
-              └── spawn ──→ Researcher Agent ──→ 结果返回
+              ├── spawn ──-> Coder Agent ──-> 结果返回
+              ├── spawn ──-> Planner Agent ──-> 结果返回
+              ├── spawn ──-> Reviewer Agent ──-> 结果返回
+              └── spawn ──-> Researcher Agent ──-> 结果返回
               │
               ▼
-         Main Agent 汇总 ──→ 用户
+         Main Agent 汇总 ──-> 用户
 ```
 
 **关键约束**:
@@ -113,10 +142,10 @@ joe chat --message "..."   # 动态别名，等同于 wasteland chat
 
 | 字段 | 说明 | 来源 |
 |------|------|------|
-| `systemPrompt` | 系统提示词 | settings.json → subAgents → promptTemplate |
-| `tools` | 可用工具列表 | settings.json → subAgents → tools |
-| `permissions` | 权限模式 | settings.json → runtime → permissionMode |
-| `model` | 使用的模型 | settings.json → subAgents → model |
+| `systemPrompt` | 系统提示词 | settings.json -> subAgents -> promptTemplate |
+| `tools` | 可用工具列表 | settings.json -> subAgents -> tools |
+| `permissions` | 权限模式 | settings.json -> runtime -> permissionMode |
+| `model` | 使用的模型 | settings.json -> subAgents -> model |
 
 **角色配置位置**: `settings.json`（或 `.wasteland/settings.json`）
 
@@ -224,7 +253,7 @@ joe chat --message "..."   # 动态别名，等同于 wasteland chat
   ↓ 被覆盖
 .wasteland/settings.json (项目级)
   ↓ 被覆盖
-命令行参数 (--provider, --model, etc.)
+命令行参数 (--provider, --role, etc.)
 ```
 
 ### 4.3 皮肤加载优先级
@@ -237,31 +266,84 @@ joe chat --message "..."   # 动态别名，等同于 wasteland chat
 内置默认皮肤 (Immortan Joe)
 ```
 
-## 5. 运行时架构
+## 5. UI 分层与 Adapter 架构
 
-### 5.1 Agent Loop
+wasteland 采用三层分层架构，**Core 层不依赖任何具体 UI**。UI 层（TUI / CLI）可替换、可移除，经 Adapter 接入 Core。接口细则见 [`input-output-adapters.md`](./input-output-adapters.md)。
+
+### 5.1 分层结构
 
 ```
-用户输入
+┌───────────────────────────────────────────────────────────┐
+│  UI 层（可替换；Core 不依赖具体 UI）                       │
+│  ┌─────────────────────────┐  ┌─────────────────────────┐ │
+│  │ TUI（唯一主界面）        │  │ CLI（非交互 fallback）   │ │
+│  │ src/tui/                │  │ src/ui/                 │ │
+│  │  TuiInputAdapter        │  │  CliInputAdapter        │ │
+│  │  TuiOutputAdapter       │  │  CliOutputAdapter       │ │
+│  │  Ink / React            │  │  readline / terminal    │ │
+│  └─────────────────────────┘  └─────────────────────────┘ │
+└───────────────────────────────────────────────────────────┘
+        │ input$: Observable<ChatInputTurn>      ▲
+        ▼                                         │ events$: Observable<RuntimeEvent>
+┌───────────────────────────────────────────────────────────┐
+│  Adapter 层  src/core/adapters/                           │
+│  InputAdapter / OutputAdapter 抽象                        │
+│  DefaultOutputAdapter（1:1 默认实现）                     │
+└───────────────────────────────────────────────────────────┘
+        │                                         ▲
+        ▼                                         │
+┌───────────────────────────────────────────────────────────┐
+│  Core 层（不变）  src/core/runtime/                       │
+│  runAgentLoop / session-manager / tool-dispatch /         │
+│  permission-gate / event-types / user-input-bridge        │
+└───────────────────────────────────────────────────────────┘
+```
+
+### 5.2 边界契约
+
+- **输入边界**：UI 层通过 `InputAdapter` 产出 `input$: Observable<ChatInputTurn>`，交由 `runAgentLoop` 消费。Core 只认该 Observable，不感知输入来自 TUI 还是 CLI。
+- **输出边界**：`runAgentLoop` 返回 `{ events$: Observable<RuntimeEvent>, debug$ }`，UI 层通过 `OutputAdapter`（`handleEvents(events$)`）消费并渲染。Core 不感知渲染方式。
+- **依赖方向**：UI 依赖 Adapter 抽象与 Core 运行时；Core 不反向依赖任何 UI 实现。新增 UI（如 Web/Desktop）只需实现 `InputAdapter` / `OutputAdapter`，无需改动 Core。
+
+### 5.3 Adapter 实现一览
+
+| 抽象 | 实现 | 文件 |
+|------|------|------|
+| `InputAdapter` | `CliInputAdapter` | `src/ui/cli-input-adapter.ts` |
+| `InputAdapter` | `TuiInputAdapter` | `src/tui/tui-input-adapter.ts` |
+| `OutputAdapter` | `CliOutputAdapter` | `src/ui/cli-output-adapter.ts` |
+| `OutputAdapter` | `TuiOutputAdapter` | `src/tui/tui-output-adapter.ts` |
+| `OutputAdapter` | `DefaultOutputAdapter`（1:1 映射） | `src/core/adapters/output-adapter.ts` |
+
+## 6. 运行时架构
+
+Core 与 UI 的解耦点即 `runAgentLoop` 的 `input$` / `events$` 边界（见 [第 5 节](#5-ui-分层与-adapter-架构)）：UI 经 Adapter 产生 `input$`、消费 `events$`，Core 内部不感知 UI 类型。
+
+### 6.1 Agent Loop
+
+```
+InputAdapter.input$ → 用户输入
   ↓
 TurnContext 构建（system prompt + history + tools）
   ↓
 Provider.runStep(TurnContext, TurnState)
   ↓ 返回 Observable<ProviderStreamEvent>
-  ├── assistant_chunk → 流式输出文本
-  ├── tool_call → ToolRegistry.dispatch()
-  │     ├── 普通工具 → 执行并返回结果
-  │     └── spawn_agent → 创建子 agent session
+  ├── assistant_chunk -> 流式输出文本
+  ├── tool_call -> ToolRegistry.dispatch()
+  │     ├── 普通工具 -> 执行并返回结果
+  │     └── spawn_agent -> 创建子 agent session
   │           ├── 子 agent 独立运行 agent loop
   │           └── 结果返回主 agent
-  └── assistant_message → turn 结束
+  └── assistant_message -> turn 结束
   ↓
 检查 maxStepsPerTurn / maxTurns
   ↓
 TurnState 更新，进入下一轮
+  ↓
+events$: Observable<RuntimeEvent> → OutputAdapter 渲染
 ```
 
-### 5.2 Provider 抽象
+### 6.2 Provider 抽象
 
 ```typescript
 interface AgentProvider {
@@ -278,7 +360,7 @@ interface AgentProvider {
 | `openai-compatible` | `createOpenAIProvider` | OpenAI / Ollama / Qwen 等兼容 API |
 | `anthropic` | `createClaudeProvider` | Anthropic Claude API |
 
-### 5.3 工具系统
+### 6.3 工具系统
 
 **内置工具** (12 个):
 
@@ -297,14 +379,14 @@ interface AgentProvider {
 | `spawn_agent` | 创建子 agent | execute |
 | `mcp-*` | MCP 服务器工具 | 动态 |
 
-### 5.4 Session 管理
+### 6.4 Session 管理
 
 - 每个 agent 运行产生一个 session
 - Session 以 JSONL 格式持久化
 - 主 agent session 和子 agent session 独立存储
-- 支持 session 恢复（`resume` 命令）
+- 支持 session 恢复（`resume` 命令；TUI 亦可通过 `--attach <session>` 接入）
 
-## 6. 事件系统
+## 7. 事件系统
 
 ### RuntimeEvent 类型
 
@@ -336,7 +418,7 @@ interface AgentProvider {
 | `session` | 会话开始记录 |
 | `session_end` | 会话结束记录 |
 
-## 7. 技能系统
+## 8. 技能系统
 
 技能是更高层次的抽象，封装常见工作流。
 
@@ -356,17 +438,23 @@ interface AgentProvider {
 2. **项目级** (`.wasteland/skills/`): 项目特定技能
 3. **用户级** (`~/.wasteland/skills/`): 用户自定义技能
 
-## 8. 国际化（i18n）
+## 9. 国际化（i18n）
 
 - 支持语言: `en`（英语）、`zh`（中文）
 - 默认语言: `en`
-- 可通过 `settings.json` → `runtime.language` 切换
+- 可通过 `settings.json` -> `runtime.language` 切换
 - 所有用户可见文本必须通过 `t()` 函数获取
 - 禁止在源码中硬编码用户可见的文本
 
-## 9. 文档引用
+## 10. 文档引用
 
-本文档引用的现有文档（保留为实现记录，以本文档为准）:
+本文档与以下文档互补（接口细则，有效）：
+
+| 文档 | 说明 |
+|------|------|
+| `docs/architecture/input-output-adapters.md` | Adapter 接口细则、实现类清单与扩展新 UI 的步骤 |
+
+以下文档保留为实现记录，与本文档冲突时以本文档为准：
 
 | 文档 | 状态 | 说明 |
 |------|------|------|

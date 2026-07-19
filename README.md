@@ -1,9 +1,10 @@
 # wasteland
 
-Immortan Joe's War Machine - 一个基于 TypeScript、Commander 和 RxJS 的多智能体 CLI 系统。
+Immortan Joe's War Machine - 一个基于 TypeScript、RxJS 和 Ink/React 的多智能体系统,以 TUI 为唯一主界面,CLI 仅作非交互 fallback。Core 与 UI 经 adapter 解耦,UI 层可替换。
 
 **核心特性**：
 - 基于 RxJS 的响应式 Agent 运行时
+- **TUI 主界面**（Ink/React），CLI 作为非交互 fallback；UI 与 core 经 adapter 解耦
 - 支持单 Agent 和多 Agent（主从编排）模式
 - **并行 Agent 执行**：多个 spawn_agent 调用可并行执行，提升多 Agent 系统效率
 - 完整的工具系统和权限控制
@@ -37,66 +38,99 @@ export xiaomi_api_key='your-xiaomi-api-key'
 # 编辑 .wasteland/auth.json
 ```
 
-### 基础使用
+### 启动 TUI
 
 ```bash
-# 单次消息模式
-wasteland chat --provider jdcloud --message "你好"
+# 开发模式：从 TypeScript 源码启动 TUI（默认入口）
+npm run dev
 
-# 交互模式
-wasteland chat --provider jdcloud
-
-# 查看配置
-wasteland config current
+# 全局安装后
+wasteland
 ```
+
+启动后在 TUI 界面直接输入消息即可对话，AI 响应流式渲染，工具调用、权限决策、子 Agent 进度均实时展示。不带参数运行 `wasteland` 或 `npm run dev` 会自动进入 TUI（`src/cli.ts` 无参时自动追加 `tui`）。
 
 ## 可用脚本
 
-- `npm run dev -- <args>`：直接从 TypeScript 源码运行 CLI
-- `npm run chat -- --message "你好"`：直接从 TypeScript 源码运行 RxJS `chat` 命令
+- `npm run dev`：从 TypeScript 源码启动 TUI（默认入口，等价于 `npm run dev -- tui`）
+- `npm run dev -- chat --message "你好"`：以非交互模式运行 `chat` 命令（已从 `--help` 隐藏，仅作管道/脚本 fallback）
 - `npm run build`：把 CLI 编译到 `dist/`
-- `npm start -- <args>`：通过可执行包装层运行构建后的 CLI
-- `npm test`：先构建，再运行冒烟测试
+- `npm run tui:build`：先构建再运行 TUI
+- `npm test`：先构建，再运行测试
 - `npm run check`：统一运行 typecheck 与测试
 - `./scripts/create-aliases.sh [skin-id]`：根据皮肤配置创建角色别名（如 `joe`），postinstall 时自动执行
 
+## 界面与分层架构
+
+wasteland 采用三层分层架构，UI 层可替换，core 不依赖任何具体 UI：
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  UI 层（可替换，core 不依赖具体 UI）                          │
+│                                                             │
+│   TUI（唯一主界面）              CLI（非交互 fallback）       │
+│   src/tui/                       src/ui/                     │
+│   Ink / React                    readline / terminal         │
+│   TuiInputAdapter                CliInputAdapter             │
+│   TuiOutputAdapter               CliOutputAdapter            │
+└──────────────┬──────────────────────────────┬────────────────┘
+               │                              │
+               │   统一为 ChatInputTurn 流      │
+               ▼                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Adapter 层   src/core/adapters/                            │
+│                                                             │
+│  InputAdapter（抽象）          OutputAdapter（抽象）          │
+│  统一输入为 input$              RuntimeEvent → DisplayEvent   │
+│                               DefaultOutputAdapter（1:1 映射）│
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Core 层   src/core/runtime/（UI 无关，可独立运行）           │
+│                                                             │
+│  runAgentLoop({ input$ }) → { events$, debug$ }             │
+│  session-manager · tool-dispatch · permission-gate           │
+│  event-types · user-input-bridge                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+- **UI 层**：TUI（`src/tui/`，Ink/React，`TuiInputAdapter`/`TuiOutputAdapter`）是唯一主界面；CLI（`src/ui/`，readline/terminal，`CliInputAdapter`/`CliOutputAdapter`）保留为非交互/管道/脚本 fallback。两者经同一套 adapter 接口接入 core。
+- **Adapter 层**：`src/core/adapters/` 定义 `InputAdapter`/`OutputAdapter` 抽象与 `DefaultOutputAdapter`，把 `RuntimeEvent` 1:1 映射为 `DisplayEvent`，屏蔽 UI 差异。
+- **Core 层**：`src/core/runtime/` 负责编排（`runAgentLoop`、`session-manager`、`tool-dispatch`、`permission-gate`、`event-types`、`user-input-bridge`），与 UI 完全解耦。`runAgentLoop({ input$ })` 返回 `{ events$, debug$ }`，UI 经 adapter 订阅事件流。
+
 ## 使用示例
 
-### 基础对话
+### 基础对话（TUI）
 
 ```bash
-# 单次消息
-wasteland chat --provider jdcloud --message "你好"
+# 启动 TUI（默认入口）
+npm run dev
 
-# 交互模式
-wasteland chat --provider jdcloud
-
-# 使用管道输入
-echo "列出当前目录" | wasteland chat --provider jdcloud
+# 指定 provider / role 启动
+npm run dev -- tui --provider jdcloud --role immortan-joe
 ```
 
-### Tool Calling
+启动后在 TUI 界面直接输入消息即可对话，响应流式渲染。
 
-```bash
-# 读取文件
-wasteland chat --provider jdcloud --message "读取 package.json"
+### Tool Calling（TUI）
 
-# 执行命令
-wasteland chat --provider jdcloud --message "列出当前目录"
+在 TUI 中直接输入：
 
-# 搜索文件
-wasteland chat --provider jdcloud --message "搜索所有 .ts 文件"
-```
+- "读取 package.json" → 触发 `read-file`
+- "列出当前目录" → 触发 `list-directory` / `bash`
+- "搜索所有 .ts 文件" → 触发 `glob`
 
-### 多 Agent
+工具调用请求、权限决策、执行结果都会在 TUI 中实时展示。
 
-```bash
-# 创建子 Agent
-wasteland chat --provider jdcloud --message "创建一个子 Agent 来分析代码"
+### 多 Agent（TUI）
 
-# 并行执行
-wasteland chat --provider jdcloud --message "同时执行：1. 读取 README.md 2. 列出目录"
-```
+在 TUI 中输入需要编排的任务，主角色（Immortan Joe）会通过 `spawn_agent` 调度子 Agent：
+
+- "创建一个子 Agent 来分析代码"
+- "同时执行：1. 读取 README.md 2. 列出目录"
+
+子 Agent 的创建、进度、完成事件会在 TUI 中显示。
 
 ### 会话管理
 
@@ -114,6 +148,52 @@ wasteland resume <session-id>
 wasteland sessions delete <session-id> --confirm
 ```
 
+TUI 也支持 `--attach <session>` 直接附加到历史会话：
+
+```bash
+npm run dev -- tui --attach <session-id>
+```
+
+### 非交互 fallback（chat 命令）
+
+`chat` 命令已从 `--help` 隐藏（`src/cli.ts` 中 `hidden: true`），保留作脚本/管道场景的 fallback。chat 命令选项：`-m/--message`、`-p/--provider`、`-r/--role`、`--debug`、`--debug-format`、`--permission-mode`（无 `--multi`，多 Agent 由 `spawn_agent` 工具调度）。
+
+```bash
+# 单次消息（脚本场景）
+npm run dev -- chat --provider jdcloud --message "你好"
+
+# 管道输入
+echo "列出当前目录" | npm run dev -- chat --provider jdcloud
+
+# 交互式 CLI（非 TTY 无法启动 TUI 时的 fallback）
+npm run dev -- chat --provider jdcloud
+```
+
+`chat` 命令的三条输入路径：
+
+- `--message <text>`：单次输入，适合脚本和测试
+- 通过 `stdin` 管道输入：适合把外部输入整段送入同一条 runtime 路径
+- 不带 `--message` 且无 `stdin` 管道：进入交互模式，按行输入，输入 `/exit` 或 `/quit` 退出
+
+交互模式下支持本地会话命令（在 UI 层直接处理，不进入 runtime/provider）：
+
+- `/help`
+- `/tools`
+- `/clear`
+- `/exit`
+
+内置默认 provider 是 `local`，用于在不接真实模型时验证 runtime/provider/ui/session 边界；当前项目本地 `.wasteland/settings.json` 已把默认 provider 配成 `qwen`。如果要按真实全局命令的方式测试：
+
+```bash
+npm link
+wasteland --help
+wasteland chat --message "你好"
+```
+
+`chat` 输入语法表见：
+
+- [Phase 2：工具运行时与权限闸门](./docs/implementation/phase-2-agent-tool-runtime.md)
+
 ## 多 Agent 模式
 
 wasteland 采用 **单主角色 + 多子Agent** 架构：
@@ -121,8 +201,8 @@ wasteland 采用 **单主角色 + 多子Agent** 架构：
 ### 主角色（Immortan Joe）
 
 ```bash
-# 默认使用 Immortan Joe 主角色
-wasteland chat --message "分析代码"
+# 在 TUI 中直接对话即可，默认使用 Immortan Joe 主角色
+npm run dev
 ```
 
 Immortan Joe 是唯一主角色，完全内置，不可覆盖。它会自动调度子Agent执行任务。
@@ -162,6 +242,8 @@ spawn_agent({
 
 **测试多 Agent（使用 Qwen）**：
 
+在 TUI 中直接输入任务即可触发多 Agent；以下为非交互测试场景：
+
 ```bash
 # 1. 配置 Qwen API Key（如果还没配置）
 export APP_CHAT_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode"
@@ -169,50 +251,19 @@ export APP_CHAT_API_KEY="<your-key>"
 export APP_CHAT_MODEL="qwen3-max"
 
 # 2. 使用 local provider 测试 spawn_agent 命令
-npm run chat -- --provider local --message "/spawn analyzer 分析 package.json"
+npm run dev -- chat --provider local --message "/spawn analyst 分析 package.json"
 
 # 3. 使用 Qwen provider 测试（Qwen 会自动决定是否调用 spawn_agent）
-npm run chat -- --multi --message "分析这个项目的架构，并给出重构建议"
+npm run dev -- chat --message "分析这个项目的架构，并给出重构建议"
 
 # 4. 使用 bypass_permissions 模式允许 spawn_agent 执行
-npm run chat -- --multi --permission-mode bypass_permissions --message "..."
+npm run dev -- chat --permission-mode bypass_permissions --message "..."
 ```
 
 **注意**：
 - `local` provider 通过 `/spawn <name> <task>` 语法触发 spawn_agent
 - `qwen` provider 会根据任务自动决定是否调用 spawn_agent（需要模型支持 tool calling）
 - spawn_agent 是高风险工具，默认权限模式会要求确认
-
-`chat` 命令当前有三条输入路径：
-
-- `--message <text>`：单次输入，适合脚本和测试
-- 通过 `stdin` 管道输入：适合把外部输入整段送入同一条 runtime 路径
-- 不带 `--message` 且无 `stdin` 管道：进入交互模式，按行输入，输入 `/exit` 或 `/quit` 退出
-
-交互模式下还支持本地会话命令：
-
-- `/help`
-- `/tools`
-- `/clear`
-- `/exit`
-
-这些命令在 UI 层直接处理，不会进入 runtime/provider。
-
-安装或链接到全局后，启动命令是 `wasteland`。角色别名（如 `joe`）由 `scripts/create-aliases.sh` 根据皮肤配置动态创建。
-
-如果要按真实全局命令的方式测试：
-
-```bash
-npm link
-wasteland --help
-wasteland chat --message "你好"
-```
-
-内置默认 provider 是 `local`，用于在不接真实模型时验证 runtime/provider/ui/session 边界；当前项目本地 `.wasteland/settings.json` 已把默认 provider 配成 `qwen`。
-
-当前支持的 `chat` 输入语法表见：
-
-- [Phase 2：工具运行时与权限闸门](./docs/implementation/phase-2-agent-tool-runtime.md)
 
 ## 配置与数据目录
 
@@ -234,6 +285,8 @@ wasteland chat --message "你好"
 - `WASTELAND_MAX_STEPS_PER_TURN`：覆盖单轮最大 step 数
 - `WASTELAND_DEBUG`：默认打开调试追踪
 - `WASTELAND_SESSION_DIR`：覆盖 session transcript 输出目录
+- `WASTELAND_LANGUAGE`：覆盖界面语言（如 `zh`、`en`）
+- `WASTELAND_MAX_CONCURRENCY`：覆盖并行子 Agent 最大并发数（`-1` 表示无限制）
 
 当前还支持一组面向 Qwen 接入的环境变量桥接：
 
@@ -275,7 +328,7 @@ export APP_CHAT_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode"
 export APP_CHAT_API_KEY="<your-key>"
 export APP_CHAT_MODEL="qwen3-max"
 
-wasteland chat --message "你好"
+npm run dev
 ```
 
 说明：
@@ -295,33 +348,31 @@ session transcript 默认写入 `.wasteland/sessions/`。
 
 ## 技能系统
 
-wasteland 内置技能系统，支持高级工作流和自动化操作。
+wasteland 内置技能系统，支持高级工作流和自动化操作。使用 `/技能名` 调用技能，在 TUI 或交互式 CLI 中直接输入即可。
 
 ### 内置技能
 
-使用 `/技能名` 调用技能：
-
 ```bash
 # 系统技能
-wasteland chat --message "/help"              # 显示帮助
-wasteland chat --message "/status"            # 查看会话状态
-wasteland chat --message "/tools"             # 列出可用工具
+/help              # 显示帮助
+/status            # 查看会话状态
+/tools             # 列出可用工具
 
 # 项目技能
-wasteland chat --message "/init"              # 初始化项目上下文
-wasteland chat --message "/ctx"               # 显示项目概览
-wasteland chat --message "/init --template minimal"  # 使用最小模板
+/init              # 初始化项目上下文
+/ctx               # 显示项目概览
+/init --template minimal  # 使用最小模板
 ```
 
 ### 技能别名
 
 大部分技能都有简短别名：
 
-- `/help` → `/h`, `/?`
-- `/status` → `/stat`, `/info`
-- `/tools` → `/tls`
-- `/init` → `/i`
-- `/context` → `/ctx`
+- `/help` -> `/h`, `/?`
+- `/status` -> `/stat`, `/info`
+- `/tools` -> `/tls`
+- `/init` -> `/i`
+- `/context` -> `/ctx`
 
 ### 自定义技能
 
@@ -368,15 +419,15 @@ wasteland 采用 **Agents-as-Tools** 模式实现多 Agent 编排：
 
 ```
 单 Agent 模式（默认）:
-  runAgentLoop → runTurnLoop → Provider.runStep → tool_call → dispatchToolCall
+  runAgentLoop -> runTurnLoop -> Provider.runStep -> tool_call -> dispatchToolCall
 
 多 Agent 模式:
-  runAgentLoop → runTurnLoop → Provider.runStep
+  runAgentLoop -> runTurnLoop -> Provider.runStep
     ↓ (tool_call: spawn_agent)
-    → dispatchToolCall
-      → createSpawnAgentTool
-        → runAgentLoop (子 Agent, mode="single")
-          → 返回 tool_result
+    -> dispatchToolCall
+      -> createSpawnAgentTool
+        -> runAgentLoop (子 Agent, mode="single")
+          -> 返回 tool_result
 ```
 
 **核心优势**：
@@ -386,8 +437,8 @@ wasteland 采用 **Agents-as-Tools** 模式实现多 Agent 编排：
 - RxJS forkJoin 自然支持并行执行
 
 **相关文件**：
-- `src/runtime/event-types.ts` - RuntimeEvent 类型（含 agent_spawned/agent_completed）
-- `src/runtime/session-manager.ts` - SessionManager（含 createChildSession）
+- `src/core/runtime/event-types.ts` - RuntimeEvent 类型（含 agent_spawned/agent_completed）
+- `src/core/runtime/session-manager.ts` - SessionManager（含 createChildSession）
 - `src/tools/spawn-agent.ts` - spawn_agent 工具实现
 
 ## 项目结构
@@ -396,15 +447,23 @@ wasteland 采用 **Agents-as-Tools** 模式实现多 Agent 编排：
 bin/            可执行入口
 docs/           架构与实施文档
 src/            TypeScript 源码
-src/commands/   子命令
+src/commands/   子命令（tui / chat / config / init / sessions / resume / skin）
 src/chat/       RxJS 回复管线
 src/config/     统一配置加载与 `.wasteland` 路径规则
-src/runtime/    当前已落地的 agent runtime 层
-src/providers/  当前已落地的 provider 抽象层
-src/tools/      当前已落地的工具合同与内建工具层
+src/core/       核心层（与 UI 解耦）
+src/core/adapters/  InputAdapter/OutputAdapter 抽象 + DefaultOutputAdapter
+src/core/runtime/   agent runtime（runAgentLoop / session-manager / tool-dispatch / permission-gate / event-types / user-input-bridge）
+src/core/shared/    runtime 初始化等共享逻辑
+src/providers/  provider 抽象层（local / openai-compatible / claude 等）
+src/tools/      工具合同与内建工具层
 src/skills/     技能系统（技能注册、发现、执行）
-src/ui/         当前已落地的终端 UI 层
-src/tui/        TUI 界面（基于 Ink/React）
+src/ui/         CLI 终端 UI 层（CliInputAdapter / CliOutputAdapter，readline/terminal）
+src/tui/        TUI 界面（TuiInputAdapter / TuiOutputAdapter，基于 Ink/React）
+src/skins/      皮肤加载（角色人设与皮肤解耦）
+src/acp/        A2A 协作（Agent-to-Agent 适配、注册、Webhook）
+src/prompts/    提示词装配与角色模板
+src/locales/    i18n 翻译（zh / en）
+src/utils/      通用工具（符号链接别名管理等）
 test/           冒烟测试
 dist/           构建产物
 ```
@@ -428,7 +487,7 @@ dist/           构建产物
 - 独立的 permission gate
 - 独立的 tool lifecycle dispatch 与测试
 - `local` provider 下 `/read <path>` 与 `/bash <command>` 的真实工具调用路径
-- 内建工具：`read-file`、`glob`、`grep`、`list-directory`、`web-fetch`、`bash`、`edit-file`、`write-file`
+- 内建工具：`read-file`、`glob`、`grep`、`list-directory`、`web-fetch`、`web-search`、`bash`、`edit-file`、`write-file`、`http-request`、`git`、`ask-user`、`spawn_agent`
 - read-before-edit 安全检查：edit-file 和 write-file 需要先读取目标文件
 
 **Phase 3 多 Agent 架构已完成**：
@@ -436,7 +495,7 @@ dist/           构建产物
 - `spawn_agent` 工具：允许主 Agent 创建子 Agent
 - 子 Agent Session 管理：独立的 session 文件
 - RuntimeEvent 扩展：`agent_spawned`、`agent_completed` 事件
-- CLI 参数：`--multi` 提示多 Agent 模式
+- 多 Agent 调度：由 `spawn_agent` 工具触发，无需 CLI 开关
 - 架构设计：Agents-as-Tools 模式，与现有架构无缝整合
 
 **技能系统已完成**：
