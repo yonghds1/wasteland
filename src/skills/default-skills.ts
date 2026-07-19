@@ -14,7 +14,7 @@ import { toolsSkill } from './skills/tools-skill.js';
 /**
  * 内置技能列表
  *
- * 包含所有随 rx-cli 发布的内置技能。
+ * 包含所有随 wasteland 发布的内置技能。
  */
 export const DEFAULT_SKILLS: Skill[] = [
   // 系统技能

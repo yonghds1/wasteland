@@ -91,7 +91,7 @@ async function main() {
 
       const result = await readTool.execute(
         {
-          file_path: "/home/ubuntu/workspace/rx-cli/package.json",
+          file_path: "/home/ubuntu/workspace/wasteland/package.json",
         },
         {
           sessionId: "test-session",

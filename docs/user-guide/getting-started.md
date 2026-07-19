@@ -12,7 +12,7 @@
 ```bash
 # 克隆项目
 git clone <repository-url>
-cd rx-cli
+cd wasteland
 
 # 安装依赖
 npm install
