@@ -8,12 +8,14 @@ wasteland 采用 **Agents-as-Tools** 模式实现多 Agent 编排：
 
 - 主 Agent (Immortan Joe) 负责任务分析和调度
 - 子 Agent 负责执行具体任务
-- 通过 `spawn-agent` 工具创建和管理子 Agent
+- 通过 `spawn_agent` 工具创建和管理子 Agent
+
+多 Agent 调度由主 Agent 自动完成：你在 TUI 中用自然语言提出需求，Immortan Joe 会判断是否需要拆分任务，并通过 `spawn_agent` 工具自动派发子 Agent。无需任何 `--multi` 之类的开关。
 
 ## 架构图
 
 ```
-用户
+用户 (TUI 输入)
   ↓
 主 Agent (Immortan Joe)
   ↓
@@ -38,39 +40,63 @@ wasteland 采用 **Agents-as-Tools** 模式实现多 Agent 编排：
 | `analyst` | 系统分析 | read-file, glob, grep, list-directory |
 | `tester` | 测试验证 | bash, read-file |
 
+## 启动 TUI
+
+多 Agent 协作在 TUI 中进行。默认无参启动即进入 TUI：
+
+```bash
+# 默认启动 TUI
+wasteland
+
+# 或显式指定 tui 子命令与选项
+wasteland tui --provider jdcloud
+wasteland tui -r <role>
+wasteland tui --permission-mode bypass_permissions
+wasteland tui --attach <session>
+```
+
+TUI 选项：
+
+| 选项 | 说明 |
+|------|------|
+| `-r, --role <name>` | 指定主角色 |
+| `-p, --provider <name>` | 指定模型 provider |
+| `--permission-mode <mode>` | 权限模式（`default` / `accept_edits` / `bypass_permissions`） |
+| `--debug` | 开启调试输出 |
+| `--attach <session>` | 附加到已有 session |
+
+进入 TUI 后，直接在输入框用自然语言对话即可。下文示例中 `>` 开头的行表示在 TUI 输入框中输入的内容。
+
 ## 使用方法
 
 ### 自动调度
 
 主 Agent 会根据任务自动决定是否需要创建子 Agent：
 
-```bash
-# 自动创建子 Agent 分析代码
-wasteland chat --provider jdcloud --message "分析这个项目的架构"
 ```
+> 分析这个项目的架构
+```
+
+Immortan Joe 收到请求后，判断需要分析代码结构，自动通过 `spawn_agent` 派发 `analyst` 子 Agent。
 
 ### 显式创建
 
-也可以显式要求创建子 Agent：
+也可以在对话中显式要求创建子 Agent：
 
-```bash
-# 创建 researcher 子 Agent
-wasteland chat --provider jdcloud --message "创建一个 researcher 子 Agent 来搜索信息"
-
-# 创建 developer 子 Agent
-wasteland chat --provider jdcloud --message "创建一个 developer 子 Agent 来编写代码"
+```
+> 创建一个 researcher 子 Agent 来搜索信息
+> 创建一个 developer 子 Agent 来编写代码
 ```
 
 ### 并行执行
 
 主 Agent 可以同时创建多个子 Agent 并行执行任务：
 
-```bash
-# 并行执行多个任务
-wasteland chat --provider jdcloud --message "同时执行：1. 读取 README.md 2. 列出目录结构 3. 分析 package.json"
+```
+> 同时执行：1. 读取 README.md 2. 列出目录结构 3. 分析 package.json
 ```
 
-## spawn-agent 工具
+## spawn_agent 工具
 
 ### 参数
 
@@ -85,12 +111,18 @@ spawn_agent({
 
 ### 示例
 
-```bash
-# 基础使用
-wasteland chat --provider jdcloud --message "spawn_agent researcher 搜索 RxJS 最佳实践"
+在 TUI 中用自然语言描述即可，主 Agent 会转换成对应的 `spawn_agent` 调用：
 
-# 指定工具
-wasteland chat --provider jdcloud --message "spawn_agent developer 编写测试，只使用 bash 和 read-file 工具"
+```
+> 让 researcher 搜索 RxJS 最佳实践
+> 让 developer 编写测试，只使用 bash 和 read-file 工具
+```
+
+对应的主 Agent 调用形如：
+
+```
+spawn_agent({ name: "researcher", task: "搜索 RxJS 最佳实践" })
+spawn_agent({ name: "developer", task: "编写测试", tools: ["bash", "read-file"] })
 ```
 
 ## 配置子 Agent
@@ -121,14 +153,14 @@ wasteland chat --provider jdcloud --message "spawn_agent developer 编写测试�
 主 Agent 分析用户请求，决定是否需要子 Agent：
 
 ```
-用户: "分析这个项目的架构"
+> 分析这个项目的架构
   ↓
-主 Agent: 需要分析代码结构 → 创建 analyst 子 Agent
+主 Agent: 需要分析代码结构 -> 创建 analyst 子 Agent
 ```
 
 ### 2. 子 Agent 创建
 
-主 Agent 通过 `spawn-agent` 工具创建子 Agent：
+主 Agent 通过 `spawn_agent` 工具创建子 Agent：
 
 ```
 主 Agent 调用 spawn_agent({
@@ -170,24 +202,24 @@ wasteland chat --provider jdcloud --message "spawn_agent developer 编写测试�
 
 主 Agent 可以按顺序执行多个子 Agent：
 
-```bash
-wasteland chat --provider jdcloud --message "先创建 researcher 搜索信息，然后创建 developer 编写代码"
+```
+> 先创建 researcher 搜索信息，然后创建 developer 编写代码
 ```
 
 ### 条件执行
 
 主 Agent 可以根据前一个子 Agent 的结果决定下一步：
 
-```bash
-wasteland chat --provider jdcloud --message "先分析代码，如果有问题就修复，然后运行测试"
+```
+> 先分析代码，如果有问题就修复，然后运行测试
 ```
 
 ### 错误处理
 
 子 Agent 执行失败时，主 Agent 会尝试恢复：
 
-```bash
-wasteland chat --provider jdcloud --message "如果分析失败，就列出目录结构作为备选方案"
+```
+> 如果分析失败，就列出目录结构作为备选方案
 ```
 
 ## Session 管理
@@ -212,9 +244,9 @@ wasteland sessions show <session-id>
 对于独立任务，主 Agent 会自动并行执行子 Agent：
 
 ```
-任务 A ──→ 子 Agent 1 ──→ 结果 A
-任务 B ──→ 子 Agent 2 ──→ 结果 B
-任务 C ──→ 子 Agent 3 ──→ 结果 C
+任务 A ──-> 子 Agent 1 ──-> 结果 A
+任务 B ──-> 子 Agent 2 ──-> 结果 B
+任务 C ──-> 子 Agent 3 ──-> 结果 C
                     ↓
               主 Agent 汇总
 ```
@@ -223,8 +255,8 @@ wasteland sessions show <session-id>
 
 可以通过 `tools` 参数限制子 Agent 的工具集，提高安全性：
 
-```bash
-wasteland chat --provider jdcloud --message "创建只读子 Agent，只使用 read-file 和 grep"
+```
+> 创建只读子 Agent，只使用 read-file 和 grep
 ```
 
 ## 故障排除
@@ -261,6 +293,34 @@ Error: Failed to spawn agent
 1. 检查 provider 是否支持 spawn_agent
 2. 检查 API 配额
 3. 检查网络连接
+
+## 非交互 fallback（chat 命令）
+
+TUI 是唯一主界面。当处于非交互环境（管道、脚本、CI）或无 TTY 时，可使用保留的 `chat` 命令作为 fallback。`chat` 命令已从 `--help` 隐藏，但仍可正常调用。
+
+```bash
+# 单次消息
+wasteland chat --provider jdcloud --message "分析这个项目的架构"
+
+# 管道输入
+echo "分析 package.json" | wasteland chat --provider jdcloud
+
+# 带权限模式（适用于自动化脚本）
+wasteland chat --provider jdcloud --message "..." --permission-mode bypass_permissions
+```
+
+chat 选项：
+
+| 选项 | 说明 |
+|------|------|
+| `-m, --message <text>` | 单次消息（非交互） |
+| `-p, --provider <name>` | 指定模型 provider |
+| `-r, --role <name>` | 指定角色 |
+| `--debug` | 开启调试输出 |
+| `--debug-format <format>` | 调试输出格式（`pretty` / `jsonl`） |
+| `--permission-mode <mode>` | 权限模式 |
+
+chat 模式下，主 Agent 同样会通过 `spawn_agent` 自动调度子 Agent，多 Agent 行为与 TUI 一致；区别仅在于输入输出为非交互式。
 
 ## 最佳实践
 

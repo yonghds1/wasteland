@@ -180,15 +180,24 @@ export APP_CHAT_MODEL="qwen3-max"
 | `accept_edits` | 读写操作自动允许，高风险操作需要确认 |
 | `bypass_permissions` | 所有操作自动允许（不推荐生产使用） |
 
-## CLI 参数
+## 启动参数
+
+### TUI(主界面)
 
 ```bash
-wasteland chat \
-  --provider jdcloud \
-  --role immortan-joe \
-  --permission-mode bypass_permissions \
-  --debug \
-  --message "你好"
+npm run dev -- tui --provider jdcloud --role immortan-joe --permission-mode bypass_permissions --debug
+# 或(全局安装后):wasteland tui --provider jdcloud --role immortan-joe
+# --attach <session-id> 可直接恢复指定会话
+```
+
+TUI 是交互式界面,无需 `--message`。选项:`-p/--provider`、`-r/--role`、`--permission-mode`、`--debug`、`--attach <session>`。
+
+### 非交互 fallback(chat)
+
+`chat` 命令已从 `--help` 隐藏,保留作脚本/管道场景:
+
+```bash
+wasteland chat --provider jdcloud --role immortan-joe --permission-mode bypass_permissions --message "你好"
 ```
 
 ## 配置验证
