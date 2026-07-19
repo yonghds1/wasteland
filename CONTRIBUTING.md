@@ -17,9 +17,9 @@ cd wasteland
 # 2. 安装依赖
 npm install
 
-# 3. 启动开发模式
-npm run cli          # 使用 tsx 直接运行
-npm run cli:build    # 先构建再运行
+# 3. 启动开发模式（TUI）
+npm run dev          # 使用 tsx 直接运行，默认启动 TUI
+npm run tui:build    # 先构建再运行 TUI
 ```
 
 ## 项目结构
