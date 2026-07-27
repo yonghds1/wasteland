@@ -3,7 +3,6 @@ import { promisify } from 'node:util';
 import { z } from 'zod';
 import { zodToJsonSchema } from '@alcyone-labs/zod-to-json-schema';
 
-import { t } from '../locales/index.js';
 import type { AgentTool } from './tool-types.js';
 import type { JsonSchema } from './tool-types.js';
 
@@ -35,6 +34,8 @@ export function createBashTool(): AgentTool {
       try {
         const { stdout, stderr } = await execFileAsync('bash', ['-lc', parsed.data.command], {
           cwd: context.cwd,
+          timeout: 120000,
+          maxBuffer: 10 * 1024 * 1024,
         });
         const output = [stdout, stderr].filter((value) => value.length > 0).join('');
 
@@ -43,9 +44,16 @@ export function createBashTool(): AgentTool {
           output: output.trimEnd(),
         };
       } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        if (msg.includes('timed out') || msg.includes('ETIMEDOUT')) {
+          return { status: 'error', error: '命令执行超时（120s 已终止）。' };
+        }
+        if (msg.includes('maxBuffer')) {
+          return { status: 'error', error: '命令输出过大（超过 10MB）。' };
+        }
         return {
           status: 'error',
-          error: error instanceof Error ? error.message : String(error),
+          error: msg,
         };
       }
     },

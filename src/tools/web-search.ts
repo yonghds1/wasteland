@@ -47,12 +47,6 @@ export type WebSearchInput = z.infer<typeof webSearchInputSchema>;
 /** 默认超时时间（毫秒） */
 const DEFAULT_TIMEOUT = 15000;
 
-/** 默认最大结果数量 */
-const DEFAULT_MAX_RESULTS = 5;
-
-/** 最大允许结果数量 */
-const MAX_ALLOWED_RESULTS = 20;
-
 /** 默认 User-Agent */
 const USER_AGENT = 'wasteland/0.1.0 (CLI Tool)';
 
@@ -79,32 +73,6 @@ type SearchResult = {
 // ============================================================
 // 辅助函数
 // ============================================================
-
-/**
- * 验证搜索查询
- *
- * @param value - 输入查询值
- * @returns 有效查询字符串，或 null 表示无效
- */
-function validateQuery(value: unknown): string | null {
-  if (typeof value !== 'string' || value.trim().length === 0) {
-    return null;
-  }
-  return value.trim();
-}
-
-/**
- * 解析最大结果数量
- *
- * @param value - 输入值
- * @returns 解析后的数量
- */
-function parseMaxResults(value: unknown): number {
-  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
-    return DEFAULT_MAX_RESULTS;
-  }
-  return Math.min(Math.floor(value), MAX_ALLOWED_RESULTS);
-}
 
 /**
  * DuckDuckGo 搜索

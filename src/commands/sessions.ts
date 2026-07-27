@@ -262,7 +262,6 @@ export function createSessionsCommand(): Command {
           console.log(`\n${t('commands.sessions.stats.title')}`);
           console.log('─'.repeat(40));
           console.log(`${t('commands.sessions.stats.totalSessions')} ${stats.totalSessions}`);
-          console.log(`${t('commands.sessions.stats.totalMessages')} ${stats.totalMessages}`);
 
           if (stats.oldestSession) {
             console.log(

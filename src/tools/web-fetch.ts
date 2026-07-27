@@ -20,18 +20,21 @@
  * - timeout: 超时时间（可选，默认 30000ms）
  */
 
+import { lookup } from 'node:dns/promises';
+import { isIP } from 'node:net';
 import { z } from 'zod';
 import { zodToJsonSchema } from '@alcyone-labs/zod-to-json-schema';
 
 import type { AgentTool, ToolExecutionResult } from './tool-types.js';
 import type { JsonSchema } from './tool-types.js';
+import { htmlToMarkdown } from './html-to-markdown.js';
 
 // ============================================================
 // Zod Schema
 // ============================================================
 
 export const webFetchInputSchema = z.object({
-  url: z.string().url().describe('请求 URL（支持 http/https）'),
+  url: z.string().url().refine(u => /^https?:\/\//i.test(u), '仅支持 http/https URL').describe('请求 URL（支持 http/https）'),
   method: z.enum(['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD']).default('GET').describe('HTTP 方法'),
   headers: z.record(z.string(), z.string()).optional().describe('自定义请求头'),
   body: z.union([z.string(), z.record(z.string(), z.unknown())]).optional().describe('请求体（POST/PUT/PATCH 时使用）'),
@@ -64,61 +67,72 @@ const DEFAULT_HEADERS: Record<string, string> = {
 // ============================================================
 
 /**
- * 验证 URL 格式
+ * 判断 IP 是否为私网/回环/链路本地/保留地址（SSRF 防护）
  *
- * @param value - 输入 URL 值
- * @returns 有效 URL，或 null 表示无效
+ * 覆盖：回环、私网段、链路本地（含云元数据 169.254.169.254）、
+ * CGN、未指定地址，以及 IPv6 的 ::1、fc00::/7、fe80::/10。
  */
-function validateUrl(value: unknown): URL | null {
-  if (typeof value !== 'string' || value.trim().length === 0) {
-    return null;
+function isDisallowedIp(ip: string): boolean {
+  // IPv4-mapped IPv6（如 ::ffff:169.254.169.254）
+  const mapped = ip.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
+  if (mapped) {
+    ip = mapped[1];
   }
 
+  // IPv6 特殊地址
+  if (ip.includes(':')) {
+    if (ip === '::1' || ip === '::') return true;
+    if (/^f[cd][0-9a-f]{2}:/i.test(ip)) return true; // fc00::/7 私网
+    if (/^fe[89ab][0-9a-f]{2}:/i.test(ip)) return true; // fe80::/10 链路本地
+    return false;
+  }
+
+  // IPv4
+  const parts = ip.split('.').map(Number);
+  if (parts.length !== 4 || parts.some(n => Number.isNaN(n) || n < 0 || n > 255)) {
+    return false; // 无法识别，交由 fetch 自行报错
+  }
+  const [a, b] = parts;
+  if (a === 0) return true; // 0.0.0.0/8
+  if (a === 10) return true; // 10.0.0.0/8 私网
+  if (a === 127) return true; // 127.0.0.0/8 回环
+  if (a === 169 && b === 254) return true; // 169.254.0.0/16 链路本地（云元数据）
+  if (a === 172 && b >= 16 && b <= 31) return true; // 172.16.0.0/12 私网
+  if (a === 192 && b === 168) return true; // 192.168.0.0/16 私网
+  if (a === 100 && b >= 64 && b <= 127) return true; // 100.64.0.0/10 CGN
+  return false;
+}
+
+/**
+ * 校验目标 URL 不指向私网/保留地址（SSRF 防护）
+ *
+ * 若 hostname 是 IP 直接检查；若是域名则 DNS 解析后检查所有地址。
+ * 注意：DNS rebinding 不在本次防护范围内（需 fetch 层绑定 IP）。
+ *
+ * @throws 若目标地址被禁止访问
+ */
+async function assertPublicUrl(target: URL): Promise<void> {
+  const host = target.hostname;
+
+  if (isIP(host)) {
+    if (isDisallowedIp(host)) {
+      throw new Error(`目标地址 ${host} 为私网/保留地址，禁止访问（SSRF 防护）。`);
+    }
+    return;
+  }
+
+  let addresses: { address: string }[];
   try {
-    const url = new URL(value);
-    // 只允许 HTTP 和 HTTPS
-    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-      return null;
-    }
-    return url;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * 解析请求头
- *
- * @param value - 输入请求头值
- * @returns 请求头对象
- */
-function parseHeaders(value: unknown): Record<string, string> {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    return { ...DEFAULT_HEADERS };
+    addresses = await lookup(host, { all: true });
+  } catch (error) {
+    throw new Error(`域名解析失败: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
 
-  const headers: Record<string, string> = { ...DEFAULT_HEADERS };
-
-  for (const [key, val] of Object.entries(value)) {
-    if (typeof val === 'string') {
-      headers[key] = val;
+  for (const addr of addresses) {
+    if (isDisallowedIp(addr.address)) {
+      throw new Error(`目标域名 ${host} 解析到私网/保留地址 ${addr.address}，禁止访问（SSRF 防护）。`);
     }
   }
-
-  return headers;
-}
-
-/**
- * 解析超时时间
- *
- * @param value - 输入超时值
- * @returns 超时时间（毫秒）
- */
-function parseTimeout(value: unknown): number {
-  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
-    return DEFAULT_TIMEOUT;
-  }
-  return Math.min(Math.floor(value), 120000); // 最大 120 秒
 }
 
 /**
@@ -146,6 +160,19 @@ function isJsonContent(contentType: string | null): boolean {
     return false;
   }
   return contentType.includes('application/json');
+}
+
+/**
+ * 检测内容类型是否为 HTML
+ *
+ * @param contentType - Content-Type 头（可能含 charset 如 "text/html; charset=utf-8"）
+ * @returns 是否为 HTML
+ */
+function isHtmlContent(contentType: string | null): boolean {
+  if (!contentType) {
+    return false;
+  }
+  return contentType.includes('text/html');
 }
 
 /**
@@ -217,19 +244,48 @@ export function createWebFetchTool(): AgentTool {
       try {
         const startTime = Date.now();
 
-        // 创建 AbortController 用于超时控制
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeout);
+        // 手动跟随重定向，每一跳都做 SSRF 校验，防止通过重定向绕过私网限制
+        const MAX_REDIRECTS = 5;
+        let currentUrl = url;
+        let response: Response | undefined;
 
-        const response = await fetch(url.toString(), {
-          method: parsed.data.method,
-          headers,
-          body,
-          signal: controller.signal,
-          redirect: 'follow',
-        });
+        for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+          await assertPublicUrl(currentUrl);
 
-        clearTimeout(timeoutId);
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), timeout);
+          try {
+            response = await fetch(currentUrl.toString(), {
+              method: hop === 0 ? parsed.data.method : 'GET',
+              headers,
+              body: hop === 0 ? body : undefined,
+              signal: controller.signal,
+              redirect: 'manual',
+            });
+          } finally {
+            clearTimeout(timeoutId);
+          }
+
+          // 3xx 重定向：校验 Location 并继续下一跳
+          if (response.status >= 300 && response.status < 400) {
+            const location = response.headers.get('location');
+            if (!location) break;
+            const nextUrl = new URL(location, currentUrl);
+            if (nextUrl.protocol !== 'http:' && nextUrl.protocol !== 'https:') {
+              return {
+                status: 'error',
+                error: `重定向到不允许的协议: ${nextUrl.protocol}`,
+              };
+            }
+            currentUrl = nextUrl;
+            continue;
+          }
+          break;
+        }
+
+        if (!response) {
+          return { status: 'error', error: '请求未返回响应。' };
+        }
 
         const duration = Date.now() - startTime;
 
@@ -249,6 +305,11 @@ export function createWebFetchTool(): AgentTool {
         if (isJsonContent(contentType)) {
           const json = await response.json();
           content = JSON.stringify(json, null, 2);
+        } else if (isHtmlContent(contentType)) {
+          // HTML：转换为 Markdown（去掉 script/style/nav 等噪声，保留正文结构），
+          // 让 LLM 拿到可读文本而非 raw HTML 源码。htmlToMarkdown 内部已做异常 fallback。
+          const rawHtml = await response.text();
+          content = htmlToMarkdown(rawHtml);
         } else {
           content = await response.text();
         }
@@ -261,7 +322,7 @@ export function createWebFetchTool(): AgentTool {
         return {
           status: 'success',
           output: formatResponse(
-            url.toString(),
+            currentUrl.toString(),
             response.status,
             response.statusText,
             response.headers,

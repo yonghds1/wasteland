@@ -39,9 +39,6 @@ const DEFAULT_TIMEOUT = 30000;
 /** 最大输出长度 */
 const MAX_OUTPUT_LENGTH = 50000;
 
-/** 禁止的子命令（出于安全考虑） */
-const BLOCKED_SUBCOMMANDS = new Set(['push --force', 'push -f', 'rebase', 'reset --hard']);
-
 // ============================================================
 // 类型定义
 // ============================================================
@@ -66,6 +63,8 @@ export type GitInput = z.infer<typeof gitInputSchema>;
 /**
  * 验证子命令是否允许执行
  *
+ * 注：subcommand 已由 zod enum 限定为合法集合，此处只做参数级安全检查。
+ *
  * @param subcommand - Git 子命令
  * @param args - 命令参数
  * @returns 验证结果
@@ -74,18 +73,7 @@ function validateSubcommand(
   subcommand: string,
   args: string[]
 ): { allowed: true } | { allowed: false; error: string } {
-  // 检查是否在禁止列表中
-  const fullCommand = [subcommand, ...args].join(' ');
-  for (const blocked of BLOCKED_SUBCOMMANDS) {
-    if (fullCommand.includes(blocked)) {
-      return {
-        allowed: false,
-        error: t('tools.git.blockedSubcommand', { command: blocked }),
-      };
-    }
-  }
-
-  // 检查禁止 force push
+  // 禁止 force push（精确匹配数组元素，不误伤 --force-with-lease）
   if (subcommand === 'push' && (args.includes('--force') || args.includes('-f'))) {
     return {
       allowed: false,
@@ -93,16 +81,14 @@ function validateSubcommand(
     };
   }
 
-  // 检查是否支持的子命令
-  const supportedSubcommands = [
-    'status', 'diff', 'log', 'add', 'commit',
-    'branch', 'checkout', 'push', 'pull',
-  ];
-  if (!supportedSubcommands.includes(subcommand)) {
-    return {
-      allowed: false,
-      error: t('tools.git.unsupportedSubcommand', { subcommand }),
-    };
+  // 禁止 --output：git diff 可借此把内容写入任意文件，绕过 cwd 边界
+  for (const arg of args) {
+    if (arg === '--output' || arg.startsWith('--output=')) {
+      return {
+        allowed: false,
+        error: 'git --output 参数被禁止（可能写入工作目录之外的文件）。',
+      };
+    }
   }
 
   return { allowed: true };

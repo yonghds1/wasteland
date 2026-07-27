@@ -10,7 +10,7 @@
  * - Esc: 取消输入
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Text, Box, useInput } from 'ink';
 import { useAppContext } from '../context/AppContext.js';
 import { t } from '../../locales/index.js';
@@ -27,9 +27,17 @@ export function ChatInputBar({ width, skin, sendMessage }: ChatInputBarProps): R
   const { state, setInputMode, setFocusArea } = useAppContext();
   const [input, setInput] = useState('');
 
-  // 自动进入输入模式
+  // 自动进入输入模式（但用户按 Esc 主动退出后不自动拉回，需按 Enter 重新进入）
+  const prevInputModeRef = useRef(state.inputMode);
   useEffect(() => {
+    const wasInputMode = prevInputModeRef.current;
+    prevInputModeRef.current = state.inputMode;
+
     if (!state.inputMode && !state.showHelp && !state.exitConfirmPending) {
+      // inputMode 刚从 true 变 false（用户主动 Esc 退出）时不自动拉回
+      if (wasInputMode) {
+        return;
+      }
       setFocusArea('inputBar');
       setInputMode(true);
     }
@@ -66,7 +74,7 @@ export function ChatInputBar({ width, skin, sendMessage }: ChatInputBarProps): R
     }
 
     // 普通字符输入(保留 Shift 以支持大写,Enter 已在上方拦截)
-    if (inputChar && !key.ctrl && !key.meta && inputChar !== '\r' && inputChar !== '\n') {
+    if (inputChar && !key.ctrl && !key.meta && inputChar !== '\r' && inputChar !== '\n' && !key.tab) {
       setInput((prev) => prev + inputChar);
     }
   });

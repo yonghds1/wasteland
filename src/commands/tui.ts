@@ -9,7 +9,7 @@ import { Command } from 'commander';
 import { detectTTY } from '../ui/tty-detect.js';
 import { runTUI } from '../tui/index.js';
 import { createTuiRuntime, cleanupTuiRuntime } from '../tui/hooks/useRuntime.js';
-import { loadWastelandSettings } from '../config/load-settings.js';
+import { getOrLoadSettings } from '../config/loaded-settings.js';
 import { initI18n, t } from '../locales/index.js';
 
 export function createTuiCommand(): Command {
@@ -22,7 +22,7 @@ export function createTuiCommand(): Command {
     .option('--attach <session>', t('commands.tui.options.attach'))
     .action(async (options) => {
       // 初始化 i18n
-      const loadedSettings = await loadWastelandSettings({ cwd: process.cwd(), env: process.env });
+      const loadedSettings = await getOrLoadSettings(process.cwd(), process.env);
       const language = loadedSettings.settings.runtime.language;
       await initI18n(language);
 

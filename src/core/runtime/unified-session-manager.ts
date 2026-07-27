@@ -162,7 +162,6 @@ export class UnifiedSessionManager {
    */
   async getStats(): Promise<{
     totalSessions: number;
-    totalMessages: number;
     oldestSession?: string;
     newestSession?: string;
   }> {

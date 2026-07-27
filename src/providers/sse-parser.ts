@@ -55,17 +55,17 @@ export function parseSSEStream(reader: ReadableStreamDefaultReader<Uint8Array>):
           bufferParts.push(decoded);
           bufferLength += decoded.length;
 
-          // 当 buffer 足够大时才处理，减少 split 操作
-          if (bufferLength > 8192) {
+          // 一旦 buffer 中出现 SSE 事件边界（\n\n），立即处理已完成的事件。
+          // 修复前用 `bufferLength > 8192` 守卫，导致小响应（minimax 整个 reply ~150B）
+          // 永远达不到阈值，所有 chunks 在流 done 时一次性 emit，破坏流式打字效果。
+          if (bufferLength > 0 && bufferParts.join('').includes('\n\n')) {
             const fullBuffer = bufferParts.join('');
-            bufferParts.length = 0;
-            bufferLength = 0;
-
-            // 按 \n\n 分割为独立的 SSE 事件
             const parts = fullBuffer.split('\n\n');
 
-            // 最后一个部分可能不完整，保留在 buffer 中
+            // 最后一个部分可能不完整（缺尾部 \n\n），保留在 buffer 中
             const lastPart = parts.pop() ?? '';
+            bufferParts.length = 0;
+            bufferLength = 0;
             if (lastPart) {
               bufferParts.push(lastPart);
               bufferLength = lastPart.length;

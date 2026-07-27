@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { useInput } from 'ink';
+import React, { useState, useCallback, useEffect } from 'react';
+import { useInput, useApp, useStdout } from 'ink';
 import { ChatArea } from './components/ChatArea.js';
 import { AppContext, type AppState, type PageName, type FocusArea } from './context/AppContext.js';
 import { useRuntimeEvents } from './hooks/useRuntimeEvents.js';
@@ -59,6 +59,22 @@ export function App({ runtime }: AppProps): React.ReactElement {
   const [state, setState] = useState<AppState>(() =>
     createInitialState(runtime.config, runtime.session, runtime.providerId, runtime.fullConfig)
   );
+
+  // 终端标题通知：根据状态设置 window title，让用户在 tab/任务栏一眼看到状态
+  // - 流式中：⠋ wasteland（与 TUI 内 spinner 同节奏提示）
+  // - 思考中：⏳ wasteland（等首个 chunk）
+  // - 空闲：wasteland
+  const { stdout } = useStdout();
+  useEffect(() => {
+    let title = 'wasteland';
+    if (state.session.isStreaming) {
+      title = '⠋ wasteland';
+    } else if (state.session.isThinking) {
+      title = '⏳ wasteland';
+    }
+    // OSC 0 (set window title) + BEL 终止符
+    stdout.write(`\x1b]0;${title}\x07`);
+  }, [state.session.isStreaming, state.session.isThinking, stdout]);
 
   // 订阅 runtime 事件
   useRuntimeEvents(runtime.events$, runtime.debug$, setState);
@@ -121,6 +137,11 @@ export function App({ runtime }: AppProps): React.ReactElement {
             setExitConfirmPending(true);
           }
 
+          // 处理 /sessions：进入 session 索引页
+          if (result.action === 'sessions') {
+            setCurrentPage('sessions');
+          }
+
           return;
         }
       }
@@ -128,7 +149,7 @@ export function App({ runtime }: AppProps): React.ReactElement {
       // 非本地命令，发送到 agent loop
       rawSendMessage(content);
     },
-    [rawSendMessage, setExitConfirmPending]
+    [rawSendMessage, setExitConfirmPending, setCurrentPage]
   );
 
   const setShowHelp = useCallback((show: boolean) => {
@@ -159,11 +180,12 @@ export function App({ runtime }: AppProps): React.ReactElement {
   }, []);
 
   // 全局键盘处理
+  const { exit } = useApp();
   useInput((input, key) => {
     // Ctrl+C 全局退出
     if (key.ctrl && input === 'c') {
       if (state.exitConfirmPending) {
-        process.exit(0);
+        exit();
       } else {
         setInputMode(false);
         setExitConfirmPending(true);
@@ -174,7 +196,7 @@ export function App({ runtime }: AppProps): React.ReactElement {
     // 退出确认
     if (state.exitConfirmPending) {
       if (input === 'y') {
-        process.exit(0);
+        exit();
       } else {
         setExitConfirmPending(false);
       }
@@ -211,6 +233,44 @@ export function App({ runtime }: AppProps): React.ReactElement {
     if (key.return && !state.inputMode && !state.showHelp && !state.exitConfirmPending) {
       setInputMode(true);
       setFocusArea('inputBar');
+      return;
+    }
+
+    // Tab / Shift+Tab 在当前页面的可聚焦区域间循环切换
+    // （修复前：没有 Tab 处理，按 Tab 会被 ChatInputBar 当作字符插入输入框）
+    if (key.tab) {
+      const focusCycle: Record<PageName, FocusArea[]> = {
+        session: ['messageList', 'inputBar'],
+        debug: ['traceLog'],
+        config: ['configList'],
+        sessions: [],
+      };
+      const cycle = focusCycle[state.currentPage] ?? [];
+      if (cycle.length > 1) {
+        const currentIdx = state.focusArea ? cycle.indexOf(state.focusArea) : -1;
+        const direction = key.shift ? -1 : 1;
+        const nextIdx = currentIdx < 0
+          ? (direction > 0 ? 0 : cycle.length - 1)
+          : (currentIdx + direction + cycle.length) % cycle.length;
+        const nextArea = cycle[nextIdx];
+        setFocusArea(nextArea);
+        // 同步 inputMode：进入输入框自动开启输入模式；离开则关闭
+        if (nextArea === 'inputBar') {
+          setInputMode(true);
+        } else if (state.focusArea === 'inputBar') {
+          setInputMode(false);
+        }
+      }
+      return;
+    }
+
+    // Esc 在 sessions 页退出（回到 session 页，sessions 页没有输入框所以 Esc 走这里）
+    if (
+      key.escape &&
+      state.currentPage === 'sessions' &&
+      !state.exitConfirmPending
+    ) {
+      setCurrentPage('session');
       return;
     }
   });

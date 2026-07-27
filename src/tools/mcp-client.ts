@@ -588,7 +588,11 @@ export class MCPClient extends EventEmitter {
         timeout: timeoutId,
       });
 
-      this.transport.send(request).catch(reject);
+      this.transport.send(request).catch((err) => {
+        clearTimeout(timeoutId);
+        this.pendingRequests.delete(id);
+        reject(err);
+      });
     });
   }
 

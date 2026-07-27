@@ -187,27 +187,53 @@ export class StdioTransport extends EventEmitter implements Transport {
    * 断开连接（终止子进程）
    */
   async disconnect(): Promise<void> {
-    if (!this.process) {
+    const proc = this.process;
+    if (!proc) {
       return;
     }
 
-    // 发送 SIGTERM 给进程
-    this.process.kill('SIGTERM');
     this.process = null;
     this.connected = false;
     this.buffer = '';
+
+    // 已退出则直接返回，避免 Promise 永久挂起
+    if (proc.exitCode !== null || proc.signalCode !== null) {
+      return;
+    }
+
+    // 发送 SIGTERM 等待退出；超时则 SIGKILL 强制终止
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(() => {
+        proc.kill('SIGKILL');
+        resolve();
+      }, 5000);
+      proc.once('exit', () => {
+        clearTimeout(timer);
+        resolve();
+      });
+      proc.kill('SIGTERM');
+    });
   }
 
   /**
    * 发送 JSON-RPC 消息
    */
   async send(message: JsonRpcMessage): Promise<void> {
-    if (!this.process?.stdin) {
+    const stdin = this.process?.stdin;
+    if (!stdin) {
       throw new Error('StdioTransport not connected');
     }
 
     const data = JSON.stringify(message) + '\n';
-    this.process.stdin.write(data);
+    return new Promise((resolve, reject) => {
+      stdin.write(data, (err) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
+    });
   }
 
   /**
@@ -311,6 +337,8 @@ export class SseTransport extends EventEmitter implements Transport {
   private closeHandler: ((code: number | null) => void) | null = null;
   private connected = false;
   private abortController: AbortController | null = null;
+  private readyResolve?: () => void;
+  private readyReject?: (error: Error) => void;
 
   constructor(private config: SseTransportConfig) {
     super();
@@ -325,13 +353,22 @@ export class SseTransport extends EventEmitter implements Transport {
     }
 
     this.abortController = new AbortController();
-    this.connected = true;
 
-    // 启动 SSE 监听（异步，不阻塞连接）
+    // SSE 流异步建立：等 listenForEvents 拿到 reader 后再标记 connected，
+    // 避免连接未就绪时 send 误判为已连接
+    const ready = new Promise<void>((resolve, reject) => {
+      this.readyResolve = resolve;
+      this.readyReject = reject;
+    });
+
     this.listenForEvents().catch((error) => {
       this.errorHandler?.(error);
       this.connected = false;
+      this.readyReject?.(error);
     });
+
+    await ready;
+    this.connected = true;
   }
 
   /**
@@ -375,7 +412,7 @@ export class SseTransport extends EventEmitter implements Transport {
       }
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error(`Request timeout: ${timeout}ms`);
+        throw new Error(`Request timeout: ${timeout}ms`, { cause: error });
       }
       throw error;
     } finally {
@@ -441,6 +478,8 @@ export class SseTransport extends EventEmitter implements Transport {
       }
 
       const reader = response.body.getReader();
+      // SSE 流已建立，通知 connect 可以标记 connected
+      this.readyResolve?.();
       const decoder = new TextDecoder();
       let buffer = '';
 

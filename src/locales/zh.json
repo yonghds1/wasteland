@@ -37,12 +37,6 @@
     "mcpToolRegistry": "MCP 工具 {{name}} 应通过 MCPToolRegistry 执行",
     "startupFailed": "MCP 服务器启动失败:"
   },
-  "tui": {
-    "failedToLoadSkin": "加载皮肤失败:",
-    "toolError": "错误: {{error}}",
-    "runtimeEventStreamError": "运行时事件流错误:",
-    "debugTraceStreamError": "调试跟踪流错误:"
-  },
   "utils": {
     "failedToRunScript": "运行 create-aliases.sh 失败:"
   },
@@ -453,6 +447,10 @@
       "runningAgents": "⚡ {{count}} 个 agent",
       "tools": "{{count}} 工具"
     },
+    "toolError": "错误: {{error}}",
+    "runtimeEventStreamError": "运行时事件流错误:",
+    "debugTraceStreamError": "调试跟踪流错误:",
+    "failedToLoadSkin": "加载皮肤失败:",
     "config": {
       "title": "指南",
       "docs": {

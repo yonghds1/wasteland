@@ -162,12 +162,13 @@ export class SessionManager {
       buffer.timer = undefined;
     }
 
-    // 批量写入
-    const content = buffer.records.map((r) => JSON.stringify(r)).join('\n') + '\n';
+    // 原子取走缓冲区：先取出并清空，再写入，避免 await 期间新到达的记录被丢失
+    const recordsToWrite = buffer.records;
+    buffer.records = [];
+    const content = recordsToWrite.map((r) => JSON.stringify(r)).join('\n') + '\n';
     const sessionPath = join(this.sessionDir, `${sessionId}.jsonl`);
 
     await appendFile(sessionPath, content, 'utf8');
-    buffer.records = [];
   }
 
   /**

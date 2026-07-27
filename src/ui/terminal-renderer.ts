@@ -18,6 +18,7 @@ import {
   wrapText,
 } from './terminal-theme.js';
 import { theme } from './themes/index.js';
+import { splitThinkTags } from './think-tags.js';
 
 // ============================================================
 // 配置常量
@@ -303,11 +304,14 @@ export async function renderRuntimeEvents(
     stderr?: Writable;
     onTurnComplete?: () => void;
     style?: 'classic' | 'interactive';
+    /** 是否展示思考块（minimax/DeepSeek R1 等把 <think> 拼到 content 时） */
+    showThinking?: boolean;
   }
 ): Promise<void> {
   const stdout = params?.stdout ?? process.stdout;
   const stderr = params?.stderr ?? process.stderr;
   const style = params?.style ?? 'classic';
+  const showThinking = params?.showThinking ?? true;
   const panelWidth = resolvePanelWidth('columns' in stdout ? stdout.columns : undefined);
   const chunkedTurns = new Set<number>();
   const pendingTurnSpacing = new Set<number>();
@@ -394,10 +398,25 @@ export async function renderRuntimeEvents(
                 stdout.write('\n');
                 chunkedTurns.delete(event.turn);
                 chunkWriter.close(event.turn);
+                // 流式 chunk 阶段保留原始内容保证实时体验；message 收尾时
+                // 清洗出 thinking 单独展示（💭 + dim 样式，参考 OpenCode）。
+                if (showThinking) {
+                  const split = splitThinkTags(event.content);
+                  if (split.thinking) {
+                    stdout.write(
+                      `\n${paint('💭 Thinking', ANSI.dim)}\n${paint(split.thinking, ANSI.dim)}\n`
+                    );
+                  }
+                }
               } else {
+                const split = splitThinkTags(event.content);
+                let displayContent = split.content;
+                if (showThinking && split.thinking) {
+                  displayContent = `${paint('💭 Thinking', ANSI.dim)}\n${paint(split.thinking, ANSI.dim)}\n\n${split.content}`;
+                }
                 writeInteractiveBlock(stdout, {
                   label: 'wasteland',
-                  content: event.content,
+                  content: displayContent,
                   depth: currentDepth,
                   name: currentName,
                   width: panelWidth,
@@ -411,8 +430,18 @@ export async function renderRuntimeEvents(
             if (chunkedTurns.has(event.turn)) {
               stdout.write('\n');
               chunkedTurns.delete(event.turn);
+              if (showThinking) {
+                const split = splitThinkTags(event.content);
+                if (split.thinking) {
+                  stdout.write(`💭 Thinking: ${split.thinking}\n`);
+                }
+              }
             } else {
-              stdout.write(`assistant[${event.turn}]> ${event.content}\n`);
+              const split = splitThinkTags(event.content);
+              if (showThinking && split.thinking) {
+                stdout.write(`💭 Thinking: ${split.thinking}\n`);
+              }
+              stdout.write(`assistant[${event.turn}]> ${split.content}\n`);
             }
 
             params?.onTurnComplete?.();

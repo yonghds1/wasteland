@@ -13,6 +13,9 @@
 // 嵌套值获取
 // ============================================================
 
+/** 禁止访问的属性名（防止原型链注入，如 {{__proto__}}） */
+const FORBIDDEN_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
 /**
  * 从对象中获取嵌套路径的值
  *
@@ -26,6 +29,10 @@
  */
 function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
   return path.split('.').reduce<unknown>((current, key) => {
+    // 阻止原型链访问，防止 {{__proto__}} / {{constructor.prototype}} 等注入
+    if (FORBIDDEN_KEYS.has(key)) {
+      return undefined;
+    }
     if (current && typeof current === 'object') {
       return (current as Record<string, unknown>)[key];
     }

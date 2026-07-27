@@ -35,6 +35,12 @@ export interface TuiRuntimeContext {
   sessionManager: SessionManager;
   /** 皮肤配置 */
   skin: Skin | null;
+  /** 是否在 UI 上展示模型的思考块（minimax/DeepSeek R1 等把 <think> 拼到 content） */
+  showThinking: boolean;
+  /** Spinner 帧切换间隔（毫秒），默认 80 */
+  spinnerIntervalMs: number;
+  /** 打字机逐字符揭示间隔（毫秒），默认 30 */
+  typewriterRateMs: number;
 }
 
 /**

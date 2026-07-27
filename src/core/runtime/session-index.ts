@@ -410,20 +410,15 @@ export class SessionIndex {
    */
   async getStats(): Promise<{
     totalSessions: number;
-    totalMessages: number;
     oldestSession?: string;
     newestSession?: string;
   }> {
+    // 注意：listSessions 快速模式不计算 messageCount，故不返回 totalMessages，
+    // 避免返回恒为 0 的错误统计。如需消息总数，应对具体 session 调用完整解析。
     const sessions = await this.listSessions({ limit: 1000 });
-
-    let totalMessages = 0;
-    for (const session of sessions) {
-      totalMessages += session.messageCount;
-    }
 
     return {
       totalSessions: sessions.length,
-      totalMessages,
       oldestSession: sessions[sessions.length - 1]?.createdAt,
       newestSession: sessions[0]?.createdAt,
     };

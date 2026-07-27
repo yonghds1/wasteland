@@ -10,12 +10,13 @@ import { createSkinCommand } from './commands/skin.js';
 import { isConfigEmpty } from './config/config-writer.js';
 import { ensureRoleAliases } from './utils/symlink-manager.js';
 import { loadWastelandSettings } from './config/load-settings.js';
+import { setLoadedSettings, clearLoadedSettings } from './config/loaded-settings.js';
 import { initI18n, t, DEFAULT_LANGUAGE } from './locales/index.js';
 import { detectTTY } from './ui/tty-detect.js';
 
 function registerRootCommands(program: Command): void {
-  // chat 命令保留功能，但从 --help 隐藏（TUI 为唯一主入口）
-  configureChatCommand(program.command('chat', { hidden: true }));
+  // chat 命令作为非交互式 fallback（非 TTY 场景使用 --message）
+  configureChatCommand(program.command('chat'));
   program.addCommand(createConfigCommand());
   program.addCommand(createCurrentConfigCommand());
   program.addCommand(createInitCommand());
@@ -31,11 +32,6 @@ export function createProgram(): Command {
   program.name('wasteland').description(t('cli.description')).version('0.1.0');
 
   registerRootCommands(program);
-
-  const devShim = new Command('wasteland').description(t('cli.devDescription'));
-
-  registerRootCommands(devShim);
-  program.addCommand(devShim);
 
   return program;
 }
@@ -77,9 +73,8 @@ export async function run(argv = process.argv): Promise<void> {
   const skinId = loadedSettings?.settings.runtime.skinId ?? 'immortan-joe';
   await ensureRoleAliases(skinId);
 
-  // 将已加载的配置存储到全局，避免重复加载
-  // initializeRuntime() 会优先使用此配置
-  (globalThis as Record<string, unknown>).__wasteland_loaded_settings = loadedSettings;
+  // 缓存已加载配置，供 initializeRuntime 复用，避免重复加载
+  setLoadedSettings(loadedSettings);
 
   // 无参数时默认启动 TUI（CLI chat 模式已从 help 隐藏，TUI 为唯一主入口）
   if (cliArgs.length === 0) {
@@ -88,8 +83,8 @@ export async function run(argv = process.argv): Promise<void> {
 
   await createProgram().parseAsync(argv);
 
-  // 清理全局配置
-  delete (globalThis as Record<string, unknown>).__wasteland_loaded_settings;
+  // 清理配置缓存
+  clearLoadedSettings();
 }
 
 void run();

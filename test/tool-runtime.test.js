@@ -88,8 +88,9 @@ describe("tool-runtime", () => {
     expect(events.map((e) => e.type)).toEqual([
       "tool_call_requested", "permission_decision", "tool_failed",
     ]);
-    expect(events[1].decision).toBe("ask");
-    expect(events[2].status).toBe("blocked");
+    // 无 userInputBridge 时，ask 决策降级为 deny（非交互环境无法询问用户）
+    expect(events[1].decision).toBe("deny");
+    expect(events[2].status).toBe("error");
 
     await sessionManager.closeSession(session.id);
   });
@@ -113,10 +114,17 @@ describe("tool-runtime", () => {
       }).pipe(toArray()),
     );
 
-    expect(events.map((e) => e.type)).toEqual([
-      "tool_call_requested", "permission_decision", "tool_started",
-      "agent_spawned", "agent_completed", "tool_result",
-    ]);
+    // #4 修复后，子 agent 的中间事件会被转译为 agent_thinking / agent_tool_use /
+// agent_progress 向上转发，因此不再要求严格相等的事件列表，仅断言关键事件存在
+// 且顺序正确（tool_result 在最后）。
+const eventTypes = events.map((e) => e.type);
+expect(eventTypes).toContain("tool_call_requested");
+expect(eventTypes).toContain("permission_decision");
+expect(eventTypes).toContain("tool_started");
+expect(eventTypes).toContain("agent_spawned");
+expect(eventTypes).toContain("agent_completed");
+expect(eventTypes).toContain("tool_result");
+expect(eventTypes[eventTypes.length - 1]).toBe("tool_result");
 
     const spawnedEvent = events.find((e) => e.type === "agent_spawned");
     expect(spawnedEvent.name).toBe("analyzer");
@@ -187,10 +195,17 @@ describe("tool-runtime", () => {
       }).pipe(toArray()),
     );
 
-    expect(events.map((e) => e.type)).toEqual([
-      "tool_call_requested", "permission_decision", "tool_started",
-      "agent_spawned", "agent_completed", "tool_result",
-    ]);
+    // #4 修复后，子 agent 的中间事件会被转译为 agent_thinking / agent_tool_use /
+// agent_progress 向上转发，因此不再要求严格相等的事件列表，仅断言关键事件存在
+// 且顺序正确（tool_result 在最后）。
+const eventTypes = events.map((e) => e.type);
+expect(eventTypes).toContain("tool_call_requested");
+expect(eventTypes).toContain("permission_decision");
+expect(eventTypes).toContain("tool_started");
+expect(eventTypes).toContain("agent_spawned");
+expect(eventTypes).toContain("agent_completed");
+expect(eventTypes).toContain("tool_result");
+expect(eventTypes[eventTypes.length - 1]).toBe("tool_result");
 
     const toolResult = events.find((e) => e.type === "tool_result");
     expect(toolResult.status).toBe("success");

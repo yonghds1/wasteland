@@ -9,6 +9,7 @@ import { Subject } from 'rxjs';
 
 import { initializeRuntime } from '@core/shared/initialize-runtime.js';
 import { runAgentLoop } from '@core/runtime/agent-loop.js';
+import { enableDebugLog } from '@core/runtime/debug-logger.js';
 import { UserInputBridge } from '@core/runtime/user-input-bridge.js';
 import { loadSkin } from '../../skins/index.js';
 import { initI18n, t } from '../../locales/index.js';
@@ -64,6 +65,12 @@ export async function createTuiRuntime(
   // 5. 创建用户输入桥接器（用于 ask-user 工具）
   const userInputBridge = new UserInputBridge();
 
+  // 启用 debug 日志（如果配置开启）。必须在 runAgentLoop 之前调用，
+  // 这样 trace callback 第一次触发时就能写入文件。
+  if (runtime.loadedSettings.settings.runtime.debug) {
+    enableDebugLog();
+  }
+
   // 6. 启动 Agent 循环
   const run = runAgentLoop({
     input$,
@@ -81,6 +88,9 @@ export async function createTuiRuntime(
     skillExecutor: runtime.skillExecutor,
     childAgentTimeout: runtime.loadedSettings.settings.runtime.childAgentTimeout,
     userInputBridge,
+    debug: runtime.loadedSettings.settings.runtime.debug,
+    // 透传给 dispatchToolCall → spawn-agent（读 subAgents 配置 + 重试参数）
+    loadedSettings: runtime.loadedSettings,
   });
 
   // 6. 构建 TUI 配置
@@ -127,6 +137,9 @@ export async function createTuiRuntime(
     stopA2A: runtime.a2aManager.stopA2A,
     skin,
     userInputBridge,
+    showThinking: runtime.loadedSettings.settings.runtime.showThinking,
+    spinnerIntervalMs: runtime.loadedSettings.settings.runtime.spinnerIntervalMs,
+    typewriterRateMs: runtime.loadedSettings.settings.runtime.typewriterRateMs,
   } as InternalTuiRuntimeContext;
 }
 

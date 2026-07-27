@@ -24,7 +24,7 @@ export type LocalCommandResult = {
   /** 命令输出内容 */
   output?: string;
   /** 特殊动作标识 */
-  action?: 'clear' | 'exit' | 'help';
+  action?: 'clear' | 'exit' | 'help' | 'sessions';
 };
 
 /**
@@ -45,7 +45,7 @@ export type ExecuteLocalCommandParams = {
 const EXIT_COMMANDS = new Set(['/exit', '/quit']);
 
 /** 本地命令集合 */
-const LOCAL_COMMANDS = new Set(['/help', '/tools', '/clear', '/skills']);
+const LOCAL_COMMANDS = new Set(['/help', '/tools', '/clear', '/skills', '/sessions']);
 
 // ============================================================
 // Main Function
@@ -115,6 +115,14 @@ export function executeLocalCommand(
     };
   }
 
+  // /sessions: 进入 session 索引页（列出历史会话供浏览）
+  if (trimmedCommand === '/sessions') {
+    return {
+      handled: true,
+      action: 'sessions',
+    };
+  }
+
   // 未处理的命令
   return {
     handled: false,
@@ -158,6 +166,7 @@ function createHelpText(): string {
     '  /tools  Show current local tool syntax',
     '  /skills Show available skills',
     '  /clear  Clear screen and redraw',
+    '  /sessions  List and browse past sessions',
     '  /exit   Exit the session',
   ].join('\n');
 }

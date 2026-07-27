@@ -20,11 +20,11 @@
  */
 
 import { readFile, stat } from 'node:fs/promises';
-import { join, relative, resolve } from 'node:path';
+import { join, relative } from 'node:path';
 import { z } from 'zod';
 import { zodToJsonSchema } from '@alcyone-labs/zod-to-json-schema';
 
-import { t } from '../locales/index.js';
+import { resolveWithinCwd } from './path-utils.js';
 import type { AgentTool, ToolExecutionResult } from './tool-types.js';
 import type { JsonSchema } from './tool-types.js';
 
@@ -83,19 +83,6 @@ type GrepMatch = {
 // ============================================================
 // 辅助函数
 // ============================================================
-
-/**
- * 解析搜索模式
- *
- * @param value - 输入模式值
- * @returns 有效模式字符串，或 null 表示无效
- */
-function resolvePattern(value: unknown): string | null {
-  if (typeof value !== 'string' || value.trim().length === 0) {
-    return null;
-  }
-  return value.trim();
-}
 
 /**
  * 编译正则表达式
@@ -307,10 +294,17 @@ export function createGrepTool(): AgentTool {
         };
       }
 
-      // 解析搜索路径
+      // 解析搜索路径（基于 realpath 防止符号链接穿越与路径遍历）
       const searchDir = parsed.data.path
-        ? resolve(context.cwd, parsed.data.path)
+        ? await resolveWithinCwd(context.cwd, parsed.data.path)
         : context.cwd;
+
+      if (!searchDir) {
+        return {
+          status: 'error',
+          error: `路径 "${parsed.data.path}" 位于工作目录之外。`,
+        };
+      }
 
       // 验证路径存在且是目录
       try {

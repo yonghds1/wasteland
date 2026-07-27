@@ -33,7 +33,7 @@ import { once } from 'node:events';
 import { createInterface } from 'node:readline';
 import type { Readable, Writable } from 'node:stream';
 
-import { filter, from, fromEvent, map, scan, takeUntil, tap, type Observable } from 'rxjs';
+import { filter, from, fromEvent, map, of, scan, takeUntil, tap, type Observable } from 'rxjs';
 
 import type { ChatInputTurn } from '../core/runtime/event-types.js';
 import type { UserInputBridge } from '../core/runtime/user-input-bridge.js';
@@ -163,15 +163,12 @@ export function createSingleTurnInput(
   message: string,
   source: 'message' | 'stdin'
 ): Observable<ChatInputTurn> {
-  // from: 将数组转换为 Observable，依次发出每个元素
-  // 这里只有一个元素，所以发出一次
-  return from([
-    {
-      turn: 1,
-      content: message.trim(),
-      source,
-    } satisfies ChatInputTurn,
-  ]);
+  // of: 直接发出单个元素（比 from([x]) 更直接，语义等价）
+  return of({
+    turn: 1,
+    content: message.trim(),
+    source,
+  } satisfies ChatInputTurn);
 }
 
 /**

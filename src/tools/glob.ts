@@ -21,6 +21,7 @@ import { relative, resolve } from 'node:path';
 import { z } from 'zod';
 import { zodToJsonSchema } from '@alcyone-labs/zod-to-json-schema';
 
+import { resolveWithinCwd } from './path-utils.js';
 import type { AgentTool, ToolExecutionResult } from './tool-types.js';
 import type { JsonSchema } from './tool-types.js';
 
@@ -38,33 +39,6 @@ export type GlobInput = z.infer<typeof globInputSchema>;
 // ============================================================
 // 辅助函数
 // ============================================================
-
-/**
- * 解析并验证 glob 模式
- *
- * @param value - 输入模式值
- * @returns 有效模式字符串，或 null 表示无效
- */
-function resolvePattern(value: unknown): string | null {
-  if (typeof value !== 'string' || value.trim().length === 0) {
-    return null;
-  }
-  return value.trim();
-}
-
-/**
- * 解析可选的工作目录
- *
- * @param cwd - 当前工作目录
- * @param value - 输入目录值
- * @returns 解析后的绝对路径，或默认使用 cwd
- */
-function resolveSearchDir(cwd: string, value: unknown): string {
-  if (typeof value !== 'string' || value.trim().length === 0) {
-    return cwd;
-  }
-  return resolve(cwd, value);
-}
 
 /**
  * 格式化搜索结果
@@ -106,8 +80,17 @@ export function createGlobTool(): AgentTool {
         return { status: 'error', error: parsed.error.issues.map(i => i.message).join(', ') };
       }
 
-      // 解析搜索目录
-      const searchDir = resolveSearchDir(context.cwd, parsed.data.cwd);
+      // 解析搜索目录（基于 realpath 防止符号链接穿越与路径遍历）
+      const searchDir = parsed.data.cwd
+        ? await resolveWithinCwd(context.cwd, parsed.data.cwd)
+        : context.cwd;
+
+      if (!searchDir) {
+        return {
+          status: 'error',
+          error: `搜索目录 "${parsed.data.cwd}" 位于工作目录之外。`,
+        };
+      }
 
       try {
         // 使用 Node.js 内置 glob 函数

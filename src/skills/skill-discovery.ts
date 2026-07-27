@@ -204,8 +204,20 @@ function resolveTemplate(template: string, variables: Record<string, unknown>): 
  */
 async function loadTypeScriptSkill(filePath: string): Promise<Skill> {
   // 动态导入 (ESM)
-  // 注意：需要确保文件是有效的 ESM 模块
-  const module = await import(filePath);
+  // 注意：.ts 文件仅在 tsx 开发模式下可加载；生产环境（node dist/cli.js）
+  // 无法直接 import .ts，需将技能编译为 .js。
+  let module;
+  try {
+    module = await import(filePath);
+  } catch (error) {
+    const hint = filePath.endsWith('.ts')
+      ? ' 生产环境（node）不支持直接 import .ts，请用 tsx 运行或将技能编译为 .js。'
+      : '';
+    throw new Error(
+      `无法加载技能模块 ${filePath}: ${error instanceof Error ? error.message : String(error)}。${hint}`,
+      { cause: error }
+    );
+  }
 
   if (!module.default || typeof module.default !== 'object') {
     throw new Error(t('skills.common.skillModuleDefaultExport', { path: filePath }));
@@ -231,7 +243,7 @@ async function loadTypeScriptSkill(filePath: string): Promise<Skill> {
 async function loadDirectorySkill(dirPath: string): Promise<Skill> {
   const manifestPath = join(dirPath, 'skill.json');
 
-  // 检查是否有 handler 文件
+  // 检查是否有 handler 文件（优先 .js：生产环境友好；.ts 仅 tsx 开发模式可用）
   const handlerTsPath = join(dirPath, 'handler.ts');
   const handlerJsPath = join(dirPath, 'handler.js');
 
@@ -239,14 +251,14 @@ async function loadDirectorySkill(dirPath: string): Promise<Skill> {
   let handlerPath = '';
 
   try {
-    await stat(handlerTsPath);
+    await stat(handlerJsPath);
     hasHandler = true;
-    handlerPath = handlerTsPath;
+    handlerPath = handlerJsPath;
   } catch {
     try {
-      await stat(handlerJsPath);
+      await stat(handlerTsPath);
       hasHandler = true;
-      handlerPath = handlerJsPath;
+      handlerPath = handlerTsPath;
     } catch {
       // 没有 handler
     }

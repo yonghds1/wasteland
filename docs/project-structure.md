@@ -36,7 +36,7 @@ Phase 2 第一批骨架之后，目录边界已经被建出来，但不同目录
 - `src/tools/read-file.ts` 和 `src/tools/bash.ts` 已作为真实内建工具接入
 - `src/ui/debug-renderer.ts` 已把调试追踪输出从普通回复渲染中分离
 - `src/mcp/` 仍是预留层
-- `src/chat/` 仍是过渡层，当前用于承载本地回复构造逻辑
+- `src/chat/` 承载本地回复构造工具（纯函数，供 providers/ 使用）
 
 ---
 
@@ -177,7 +177,7 @@ test/
 - `tools/` 负责内建工具实现与工具契约。
 - `ui/` 负责终端输入流与渲染器。
 - `mcp/` 负责 MCP 集成边界。
-- `chat/` 是过渡层，随着 runtime/UI 成熟应逐步缩小。
+- `chat/` 承载本地回复构造工具（纯函数），已被 providers/ 当工具使用。
 
 ## 依赖规则
 

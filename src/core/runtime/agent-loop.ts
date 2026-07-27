@@ -25,8 +25,10 @@ import {
   Observable,
   ReplaySubject,
   Subject,
+  catchError,
   concat,
   concatMap,
+  concatWith,
   defer,
   forkJoin,
   from,
@@ -35,12 +37,14 @@ import {
   mergeMap,
   of,
   tap,
+  takeWhile,
   toArray,
 } from 'rxjs';
 
 import { t } from '../../locales/index.js';
 
 import { createDebugTraceEvent, type DebugTraceEvent } from './debug-events.js';
+import { debugLog } from './debug-logger.js';
 import { UserInputBridge } from './user-input-bridge.js';
 import type { AgentProvider } from '../../providers/provider-types.js';
 import type { ToolRegistry } from '../../tools/tool-registry.js';
@@ -56,7 +60,7 @@ import { SessionManager, type SessionMetadata } from './session-manager.js';
 import { dispatchToolCall } from './tool-dispatch.js';
 import { createTurnContext } from './turn-context.js';
 import type { SkillExecutor } from '../../skills/skill-executor.js';
-import type { ProviderSettings } from '../../config/settings-types.js';
+import type { ProviderSettings, LoadedWastelandSettings } from '../../config/settings-types.js';
 import type { ProviderRegistry } from '../../providers/provider-registry.js';
 import {
   advanceTurnState,
@@ -74,18 +78,13 @@ import {
 // ============================================================
 
 /**
- * 创建易读的时间戳字符串
- * 格式: 2026-05-24 11:30:00 (本地时间，精确到秒)
+ * 创建时间戳（ISO 8601，UTC）
+ *
+ * 统一使用 ISO 格式，与 tool-dispatch 等模块一致，避免 session 文件中
+ * message（本地时间）与 tool_call（UTC）格式不一致导致按时间排序错乱。
  */
 function createTimestamp(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  const hour = String(now.getHours()).padStart(2, '0');
-  const minute = String(now.getMinutes()).padStart(2, '0');
-  const second = String(now.getSeconds()).padStart(2, '0');
-  return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+  return new Date().toISOString();
 }
 
 /**
@@ -317,6 +316,10 @@ function runTurnLoop(params: {
   childAgentTimeout?: number;
   /** 用户输入桥接器（用于 ask-user 工具） */
   userInputBridge?: UserInputBridge;
+  /** 当前 spawn 嵌套深度（用于限制递归 spawn） */
+  spawnDepth?: number;
+  /** 可选：完整 loadedSettings，透传到 dispatchToolCall → spawn-agent 用于读 subAgents 配置 */
+  loadedSettings?: LoadedWastelandSettings;
 }): Observable<RuntimeEvent> {
   // defer 延迟执行，确保每次递归时重新评估条件
   return defer(() => {
@@ -440,87 +443,47 @@ function runTurnLoop(params: {
     });
 
     // ---- Provider 执行阶段 ----
-    // provider.runStep 返回一个 Observable<ProviderStreamEvent>
-    // 使用 toArray 缓冲所有事件，然后并行处理 spawn_agent 工具调用
-    const provider$ = params.provider
-      .runStep({
-        context: params.context,
-        state,
-      })
-      .pipe(
-        // toArray: 缓冲所有 provider 事件，等待流完成后一起处理
-        toArray(),
-        // concatMap: 处理缓冲的事件列表
-        // 使用 concatMap + from 将 Promise 转换为 Observable
-        concatMap((events) => from(processProviderEvents(events)).pipe(
-          // 确保返回类型是 Observable<RuntimeEvent>
-          mergeMap((obs) => obs)
-        ))
-      );
+    // provider.runStep 返回一个 Observable<ProviderStreamEvent>。
+    // 重构（恢复流式打字效果）：
+    //   1) assistant_chunk 等 non-tool 事件**立即** emit（恢复打字流式）
+    //   2) tool_call 累积到 buffer，不立即 emit
+    //   3) 流结束后处理 tail：spawn_agent forkJoin 并行（保留 #11）+ 其他串行
+    //   4) provider 错误仍转 assistant_message（之前的修复保留）
+    const provider$: Observable<RuntimeEvent> = defer((): Observable<RuntimeEvent> => {
+      // ---- 共享状态（闭包内 helper 可见，引用外层 state/nextAction） ----
+      let streamIndex = 0;
+      const toolCallBuffer: Array<{
+        event: { type: 'tool_call'; call: { id: string; toolName: string; input: Record<string, unknown> } };
+        index: number;
+      }> = [];
 
-    // ---- 内部辅助函数：处理 provider 事件 ----
-    // 将所有事件缓冲后处理，支持 spawn_agent 并行执行
-    async function processProviderEvents(
-      events: Array<{ type: string; text?: string; call?: { id: string; toolName: string; input: Record<string, unknown> } }>
-    ): Promise<Observable<RuntimeEvent>> {
-      // 记录 provider 事件数量
-      params.trace({
-        sessionId: params.session.id,
-        turn: state.turn,
-        step: state.step,
-        scope: 'provider',
-        phase: 'provider.events',
-        message: `provider emitted ${events.length} events`,
-        data: {
-          eventCount: events.length,
-          toolCalls: events.filter((e) => e.type === 'tool_call').length,
-        },
-      });
-
-      // 分离 tool_call 事件和其他事件
-      const toolCallEvents: Array<{ event: { type: 'tool_call'; call: { id: string; toolName: string; input: Record<string, unknown> } }; index: number }> = [];
-      const nonToolEvents: Array<{ event: { type: string; text?: string; call?: { id: string; toolName: string; input: Record<string, unknown> } }; index: number }> = [];
-
-      events.forEach((event, index) => {
-        if (event.type === 'tool_call' && event.call) {
-          toolCallEvents.push({ event: event as { type: 'tool_call'; call: { id: string; toolName: string; input: Record<string, unknown> } }, index });
-        } else {
-          nonToolEvents.push({ event, index });
-        }
-      });
-
-      // 分离 spawn_agent 和其他工具
-      const spawnEvents = toolCallEvents.filter((tc) => tc.event.call.toolName === 'spawn_agent');
-      const otherEvents = toolCallEvents.filter((tc) => tc.event.call.toolName !== 'spawn_agent');
-
-      // ---- 第一步：处理非 tool 事件（更新 state） ----
-      const nonToolRuntimeEvents: RuntimeEvent[] = [];
-
-      for (const { event } of nonToolEvents) {
+      // ---- 流式处理单个 non-tool 事件（chunks 等立即 emit） ----
+      function processStreamedNonToolEvent(
+        event: { type: string; text?: string; call?: unknown }
+      ): Observable<RuntimeEvent> {
         if (event.type === 'assistant_chunk' && event.text) {
           state = appendAssistantChunk(state, event.text);
-          nonToolRuntimeEvents.push({
+          // 每个 chunk 单独 trace（debug 模式下写入文件，带时间戳用于验证流式）
+          params.trace({
+            sessionId: params.session.id,
+            turn: state.turn,
+            step: state.step,
+            scope: 'provider',
+            phase: 'provider.chunk',
+            message: 'chunk received',
+            data: { textLength: event.text.length, preview: event.text.slice(0, 50) },
+          });
+          return of<RuntimeEvent>({
             type: 'assistant_chunk',
             sessionId: params.session.id,
             turn: state.turn,
             chunk: event.text,
           });
-        } else if (event.type === 'assistant_message') {
+        }
+        if (event.type === 'assistant_message') {
           const content = event.text ?? '';
           state = completeTurnState(state, content);
           nextAction = 'complete';
-
-          const persistEvent = await lastValueFrom(
-            persistAssistantMessage({
-              session: params.session,
-              sessionManager: params.sessionManager,
-              history: params.history,
-              turn: state.turn,
-              content,
-            })
-          );
-          nonToolRuntimeEvents.push(persistEvent);
-
           params.trace({
             sessionId: params.session.id,
             turn: state.turn,
@@ -530,89 +493,150 @@ function runTurnLoop(params: {
             message: 'turn completed',
             data: { contentLength: content.length },
           });
+          return from(
+            params.sessionManager.appendRecord(
+              params.session,
+              createAssistantRecord(state.turn, content)
+            )
+          ).pipe(
+            map(
+              (): RuntimeEvent => ({
+                type: 'assistant_message',
+                sessionId: params.session.id,
+                turn: state.turn,
+                content,
+              })
+            )
+          );
         }
+        return EMPTY;
       }
 
-      // ---- 第二步：记录所有 tool_call 到 state ----
-      for (const { event } of toolCallEvents) {
-        state = recordToolCall(state, event.call);
+      // ---- 流结束后 tail：tool_calls 分发 + 合并 RuntimeEvents ----
+      function processProviderTail(): Observable<RuntimeEvent> {
+        return defer(async () => {
+          if (toolCallBuffer.length === 0) {
+            return EMPTY;
+          }
+
+          // 记录 tool_calls 到 state
+          for (const { event } of toolCallBuffer) {
+            state = recordToolCall(state, event.call);
+          }
+          nextAction = 'tool';
+
+          // 分离 spawn_agent 和其他工具
+          const spawnEvents = toolCallBuffer.filter(
+            (tc) => tc.event.call.toolName === 'spawn_agent'
+          );
+          const otherEvents = toolCallBuffer.filter(
+            (tc) => tc.event.call.toolName !== 'spawn_agent'
+          );
+
+          // 并行分发 spawn_agent（保留 #11）
+          const allToolResults: Array<{
+            runtimeEvents: RuntimeEvent[];
+            callId: string;
+            originalIndex: number;
+          }> = [];
+          if (spawnEvents.length > 0) {
+            await lastValueFrom(
+              forkJoin(
+                spawnEvents.map(({ event, index }) =>
+                  dispatchSingleToolCall(event.call, state, index).pipe(
+                    tap((result) => {
+                      allToolResults.push(result);
+                    })
+                  )
+                )
+              )
+            );
+          }
+          // 串行分发其他工具
+          for (const { event, index } of otherEvents) {
+            const result = await lastValueFrom(
+              dispatchSingleToolCall(event.call, state, index)
+            );
+            allToolResults.push(result);
+          }
+
+          // 按原 index 排序 + 更新 state
+          allToolResults.sort((a, b) => a.originalIndex - b.originalIndex);
+          for (const result of allToolResults) {
+            for (const toolEvent of result.runtimeEvents) {
+              if (toolEvent.type === 'tool_result' || toolEvent.type === 'tool_failed') {
+                const originalCall = state.toolCalls.find((tc) => tc.id === result.callId);
+                state = recordToolResult(state, {
+                  callId: result.callId,
+                  toolName: toolEvent.toolName,
+                  input: originalCall?.input ?? {},
+                  status: toolEvent.status,
+                  ...(toolEvent.type === 'tool_result'
+                    ? { output: toolEvent.output }
+                    : { error: toolEvent.error }),
+                });
+              }
+            }
+          }
+
+          // 合并所有 tool events 为一个 Observable（按原 index 排好序）
+          const allEvents = allToolResults.flatMap((r) => r.runtimeEvents);
+          return allEvents.length > 0 ? concat(...allEvents.map((e) => of(e))) : EMPTY;
+        }).pipe(mergeMap((obs) => obs));
       }
-      if (toolCallEvents.length > 0) {
-        nextAction = 'tool';
-      }
 
-      // ---- 第三步：分发工具调用（spawn_agent 并行，其他串行） ----
-      const allToolResults: Array<{
-        runtimeEvents: RuntimeEvent[];
-        callId: string;
-        originalIndex: number;
-      }> = [];
-
-      // 并行分发 spawn_agent 调用
-      if (spawnEvents.length > 0) {
-        const spawnDispatches = spawnEvents.map(({ event, index }) =>
-          dispatchSingleToolCall(event.call, state, index).pipe(
-            tap((result) => {
-              allToolResults.push(result);
-            })
-          )
-        );
-
-        // 使用 forkJoin 并行执行所有 spawn_agent，fail-fast 策略
-        await lastValueFrom(forkJoin(spawnDispatches));
-      }
-
-      // 串行分发其他工具调用
-      if (otherEvents.length > 0) {
-        for (const { event, index } of otherEvents) {
-          const result = await lastValueFrom(dispatchSingleToolCall(event.call, state, index));
-          allToolResults.push(result);
-        }
-      }
-
-      // ---- 第四步：按原始顺序更新 state 并收集事件 ----
-      allToolResults.sort((a, b) => a.originalIndex - b.originalIndex);
-
-      const toolRuntimeEvents: RuntimeEvent[] = [];
-      for (const result of allToolResults) {
-        // 更新 state（按顺序）
-        for (const toolEvent of result.runtimeEvents) {
-          if (toolEvent.type === 'tool_result' || toolEvent.type === 'tool_failed') {
-            const originalCall = state.toolCalls.find((tc) => tc.id === result.callId);
-            state = recordToolResult(state, {
-              callId: result.callId,
-              toolName: toolEvent.type === 'tool_result' ? toolEvent.toolName : toolEvent.toolName,
-              input: originalCall?.input ?? {},
-              status: toolEvent.type === 'tool_result' ? toolEvent.status : toolEvent.status,
-              ...(toolEvent.type === 'tool_result'
-                ? { output: toolEvent.output }
-                : { error: toolEvent.error }),
+      return params.provider
+        .runStep({
+          context: params.context,
+          state,
+        })
+        .pipe(
+          // 收集 tool_calls 到 buffer（chunks 等不缓冲）
+          tap((e) => {
+            if (e.type === 'tool_call' && e.call) {
+              toolCallBuffer.push({
+                event: e as { type: 'tool_call'; call: { id: string; toolName: string; input: Record<string, unknown> } },
+                index: streamIndex,
+              });
+            }
+            streamIndex++;
+          }),
+          // 流式处理 non-tool events（chunks 等立即 emit）
+          mergeMap((e) => processStreamedNonToolEvent(e)),
+          // provider 错误转 assistant_message（之前的修复保留：让用户看到具体错误）
+          catchError((err): Observable<RuntimeEvent> => {
+            const errMsg = err instanceof Error ? err.message : String(err);
+            params.trace({
+              sessionId: params.session.id,
+              turn: state.turn,
+              step: state.step,
+              scope: 'provider',
+              phase: 'provider.error',
+              message: `provider failed: ${errMsg}`,
+              data: { provider: params.provider.id },
             });
-          }
-        }
-        toolRuntimeEvents.push(...result.runtimeEvents);
-      }
-
-      // 合并所有事件（按原始顺序）
-      const allRuntimeEvents: RuntimeEvent[] = [...nonToolEvents, ...toolCallEvents]
-        .sort((a, b) => a.index - b.index)
-        .flatMap(({ index }) => {
-          // 非 tool 事件
-          const nonToolIndex = nonToolEvents.findIndex((n) => n.index === index);
-          if (nonToolIndex >= 0) {
-            const event = nonToolRuntimeEvents[nonToolIndex];
-            return event ? [event] : [];
-          }
-          // tool 事件
-          const toolResult = allToolResults.find((r) => r.originalIndex === index);
-          return toolResult?.runtimeEvents ?? [];
-        });
-
-      // 使用 concat 将事件数组转换为 Observable
-      return allRuntimeEvents.length > 0
-        ? concat(...allRuntimeEvents.map((event) => of(event)))
-        : EMPTY;
-    }
+            const errorContent = `[错误] provider 调用失败: ${errMsg}`;
+            state = completeTurnState(state, errorContent);
+            return from(
+              params.sessionManager.appendRecord(
+                params.session,
+                createAssistantRecord(state.turn, errorContent)
+              )
+            ).pipe(
+              map(
+                (): RuntimeEvent => ({
+                  type: 'assistant_message',
+                  sessionId: params.session.id,
+                  turn: state.turn,
+                  content: errorContent,
+                })
+              )
+            );
+          }),
+          // 流结束后，flush tool_calls
+          concatWith(defer(() => processProviderTail()))
+        );
+    });
 
     // ---- 内部辅助函数：分发单个工具调用 ----
     function dispatchSingleToolCall(
@@ -684,6 +708,10 @@ function runTurnLoop(params: {
         childAgentTimeout: params.childAgentTimeout,
         // 用户输入支持
         userInputBridge: params.userInputBridge,
+        // 透传 settings（spawn-agent 用于读 subAgents 配置 + 重试参数）
+        loadedSettings: params.loadedSettings,
+        // 嵌套 spawn 深度
+        spawnDepth: params.spawnDepth,
       }).pipe(
         // 收集所有工具事件
         toArray(),
@@ -937,16 +965,41 @@ export function runAgentLoop(params: {
   childAgentTimeout?: number;
   /** 可选：用户输入桥接器（用于 ask-user 工具） */
   userInputBridge?: UserInputBridge;
+  /** 可选：当前 spawn 嵌套深度（用于限制递归 spawn） */
+  spawnDepth?: number;
+  /** 可选：是否启用 debug 日志落盘（写入 .wasteland/debug.log） */
+  debug?: boolean;
+  /** 可选：完整 loadedSettings，透传到 dispatchToolCall → spawn-agent 用于读 subAgents 配置 */
+  loadedSettings?: LoadedWastelandSettings;
 }): AgentRun {
   // 创建调试追踪的 Subject
-  // 使用 ReplaySubject 确保所有事件都能被订阅者接收
-  const debugSubject = new ReplaySubject<DebugTraceEvent>();
-  const trace = createTraceEmitter(debugSubject);
+  // 使用 ReplaySubject 缓冲近期事件供迟到的订阅者接收（限 200 条避免长会话内存膨胀）
+  const debugSubject = new ReplaySubject<DebugTraceEvent>(200);
+  const baseTrace = createTraceEmitter(debugSubject);
+  // 统一 trace 入口：debug 开启时同时写入 .wasteland/debug.log，
+  // 方便 `tail -f` 实时观察流式、工具调用、错误等
+  const trace = (event: DebugTraceInput): void => {
+    baseTrace(event);
+    if (params.debug) {
+      debugLog({
+        kind: 'trace',
+        sessionId: event.sessionId,
+        turn: event.turn,
+        step: event.step,
+        scope: event.scope,
+        phase: event.phase,
+        message: event.message,
+        data: event.data,
+      });
+    }
+  };
   const maxStepsPerTurn = params.maxStepsPerTurn ?? 8;
   const maxTurns = params.maxTurns ?? 20;
 
   // 用户输入桥接器（用于 ask-user 工具）
-  // 如果未提供，创建新的实例
+  // 如果未提供，创建新的实例。仅内部创建的实例在会话结束时由本循环销毁；
+  // 复用外部传入的（如子 Agent 复用父 Agent 的 bridge）生命周期由所有者管理。
+  const ownsUserInputBridge = !params.userInputBridge;
   const userInputBridge = params.userInputBridge ?? new UserInputBridge();
 
   // ---- 主事件流 ----
@@ -1016,19 +1069,9 @@ export function runAgentLoop(params: {
             });
           }
         }),
-        // 使用 takeWhile 在达到限制时停止处理
-        // 注意：takeWhile 在第 maxTurns+1 个 turn 时会 complete 流
+        // 达到 maxTurns 后停止处理（takeWhile 在第 maxTurns+1 个 turn 时 complete 流）
+        takeWhile(() => turnCount <= maxTurns),
         concatMap((turn) => {
-          // 如果超过 maxTurns，发出警告并完成
-          if (turnCount > maxTurns) {
-            return of<RuntimeEvent>({
-              type: 'assistant_message',
-              sessionId: session.id,
-              turn: turn.turn,
-              content: t('runtime.maxTurnsReached', { maxTurns: String(maxTurns) }),
-            });
-          }
-
           // 创建历史快照（用于传递给 Provider）
           const historySnapshot = [...history];
           const context = createTurnContext({
@@ -1093,6 +1136,7 @@ export function runAgentLoop(params: {
             providerSettings: params.providerSettings,
             childAgentTimeout: params.childAgentTimeout,
             userInputBridge,
+            spawnDepth: params.spawnDepth,
           });
 
           // concat 确保先处理 user$，再处理 assistant$
@@ -1106,8 +1150,11 @@ export function runAgentLoop(params: {
         from(params.sessionManager.appendRecord(session, createSessionEndRecord(session.id)))
       ).pipe(
         tap(() => {
-          // 清理用户输入桥接器
-          userInputBridge.destroy();
+          // 仅销毁内部创建的桥接器；复用外部传入的不在此销毁
+          // （子 Agent 复用父 Agent 的 bridge 时，由父会话/UI 层管理其生命周期）
+          if (ownsUserInputBridge) {
+            userInputBridge.destroy();
+          }
 
           trace({
             sessionId: session.id,

@@ -19,10 +19,11 @@
  */
 
 import { readdir, stat } from 'node:fs/promises';
-import { join, relative, resolve } from 'node:path';
+import { join, relative } from 'node:path';
 import { z } from 'zod';
 import { zodToJsonSchema } from '@alcyone-labs/zod-to-json-schema';
 
+import { resolveWithinCwd } from './path-utils.js';
 import type { AgentTool, ToolExecutionResult } from './tool-types.js';
 import type { JsonSchema } from './tool-types.js';
 
@@ -323,10 +324,17 @@ export function createListDirectoryTool(): AgentTool {
         return { status: 'error', error: parsed.error.issues.map(i => i.message).join(', ') };
       }
 
-      // 解析目录路径
+      // 解析目录路径（基于 realpath 防止符号链接穿越与路径遍历）
       const targetPath = parsed.data.path
-        ? resolve(context.cwd, parsed.data.path)
+        ? await resolveWithinCwd(context.cwd, parsed.data.path)
         : context.cwd;
+
+      if (!targetPath) {
+        return {
+          status: 'error',
+          error: `路径 "${parsed.data.path}" 位于工作目录之外。`,
+        };
+      }
 
       // 验证路径存在且是目录
       try {

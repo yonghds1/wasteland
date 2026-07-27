@@ -28,6 +28,8 @@ export type CliOutputAdapterParams = {
   style?: 'classic' | 'interactive';
   /** 轮次完成回调 */
   onTurnComplete?: () => void;
+  /** 是否展示思考块，默认 true */
+  showThinking?: boolean;
 };
 
 // ============================================================
@@ -45,12 +47,14 @@ export class CliOutputAdapter implements OutputAdapter {
   private stderr: Writable;
   private style: 'classic' | 'interactive';
   private onTurnComplete?: () => void;
+  private showThinking: boolean;
 
   constructor(params?: CliOutputAdapterParams) {
     this.stdout = params?.stdout ?? process.stdout;
     this.stderr = params?.stderr ?? process.stderr;
     this.style = params?.style ?? 'classic';
     this.onTurnComplete = params?.onTurnComplete;
+    this.showThinking = params?.showThinking ?? true;
   }
 
   /**
@@ -78,6 +82,7 @@ export class CliOutputAdapter implements OutputAdapter {
       stderr: this.stderr,
       style: this.style,
       onTurnComplete: this.onTurnComplete,
+      showThinking: this.showThinking,
     });
   }
 

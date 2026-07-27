@@ -295,40 +295,72 @@ function processRuntimeEvent(
           status: 'running',
         };
       }
-      // 添加进度消息
+      // 进度消息：find-or-update 累积到同一个 message（避免同 childId 重复 key warning）
       if (event.message) {
-        messages.push({
-          id: `agent-progress-${event.childId}-${Date.now()}`,
-          timestamp: new Date().toISOString(),
-          agentId: event.childId,
-          type: 'system',
-          content: `[${event.childName}] ${event.message}`,
-        });
+        const progressMsgId = `agent-progress-${event.childId}`;
+        const progressMsgIdx = messages.findIndex((m) => m.id === progressMsgId);
+        const content = `[${event.childName}] ${event.message}`;
+        if (progressMsgIdx >= 0) {
+          messages[progressMsgIdx] = {
+            ...messages[progressMsgIdx],
+            content: messages[progressMsgIdx].content + '\n' + content,
+            timestamp: new Date().toISOString(),
+          };
+        } else {
+          messages.push({
+            id: progressMsgId,
+            timestamp: new Date().toISOString(),
+            agentId: event.childId,
+            type: 'system',
+            content,
+          });
+        }
       }
       break;
     }
 
     case 'agent_thinking': {
-      // 添加思考消息
-      messages.push({
-        id: `agent-thinking-${event.childId}-${Date.now()}`,
-        timestamp: new Date().toISOString(),
-        agentId: event.childId,
-        type: 'assistant',
-        content: event.content,
-      });
+      // 思考消息：find-or-append 累积到同一个 message（子 agent thinking 持续 emit，
+      // 避免同毫秒多次 emit 导致的 React duplicate key warning）
+      const thinkingId = `agent-thinking-${event.childId}`;
+      const thinkingIdx = messages.findIndex((m) => m.id === thinkingId);
+      if (thinkingIdx >= 0) {
+        messages[thinkingIdx] = {
+          ...messages[thinkingIdx],
+          content: messages[thinkingIdx].content + event.content,
+          timestamp: new Date().toISOString(),
+        };
+      } else {
+        messages.push({
+          id: thinkingId,
+          timestamp: new Date().toISOString(),
+          agentId: event.childId,
+          type: 'assistant',
+          content: event.content,
+        });
+      }
       break;
     }
 
     case 'agent_tool_use': {
-      // 添加工具调用消息
-      messages.push({
-        id: `agent-tool-${event.childId}-${Date.now()}`,
-        timestamp: new Date().toISOString(),
-        agentId: event.childId,
-        type: 'tool',
-        content: `🔧 ${event.toolName}`,
-      });
+      // 工具调用消息：find-or-update 累积到同一个 message
+      const toolMsgId = `agent-tool-${event.childId}`;
+      const toolMsgIdx = messages.findIndex((m) => m.id === toolMsgId);
+      if (toolMsgIdx >= 0) {
+        messages[toolMsgIdx] = {
+          ...messages[toolMsgIdx],
+          content: messages[toolMsgIdx].content + ' / ' + event.toolName,
+          timestamp: new Date().toISOString(),
+        };
+      } else {
+        messages.push({
+          id: toolMsgId,
+          timestamp: new Date().toISOString(),
+          agentId: event.childId,
+          type: 'tool',
+          content: `🔧 ${event.toolName}`,
+        });
+      }
       break;
     }
 

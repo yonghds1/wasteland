@@ -23,6 +23,8 @@ import { Box, useStdout } from 'ink';
 import { StatusBar } from './StatusBar.js';
 import { ChatMessageList } from './ChatMessageList.js';
 import { ChatInputBar } from './ChatInputBar.js';
+import { SessionIndexPage } from './SessionIndexPage.js';
+import { useAppContext } from '../context/AppContext.js';
 import type { TuiRuntimeContext } from '../types.js';
 
 interface ChatAreaProps {
@@ -32,21 +34,35 @@ interface ChatAreaProps {
 
 export function ChatArea({ runtime, sendMessage }: ChatAreaProps): React.ReactElement {
   const { stdout } = useStdout();
+  const { state, setCurrentPage } = useAppContext();
   const terminalRows = stdout?.rows ?? 24;
   const terminalColumns = stdout?.columns ?? 80;
+  const isSessionsPage = state.currentPage === 'sessions';
 
   return (
     <Box flexDirection="column" width={terminalColumns} height={terminalRows}>
       {/* 顶部状态栏(固定高度) */}
       <StatusBar width={terminalColumns} runtime={runtime} />
 
-      {/* 消息列表(占剩余空间) */}
+      {/* 主体区域：根据 currentPage 切换主视图 */}
       <Box flexGrow={1} width={terminalColumns} overflow="hidden">
-        <ChatMessageList width={terminalColumns} skin={runtime.skin} />
+        {isSessionsPage ? (
+          <SessionIndexPage onClose={() => setCurrentPage('session')} />
+        ) : (
+          <ChatMessageList
+            width={terminalColumns}
+            skin={runtime.skin}
+            showThinking={runtime.showThinking}
+            spinnerIntervalMs={runtime.spinnerIntervalMs}
+            typewriterRateMs={runtime.typewriterRateMs}
+          />
+        )}
       </Box>
 
-      {/* 底部输入框(自然高度) */}
-      <ChatInputBar width={terminalColumns} skin={runtime.skin} sendMessage={sendMessage} />
+      {/* 底部输入框(sessions 页时隐藏) */}
+      {!isSessionsPage && (
+        <ChatInputBar width={terminalColumns} skin={runtime.skin} sendMessage={sendMessage} />
+      )}
     </Box>
   );
 }

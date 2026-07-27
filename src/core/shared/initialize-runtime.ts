@@ -8,6 +8,7 @@
 import { homedir } from 'node:os';
 
 import { loadWastelandSettings } from '../../config/load-settings.js';
+import { getLoadedSettings } from '../../config/loaded-settings.js';
 import { resolveDefaultSessionDir } from '../../config/paths.js';
 import { resolveChatRuntime } from '../../config/resolve-chat-runtime.js';
 import type { ResolvedChatRuntime } from '../../config/resolve-chat-runtime.js';
@@ -99,9 +100,9 @@ export async function initializeRuntime(
   const { cwd, roleName, providerName, env = process.env } = params;
 
   // 1. 加载配置（优先使用已加载的配置，避免重复加载）
-  const preloadedSettings = (globalThis as Record<string, unknown>).__wasteland_loaded_settings;
+  const preloadedSettings = getLoadedSettings();
   const loadedSettings = preloadedSettings
-    ? (preloadedSettings as LoadedWastelandSettings)
+    ? preloadedSettings
     : await loadWastelandSettings({ cwd, env });
 
   // 2. 解析运行时配置

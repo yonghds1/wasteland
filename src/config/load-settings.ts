@@ -302,6 +302,44 @@ async function parseSettings(raw: unknown, sourcePath: string): Promise<RawWaste
       runtime.language = raw.runtime.language;
     }
 
+    if ('showThinking' in raw.runtime && raw.runtime.showThinking !== undefined) {
+      if (typeof raw.runtime.showThinking !== 'boolean') {
+        throw new Error(`配置文件 ${sourcePath} 中 runtime.showThinking 必须是布尔值。`);
+      }
+
+      runtime.showThinking = raw.runtime.showThinking;
+    }
+
+    if ('spinnerIntervalMs' in raw.runtime && raw.runtime.spinnerIntervalMs !== undefined) {
+      if (
+        typeof raw.runtime.spinnerIntervalMs !== 'number' ||
+        !Number.isInteger(raw.runtime.spinnerIntervalMs) ||
+        raw.runtime.spinnerIntervalMs < 16 ||
+        raw.runtime.spinnerIntervalMs > 1000
+      ) {
+        throw new Error(
+          `配置文件 ${sourcePath} 中 runtime.spinnerIntervalMs 必须是 16-1000 之间的整数（毫秒）。`
+        );
+      }
+
+      runtime.spinnerIntervalMs = raw.runtime.spinnerIntervalMs;
+    }
+
+    if ('typewriterRateMs' in raw.runtime && raw.runtime.typewriterRateMs !== undefined) {
+      if (
+        typeof raw.runtime.typewriterRateMs !== 'number' ||
+        !Number.isInteger(raw.runtime.typewriterRateMs) ||
+        raw.runtime.typewriterRateMs < 5 ||
+        raw.runtime.typewriterRateMs > 200
+      ) {
+        throw new Error(
+          `配置文件 ${sourcePath} 中 runtime.typewriterRateMs 必须是 5-200 之间的整数（毫秒）。`
+        );
+      }
+
+      runtime.typewriterRateMs = raw.runtime.typewriterRateMs;
+    }
+
     settings.runtime = runtime;
   }
 
@@ -456,6 +494,9 @@ function mergeSettings(
       childAgentTimeout: next.runtime?.childAgentTimeout ?? base.runtime.childAgentTimeout,
       debug: next.runtime?.debug ?? base.runtime.debug,
       language: next.runtime?.language ?? base.runtime.language,
+      showThinking: next.runtime?.showThinking ?? base.runtime.showThinking,
+      spinnerIntervalMs: next.runtime?.spinnerIntervalMs ?? base.runtime.spinnerIntervalMs,
+      typewriterRateMs: next.runtime?.typewriterRateMs ?? base.runtime.typewriterRateMs,
     },
     mcpServers: mergedMCPServers,
     a2aAgents: mergedA2AAgents,
@@ -623,6 +664,9 @@ function applyEnvironmentOverrides(
       childAgentTimeout: settings.runtime.childAgentTimeout,
       debug: settings.runtime.debug,
       language: settings.runtime.language,
+      showThinking: settings.runtime.showThinking,
+      spinnerIntervalMs: settings.runtime.spinnerIntervalMs,
+      typewriterRateMs: settings.runtime.typewriterRateMs,
     },
     mcpServers: { ...settings.mcpServers },
     a2aAgents: [...settings.a2aAgents],
@@ -658,6 +702,29 @@ function applyEnvironmentOverrides(
   const debugEnv = env.WASTELAND_DEBUG ?? env.JOE_DEBUG;
   if (typeof debugEnv === 'string' && debugEnv.trim().length > 0) {
     resolved.runtime.debug = parseBooleanOverride(debugEnv, 'WASTELAND_DEBUG');
+  }
+
+  const showThinkingEnv = env.WASTELAND_SHOW_THINKING ?? env.JOE_SHOW_THINKING;
+  if (typeof showThinkingEnv === 'string' && showThinkingEnv.trim().length > 0) {
+    resolved.runtime.showThinking = parseBooleanOverride(showThinkingEnv, 'WASTELAND_SHOW_THINKING');
+  }
+
+  const spinnerEnv = env.WASTELAND_SPINNER_INTERVAL_MS ?? env.JOE_SPINNER_INTERVAL_MS;
+  if (typeof spinnerEnv === 'string' && spinnerEnv.trim().length > 0) {
+    const parsed = Number.parseInt(spinnerEnv, 10);
+    if (!Number.isInteger(parsed) || parsed < 16 || parsed > 1000) {
+      throw new Error('环境变量 WASTELAND_SPINNER_INTERVAL_MS 必须是 16-1000 之间的整数（毫秒）。');
+    }
+    resolved.runtime.spinnerIntervalMs = parsed;
+  }
+
+  const typewriterEnv = env.WASTELAND_TYPEWRITER_RATE_MS ?? env.JOE_TYPEWRITER_RATE_MS;
+  if (typeof typewriterEnv === 'string' && typewriterEnv.trim().length > 0) {
+    const parsed = Number.parseInt(typewriterEnv, 10);
+    if (!Number.isInteger(parsed) || parsed < 5 || parsed > 200) {
+      throw new Error('环境变量 WASTELAND_TYPEWRITER_RATE_MS 必须是 5-200 之间的整数（毫秒）。');
+    }
+    resolved.runtime.typewriterRateMs = parsed;
   }
 
   const langEnv = env.WASTELAND_LANGUAGE ?? env.JOE_LANGUAGE;

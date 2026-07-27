@@ -16,6 +16,7 @@ import { MCPToolRegistry } from './mcp-registry.js';
 import { t } from '../locales/index.js';
 import { A2AAgentRegistry } from '../acp/a2a-registry.js';
 import { createA2ASpawnAgentTool } from './a2a-spawn-agent.js';
+import { SPAWN_AGENT_DESCRIPTION, SPAWN_AGENT_INPUT_SCHEMA_JSON } from './spawn-agent.js';
 
 /**
  * 创建 spawn_agent 的占位工具定义
@@ -27,6 +28,10 @@ function createSpawnAgentPlaceholder() {
   return {
     name: 'spawn_agent',
     riskLevel: 'execute' as const,
+    // 向 Provider 声明 spawn_agent 的参数契约（与实际工具共享同一 schema/description，
+    // 避免模型看到空 schema 而不知道如何调用）。实际执行在 dispatchToolCall 中拦截。
+    description: SPAWN_AGENT_DESCRIPTION,
+    inputSchema: SPAWN_AGENT_INPUT_SCHEMA_JSON,
     // 这个 execute 永远不会被调用，因为 dispatchToolCall 会拦截
     async execute(): Promise<never> {
       throw new Error(t('mcp.spawnAgentHandled'));

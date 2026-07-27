@@ -26,68 +26,11 @@ import type { ProviderStepInput } from './provider-types.js';
 import {
   buildOpenAITools,
   buildMessages,
-  parseToolCalls,
   type OpenAIFunctionTool,
   type OpenAIMessage,
 } from './openai-compatible/index.js';
 import { parseSSEStream } from './sse-parser.js';
-
-// ============================================================
-// 重试配置
-// ============================================================
-
-/** 最大重试次数 */
-const MAX_RETRIES = 3;
-
-/** 基础重试延迟（毫秒） */
-const BASE_RETRY_DELAY = 1000;
-
-/**
- * 带重试的 fetch 请求
- *
- * @param url - 请求 URL
- * @param options - fetch 选项
- * @param retries - 剩余重试次数
- * @returns Response 对象
- */
-async function fetchWithRetry(
-  url: string,
-  options: RequestInit,
-  retries = MAX_RETRIES
-): Promise<Response> {
-  try {
-    const response = await fetch(url, options);
-
-    // 429 Rate Limit - 等待 Retry-After 或指数退避
-    if (response.status === 429) {
-      if (retries > 0) {
-        const retryAfter = response.headers.get('Retry-After');
-        const delay = retryAfter
-          ? parseInt(retryAfter, 10) * 1000
-          : BASE_RETRY_DELAY * Math.pow(2, MAX_RETRIES - retries);
-        await new Promise((resolve) => setTimeout(resolve, delay));
-        return fetchWithRetry(url, options, retries - 1);
-      }
-    }
-
-    // 503 Service Unavailable - 指数退避重试
-    if (response.status === 503 && retries > 0) {
-      const delay = BASE_RETRY_DELAY * Math.pow(2, MAX_RETRIES - retries);
-      await new Promise((resolve) => setTimeout(resolve, delay));
-      return fetchWithRetry(url, options, retries - 1);
-    }
-
-    return response;
-  } catch (error) {
-    // 网络错误 - 指数退避重试
-    if (retries > 0) {
-      const delay = BASE_RETRY_DELAY * Math.pow(2, MAX_RETRIES - retries);
-      await new Promise((resolve) => setTimeout(resolve, delay));
-      return fetchWithRetry(url, options, retries - 1);
-    }
-    throw error;
-  }
-}
+import { fetchWithRetry, parseToolArguments } from './shared/retry.js';
 
 // ============================================================
 // 类型定义
@@ -264,6 +207,8 @@ function requestClaudeStreaming(
   system?: string
 ): Observable<ProviderStreamEvent> {
   return new Observable<ProviderStreamEvent>((subscriber) => {
+    let subscription: { unsubscribe: () => void } | undefined;
+
     async function execute() {
       const requestBody: ClaudeRequest = {
         model: config.model,
@@ -310,7 +255,7 @@ function requestClaudeStreaming(
       const toolCallMap = new Map<number, ToolCallAccumulator>();
       let finished = false;
 
-      sse$.subscribe({
+      subscription = sse$.subscribe({
         next(data) {
           try {
             const event = JSON.parse(data) as ClaudeSSEEvent;
@@ -397,20 +342,8 @@ function requestClaudeStreaming(
 
     execute().catch((err) => subscriber.error(err));
 
-    return () => {};
+    return () => subscription?.unsubscribe();
   });
-}
-
-/**
- * 解析工具调用参数 JSON
- */
-function parseToolArguments(argsJson: string): Record<string, unknown> {
-  if (!argsJson) return {};
-  try {
-    return JSON.parse(argsJson) as Record<string, unknown>;
-  } catch {
-    return {};
-  }
 }
 
 // ============================================================
@@ -421,7 +354,7 @@ export function createClaudeProvider(settings?: ProviderSettings): AgentProvider
   const config = resolveClaudeConfig(settings);
 
   return {
-    id: 'claude',
+    id: 'anthropic',
 
     runStep({ context, state }: ProviderStepInput) {
       return defer(async () => {

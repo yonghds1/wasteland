@@ -1,5 +1,7 @@
 import { readFile, stat } from 'node:fs/promises';
-import { relative, resolve } from 'node:path';
+import { relative } from 'node:path';
+
+import { resolveWithinCwd } from './path-utils.js';
 import { z } from 'zod';
 import { zodToJsonSchema } from '@alcyone-labs/zod-to-json-schema';
 
@@ -32,42 +34,6 @@ const TRUNCATION_HALF_LINES = 50;
 // ============================================================
 // 辅助函数
 // ============================================================
-
-/**
- * 解析并验证文件路径
- *
- * @param cwd - 当前工作目录
- * @param value - 输入路径值
- * @returns 解析后的绝对路径，或 null 表示无效
- */
-function resolveReadablePath(cwd: string, value: unknown): string | null {
-  if (typeof value !== 'string' || value.trim().length === 0) {
-    return null;
-  }
-
-  const targetPath = resolve(cwd, value);
-  const relativePath = relative(cwd, targetPath);
-
-  // 不允许读取工作目录外的文件
-  if (relativePath.startsWith('..')) {
-    return null;
-  }
-
-  return targetPath;
-}
-
-/**
- * 解析可选的数字参数
- *
- * @param value - 输入值
- * @returns 解析后的数字，或 undefined
- */
-function parseOptionalNumber(value: unknown): number | undefined {
-  if (typeof value !== 'number' || !Number.isInteger(value) || value < 1) {
-    return undefined;
-  }
-  return value;
-}
 
 /**
  * 格式化文件元数据头
@@ -270,8 +236,8 @@ export function createReadFileTool(): AgentTool {
         return { status: 'error', error: parsed.error.issues.map(i => i.message).join(', ') };
       }
 
-      // 解析路径
-      const targetPath = resolveReadablePath(context.cwd, parsed.data.path);
+      // 解析路径（基于 realpath 防止符号链接穿越）
+      const targetPath = await resolveWithinCwd(context.cwd, parsed.data.path);
 
       if (!targetPath) {
         return {

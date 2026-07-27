@@ -37,12 +37,6 @@
     "mcpToolRegistry": "MCP tool {{name}} should be executed via MCPToolRegistry",
     "startupFailed": "MCP servers startup failed:"
   },
-  "tui": {
-    "failedToLoadSkin": "Failed to load skin:",
-    "toolError": "Error: {{error}}",
-    "runtimeEventStreamError": "Runtime event stream error:",
-    "debugTraceStreamError": "Debug trace stream error:"
-  },
   "utils": {
     "failedToRunScript": "Failed to run create-aliases.sh:"
   },
@@ -465,6 +459,10 @@
       "runningAgents": "⚡ {{count}} agents",
       "tools": "{{count}} tools"
     },
+    "toolError": "Error: {{error}}",
+    "runtimeEventStreamError": "Runtime event stream error:",
+    "debugTraceStreamError": "Debug trace stream error:",
+    "failedToLoadSkin": "Failed to load skin:",
     "config": {
       "title": "Guide",
       "docs": {

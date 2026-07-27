@@ -92,6 +92,15 @@ export type A2AAgentsConfig = A2AAgentConfig[];
 export type SubAgentSettings = RoleSettings & {
   /** 子角色描述，用于配置页面显示 */
   description?: string;
+  /**
+   * 子 agent 失败时自动重试次数（0 = 不重试，默认 0）
+   * 失败场景：超时 / minimax 无返回 / 子 agent 异常
+   * 重试策略：指数退避（retryDelayMs * 2^(attempt-1)）
+   * 全部失败后 error 写回主 agent，避免 minimax 自己脑补
+   */
+  maxRetries?: number;
+  /** 重试间隔（毫秒），默认 1000 */
+  retryDelayMs?: number;
 };
 
 export type RawWastelandSettings = {
@@ -115,6 +124,23 @@ export type RawWastelandSettings = {
     debug?: boolean;
     /** 语言设置，默认 en */
     language?: string;
+    /**
+     * 是否在 UI 上展示模型的 <think> 思考块
+     * （minimax/DeepSeek R1/QwQ 等会把思考拼到 content 里）
+     * 默认 true，与 Claude Code / OpenCode 一致
+     */
+    showThinking?: boolean;
+    /**
+     * Spinner 帧切换间隔（毫秒），默认 80
+     * 有效范围 16-1000（16ms ≈ 60fps 上限，1000ms ≈ 慢速）
+     */
+    spinnerIntervalMs?: number;
+    /**
+     * 打字机逐字符揭示间隔（毫秒），默认 30
+     * 有效范围 5-200（5ms ≈ 极快，30ms ≈ ChatGPT 默认，200ms ≈ 慢速）
+     * 控制客户端逐字符显示的节奏，与服务端 chunk 粒度解耦
+     */
+    typewriterRateMs?: number;
   };
   /** MCP 服务器配置 */
   mcpServers?: MCPServersConfig;
@@ -148,6 +174,12 @@ export type ResolvedWastelandSettings = {
     debug: boolean;
     /** 语言设置，默认 en */
     language: string;
+    /** 是否在 UI 上展示思考块，默认 true */
+    showThinking: boolean;
+    /** Spinner 帧切换间隔（毫秒），默认 80 */
+    spinnerIntervalMs: number;
+    /** 打字机逐字符揭示间隔（毫秒），默认 30 */
+    typewriterRateMs: number;
   };
   mcpServers: MCPServersConfig;
   a2aAgents: A2AAgentsConfig;
@@ -182,6 +214,9 @@ export const DEFAULT_WASTELAND_SETTINGS: ResolvedWastelandSettings = {
     childAgentTimeout: 120000,
     debug: false,
     language: DEFAULT_LANGUAGE,
+    showThinking: true,
+    spinnerIntervalMs: 80,
+    typewriterRateMs: 30,
   },
   mcpServers: {},
   a2aAgents: [],

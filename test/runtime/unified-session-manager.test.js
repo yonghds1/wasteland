@@ -220,7 +220,6 @@ describe("UnifiedSessionManager", () => {
     const stats = await manager.getStats();
     expect(stats).toBeTruthy();
     expect(typeof stats.totalSessions).toBe("number");
-    expect(typeof stats.totalMessages).toBe("number");
   });
 
   it("创建子 Agent 会话", async () => {

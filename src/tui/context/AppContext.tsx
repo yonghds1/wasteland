@@ -9,7 +9,7 @@ import type { TuiFullConfig } from '../types.js';
 // 类型定义
 // ============================================================
 
-export type PageName = 'session' | 'debug' | 'config';
+export type PageName = 'session' | 'debug' | 'config' | 'sessions';
 export type FocusArea =
   | 'header'
   | 'agentTree'

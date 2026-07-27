@@ -19,7 +19,8 @@
  */
 
 import { readFile, writeFile } from 'node:fs/promises';
-import { relative, resolve } from 'node:path';
+
+import { resolveWithinCwd } from './path-utils.js';
 import { z } from 'zod';
 import { zodToJsonSchema } from '@alcyone-labs/zod-to-json-schema';
 
@@ -41,31 +42,6 @@ export const editFileInputSchema = z.object({
 export type EditFileInput = z.infer<typeof editFileInputSchema>;
 
 /**
- * 解析可编辑的文件路径
- *
- * 确保路径在当前工作目录内，防止路径遍历攻击。
- *
- * @param cwd - 当前工作目录
- * @param value - 用户输入的路径
- * @returns 解析后的绝对路径，或 null（路径无效）
- */
-function resolveEditablePath(cwd: string, value: unknown): string | null {
-  if (typeof value !== 'string' || value.trim().length === 0) {
-    return null;
-  }
-
-  const targetPath = resolve(cwd, value);
-  const relativePath = relative(cwd, targetPath);
-
-  // 防止路径遍历：不允许 .. 开头
-  if (relativePath.startsWith('..')) {
-    return null;
-  }
-
-  return targetPath;
-}
-
-/**
  * 创建 edit-file 工具
  *
  * @returns AgentTool 实例
@@ -83,8 +59,8 @@ export function createEditFileTool(): AgentTool {
         return { status: 'error', error: parsed.error.issues.map(i => i.message).join(', ') };
       }
 
-      // 解析路径
-      const targetPath = resolveEditablePath(context.cwd, parsed.data.path);
+      // 解析路径（基于 realpath 防止符号链接穿越）
+      const targetPath = await resolveWithinCwd(context.cwd, parsed.data.path);
 
       if (!targetPath) {
         return {

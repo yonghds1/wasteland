@@ -9,24 +9,17 @@ import { Subject } from 'rxjs';
 
 import { t } from '../locales/index.js';
 
-import { loadWastelandSettings } from '../config/load-settings.js';
-import { resolveDefaultSessionDir, resolveDefaultTraceDir } from '../config/paths.js';
-import { resolveChatRuntime } from '../config/resolve-chat-runtime.js';
+import { resolveDefaultTraceDir } from '../config/paths.js';
+import { initializeRuntime } from '../core/shared/initialize-runtime.js';
 import { createSessionIndex, type SessionDetail } from '../core/runtime/session-index.js';
 import { runAgentLoop } from '../core/runtime/agent-loop.js';
-import { createDefaultProviderRegistry } from '../providers/provider-registry.js';
-import { createDefaultToolRegistry } from '../tools/default-registry.js';
 import { createPermissionGate } from '../core/runtime/permission-gate.js';
-import { SessionManager } from '../core/runtime/session-manager.js';
 import { renderRuntimeEvents } from '../ui/terminal-renderer.js';
 import { renderDebugTrace } from '../ui/debug-renderer.js';
 import { CliInputAdapter } from '../ui/cli-input-adapter.js';
 import { createSingleTurnInput } from '../ui/readline-input.js';
 import type { ChatInputTurn, RuntimeMode } from '../core/runtime/event-types.js';
 import { detectTTY } from '../ui/tty-detect.js';
-import { createSkillRegistry } from '../skills/skill-discovery.js';
-import { SkillExecutor } from '../skills/skill-executor.js';
-import { homedir } from 'node:os';
 
 // ============================================================
 // 辅助函数
@@ -69,8 +62,6 @@ function createResumedSessionMetadata(originalSession: SessionDetail) {
  * 创建 resume 命令
  */
 export function createResumeCommand(): Command {
-  const providerRegistry = createDefaultProviderRegistry();
-
   return new Command('resume')
     .description(t('commands.resume.description'))
     .argument('[session-id]', t('commands.resume.options.sessionId'))
@@ -83,11 +74,19 @@ export function createResumeCommand(): Command {
     .action(async (sessionId: string | undefined, options: any) => {
       const cwd = process.cwd();
 
-      // 加载配置
-      const loadedSettings = await loadWastelandSettings({
+      // 初始化运行时（复用入口缓存的配置，消除手动重造 runtime 的重复）
+      const runtime = await initializeRuntime({
         cwd,
+        roleName: options.role,
+        providerName: options.provider,
         env: process.env,
       });
+      const { loadedSettings, resolvedRuntime } = runtime;
+
+      // permissionMode 覆盖（命令行 --permission-mode 优先于配置）
+      const permissionGate = options.permissionMode
+        ? createPermissionGate({ mode: options.permissionMode })
+        : runtime.permissionGate;
 
       // 获取 session 索引
       const sessionIndex = createSessionIndex();
@@ -117,59 +116,8 @@ export function createResumeCommand(): Command {
       // 恢复历史消息
       const history = restoreHistoryFromRecords(sessionToResume.records);
 
-      // 解析运行时配置
-      const runtimeConfig = resolveChatRuntime({
-        settings: loadedSettings.settings,
-        providerName: options.provider,
-        roleName: options.role,
-        cwd,
-      });
-
-      // 创建 provider
-      const provider = providerRegistry.resolve(
-        runtimeConfig.providerName,
-        runtimeConfig.providerConfig
-      );
-
-      // 创建 session 管理器
-      const sessionManager = new SessionManager(
-        resolveDefaultSessionDir({
-          cwd,
-          projectConfigDir: loadedSettings.projectConfigDir,
-          env: process.env,
-        })
-      );
-
       // 创建恢复的 session 元数据
       const resumedSession = createResumedSessionMetadata(sessionToResume);
-
-      // 创建权限门控
-      const permissionMode = options.permissionMode ?? runtimeConfig.permissionMode ?? 'default';
-      const permissionGate = createPermissionGate({ mode: permissionMode });
-
-      // 创建工具注册表
-      const { toolRegistry, startMCP, stopMCP } = createDefaultToolRegistry(
-        loadedSettings.settings.mcpServers
-      );
-
-      // 创建技能注册表和执行器
-      const skillRegistry = await createSkillRegistry({
-        projectSkillsDir: loadedSettings.projectConfigDir
-          ? `${loadedSettings.projectConfigDir}/skills`
-          : undefined,
-        userSkillsDir: `${homedir()}/.wasteland/skills`,
-      });
-      const skillExecutor = new SkillExecutor(skillRegistry);
-
-      // 启动 MCP 服务器
-      try {
-        await startMCP();
-      } catch (error) {
-        console.warn(
-          t('mcp.startupFailed'),
-          error instanceof Error ? error.message : String(error)
-        );
-      }
 
       const debug = options.debug === true || loadedSettings.settings.runtime.debug;
       const debugFormat = options.debugFormat === 'jsonl' ? 'jsonl' : 'pretty';
@@ -185,18 +133,18 @@ export function createResumeCommand(): Command {
 
           const run = runAgentLoop({
             input$,
-            provider,
-            sessionManager,
-            toolRegistry,
+            provider: runtime.provider,
+            sessionManager: runtime.sessionManager,
+            toolRegistry: runtime.toolRegistry,
             permissionGate,
             cwd,
             mode: 'single',
             maxStepsPerTurn,
             existingSession: resumedSession,
-            prompt: runtimeConfig.prompt,
-            providerRegistry,
-            providerSettings: runtimeConfig.providerConfig,
-            skillExecutor,
+            prompt: resolvedRuntime.prompt,
+            providerRegistry: runtime.providerRegistry,
+            providerSettings: resolvedRuntime.providerConfig,
+            skillExecutor: runtime.skillExecutor,
             childAgentTimeout,
           });
 
@@ -239,24 +187,24 @@ export function createResumeCommand(): Command {
 
           const run = runAgentLoop({
             input$: inputSubject.asObservable(),
-            provider,
-            sessionManager,
-            toolRegistry,
+            provider: runtime.provider,
+            sessionManager: runtime.sessionManager,
+            toolRegistry: runtime.toolRegistry,
             permissionGate,
             cwd,
             mode: 'interactive',
             maxStepsPerTurn,
             existingSession: resumedSession,
-            prompt: runtimeConfig.prompt,
-            providerRegistry,
-            providerSettings: runtimeConfig.providerConfig,
-            skillExecutor,
+            prompt: resolvedRuntime.prompt,
+            providerRegistry: runtime.providerRegistry,
+            providerSettings: resolvedRuntime.providerConfig,
+            skillExecutor: runtime.skillExecutor,
             childAgentTimeout,
           });
 
           // 使用 CliInputAdapter 替代 createInteractiveTurnStream
           const inputAdapter = new CliInputAdapter({
-            skillExecutor,
+            skillExecutor: runtime.skillExecutor,
           });
 
           const work: Promise<void>[] = [
@@ -304,7 +252,7 @@ export function createResumeCommand(): Command {
           await inputAdapter.done;
         }
       } finally {
-        await stopMCP();
+        await runtime.mcpManager.stopMCP();
       }
     });
 }

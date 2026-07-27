@@ -94,6 +94,10 @@ async function runChatSession(params: {
       skillExecutor: runtime.skillExecutor,
       childAgentTimeout: runtime.loadedSettings.settings.runtime.childAgentTimeout,
       userInputBridge: params.userInputBridge,
+      // debug 开启条件：settings.runtime.debug 或 CLI --debug flag
+      debug: Boolean(params.debug || runtime.loadedSettings.settings.runtime.debug),
+      // 透传给 dispatchToolCall → spawn-agent（读 subAgents 配置 + 重试参数）
+      loadedSettings: runtime.loadedSettings,
     });
 
     // 使用 CliOutputAdapter 处理事件
@@ -218,6 +222,7 @@ export function configureChatCommand(cmd: Command): Command {
       const outputAdapter = new CliOutputAdapter({
         style: renderStyle,
         onTurnComplete: () => inputAdapter.prompt(),
+        showThinking: runtime.loadedSettings.settings.runtime.showThinking,
       });
 
       try {

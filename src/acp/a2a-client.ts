@@ -122,15 +122,16 @@ export class A2AClient {
   // ----------------------------------------------------------
 
   /**
-   * 发送任务 (同步阻塞模式)
+   * 发送任务
    *
-   * 发送任务并阻塞等待 Agent 返回最终结果。
-   * 如果 Agent 支持 blocking 模式，会一直等待直到任务完成。
+   * 发送任务并返回 Task。注意：返回的 Task 状态取决于服务端实现，
+   * 可能是 submitted / working / completed，不保证阻塞至完成。
+   * 如需等待最终结果，应在调用后轮询 getTask 直到状态稳定。
    *
    * @param task - 任务内容 (文本)
    * @param options - 可选配置
    * @param options.sessionId - 会话 ID (用于多轮对话)
-   * @returns 完成的任务
+   * @returns 任务对象（状态不一定为 completed）
    * @throws {A2AClientError} 请求失败时抛出
    */
   async sendTask(
@@ -144,9 +145,6 @@ export class A2AClient {
       id: taskId,
       sessionId,
       message: this.createUserMessage(task),
-      configuration: {
-        blocking: true,
-      },
     };
 
     const response = await this.fetch(`${this.baseUrl}/tasks/send`, {

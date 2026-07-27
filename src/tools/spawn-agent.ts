@@ -1,53 +1,46 @@
 /**
- * spawn-agent.ts - 子 Agent 创建工具
+ * spawn-agent.ts - 子 Agent 创建与事件转发
  *
- * 本文件实现了 spawn_agent 工具，允许主 Agent 创建并运行子 Agent。
+ * 本文件实现 spawn_agent 工具的核心逻辑：主 Agent 调用后创建子 Agent，
+ * 并将其思考、工具调用与进度事件实时转发给父 Agent / TUI，
+ * 最终结果作为 tool_result / tool_failed 返回给父 Agent。
  *
  * ## 核心设计
  *
- * - spawn_agent 作为普通工具注册到 ToolRegistry
  * - 子 Agent 通过 runAgentLoop 执行（mode="single"）
- * - 执行结果作为 tool_result 返回给主 Agent
+ * - 子 Agent 的中间事件被转译为 agent_thinking / agent_tool_use / agent_progress
+ *   三个父侧可观察事件（定义于 event-types.ts）
+ * - 最终结果以 tool_result / tool_failed 形式写回父 session
  *
  * ## 使用示例
  *
  * ```typescript
- * // 主 Agent 调用
- * spawn_agent({
- *   name: "analyzer",
- *   task: "分析 UserService 代码"
- * })
- *
- * // 返回结果
- * {
- *   status: "success",
- *   output: "分析结果...",
- *   sessionPath: ".wasteland/sessions/xxx-child-analyzer.jsonl"
- * }
+ * // 在 handleSpawnAgent 中：
+ * spawnChildAgentForwarding$({ context, call });
  * ```
  */
 
-import { catchError, defaultIfEmpty, filter, map, take, timeout } from 'rxjs/operators';
-import { forkJoin, from, lastValueFrom, of } from 'rxjs';
+import { Observable, defer, from, mergeMap, of, retry, throwError, timer } from 'rxjs';
+import { catchError, filter, take, timeout, map } from 'rxjs/operators';
 import { z } from 'zod';
 import { zodToJsonSchema } from '@alcyone-labs/zod-to-json-schema';
 
 import { t } from '../locales/index.js';
+import { debugLog } from '../core/runtime/debug-logger.js';
 import { runAgentLoop } from '../core/runtime/agent-loop.js';
 import type { SessionMetadata } from '../core/runtime/session-manager.js';
-import type { SessionMessageRecord } from '../core/runtime/event-types.js';
 import type {
-  AgentTool,
-  ToolExecutionContext,
-  ToolExecutionResult,
-  ToolInput,
-} from './tool-types.js';
-import type { JsonSchema } from './tool-types.js';
+  SessionMessageRecord,
+  SessionToolResultRecord,
+  RuntimeEvent,
+} from '../core/runtime/event-types.js';
+import type { AgentTool, JsonSchema } from './tool-types.js';
 import type { AgentProvider } from '../providers/provider-types.js';
 import type { SessionManager } from '../core/runtime/session-manager.js';
 import type { ToolRegistry } from './tool-registry.js';
 import type { PermissionGate } from '../core/runtime/permission-gate.js';
-import type { ProviderSettings } from '../config/settings-types.js';
+import type { UserInputBridge } from '../core/runtime/user-input-bridge.js';
+import type { ProviderSettings, LoadedWastelandSettings } from '../config/settings-types.js';
 import type { ProviderRegistry } from '../providers/provider-registry.js';
 
 // ============================================================
@@ -64,60 +57,44 @@ export const spawnAgentInputSchema = z.object({
 
 /**
  * 将通用模型名称映射到实际模型名称
- *
- * @param model - 通用模型名称（haiku/sonnet/opus）
- * @param providerId - Provider ID
- * @returns 实际模型名称
  */
 function mapModelToActualModel(model: string, providerId: string): string {
-  // 通用模型名称到各 Provider 的映射
   const modelMappings: Record<string, Record<string, string>> = {
-    qwen: {
-      haiku: 'qwen-turbo',
-      sonnet: 'qwen-plus',
-      opus: 'qwen-max',
-    },
-    ollama: {
-      haiku: 'llama3.2:1b',
-      sonnet: 'llama3.2',
-      opus: 'llama3.3:70b',
-    },
-    openai: {
-      haiku: 'gpt-4o-mini',
-      sonnet: 'gpt-4o',
-      opus: 'o1',
-    },
-    'openai-compatible': {
-      haiku: 'gpt-4o-mini',
-      sonnet: 'gpt-4o',
-      opus: 'o1',
-    },
-    anthropic: {
-      haiku: 'claude-haiku-4-5-20251001',
-      sonnet: 'claude-sonnet-4-6',
-      opus: 'claude-opus-4-8',
-    },
+    qwen: { haiku: 'qwen-turbo', sonnet: 'qwen-plus', opus: 'qwen-max' },
+    ollama: { haiku: 'llama3.2:1b', sonnet: 'llama3.2', opus: 'llama3.3:70b' },
+    openai: { haiku: 'gpt-4o-mini', sonnet: 'gpt-4o', opus: 'o1' },
+    'openai-compatible': { haiku: 'gpt-4o-mini', sonnet: 'gpt-4o', opus: 'o1' },
+    anthropic: { haiku: 'claude-haiku-4-5-20251001', sonnet: 'claude-sonnet-4-6', opus: 'claude-opus-4-8' },
   };
-
-  // 如果是已知的通用名称，尝试映射
   const providerMapping = modelMappings[providerId];
   if (providerMapping && providerMapping[model]) {
     return providerMapping[model];
   }
-
-  // 否则直接返回原值（可能是具体的模型名称如 "qwen-max"）
   return model;
 }
 
-/**
- * spawn_agent 工具的输入参数
- */
+/** spawn_agent 工具的输入类型 */
 export type SpawnAgentInput = z.infer<typeof spawnAgentInputSchema>;
 
+/** 子 Agent 最大嵌套深度（防止递归 spawn 耗尽资源） */
+const MAX_SPAWN_DEPTH = 3;
+
+/** spawn_agent 工具的风险等级（execute：调用 spawn_agent 属于执行子任务） */
+export const SPAWN_AGENT_RISK_LEVEL = 'execute' as const;
+
+/** spawn_agent 工具的描述（展示给 LLM），placeholder 与实际工具共享以避免漂移 */
+export const SPAWN_AGENT_DESCRIPTION = '创建并运行子 Agent 执行任务';
+
+/** spawn_agent 工具的 JSON Schema（展示给 LLM），集中导出供 placeholder 复用 */
+export const SPAWN_AGENT_INPUT_SCHEMA_JSON = zodToJsonSchema(spawnAgentInputSchema) as JsonSchema;
+
 /**
- * spawn_agent 工具的执行上下文（扩展版）
+ * spawn_agent 工具的执行上下文
  */
-export type SpawnAgentContext = ToolExecutionContext & {
+export type SpawnAgentContext = {
+  sessionId: string;
+  turn: number;
+  cwd: string;
   session: SessionMetadata;
   sessionManager: SessionManager;
   provider: AgentProvider;
@@ -130,222 +107,356 @@ export type SpawnAgentContext = ToolExecutionContext & {
   providerSettings?: ProviderSettings;
   /** 子 Agent 执行超时（毫秒），默认 120000 */
   childAgentTimeout?: number;
+  /** 当前 spawn 嵌套深度（0 = 顶层 agent 调用） */
+  depth?: number;
+  /** 可选：用户输入桥接器，复用父 Agent 的 bridge 以支持子 Agent 内的 ask-user 与权限询问 */
+  userInputBridge?: UserInputBridge;
+  /** 可选：完整 loadedSettings，用于读 subAgents 配置（实现重试 + 角色注入） */
+  loadedSettings?: LoadedWastelandSettings;
 };
 
 /**
- * 创建 spawn_agent 工具
+ * 运行子 Agent 并将其事件流转发为父侧可观察的 agent_* 事件。
  *
- * @param context - 扩展的执行上下文
- * @returns AgentTool 实例
+ * 设计目的：让父 Agent 和 TUI 能实时看到子 Agent 的思考、工具调用与进度，
+ * 而不仅仅是最终的文本结果。修复前，子 Agent 的中间事件（assistant_chunk、
+ * tool_call_requested、tool_result 等）被完全吞掉，父侧和 TUI 只能看到
+ * "开始"和"结束 + 最终文本"两个事件，是黑盒。
+ *
+ * 输出事件顺序：
+ * 1. agent_spawned（带 childId / childSessionPath）
+ * 2. agent_thinking / agent_tool_use / agent_progress（来自子 Agent 的中间事件转译）
+ * 3. agent_completed（success / error / timeout）
+ * 4. tool_result 或 tool_failed（作为 spawn_agent 工具在父侧的最终结果，写入父 session）
+ *
+ * 单订阅保证：events$ 是 cold Observable，本函数内部只订阅一次以避免子 Agent 重复执行。
+ *
+ * @param params - 上下文与工具调用
+ * @returns RuntimeEvent 事件流
  */
-export function createSpawnAgentTool(context: SpawnAgentContext): AgentTool {
-  return {
-    name: 'spawn_agent',
-    riskLevel: 'execute',
-    description: '创建并运行子 Agent 执行任务',
-    inputSchema: zodToJsonSchema(spawnAgentInputSchema) as JsonSchema,
+export function spawnChildAgentForwarding$(params: {
+  context: SpawnAgentContext;
+  call: { id: string; toolName: string; input: Record<string, unknown> };
+}): Observable<RuntimeEvent> {
+  const { context, call } = params;
+  const parentId = context.session.id;
+  const timestamp = (): string => new Date().toISOString();
 
-    async execute(
-      input: ToolInput,
-      _toolContext: ToolExecutionContext
-    ): Promise<ToolExecutionResult> {
-      const parsed = spawnAgentInputSchema.safeParse(input);
-      if (!parsed.success) {
-        return { status: 'error', error: parsed.error.issues.map(i => i.message).join(', ') };
-      }
+  // ---- 输入校验 ----
+  const parsed = spawnAgentInputSchema.safeParse(call.input);
+  if (!parsed.success) {
+    return of<RuntimeEvent>({
+      type: 'tool_failed',
+      sessionId: parentId,
+      turn: context.turn,
+      callId: call.id,
+      toolName: call.toolName,
+      status: 'error',
+      error: parsed.error.issues.map((i) => i.message).join(', '),
+    });
+  }
 
-      const { name, task, tools, model, inheritHistory } = parsed.data;
+  const { name: childName, task: childTask, tools, model, inheritHistory } = parsed.data;
 
-      try {
-        // 1. 创建子 Agent session
-        const childSession = await context.sessionManager.createChildSession(context.session, name);
+  // ---- 嵌套深度检查 ----
+  const depth = context.depth ?? 0;
+  if (depth >= MAX_SPAWN_DEPTH) {
+    return of<RuntimeEvent>({
+      type: 'tool_failed',
+      sessionId: parentId,
+      turn: context.turn,
+      callId: call.id,
+      toolName: call.toolName,
+      status: 'error',
+      error: `已达到子 Agent 最大嵌套深度（${MAX_SPAWN_DEPTH}），禁止继续 spawn。`,
+    });
+  }
 
-        // 2. 准备子 Agent 的输入
-        // 如果 inheritHistory 为 true，将历史上下文作为前缀添加到 task
-        let taskContent = task;
-        if (inheritHistory && context.history.length > 0) {
-          const historySummary = context.history
-            .filter((record) => record.type === 'message')
-            .map((record) => {
-              const role =
-                record.role === 'user'
-                  ? t('tools.spawnAgent.roleUser')
-                  : t('tools.spawnAgent.roleAssistant');
-              return `【${role}】\n${record.content}`;
-            })
-            .join('\n\n');
+  const childAgentTimeoutMs = context.childAgentTimeout ?? 120000;
 
-          if (historySummary) {
-            taskContent = `${t('tools.spawnAgent.historyHeader')}\n\n${historySummary}\n\n${t('tools.spawnAgent.currentTaskHeader')}\n\n${task}`;
-          }
-        }
+  // ---- 重试配置（从 subAgents[name] 读取，默认不重试） ----
+  // 失败时由外层 retry 自动重 attempt，指数退避（retryDelayMs * 2^(attempt-1)）
+  const subAgentConfig = context.loadedSettings?.settings?.subAgents?.[childName];
+  const maxRetries = subAgentConfig?.maxRetries ?? 0;
+  const retryDelayMs = subAgentConfig?.retryDelayMs ?? 1000;
 
-        const childInput$ = of({
-          turn: 1,
-          content: taskContent,
-          source: 'message' as const,
-        });
+  // ---- 准备并启动子 Agent ----
+  return defer(async () => {
+    const childSession = await context.sessionManager.createChildSession(context.session, childName);
 
-        // 3. 处理工具限定：如果指定了 tools 参数，创建受限的 ToolRegistry
-        let childToolRegistry = context.toolRegistry;
-        if (tools && tools.length > 0 && context.toolRegistry) {
-          const allowedTools = tools
-            .map((toolName) => context.toolRegistry?.get(toolName))
-            .filter((tool): tool is AgentTool => tool !== undefined);
-
-          if (allowedTools.length > 0) {
-            // 使用动态导入避免循环依赖
-            const { ToolRegistry } = await import('./tool-registry.js');
-            childToolRegistry = new ToolRegistry(allowedTools);
-          }
-        }
-
-        // 4. 处理模型选择：如果指定了 model 参数，创建新的 Provider
-        let childProvider = context.provider;
-        if (model && context.providerRegistry && context.providerSettings) {
-          // 将 model 参数映射到实际的模型名称
-          const actualModel = mapModelToActualModel(model, context.provider.id);
-
-          // 创建新的 Provider 配置（继承原配置，覆盖 model）
-          const newSettings: ProviderSettings = {
-            ...context.providerSettings,
-            model: actualModel,
-          };
-
-          // 使用 ProviderRegistry 创建新的 Provider
-          childProvider = context.providerRegistry.resolve(context.provider.id, newSettings);
-        }
-
-        // 5. 运行子 Agent（使用已有的 childSession、受限的 toolRegistry 和选择的 provider）
-        const { events$ } = runAgentLoop({
-          input$: childInput$,
-          provider: childProvider,
-          sessionManager: context.sessionManager,
-          toolRegistry: childToolRegistry,
-          permissionGate: context.permissionGate,
-          cwd: context.cwd,
-          mode: 'single',
-          existingSession: childSession,
-          // 传递 providerRegistry 和 providerSettings 以支持嵌套 spawn
-          providerRegistry: context.providerRegistry,
-          providerSettings: context.providerSettings,
-        });
-
-        // 6. 等待子 Agent 完成
-        let result: { success: boolean; content?: string; error?: string } = {
-          success: false,
-          error: t('tools.spawnAgent.noResponse'),
-        };
-
-        try {
-          const finalEvent = await lastValueFrom(
-            events$.pipe(
-              // 只取最终的 assistant_message
-              filter(
-                (
-                  event
-                ): event is {
-                  type: 'assistant_message';
-                  sessionId: string;
-                  turn: number;
-                  content: string;
-                } => 'type' in event && event.type === 'assistant_message'
-              ),
-              take(1),
-              // 子 Agent 执行超时
-              timeout(context.childAgentTimeout ?? 120000),
-              // 如果没有值，返回 undefined
-              defaultIfEmpty(
-                undefined as unknown as {
-                  type: 'assistant_message';
-                  sessionId: string;
-                  turn: number;
-                  content: string;
-                }
-              )
-            )
-          );
-
-          if (finalEvent && finalEvent.type === 'assistant_message') {
-            result = { success: true, content: finalEvent.content };
-          }
-        } catch (err) {
-          result = {
-            success: false,
-            error: err instanceof Error ? err.message : String(err),
-          };
-        }
-
-        // 7. 返回结果
-        if (result.success) {
-          return {
-            status: 'success',
-            output: result.content || t('tools.spawnAgent.executionComplete'),
-            data: {
-              sessionPath: childSession.path,
-              childId: childSession.id,
-            },
-          };
-        } else {
-          return {
-            status: 'error',
-            error: result.error || t('tools.spawnAgent.executionFailed'),
-            data: {
-              sessionPath: childSession.path,
-              childId: childSession.id,
-            },
-          };
-        }
-      } catch (error) {
-        return {
-          status: 'error',
-          error: error instanceof Error ? error.message : String(error),
-        };
-      }
-    },
-  };
-}
-
-/**
- * 处理并行 spawn_agent 调用
- *
- * 当主 Agent 在一个 turn 中发出多个 spawn_agent 调用时，
- * 使用 forkJoin 并行执行所有子 Agent。
- *
- * @deprecated 此函数当前未被使用。并行 spawn 支持需要在 tool-dispatch.ts 中
- * 通过 RxJS merge 操作符实现，而不是在此处处理。
- * TODO: 实现真正的并行 spawn 支持，或删除此函数。
- *
- * @param calls - 工具调用列表
- * @param context - 执行上下文
- * @returns Observable<RuntimeEvent>
- */
-export function handleParallelSpawns(
-  calls: { callId: string; input: SpawnAgentInput }[],
-  context: SpawnAgentContext
-) {
-  const childRuns = calls.map((call) => {
-    const tool = createSpawnAgentTool(context);
-    return from(
-      tool.execute(call.input as ToolInput, {
-        sessionId: context.sessionId,
-        turn: context.turn,
-        cwd: context.cwd,
-      })
-    ).pipe(
-      timeout(context.childAgentTimeout ?? 120000),
-      catchError((err: Error) =>
-        of({
-          status: 'error' as const,
-          error: err.message || 'timeout',
+    // 处理 inheritHistory：将父历史拼成前缀
+    let taskContent = childTask;
+    if (inheritHistory && context.history.length > 0) {
+      const historySummary = context.history
+        .filter((record) => record.type === 'message')
+        .map((record) => {
+          const role =
+            record.role === 'user'
+              ? t('tools.spawnAgent.roleUser')
+              : t('tools.spawnAgent.roleAssistant');
+          return `【${role}】\n${record.content}`;
         })
-      ),
-      map((result) => ({
-        callId: call.callId,
-        ...result,
-      }))
-    );
-  });
+        .join('\n\n');
+      if (historySummary) {
+        taskContent = `${t('tools.spawnAgent.historyHeader')}\n\n${historySummary}\n\n${t('tools.spawnAgent.currentTaskHeader')}\n\n${childTask}`;
+      }
+    }
 
-  return forkJoin(childRuns);
+    const childInput$ = of({ turn: 1, content: taskContent, source: 'message' as const });
+
+    // 工具限定
+    let childToolRegistry = context.toolRegistry;
+    if (tools && tools.length > 0 && context.toolRegistry) {
+      const allowedTools = tools
+        .map((toolName) => context.toolRegistry?.get(toolName))
+        .filter((tool): tool is AgentTool => tool !== undefined);
+      if (allowedTools.length > 0) {
+        const { ToolRegistry } = await import('./tool-registry.js');
+        childToolRegistry = new ToolRegistry(allowedTools);
+      }
+    }
+
+    // 模型选择
+    let childProvider = context.provider;
+    if (model && context.providerRegistry && context.providerSettings) {
+      const actualModel = mapModelToActualModel(model, context.provider.id);
+      const newSettings: ProviderSettings = { ...context.providerSettings, model: actualModel };
+      childProvider = context.providerRegistry.resolve(context.provider.id, newSettings);
+    }
+
+    const { events$ } = runAgentLoop({
+      input$: childInput$,
+      provider: childProvider,
+      sessionManager: context.sessionManager,
+      toolRegistry: childToolRegistry,
+      permissionGate: context.permissionGate,
+      cwd: context.cwd,
+      mode: 'single',
+      existingSession: childSession,
+      providerRegistry: context.providerRegistry,
+      providerSettings: context.providerSettings,
+      childAgentTimeout: context.childAgentTimeout,
+      userInputBridge: context.userInputBridge,
+      spawnDepth: depth + 1,
+    });
+
+    // 日志：记录子 agent 实际配置（验证 minimax 调用时输入 + 解析后的 model/tools）
+    // 用于排查子 agent 是否按 settings.json subAgents 配置运行
+    debugLog({
+      kind: 'spawn_agent',
+      childName,
+      childId: childSession.id,
+      taskPreview: childTask.slice(0, 150),
+      taskLength: childTask.length,
+      providerId: childProvider.id,
+      resolvedModel: model
+        ? mapModelToActualModel(model, context.provider.id)
+        : (context.providerSettings?.model ?? 'inherit-parent'),
+      modelParam: model ?? null,
+      inheritHistory: inheritHistory ?? false,
+      toolsRequested: tools ?? null,
+      resolvedToolNames: childToolRegistry!.list(),
+      depth: depth + 1,
+    });
+
+    return { childSession, events$ };
+  }).pipe(
+    mergeMap(({ childSession, events$ }) => {
+      const childId = childSession.id;
+      const childSessionPath = childSession.path;
+
+      const spawnedEvent: RuntimeEvent = {
+        type: 'agent_spawned',
+        parentId,
+        childId,
+        childSessionPath,
+        name: childName,
+        task: childTask,
+      };
+
+      // ---- 事件转译：子 agent 中间事件 → 父侧 agent_thinking / agent_tool_use / agent_progress ----
+      const translateChildEvent = (e: RuntimeEvent): RuntimeEvent | null => {
+        switch (e.type) {
+          case 'assistant_chunk':
+            return { type: 'agent_thinking', childId, childName, content: e.chunk };
+          case 'tool_call_requested':
+            return {
+              type: 'agent_tool_use',
+              childId,
+              childName,
+              toolName: e.toolName,
+              input: e.input,
+            };
+          case 'tool_started':
+          case 'tool_result':
+          case 'tool_failed':
+            return { type: 'agent_tool_use', childId, childName, toolName: e.toolName };
+          case 'permission_decision':
+            return {
+              type: 'agent_progress',
+              childId,
+              childName,
+              status: `permission: ${e.decision}`,
+            };
+          case 'agent_spawned':
+            return {
+              type: 'agent_progress',
+              childId,
+              childName,
+              status: `sub-spawned: ${e.name}`,
+            };
+          case 'agent_completed':
+            return {
+              type: 'agent_progress',
+              childId,
+              childName,
+              status: `sub-completed: ${e.status}`,
+            };
+          default:
+            return null;
+        }
+      };
+
+      // ---- 单订阅 events$，手动管理转发累积与最终结果 ----
+      return new Observable<RuntimeEvent>((subscriber) => {
+        const forwarded: RuntimeEvent[] = [];
+        let resolved = false;
+
+        const finish = (status: 'success' | 'error' | 'timeout', content?: string, error?: string): void => {
+          if (resolved) return;
+          resolved = true;
+
+          // 1) 累积的中间转发事件
+          for (const fe of forwarded) subscriber.next(fe);
+
+          // 2) agent_completed
+          subscriber.next({
+            type: 'agent_completed',
+            childId,
+            status,
+            result: content,
+            error,
+            sessionPath: childSessionPath,
+          });
+
+          // 3) tool_result / tool_failed + 写入父 session
+          const ts = timestamp();
+          if (status === 'success') {
+            const output = content || t('tools.spawnAgent.executionComplete');
+            subscriber.next({
+              type: 'tool_result',
+              sessionId: parentId,
+              turn: context.turn,
+              callId: call.id,
+              toolName: call.toolName,
+              status: 'success',
+              output,
+            });
+            const record: SessionToolResultRecord = {
+              type: 'tool_result',
+              sessionId: parentId,
+              turn: context.turn,
+              callId: call.id,
+              toolName: call.toolName,
+              status: 'success',
+              output,
+              timestamp: ts,
+            };
+            context.sessionManager.appendRecord(context.session, record).catch(() => {});
+          } else {
+            const errMsg =
+              error ||
+              (status === 'timeout'
+                ? `子 Agent 执行超时 (timeout: ${childAgentTimeoutMs}ms)`
+                : t('tools.spawnAgent.executionFailed'));
+            subscriber.next({
+              type: 'tool_failed',
+              sessionId: parentId,
+              turn: context.turn,
+              callId: call.id,
+              toolName: call.toolName,
+              status: 'error',
+              error: errMsg,
+            });
+            const record: SessionToolResultRecord = {
+              type: 'tool_result',
+              sessionId: parentId,
+              turn: context.turn,
+              callId: call.id,
+              toolName: call.toolName,
+              status: 'error',
+              error: errMsg,
+              timestamp: ts,
+            };
+            context.sessionManager.appendRecord(context.session, record).catch(() => {});
+          }
+
+          if (status === 'success') {
+            subscriber.complete();
+          } else {
+            // 失败：调 subscriber.error 触发外层 retry（按 subAgents.maxRetries 重试）
+            subscriber.error(new Error(error || `子 Agent 失败 (${status})`));
+          }
+        };
+
+        // 立即 yield agent_spawned（在中间转发事件之前）
+        subscriber.next(spawnedEvent);
+
+        const sub = events$.subscribe({
+          next: (e) => {
+            if (e.type === 'assistant_message') {
+              finish('success', e.content);
+            } else if (e.type === 'session_ended') {
+              // 子 agent session 结束但未产生 assistant_message
+              finish('error', undefined, t('tools.spawnAgent.noResponse'));
+            } else {
+              const translated = translateChildEvent(e);
+              if (translated) forwarded.push(translated);
+            }
+          },
+          error: (err) => {
+            finish('error', undefined, err instanceof Error ? err.message : String(err));
+          },
+          complete: () => {
+            // 兜底：流 complete 但未触发 assistant_message / session_ended
+            finish('error', undefined, t('tools.spawnAgent.noResponse'));
+          },
+        });
+
+        const timeoutHandle = setTimeout(() => {
+          finish('timeout', undefined, `子 Agent 执行超时 (timeout: ${childAgentTimeoutMs}ms)`);
+        }, childAgentTimeoutMs);
+
+        return () => {
+          clearTimeout(timeoutHandle);
+          sub.unsubscribe();
+        };
+      });
+    }),
+    // ---- 重试逻辑：失败时按 subAgents.maxRetries 重新 attempt（指数退避） ----
+    // 每次重试都会重新跑 defer → 新 childSession + 新 runAgentLoop（新 attempt）
+    retry({
+      count: maxRetries,
+      delay: (err, count) => {
+        debugLog({
+          kind: 'spawn_retry',
+          childName,
+          attempt: count,
+          maxRetries,
+          error: err.message,
+        });
+        return timer(retryDelayMs * Math.pow(2, count - 1));
+      },
+    }),
+    // ---- 全部重试失败：返回明确 tool_failed（避免 minimax 自己脑补） ----
+    catchError((err) => of<RuntimeEvent>({
+      type: 'tool_failed',
+      sessionId: parentId,
+      turn: context.turn,
+      callId: call.id,
+      toolName: call.toolName,
+      status: 'error',
+      error: `子 agent ${childName} 失败 ${maxRetries + 1} 次: ${err.message}`,
+    })),
+  );
 }
