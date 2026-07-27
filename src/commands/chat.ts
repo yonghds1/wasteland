@@ -10,7 +10,7 @@ import { Command } from 'commander';
 
 import { resolveDefaultTraceDir } from '@config/paths.js';
 import type { ChatInputTurn, RuntimeMode } from '@core/runtime/event-types.js';
-import { runAgentLoop } from '@core/runtime/agent-loop.js';
+import { runAgentLoop, MAIN_AGENT_TOOL_NAMES, filterToolRegistry } from '@core/runtime/agent-loop.js';
 import { UserInputBridge } from '@core/runtime/user-input-bridge.js';
 import { initializeRuntime, type RuntimeEnvironment } from '@core/shared/initialize-runtime.js';
 import { renderDebugTrace, type DebugFormat } from '@ui/debug-renderer.js';
@@ -79,11 +79,20 @@ async function runChatSession(params: {
   const { runtime } = params;
 
   try {
+    // ---- 主 agent 工具集最小化 ----
+    // minimax 是小模型，工具越多决策越乱。这里把完整的 toolRegistry
+    // 过滤为 MAIN_AGENT_TOOL_NAMES（spawn_agent / read-file / bash），
+    // 让 minimax 只能看到核心工具。其他工具下放给 subAgents。
+    // 注：runAgentLoop 不再内部过滤，sub-agents 应保留自己的工具集。
+    const mainAgentToolRegistry = runtime.toolRegistry
+      ? filterToolRegistry(runtime.toolRegistry, MAIN_AGENT_TOOL_NAMES)
+      : undefined;
+
     const run = runAgentLoop({
       input$: params.input$,
       provider: runtime.provider,
       sessionManager: runtime.sessionManager,
-      toolRegistry: runtime.toolRegistry,
+      toolRegistry: mainAgentToolRegistry,
       permissionGate: runtime.permissionGate,
       cwd: params.cwd,
       mode: params.mode,

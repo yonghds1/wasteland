@@ -519,3 +519,131 @@ Why correct:
 - permission is explicit
 - transcript is preserved
 - later provider / MCP integration can reuse the same path
+
+---
+
+## Scenario: subAgents 配置生效 + 主 agent 工具集最小化
+
+### 1. Scope / Trigger
+
+- Trigger: minimax (MiniMax-M3) 是小模型，工具越多决策越乱，且之前的 `spawn-agent.ts` 完全忽略 `settings.subAgents[name]` 配置（minimax 在子 agent 里只能"角色扮演"）。
+- Trigger: `subAgents[name].promptVariables`（role / goal / backstory / tools / constraints）和 `promptTemplate` 字段应真正注入到子 agent 的 system prompt 和工具集。
+- Trigger: 主 agent minimax 工具集应最小化为 `[spawn_agent, read-file, bash]`，其他工具下放给子 agent。
+- Trigger: 任何 `subAgentConfig` 字段缺失需有降级路径。
+
+### 2. Signatures
+
+```ts
+// src/core/runtime/agent-loop.ts 新增导出
+export const MAIN_AGENT_TOOL_NAMES = ['spawn_agent', 'read-file', 'bash'] as const;
+
+export function filterToolRegistry(
+  registry: ToolRegistry,
+  allowedNames: readonly string[]
+): ToolRegistry;
+
+// src/tools/spawn-agent.ts 新增 helpers
+function parseSubAgentTools(raw: unknown): string[];
+// raw 可为 string（逗号分隔）/ string[] / undefined；返回 trim 后的 string[]
+
+function assembleSubAgentPrompt(params: {
+  subAgentConfig: SubAgentSettings | undefined;
+  cwd: string;
+  roleName: string;
+  tools: string[];
+}): string | undefined;
+// 通过 PromptAssembler.assemble(templateRef, context, promptVariables) 渲染 prompt
+// 失败 fallback: 返回 undefined（不传 prompt，保持原行为）
+```
+
+### 3. Contracts
+
+#### 主 agent 工具集最小化
+
+- `MAIN_AGENT_TOOL_NAMES` = `['spawn_agent', 'read-file', 'bash']`（**唯一白名单**）
+- **过滤位置**：在 chat/resume/tui 三个**入口**调用 `filterToolRegistry(runtime.toolRegistry, MAIN_AGENT_TOOL_NAMES)` 传给 `runAgentLoop`
+- **不在 `runAgentLoop` 内部过滤**（避免子 agent 二次过滤——子 agent 的 toolRegistry 已被 subAgents.tools 限定过）
+- `runAgentLoop` 接 `toolRegistry?: ToolRegistry`（已存在），传过滤后的即生效
+
+#### subAgents 配置生效（spawn-agent.ts）
+
+- **读配置**：`subAgentConfig = context.loadedSettings?.settings?.subAgents?.[childName]`
+- **降级**：`subAgentConfig` undefined → 保持 minimax 传入值（不注入 prompt，不限定 tools）
+- **工具优先级**：`subAgentConfig.promptVariables.tools` > minimax 传入 `tools` > 全部工具
+  - 若 `subAgentConfig.promptVariables.tools` 存在 → 解析为 `string[]`（`parseSubAgentTools`），用它限定子 agent
+  - 否则用 minimax 传入的 `tools`
+  - 否则用全部工具
+- **模型优先级**：`subAgentConfig.model` > minimax 传入 `model`
+  - **关键修复**：`subAgentConfig.model` 可能是 alias（如 `"minimax_model"`），需要从 `settings.models[alias].model` 解析为真实 model name（如 `"MiniMax-M3"`）
+  - 解析失败（alias 不在 models 表）→ 保留原 alias（兼容 alias 即 model name 的场景）
+- **prompt 注入**：用 `PromptAssembler.assemble(subAgentConfig.promptTemplate, { cwd, roleName, tools }, subAgentConfig.promptVariables)` 渲染 → 传给 `runAgentLoop({ ..., prompt: assembled })`
+- **链路**：`runAgentLoop.prompt` → `createTurnContext.prompt` → `buildMessages` → OpenAI system message → minimax 收到
+
+#### debug log 字段（`spawn-agent.ts` `debugLog({ kind: "spawn_agent", ... })`）
+
+- `childName`, `childId`, `taskPreview`, `taskLength`
+- `providerId`, `resolvedModel`（已解析），`modelParam`（minimax 传入原值）
+- `subAgentConfigName`（如有配置），`subAgentTools`（数组），`subAgentPromptPreview`（200 字符），`subAgentPromptLength`
+
+### 4. Validation & Error Matrix
+
+| 场景 | 行为 |
+|---|---|
+| `subAgentConfig` undefined | 降级：minimax 传入值生效，无 prompt 注入 |
+| `promptVariables.tools` 是 `"a, b, c"` | `parseSubAgentTools` 解析为 `['a', 'b', 'c']` |
+| `promptVariables.tools` 是 `string[]` | 直接 trim |
+| `subAgentConfig.model = "minimax_model"` (alias) | 从 `settings.models["minimax_model"].model` 解析为 `"MiniMax-M3"` |
+| alias 在 settings.models 找不到 | 保留原 alias |
+| PromptAssembler 抛错 | `assembleSubAgentPrompt` catch → 返回 undefined + `debugLog(kind: "sub_agent_prompt_error")` |
+| minimax 传入 `tools = ["web-search"]` 但 subAgentConfig.tools 存在 | 忽略 minimax 的 tools，用 subAgentConfig.tools |
+
+### 5. Good / Base / Bad Cases
+
+#### Good
+- `subAgentConfig = { promptTemplate: "role-worker", promptVariables: { role: "Researcher", tools: "web-fetch, read-file", ... } }` → 子 agent 收到 system prompt 含 "You are a Researcher." + "Available tools: web-fetch, read-file" + 工具集限定为 2 个
+- `subAgentConfig.model = "minimax_model"` → 实际 API 请求 `model: "MiniMax-M3"`（不是 `"minimax_model"`）
+
+#### Bad
+- `subAgentConfig` undefined 时仍注入 prompt → 禁止
+- minimax 传入的 tools 覆盖 subAgentConfig.tools → 禁止
+- model alias 未解析就传给 provider → 禁止（API 失败）
+- `runAgentLoop` 内部过滤 MAIN_AGENT_TOOL_NAMES → 禁止（会二次过滤子 agent）
+
+### 6. Tests Required
+
+- `MAIN_AGENT_TOOL_NAMES` 包含 `[spawn_agent, read-file, bash]`
+- `createDefaultToolRegistry` 注册全部 13 个工具（sanity check）
+- `runAgentLoop` 只把白名单工具传给 provider（mock provider 验证）
+- `subAgentConfig` 含 `promptTemplate + promptVariables` → 子 agent 收到正确 prompt + 工具集限定
+- `subAgentConfig.tools` 覆盖 minimax 传入 `tools`
+- 无 `subAgentConfig` → 无 prompt，minimax 传入 `tools` 生效
+- `subAgentConfig.model` alias 解析（`minimax_model` → `MiniMax-M3`）
+- alias 在 settings.models 找不到 → 保留原 alias
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```ts
+// spawn-agent.ts: 用 minimax 传入的 model 直接作为 newSettings.model
+newSettings = { ...context.providerSettings, model: model };
+// 问题：model 是 alias "minimax_model"，provider 用 "minimax_model" 调 API（失败）
+```
+
+#### Correct
+
+```ts
+// 解析 alias
+let resolvedModel = effectiveModel;
+if (subAgentConfigModel && context.loadedSettings?.settings?.models) {
+  const aliasConfig = context.loadedSettings.settings.models[subAgentConfigModel];
+  if (aliasConfig?.model) resolvedModel = aliasConfig.model;
+}
+newSettings = { ...context.providerSettings, model: resolvedModel };
+```
+
+Why correct:
+
+- `settings.models[alias].model` 是 model 别名解析的唯一权威位置
+- 未找到 alias 时保留原值（兼容 alias 即 model name 的场景，如直接写 `"gpt-4o"`）
+- 避免 minimax API 收到未解析的 alias 导致 404/400 错误

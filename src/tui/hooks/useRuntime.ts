@@ -8,7 +8,7 @@
 import { Subject } from 'rxjs';
 
 import { initializeRuntime } from '@core/shared/initialize-runtime.js';
-import { runAgentLoop } from '@core/runtime/agent-loop.js';
+import { runAgentLoop, MAIN_AGENT_TOOL_NAMES, filterToolRegistry } from '@core/runtime/agent-loop.js';
 import { enableDebugLog } from '@core/runtime/debug-logger.js';
 import { UserInputBridge } from '@core/runtime/user-input-bridge.js';
 import { loadSkin } from '../../skins/index.js';
@@ -71,12 +71,20 @@ export async function createTuiRuntime(
     enableDebugLog();
   }
 
+  // ---- 主 agent 工具集最小化 ----
+  // minimax 是小模型，工具越多决策越乱。
+  // 这里把完整的 toolRegistry 过滤为 MAIN_AGENT_TOOL_NAMES
+  // （spawn_agent / read-file / bash），让 minimax 只能看到核心工具。
+  const mainAgentToolRegistry = runtime.toolRegistry
+    ? filterToolRegistry(runtime.toolRegistry, MAIN_AGENT_TOOL_NAMES)
+    : undefined;
+
   // 6. 启动 Agent 循环
   const run = runAgentLoop({
     input$,
     provider: runtime.provider,
     sessionManager: runtime.sessionManager,
-    toolRegistry: runtime.toolRegistry,
+    toolRegistry: mainAgentToolRegistry,
     permissionGate: runtime.permissionGate,
     cwd,
     mode: 'interactive',

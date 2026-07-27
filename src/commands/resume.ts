@@ -12,7 +12,7 @@ import { t } from '../locales/index.js';
 import { resolveDefaultTraceDir } from '../config/paths.js';
 import { initializeRuntime } from '../core/shared/initialize-runtime.js';
 import { createSessionIndex, type SessionDetail } from '../core/runtime/session-index.js';
-import { runAgentLoop } from '../core/runtime/agent-loop.js';
+import { runAgentLoop, MAIN_AGENT_TOOL_NAMES, filterToolRegistry } from '../core/runtime/agent-loop.js';
 import { createPermissionGate } from '../core/runtime/permission-gate.js';
 import { renderRuntimeEvents } from '../ui/terminal-renderer.js';
 import { renderDebugTrace } from '../ui/debug-renderer.js';
@@ -127,6 +127,14 @@ export function createResumeCommand(): Command {
       const renderStyle = tty.stdoutIsTTY ? 'interactive' : 'classic';
 
       try {
+        // ---- 主 agent 工具集最小化 ----
+        // minimax 是小模型，工具越多决策越乱。
+        // 这里把完整的 toolRegistry 过滤为 MAIN_AGENT_TOOL_NAMES
+        // （spawn_agent / read-file / bash），让 minimax 只能看到核心工具。
+        const mainAgentToolRegistry = runtime.toolRegistry
+          ? filterToolRegistry(runtime.toolRegistry, MAIN_AGENT_TOOL_NAMES)
+          : undefined;
+
         if (options.message?.trim()) {
           // 单次消息模式
           const input$ = createSingleTurnInput(options.message, 'message');
@@ -135,7 +143,7 @@ export function createResumeCommand(): Command {
             input$,
             provider: runtime.provider,
             sessionManager: runtime.sessionManager,
-            toolRegistry: runtime.toolRegistry,
+            toolRegistry: mainAgentToolRegistry,
             permissionGate,
             cwd,
             mode: 'single',
@@ -189,7 +197,7 @@ export function createResumeCommand(): Command {
             input$: inputSubject.asObservable(),
             provider: runtime.provider,
             sessionManager: runtime.sessionManager,
-            toolRegistry: runtime.toolRegistry,
+            toolRegistry: mainAgentToolRegistry,
             permissionGate,
             cwd,
             mode: 'interactive',

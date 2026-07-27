@@ -20,8 +20,8 @@
  * ```
  */
 
-import { Observable, defer, from, mergeMap, of, retry, throwError, timer } from 'rxjs';
-import { catchError, filter, take, timeout, map } from 'rxjs/operators';
+import { Observable, defer, mergeMap, of, retry, timer } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { z } from 'zod';
 import { zodToJsonSchema } from '@alcyone-labs/zod-to-json-schema';
 
@@ -37,11 +37,16 @@ import type {
 import type { AgentTool, JsonSchema } from './tool-types.js';
 import type { AgentProvider } from '../providers/provider-types.js';
 import type { SessionManager } from '../core/runtime/session-manager.js';
-import type { ToolRegistry } from './tool-registry.js';
+import { ToolRegistry } from './tool-registry.js';
 import type { PermissionGate } from '../core/runtime/permission-gate.js';
 import type { UserInputBridge } from '../core/runtime/user-input-bridge.js';
-import type { ProviderSettings, LoadedWastelandSettings } from '../config/settings-types.js';
+import type {
+  ProviderSettings,
+  LoadedWastelandSettings,
+  SubAgentSettings,
+} from '../config/settings-types.js';
 import type { ProviderRegistry } from '../providers/provider-registry.js';
+import { PromptAssembler } from '../prompts/prompt-assembler.js';
 
 // ============================================================
 // Zod Schema
@@ -71,6 +76,87 @@ function mapModelToActualModel(model: string, providerId: string): string {
     return providerMapping[model];
   }
   return model;
+}
+
+/**
+ * 解析 promptVariables.tools（逗号分隔字符串）为 string[]
+ *
+ * settings.json 的 promptVariables.tools 是字符串（如 "read-file, glob, grep"），
+ * 不是数组。这里按逗号拆解并 trim，得到子 agent 的工具白名单。
+ *
+ * @param raw - 原始值（字符串 / 数组 / undefined）
+ * @returns 工具名数组（已 trim 空格），未定义返回空数组
+ */
+function parseSubAgentTools(raw: unknown): string[] {
+  if (typeof raw === 'string') {
+    return raw
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+  }
+  if (Array.isArray(raw)) {
+    return raw.map((s) => String(s).trim()).filter((s) => s.length > 0);
+  }
+  return [];
+}
+
+/**
+ * 根据 subAgentConfig 组装子 agent 的 system prompt
+ *
+ * 设计目的：minimax 是小模型，没有 system prompt 约束时只能"角色扮演"。
+ * 这里通过 PromptAssembler + subAgentConfig.promptTemplate / promptVariables
+ * 注入真实角色（researcher / developer / analyst / tester 等）。
+ *
+ * 行为：
+ * - 若 subAgentConfig 没有 promptTemplate 或 promptVariables，返回 undefined（不传 prompt）
+ * - 若 promptTemplate = 'role-worker'，使用内置 worker 模板
+ * - 其他情况原样传给 PromptAssembler.assemble()
+ *
+ * @param params - subAgentConfig 与上下文
+ * @returns 组装后的 prompt 字符串；没有可用配置时返回 undefined
+ */
+function assembleSubAgentPrompt(params: {
+  subAgentConfig: SubAgentSettings | undefined;
+  cwd: string;
+  roleName: string;
+  tools: string[];
+}): string | undefined {
+  if (!params.subAgentConfig) return undefined;
+
+  const promptTemplate = params.subAgentConfig.promptTemplate;
+  const promptVariables = params.subAgentConfig.promptVariables;
+
+  if (!promptTemplate && !promptVariables) return undefined;
+
+  try {
+    const assembler = new PromptAssembler({ cwd: params.cwd });
+    // promptTemplate 可能是 string / PromptTemplate / { template, variables }
+    // 直接传给 assembler.assemble() 即可
+    const ref = (promptTemplate ?? 'role-worker') as
+      | string
+      | { sections: unknown[]; name?: string }
+      | { template: string; variables?: Record<string, unknown> };
+
+    const result = assembler.assemble(
+      ref as Parameters<typeof assembler.assemble>[0],
+      {
+        cwd: params.cwd,
+        roleName: params.roleName,
+        tools: params.tools,
+        variables: {},
+      },
+      promptVariables as Record<string, unknown> | undefined
+    );
+    return result.content;
+  } catch (err) {
+    // prompt 组装失败不应阻塞子 agent 启动，仅记录日志
+    debugLog({
+      kind: 'sub_agent_prompt_error',
+      roleName: params.roleName,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return undefined;
+  }
 }
 
 /** spawn_agent 工具的输入类型 */
@@ -180,6 +266,42 @@ export function spawnChildAgentForwarding$(params: {
   const maxRetries = subAgentConfig?.maxRetries ?? 0;
   const retryDelayMs = subAgentConfig?.retryDelayMs ?? 1000;
 
+  // ---- 工具限定优先级 ----
+  // subAgents.tools > minimax 传入的 tools > 全部工具（context.toolRegistry）
+  // 即：配置优先于 minimax 决策，因为 minimax 是小模型，工具越少越好。
+  const subAgentConfigTools = parseSubAgentTools(subAgentConfig?.promptVariables?.tools);
+  const effectiveTools: string[] | undefined =
+    subAgentConfigTools.length > 0
+      ? subAgentConfigTools
+      : (tools && tools.length > 0 ? tools : undefined);
+
+  // ---- 模型选择优先级 ----
+  // subAgentConfig.model > minimax 传入的 model
+  // subAgentConfig.model 是字符串 model alias（如 "minimax_model"），
+  // minimax 传入的 model 是通用名（haiku/sonnet/opus/具体模型）。
+  const subAgentConfigModel = subAgentConfig?.model;
+  const effectiveModel = subAgentConfigModel ?? model;
+
+  // ---- 模型别名解析 ----
+  // subAgentConfig.model 是 alias（如 "minimax_model"），需要从 settings.models
+  // 解析为 provider 真正使用的 model name（如 "MiniMax-M3"）。
+  // 若 alias 在 models 中找不到对应配置，保持原值（兼容 alias 即 model name 的场景）。
+  let resolvedModelAlias: string | undefined = effectiveModel;
+  if (subAgentConfigModel && context.loadedSettings?.settings?.models) {
+    const aliasConfig = context.loadedSettings.settings.models[subAgentConfigModel];
+    if (aliasConfig?.model) {
+      resolvedModelAlias = aliasConfig.model;
+    }
+  }
+
+  // ---- 组装子 agent 的 system prompt（如果有 subAgentConfig.promptTemplate/variables） ----
+  const subAgentPrompt = assembleSubAgentPrompt({
+    subAgentConfig,
+    cwd: context.cwd,
+    roleName: childName,
+    tools: effectiveTools ?? context.toolRegistry?.list() ?? [],
+  });
+
   // ---- 准备并启动子 Agent ----
   return defer(async () => {
     const childSession = await context.sessionManager.createChildSession(context.session, childName);
@@ -204,22 +326,25 @@ export function spawnChildAgentForwarding$(params: {
 
     const childInput$ = of({ turn: 1, content: taskContent, source: 'message' as const });
 
-    // 工具限定
+    // 工具限定（按 effectiveTools 优先级：subAgents > minimax > 全集）
     let childToolRegistry = context.toolRegistry;
-    if (tools && tools.length > 0 && context.toolRegistry) {
-      const allowedTools = tools
+    if (effectiveTools && effectiveTools.length > 0 && context.toolRegistry) {
+      const allowedTools = effectiveTools
         .map((toolName) => context.toolRegistry?.get(toolName))
         .filter((tool): tool is AgentTool => tool !== undefined);
       if (allowedTools.length > 0) {
-        const { ToolRegistry } = await import('./tool-registry.js');
         childToolRegistry = new ToolRegistry(allowedTools);
       }
     }
 
-    // 模型选择
+    // 模型选择（subAgentConfig.model 是 alias，minimax 传入的是通用名）
     let childProvider = context.provider;
-    if (model && context.providerRegistry && context.providerSettings) {
-      const actualModel = mapModelToActualModel(model, context.provider.id);
+    if (resolvedModelAlias && context.providerRegistry && context.providerSettings) {
+      // subAgentConfigModel 路径下 resolvedModelAlias 已是真实 model name；
+      // 否则 effectiveModel === resolvedModelAlias 且非空（守卫已保证），走通用名映射。
+      const actualModel: string = subAgentConfigModel
+        ? resolvedModelAlias // 来自 subAgents.model 已在 alias 解析阶段还原为真实 model name
+        : mapModelToActualModel(resolvedModelAlias, context.provider.id);
       const newSettings: ProviderSettings = { ...context.providerSettings, model: actualModel };
       childProvider = context.providerRegistry.resolve(context.provider.id, newSettings);
     }
@@ -238,6 +363,10 @@ export function spawnChildAgentForwarding$(params: {
       childAgentTimeout: context.childAgentTimeout,
       userInputBridge: context.userInputBridge,
       spawnDepth: depth + 1,
+      // 子 agent 的 system prompt（来自 subAgents.promptTemplate + promptVariables）
+      // minimax 收到后会按角色约束行为（不再"角色扮演"）
+      prompt: subAgentPrompt,
+      loadedSettings: context.loadedSettings,
     });
 
     // 日志：记录子 agent 实际配置（验证 minimax 调用时输入 + 解析后的 model/tools）
@@ -246,16 +375,23 @@ export function spawnChildAgentForwarding$(params: {
       kind: 'spawn_agent',
       childName,
       childId: childSession.id,
+      subAgentConfigName: subAgentConfig ? childName : null,
       taskPreview: childTask.slice(0, 150),
       taskLength: childTask.length,
       providerId: childProvider.id,
-      resolvedModel: model
-        ? mapModelToActualModel(model, context.provider.id)
+      resolvedModel: resolvedModelAlias
+        ? subAgentConfigModel
+          ? resolvedModelAlias
+          : mapModelToActualModel(resolvedModelAlias, context.provider.id)
         : (context.providerSettings?.model ?? 'inherit-parent'),
       modelParam: model ?? null,
+      inheritedModel: subAgentConfigModel ?? null,
       inheritHistory: inheritHistory ?? false,
       toolsRequested: tools ?? null,
-      resolvedToolNames: childToolRegistry!.list(),
+      resolvedToolNames: childToolRegistry ? childToolRegistry.list() : [],
+      subAgentTools: subAgentConfigTools.length > 0 ? subAgentConfigTools : null,
+      subAgentPromptPreview: subAgentPrompt ? subAgentPrompt.slice(0, 200) : null,
+      subAgentPromptLength: subAgentPrompt?.length ?? 0,
       depth: depth + 1,
     });
 

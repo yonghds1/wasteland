@@ -348,3 +348,89 @@ Why correct:
 - runtime owns turn orchestration
 - provider is swappable through a contract
 - UI renderer, debug trace, and transcript persistence stay reusable
+
+---
+
+## Scenario: subAgent system prompt 透传
+
+### 1. Scope / Trigger
+
+- Trigger: `spawn-agent.ts` 组装 subAgent 角色 prompt 后需要传给子 agent
+- Trigger: 链路：`spawn-agent.ts` → `runAgentLoop({ prompt })` → `runTurnLoop` → `createTurnContext({ prompt })` → `buildMessages({ prompt })` → OpenAI `system` message
+- Trigger: 任何 subAgent 实现都应通过此链路注入 prompt，不应绕过 `buildMessages`
+
+### 2. Signatures
+
+```ts
+// src/core/runtime/agent-loop.ts runAgentLoop params 新增
+export function runAgentLoop(params: {
+  // ... 既有
+  prompt?: string;  // 角色 system prompt（主 agent 用 resolvedRuntime.prompt；子 agent 用 subAgentConfig 组装的 prompt）
+  loadedSettings?: LoadedWastelandSettings;  // 透传到 dispatchToolCall → spawn-agent 用于读 subAgents 配置
+}): AgentRun;
+
+// src/providers/openai-compatible/message-builder.ts buildMessages 新增
+function buildMessages(params: {
+  history: readonly SessionMessageRecord[];
+  input: string;
+  toolResults: readonly TurnToolResult[];
+  prompt?: string;  // 转 system message
+}): OpenAIMessage[];
+```
+
+### 3. Contracts
+
+- `runAgentLoop` 接受 `prompt?: string` 参数
+- `runTurnLoop` 透传 `prompt` 到 `createTurnContext`
+- `createTurnContext` 把 `prompt` 存到 `TurnContext.prompt`
+- `buildMessages` 检测 `params.prompt` 非空时插入 `{ role: 'system', content: prompt }` 作为第一条消息
+- minimax (OpenAI-compatible) 收到 system message 作为子 agent 的角色约束
+
+### 4. Validation & Error Matrix
+
+| 场景 | 行为 |
+|---|---|
+| `prompt` undefined | `buildMessages` 不插入 system message |
+| `prompt` 空字符串 | 同上（不插入） |
+| `prompt` 含中文/英文/多行 | 原样作为 system content |
+| `prompt` 特别长 | 不截断（minimax API 接受长 system message） |
+
+### 5. Good / Base / Bad Cases
+
+#### Good
+- 子 agent 收到 system message: `"You are an Information Research Specialist. Your goal is: Search, discover, retrieve information... Available tools: web-fetch, read-file. Constraints: - Read only..."`
+
+#### Bad
+- `runAgentLoop` 内部硬编码 system message（绕过 prompt 参数）
+- spawn-agent.ts 直接拼接 system message 后用别的 API 路径发送（绕过 `buildMessages`）
+
+### 6. Tests Required
+
+- `buildMessages({ prompt: '...' })` 在 messages[0] 插入 `{ role: 'system', content: '...' }`
+- `buildMessages({ prompt: undefined })` 不插入 system message
+- `runAgentLoop` 透传 `prompt` 到 `buildMessages`（mock provider 验证 messages 数组）
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```ts
+// spawn-agent.ts: 直接用 OpenAI 私有 API 路径发 system message
+// 绕过 buildMessages，导致 system 消息可能不参与 token 计数 / 截断
+await provider.client.post('/chat/completions', { messages: [{ role: 'system', ... }] });
+```
+
+#### Correct
+
+```ts
+// runAgentLoop 透传 prompt 到 createTurnContext
+context.prompt = params.prompt;
+// buildMessages 把 prompt 转 system message
+messages = buildMessages({ history, input, toolResults, prompt });
+```
+
+Why correct:
+
+- 统一通过 `buildMessages` 路径，所有 provider（openai / claude / local）一致
+- token 计数、截断、cache 等通用逻辑复用
+- 未来加 system prompt 限制（如最长 N 字符）只需改 `buildMessages` 一处

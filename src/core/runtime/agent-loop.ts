@@ -47,7 +47,8 @@ import { createDebugTraceEvent, type DebugTraceEvent } from './debug-events.js';
 import { debugLog } from './debug-logger.js';
 import { UserInputBridge } from './user-input-bridge.js';
 import type { AgentProvider } from '../../providers/provider-types.js';
-import type { ToolRegistry } from '../../tools/tool-registry.js';
+import type { AgentTool } from '../../tools/tool-types.js';
+import { ToolRegistry } from '../../tools/tool-registry.js';
 import type {
   ChatInputTurn,
   RuntimeEvent,
@@ -76,6 +77,46 @@ import {
 // ============================================================
 // 工具函数：时间戳和记录创建
 // ============================================================
+
+/**
+ * 主 Agent 可见的工具白名单（核心决策工具集）。
+ *
+ * 设计意图：minimax（MiniMax-M3）是小模型，工具越多决策越乱。
+ * 主 agent 只能"指挥"，具体执行交给 subAgents，所以 minimax 只需要：
+ * - `spawn_agent`：派生子 agent 执行任务
+ * - `read-file`：读取文件以理解上下文
+ * - `bash`：必要时执行 shell 命令（如运行测试）
+ *
+ * 其他工具（edit-file / write-file / glob / grep / git 等）全部下放给
+ * subAgents 通过 spawn_agent 调用时使用。
+ *
+ * 注：此过滤应在调用 runAgentLoop 之前由 chat / resume / tui 等入口完成，
+ * 不要在 runAgentLoop 内部过滤（sub-agents 应保留自己的工具集）。
+ */
+export const MAIN_AGENT_TOOL_NAMES = ['spawn_agent', 'read-file', 'bash'] as const;
+
+/**
+ * 根据白名单过滤 toolRegistry，构造一个新的 ToolRegistry。
+ *
+ * 用于 main agent 入口（chat / resume / tui）把完整 toolRegistry 过滤为
+ * minimax 可见的子集。Sub-agents 不需要此过滤（它们的 toolRegistry 已由
+ * spawn-agent 根据 subAgents.tools 自行限定）。
+ *
+ * @param registry - 完整工具注册表
+ * @param allowedNames - 允许的工具名数组
+ * @returns 新的 ToolRegistry（仅含 allowedNames 中存在的工具）
+ */
+export function filterToolRegistry(
+  registry: ToolRegistry,
+  allowedNames: readonly string[]
+): ToolRegistry {
+  const filtered: AgentTool[] = [];
+  for (const name of allowedNames) {
+    const tool = registry.get(name);
+    if (tool) filtered.push(tool);
+  }
+  return new ToolRegistry(filtered);
+}
 
 /**
  * 创建时间戳（ISO 8601，UTC）
@@ -1074,11 +1115,16 @@ export function runAgentLoop(params: {
         concatMap((turn) => {
           // 创建历史快照（用于传递给 Provider）
           const historySnapshot = [...history];
+
           const context = createTurnContext({
             sessionId: session.id,
             input: turn,
             cwd: params.cwd,
             history: historySnapshot,
+            // params.toolRegistry 直接透传：主 agent 入口（chat / resume / tui）
+            // 应当在调用 runAgentLoop 之前用 filterToolRegistry() 过滤一次，
+            // 让 minimax 只看到 MAIN_AGENT_TOOL_NAMES；sub-agents 由
+            // spawn-agent 根据 subAgents.tools 自行过滤。
             toolRegistry: params.toolRegistry,
             prompt: params.prompt,
           });

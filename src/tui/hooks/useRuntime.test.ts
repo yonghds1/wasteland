@@ -69,6 +69,8 @@ vi.mock('@core/runtime/agent-loop.js', () => ({
     events$: { subscribe: vi.fn() },
     debug$: { subscribe: vi.fn() },
   }),
+  MAIN_AGENT_TOOL_NAMES: ['spawn_agent', 'read-file', 'bash'],
+  filterToolRegistry: vi.fn((registry: any) => registry),
 }));
 
 vi.mock('../../skins/index.js', () => ({
