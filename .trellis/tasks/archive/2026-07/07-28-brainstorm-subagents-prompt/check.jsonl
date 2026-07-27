@@ -1,0 +1,9 @@
+{"file": ".trellis/spec/backend/tool-runtime-contracts.md", "reason": "验证 spawn-agent.ts 改动符合工具接口（createSpawnAgentTool / AgentTool / ToolExecutionResult）"}
+{"file": ".trellis/spec/backend/runtime-contracts.md", "reason": "验证 runAgentLoop 透传 prompt / loadedSettings 符合 runtime 行为合约"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "lint / typecheck / 测试规范：新增 2+ 测试 + 410 既有测试通过"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "useTypewriter 与 React state 协作正确（避免 stale closure / re-render 风暴）"}
+{"file": "src/prompts/role-templates.ts", "reason": "ROLE_WORKER 模板渲染正确：role/goal/backstory/tools/constraints 6 sections"}
+{"file": "src/prompts/prompt-assembler.ts", "reason": "assembleTemplate('role-worker', context, subAgentConfig.promptVariables) 正确合并变量（workflow 走 defaults）"}
+{"file": "src/providers/openai-compatible/message-builder.ts", "reason": "verify buildMessages 把 prompt 注入为 system message（链路：subAgentConfig.prompt → runAgentLoop → runTurnLoop → buildMessages → system）"}
+{"file": "src/tools/spawn-agent.ts", "reason": "verify spawn-agent.ts 读 subAgents 配置 + 注入 prompt + 工具限定（subAgents.tools 优先于 minimax 传入）"}
+{"file": "src/tools/default-registry.ts", "reason": "verify 主 agent 工具集 = [spawn_agent, read-file, bash]（其他工具移除或加权限限定）"}

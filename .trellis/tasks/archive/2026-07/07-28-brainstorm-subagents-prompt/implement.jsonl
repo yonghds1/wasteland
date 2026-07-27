@@ -1,0 +1,11 @@
+{"file": ".trellis/spec/backend/tool-runtime-contracts.md", "reason": "工具合约：spawn-agent.ts 改动需符合工具接口规范（createSpawnAgentTool / AgentTool / ToolExecutionResult）"}
+{"file": ".trellis/spec/backend/runtime-contracts.md", "reason": "runtime 行为：runAgentLoop 透传 prompt / loadedSettings 等需符合 runtime 合约"}
+{"file": ".trellis/spec/backend/index.md", "reason": "specs 入口：了解 spec 体系结构"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "React state：useTypewriter hook（rxjs + setState）设计参考"}
+{"file": ".trellis/spec/frontend/hook-guidelines.md", "reason": "React hooks 规范：useEffect / useState 使用约束"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "测试与 lint：新增测试需符合测试规范"}
+{"file": "src/prompts/role-templates.ts", "reason": "ROLE_WORKER 模板结构（identity/goal/backstory/tools/constraints sections）— 需要按这个结构渲染 promptVariables"}
+{"file": "src/prompts/prompt-assembler.ts", "reason": "assembleTemplate 接口（template + context + promptVariables）— 用于 spawn-agent 注入 subAgentConfig.promptVariables"}
+{"file": "src/providers/openai-compatible/message-builder.ts", "reason": "buildMessages 把 prompt 转 system message — 确认 runAgentLoop.prompt → system 链路"}
+{"file": "src/tools/spawn-agent.ts", "reason": "主要改动文件：读 subAgents 配置 + 注入 prompt + 工具限定"}
+{"file": "src/tools/default-registry.ts", "reason": "主 agent 工具集最小化（移除大部分工具，保留 spawn_agent + read-file + bash）"}
