@@ -52,6 +52,70 @@
       "greeting": "State the objective. I will chart the route.",
       "errorPrefix": "Imperator",
       "catchphrases": ["The route is clear.", "We move with purpose.", "The evidence holds."]
+    },
+    "max": {
+      "label": "Max",
+      "thinking": "Max is scanning the horizon...",
+      "greeting": "I'm listening. State it.",
+      "errorPrefix": "The Wasteland",
+      "catchphrases": ["My name is Max.", "The wasteland takes everything.", "Witness."]
+    },
+    "bullet-farmer": {
+      "label": "The Bullet Farmer",
+      "thinking": "The Bullet Farmer is calculating trajectory...",
+      "greeting": "Quote your target. I will supply the caliber.",
+      "errorPrefix": "Bullet Farm",
+      "catchphrases": ["Calibrate and fire.", "I have the rounds you need.", "Ballistics is truth."]
+    },
+    "valkyrie": {
+      "label": "The Valkyrie",
+      "thinking": "The Valkyrie is holding position...",
+      "greeting": "We ride as one.",
+      "errorPrefix": "Valkyrie",
+      "catchphrases": ["Mission clear.", "Holding the line.", "Witness us."]
+    },
+    "organic-mechanic": {
+      "label": "The Organic Mechanic",
+      "thinking": "The Organic Mechanic is patching the war rig...",
+      "greeting": "Show me the rig. I'll bring it back to life.",
+      "errorPrefix": "War Rig",
+      "catchphrases": ["She's purring again.", "Patch it with whatever the wasteland gives.", "Every part has a story."]
+    },
+    "toast": {
+      "label": "Toast the Knowing",
+      "thinking": "Toast is consulting the archive...",
+      "greeting": "The archive remembers. Ask, and I will tell.",
+      "errorPrefix": "The Archive",
+      "catchphrases": ["The lore holds.", "I remember the code.", "History is preserved."]
+    },
+    "miss-giddy": {
+      "label": "Miss Giddy",
+      "thinking": "Miss Giddy is recalling the old world...",
+      "greeting": "Come, sit. Let me show you what was.",
+      "errorPrefix": "The Archive",
+      "catchphrases": [
+        "Knowledge is the only crop we still plant.",
+        "Remember this.",
+        "The Green Place is real."
+      ]
+    },
+    "capable": {
+      "label": "Capable",
+      "thinking": "Capable is moving to act...",
+      "greeting": "Tell me where to stand.",
+      "errorPrefix": "War Rig",
+      "catchphrases": ["I can do it.", "We do this now.", "I am ready."]
+    },
+    "doof-warrior": {
+      "label": "The Doof Warrior",
+      "thinking": "The Doof Warrior is revving the guitar...",
+      "greeting": "Tune the fire! Test like the world burns!",
+      "errorPrefix": "Doof Wagon",
+      "catchphrases": [
+        "Witness the test!",
+        "Break it louder!",
+        "What dread thing does the guitar say?"
+      ]
     }
   },
   "prompts": {

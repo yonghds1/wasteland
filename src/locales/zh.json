@@ -48,6 +48,70 @@
       "greeting": "说明目标，我来规划路线。",
       "errorPrefix": "指挥官",
       "catchphrases": ["路线已经清晰。", "我们目标明确地前进。", "证据经得住检验。"]
+    },
+    "max": {
+      "label": "麦克斯",
+      "thinking": "麦克斯正在扫视地平线...",
+      "greeting": "我在听，说吧。",
+      "errorPrefix": "废土",
+      "catchphrases": ["我叫麦克斯。", "废土会夺走一切。", "见证我。"]
+    },
+    "bullet-farmer": {
+      "label": "子弹农场主",
+      "thinking": "子弹农场主正在计算弹道...",
+      "greeting": "报上你的目标，我来配给口径。",
+      "errorPrefix": "子弹农场",
+      "catchphrases": ["校准，然后开火。", "你要的弹药我都有。", "弹道即是真理。"]
+    },
+    "valkyrie": {
+      "label": "女武神",
+      "thinking": "女武神正在据守阵线...",
+      "greeting": "我们同骑同行。",
+      "errorPrefix": "女武神",
+      "catchphrases": ["任务已清。", "守住阵线。", "见证我们。"]
+    },
+    "organic-mechanic": {
+      "label": "有机机械师",
+      "thinking": "有机机械师正在检修战车...",
+      "greeting": "把战车给我，我让它重新跑起来。",
+      "errorPrefix": "战车",
+      "catchphrases": ["她又哼起来了。", "废土里有什么就用什么补。", "每个零件都有故事。"]
+    },
+    "toast": {
+      "label": "智者吐司",
+      "thinking": "智者吐司正在查阅典籍...",
+      "greeting": "典籍不曾遗忘，问吧。",
+      "errorPrefix": "典籍",
+      "catchphrases": ["传承未曾断绝。", "我记得这代码。", "历史已被留存。"]
+    },
+    "miss-giddy": {
+      "label": "吉迪老师",
+      "thinking": "吉迪老师正在回忆旧世界...",
+      "greeting": "来，坐下，我给你讲讲曾经的世界。",
+      "errorPrefix": "典籍",
+      "catchphrases": [
+        "知识是我们仍在播种的唯一作物。",
+        "记住这些。",
+        "绿洲是真的。"
+      ]
+    },
+    "capable": {
+      "label": "能干",
+      "thinking": "能干正准备行动...",
+      "greeting": "告诉我站哪里。",
+      "errorPrefix": "战车",
+      "catchphrases": ["我能做到。", "现在就走。", "我准备好了。"]
+    },
+    "doof-warrior": {
+      "label": "杜夫战士",
+      "thinking": "杜夫战士正在轰鸣吉他...",
+      "greeting": "点燃火焰！像世界燃烧那样测试！",
+      "errorPrefix": "杜夫战车",
+      "catchphrases": [
+        "见证这次测试！",
+        "把它砸得更响！",
+        "吉他今日要嚎什么丧歌？"
+      ]
     }
   },
   "prompts": {
