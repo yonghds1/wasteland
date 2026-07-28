@@ -47,6 +47,7 @@ import type {
 } from '../config/settings-types.js';
 import type { ProviderRegistry } from '../providers/provider-registry.js';
 import { PromptAssembler } from '../prompts/prompt-assembler.js';
+import { composeAgentPrompt, getRoleSkin } from '../skins/index.js';
 
 // ============================================================
 // Zod Schema
@@ -69,7 +70,11 @@ function mapModelToActualModel(model: string, providerId: string): string {
     ollama: { haiku: 'llama3.2:1b', sonnet: 'llama3.2', opus: 'llama3.3:70b' },
     openai: { haiku: 'gpt-4o-mini', sonnet: 'gpt-4o', opus: 'o1' },
     'openai-compatible': { haiku: 'gpt-4o-mini', sonnet: 'gpt-4o', opus: 'o1' },
-    anthropic: { haiku: 'claude-haiku-4-5-20251001', sonnet: 'claude-sonnet-4-6', opus: 'claude-opus-4-8' },
+    anthropic: {
+      haiku: 'claude-haiku-4-5-20251001',
+      sonnet: 'claude-sonnet-4-6',
+      opus: 'claude-opus-4-8',
+    },
   };
   const providerMapping = modelMappings[providerId];
   if (providerMapping && providerMapping[model]) {
@@ -108,12 +113,13 @@ function parseSubAgentTools(raw: unknown): string[] {
  * 注入真实角色（researcher / developer / analyst / tester 等）。
  *
  * 行为：
- * - 若 subAgentConfig 没有 promptTemplate 或 promptVariables，返回 undefined（不传 prompt）
- * - 若 promptTemplate = 'role-worker'，使用内置 worker 模板
- * - 其他情况原样传给 PromptAssembler.assemble()
+ * - subAgentConfig 不存在时返回 undefined，保持 minimax 传参降级路径
+ * - subAgentConfig.skin 缺失或未注册时使用 defaultRoleSkin
+ * - 功能 prompt 组装后追加到英文 persona 之后
+ * - 仅配置 skin 而没有模板变量时，仍注入 persona
  *
  * @param params - subAgentConfig 与上下文
- * @returns 组装后的 prompt 字符串；没有可用配置时返回 undefined
+ * @returns persona + 功能 prompt；无 subAgentConfig 时返回 undefined
  */
 function assembleSubAgentPrompt(params: {
   subAgentConfig: SubAgentSettings | undefined;
@@ -125,10 +131,13 @@ function assembleSubAgentPrompt(params: {
 
   const promptTemplate = params.subAgentConfig.promptTemplate;
   const promptVariables = params.subAgentConfig.promptVariables;
-
-  if (!promptTemplate && !promptVariables) return undefined;
+  const roleSkin = getRoleSkin(params.subAgentConfig.skin);
 
   try {
+    if (!promptTemplate && !promptVariables) {
+      return roleSkin.persona.fullPrompt;
+    }
+
     const assembler = new PromptAssembler({ cwd: params.cwd });
     // promptTemplate 可能是 string / PromptTemplate / { template, variables }
     // 直接传给 assembler.assemble() 即可
@@ -147,7 +156,7 @@ function assembleSubAgentPrompt(params: {
       },
       promptVariables as Record<string, unknown> | undefined
     );
-    return result.content;
+    return composeAgentPrompt(roleSkin, result.content);
   } catch (err) {
     // prompt 组装失败不应阻塞子 agent 启动，仅记录日志
     debugLog({
@@ -273,7 +282,9 @@ export function spawnChildAgentForwarding$(params: {
   const effectiveTools: string[] | undefined =
     subAgentConfigTools.length > 0
       ? subAgentConfigTools
-      : (tools && tools.length > 0 ? tools : undefined);
+      : tools && tools.length > 0
+        ? tools
+        : undefined;
 
   // ---- 模型选择优先级 ----
   // subAgentConfig.model > minimax 传入的 model
@@ -304,7 +315,10 @@ export function spawnChildAgentForwarding$(params: {
 
   // ---- 准备并启动子 Agent ----
   return defer(async () => {
-    const childSession = await context.sessionManager.createChildSession(context.session, childName);
+    const childSession = await context.sessionManager.createChildSession(
+      context.session,
+      childName
+    );
 
     // 处理 inheritHistory：将父历史拼成前缀
     let taskContent = childTask;
@@ -458,7 +472,11 @@ export function spawnChildAgentForwarding$(params: {
         const forwarded: RuntimeEvent[] = [];
         let resolved = false;
 
-        const finish = (status: 'success' | 'error' | 'timeout', content?: string, error?: string): void => {
+        const finish = (
+          status: 'success' | 'error' | 'timeout',
+          content?: string,
+          error?: string
+        ): void => {
           if (resolved) return;
           resolved = true;
 
@@ -585,14 +603,16 @@ export function spawnChildAgentForwarding$(params: {
       },
     }),
     // ---- 全部重试失败：返回明确 tool_failed（避免 minimax 自己脑补） ----
-    catchError((err) => of<RuntimeEvent>({
-      type: 'tool_failed',
-      sessionId: parentId,
-      turn: context.turn,
-      callId: call.id,
-      toolName: call.toolName,
-      status: 'error',
-      error: `子 agent ${childName} 失败 ${maxRetries + 1} 次: ${err.message}`,
-    })),
+    catchError((err) =>
+      of<RuntimeEvent>({
+        type: 'tool_failed',
+        sessionId: parentId,
+        turn: context.turn,
+        callId: call.id,
+        toolName: call.toolName,
+        status: 'error',
+        error: `子 agent ${childName} 失败 ${maxRetries + 1} 次: ${err.message}`,
+      })
+    )
   );
 }

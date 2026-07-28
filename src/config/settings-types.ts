@@ -1,6 +1,7 @@
 import type { PermissionMode } from '../core/runtime/permission-gate.js';
 import type { PromptTemplateRef } from '../prompts/prompt-types.js';
 import { DEFAULT_LANGUAGE } from '../locales/index.js';
+import { wastelandTheme } from '../theme/wasteland/index.js';
 
 export type AuthRef = {
   $auth: string;
@@ -90,6 +91,12 @@ export type A2AAgentsConfig = A2AAgentConfig[];
  * 角色均可被用户自定义覆盖或新增（含主角色 orchestrator）
  */
 export type SubAgentSettings = RoleSettings & {
+  /**
+   * 子 Agent 内容 skin ID。
+   *
+   * 未配置或 ID 未注册时由 skin 注册表回退到 defaultRoleSkin。
+   */
+  skin?: string;
   /** 子角色描述，用于配置页面显示 */
   description?: string;
   /**
@@ -215,8 +222,8 @@ export const DEFAULT_WASTELAND_SETTINGS: ResolvedWastelandSettings = {
     debug: false,
     language: DEFAULT_LANGUAGE,
     showThinking: true,
-    spinnerIntervalMs: 80,
-    typewriterRateMs: 30,
+    spinnerIntervalMs: wastelandTheme.animations.spinnerIntervalMs,
+    typewriterRateMs: wastelandTheme.animations.typewriterRateMs,
   },
   mcpServers: {},
   a2aAgents: [],

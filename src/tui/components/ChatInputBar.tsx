@@ -14,16 +14,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Text, Box, useInput } from 'ink';
 import { useAppContext } from '../context/AppContext.js';
 import { t } from '../../locales/index.js';
-import type { Skin } from '../../skins/index.js';
-import { PRIMARY, SECONDARY, MUTED, SUCCESS, BORDER_FOCUSED, BORDER_DIM } from '../utils/colors.js';
+import { wastelandTheme } from '../../theme/wasteland/index.js';
 
 interface ChatInputBarProps {
   width: number;
-  skin?: Skin | null;
   sendMessage: (content: string) => void;
 }
 
-export function ChatInputBar({ width, skin, sendMessage }: ChatInputBarProps): React.ReactElement {
+export function ChatInputBar({ width, sendMessage }: ChatInputBarProps): React.ReactElement {
   const { state, setInputMode, setFocusArea } = useAppContext();
   const [input, setInput] = useState('');
 
@@ -74,17 +72,24 @@ export function ChatInputBar({ width, skin, sendMessage }: ChatInputBarProps): R
     }
 
     // 普通字符输入(保留 Shift 以支持大写,Enter 已在上方拦截)
-    if (inputChar && !key.ctrl && !key.meta && inputChar !== '\r' && inputChar !== '\n' && !key.tab) {
+    if (
+      inputChar &&
+      !key.ctrl &&
+      !key.meta &&
+      inputChar !== '\r' &&
+      inputChar !== '\n' &&
+      !key.tab
+    ) {
       setInput((prev) => prev + inputChar);
     }
   });
 
   const isCommand = input.startsWith('/');
   const lines = input.split('\n');
-  const promptColor = isCommand ? SECONDARY : PRIMARY;
-  const contentColor = isCommand ? SECONDARY : SUCCESS;
-  // 皮肤输入提示符（如 wasteland>）
-  const promptSymbol = skin?.ui.prompts.input ?? '❯';
+  const promptColor = isCommand ? wastelandTheme.colors.secondary : wastelandTheme.colors.primary;
+  const contentColor = isCommand ? wastelandTheme.colors.secondary : wastelandTheme.colors.success;
+  // 主题输入提示符
+  const promptSymbol = wastelandTheme.decorations.prompt;
   const promptIndent = ' '.repeat(promptSymbol.length + 1);
 
   return (
@@ -92,32 +97,42 @@ export function ChatInputBar({ width, skin, sendMessage }: ChatInputBarProps): R
       {/* 输入区(多行) */}
       <Box
         flexDirection="column"
-        borderStyle="single"
+        borderStyle={wastelandTheme.decorations.borderStyle}
         borderTop
-        borderColor={state.inputMode ? BORDER_FOCUSED : BORDER_DIM}
+        borderColor={
+          state.inputMode ? wastelandTheme.colors.borderFocused : wastelandTheme.colors.borderDim
+        }
         paddingX={1}
       >
         {input ? (
           lines.map((line, i) => (
             <Box key={i} flexDirection="row">
-              <Text color={promptColor} bold>{i === 0 ? `${promptSymbol} ` : promptIndent}</Text>
+              <Text color={promptColor} bold>
+                {i === 0 ? `${promptSymbol} ` : promptIndent}
+              </Text>
               <Text color={contentColor}>
                 {line}
-                {i === lines.length - 1 && <Text color={PRIMARY}>▌</Text>}
+                {i === lines.length - 1 && (
+                  <Text color={wastelandTheme.colors.primary}>
+                    {wastelandTheme.decorations.streamingCursor}
+                  </Text>
+                )}
               </Text>
             </Box>
           ))
         ) : (
           <Box flexDirection="row">
-            <Text color={promptColor} bold>{promptSymbol} </Text>
-            <Text color={MUTED}>{t('tui.session.input.placeholder')}</Text>
+            <Text color={promptColor} bold>
+              {promptSymbol}{' '}
+            </Text>
+            <Text color={wastelandTheme.colors.muted}>{t('tui.session.input.placeholder')}</Text>
           </Box>
         )}
       </Box>
 
       {/* 快捷键提示 */}
       <Box paddingLeft={1}>
-        <Text color={MUTED}>{t('tui.session.input.hintMultiline')}</Text>
+        <Text color={wastelandTheme.colors.muted}>{t('tui.session.input.hintMultiline')}</Text>
       </Box>
     </Box>
   );

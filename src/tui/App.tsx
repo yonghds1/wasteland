@@ -77,7 +77,7 @@ export function App({ runtime }: AppProps): React.ReactElement {
   }, [state.session.isStreaming, state.session.isThinking, stdout]);
 
   // 订阅 runtime 事件
-  useRuntimeEvents(runtime.events$, runtime.debug$, setState);
+  useRuntimeEvents(runtime.events$, runtime.debug$, setState, runtime.fullConfig.subAgents);
 
   // 用户输入处理（带本地命令拦截）
   const { sendMessage: rawSendMessage } = useUserInput(runtime.input$);
@@ -249,9 +249,12 @@ export function App({ runtime }: AppProps): React.ReactElement {
       if (cycle.length > 1) {
         const currentIdx = state.focusArea ? cycle.indexOf(state.focusArea) : -1;
         const direction = key.shift ? -1 : 1;
-        const nextIdx = currentIdx < 0
-          ? (direction > 0 ? 0 : cycle.length - 1)
-          : (currentIdx + direction + cycle.length) % cycle.length;
+        const nextIdx =
+          currentIdx < 0
+            ? direction > 0
+              ? 0
+              : cycle.length - 1
+            : (currentIdx + direction + cycle.length) % cycle.length;
         const nextArea = cycle[nextIdx];
         setFocusArea(nextArea);
         // 同步 inputMode：进入输入框自动开启输入模式；离开则关闭
@@ -265,11 +268,7 @@ export function App({ runtime }: AppProps): React.ReactElement {
     }
 
     // Esc 在 sessions 页退出（回到 session 页，sessions 页没有输入框所以 Esc 走这里）
-    if (
-      key.escape &&
-      state.currentPage === 'sessions' &&
-      !state.exitConfirmPending
-    ) {
+    if (key.escape && state.currentPage === 'sessions' && !state.exitConfirmPending) {
       setCurrentPage('session');
       return;
     }

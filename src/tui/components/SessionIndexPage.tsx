@@ -16,13 +16,7 @@
 import React, { useState, useEffect } from 'react';
 import { Text, Box, useInput } from 'ink';
 import { createSessionIndex, type SessionSummary } from '../../core/runtime/session-index.js';
-import {
-  PRIMARY,
-  SECONDARY,
-  MUTED,
-  WARNING,
-  TEXT,
-} from '../utils/colors.js';
+import { wastelandTheme } from '../../theme/wasteland/index.js';
 
 interface SessionIndexPageProps {
   /** 退出页面回调（返回主 session 视图） */
@@ -81,25 +75,23 @@ export function SessionIndexPage({ onClose, onSelect }: SessionIndexPageProps): 
     <Box flexDirection="column" paddingX={1}>
       {/* 标题 */}
       <Box marginTop={1}>
-        <Text color={PRIMARY} bold>
+        <Text color={wastelandTheme.colors.primary} bold>
           Sessions{' '}
         </Text>
-        <Text color={MUTED}>
-          ({sessions.length}) · ↑↓/jk 选择 · Esc 退出
-        </Text>
+        <Text color={wastelandTheme.colors.muted}>({sessions.length}) · ↑↓/jk 选择 · Esc 退出</Text>
       </Box>
 
       {/* 错误状态（仅在加载失败时） */}
       {error && (
         <Box marginTop={1}>
-          <Text color={WARNING}>❌ 加载失败: {error}</Text>
+          <Text color={wastelandTheme.colors.warning}>❌ 加载失败: {error}</Text>
         </Box>
       )}
 
       {/* 空状态：会话还未开始 或 目录为空 */}
       {!error && sessions.length === 0 && (
         <Box marginTop={1}>
-          <Text color={MUTED}>没有历史会话。</Text>
+          <Text color={wastelandTheme.colors.muted}>没有历史会话。</Text>
         </Box>
       )}
 
@@ -116,17 +108,26 @@ export function SessionIndexPage({ onClose, onSelect }: SessionIndexPageProps): 
             const providerTag = s.providerId ? ` · ${s.providerId}` : '';
             return (
               <Box key={s.id} flexDirection="row">
-                <Text color={isSelected ? SECONDARY : MUTED} bold={isSelected}>
+                <Text
+                  color={isSelected ? wastelandTheme.colors.secondary : wastelandTheme.colors.muted}
+                  bold={isSelected}
+                >
                   {isSelected ? '▶ ' : '  '}
                 </Text>
-                <Text color={isSelected ? PRIMARY : TEXT} bold={isSelected}>
+                <Text
+                  color={isSelected ? wastelandTheme.colors.primary : wastelandTheme.colors.text}
+                  bold={isSelected}
+                >
                   {time}
                 </Text>
-                <Text color={MUTED}>  </Text>
-                <Text color={isSelected ? TEXT : MUTED} wrap="truncate-end">
+                <Text color={wastelandTheme.colors.muted}> </Text>
+                <Text
+                  color={isSelected ? wastelandTheme.colors.text : wastelandTheme.colors.muted}
+                  wrap="truncate-end"
+                >
                   {preview}
                 </Text>
-                <Text color={MUTED}>
+                <Text color={wastelandTheme.colors.muted}>
                   {providerTag}
                   {childTag}
                 </Text>

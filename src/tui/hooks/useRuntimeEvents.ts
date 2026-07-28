@@ -15,6 +15,8 @@ import { useEffect, useRef } from 'react';
 import type { Subscription } from 'rxjs';
 import type { RuntimeEvent, DebugTraceEvent } from '../types.js';
 import type { AppState, AgentNode, Message, ToolCall, TraceEvent } from '../context/AppContext.js';
+import { systemCommon, getRoleSkin } from '../../skins/index.js';
+import type { SubAgentSettings } from '../../config/settings-types.js';
 import { t, tArray } from '../../locales/index.js';
 
 /**
@@ -69,7 +71,8 @@ function processRuntimeEvent(
     streamingMessageId: string | null;
   },
   chunkAccumulator: { current: string },
-  toolStartTimes: Map<string, number>
+  toolStartTimes: Map<string, number>,
+  subAgents: Record<string, SubAgentSettings>
 ): EventProcessResult {
   const agents = [...currentState.agents];
   const messages = [...currentState.messages];
@@ -132,7 +135,7 @@ function processRuntimeEvent(
           timestamp: new Date().toISOString(),
           agentId: event.sessionId,
           type: 'system',
-          content: t('skin.ui.messages.success'),
+          content: t(systemCommon.messages.executionComplete),
         });
       }
       // 重置 chunk 累积器和流式状态
@@ -222,7 +225,7 @@ function processRuntimeEvent(
         timestamp: new Date().toISOString(),
         agentId: event.sessionId,
         type: 'system',
-        content: t('skin.ui.messages.error'),
+        content: t(systemCommon.messages.executionFailed),
       });
 
       toolStartTimes.delete(event.callId);
@@ -238,10 +241,10 @@ function processRuntimeEvent(
         status: 'running',
         startTime: Date.now(),
       });
-      // 子角色（War Boys）问候
-      const greetingKey = `skin.roles.workers.${event.name}.greeting`;
-      const greeting = t(greetingKey);
-      if (greeting && greeting !== greetingKey) {
+      // 按 subAgents 配置选择角色 skin，并在渲染时解析问候语
+      const agentSkin = getRoleSkin(subAgents[event.name]?.skin);
+      const greeting = t(agentSkin.roleUi.greetingKey);
+      if (greeting && greeting !== agentSkin.roleUi.greetingKey) {
         messages.push({
           id: `msg-agent-greeting-${event.childId}`,
           timestamp: new Date().toISOString(),
@@ -267,10 +270,11 @@ function processRuntimeEvent(
                 : 'failed',
           endTime: Date.now(),
         };
-        // 子角色（War Boys）完成口号（仅成功时，随机）
+        // 子角色完成口号（仅成功时，随机）
         if (event.status === 'success') {
           const agentName = agents[agentIndex].name;
-          const catchphrases = tArray(`skin.roles.workers.${agentName}.catchphrases`);
+          const agentSkin = getRoleSkin(subAgents[agentName]?.skin);
+          const catchphrases = tArray(agentSkin.roleUi.catchphrasesKey);
           if (catchphrases.length > 0) {
             const phrase = catchphrases[Math.floor(Math.random() * catchphrases.length)];
             messages.push({
@@ -402,7 +406,8 @@ function toTraceEvent(event: DebugTraceEvent): TraceEvent {
 export function useRuntimeEvents(
   events$: TuiRuntimeEvents | null,
   debug$: TuiRuntimeDebug | null,
-  setState: React.Dispatch<React.SetStateAction<AppState>>
+  setState: React.Dispatch<React.SetStateAction<AppState>>,
+  subAgents: Record<string, SubAgentSettings> = {}
 ): void {
   // Chunk 累积器（使用 ref 避免触发重新渲染）
   const chunkAccumulator = useRef<string>('');
@@ -426,7 +431,8 @@ export function useRuntimeEvents(
             event,
             prev.session,
             chunkAccumulator,
-            toolStartTimes.current
+            toolStartTimes.current,
+            subAgents
           );
 
           return {
@@ -469,7 +475,7 @@ export function useRuntimeEvents(
         subscriptionRef.current = null;
       }
     };
-  }, [events$, setState]);
+  }, [events$, setState, subAgents]);
 
   // 处理 debug$ 流
   useEffect(() => {

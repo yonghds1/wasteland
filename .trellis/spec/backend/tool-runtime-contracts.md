@@ -527,7 +527,7 @@ Why correct:
 ### 1. Scope / Trigger
 
 - Trigger: minimax (MiniMax-M3) 是小模型，工具越多决策越乱，且之前的 `spawn-agent.ts` 完全忽略 `settings.subAgents[name]` 配置（minimax 在子 agent 里只能"角色扮演"）。
-- Trigger: `subAgents[name].promptVariables`（role / goal / backstory / tools / constraints）和 `promptTemplate` 字段应真正注入到子 agent 的 system prompt 和工具集。
+- Trigger: `subAgents[name].promptVariables`（role / goal / backstory / tools / constraints）、`promptTemplate` 与可选 `skin` 字段应真正注入到子 agent 的 system prompt 和工具集。
 - Trigger: 主 agent minimax 工具集应最小化为 `[spawn_agent, read-file, bash]`，其他工具下放给子 agent。
 - Trigger: 任何 `subAgentConfig` 字段缺失需有降级路径。
 
@@ -552,8 +552,8 @@ function assembleSubAgentPrompt(params: {
   roleName: string;
   tools: string[];
 }): string | undefined;
-// 通过 PromptAssembler.assemble(templateRef, context, promptVariables) 渲染 prompt
-// 失败 fallback: 返回 undefined（不传 prompt，保持原行为）
+// 通过 PromptAssembler.assemble(...) 渲染功能 prompt，再在前面注入 skin 的英文 persona
+// subAgentConfig undefined 或组装失败时 fallback: 返回 undefined
 ```
 
 ### 3. Contracts
@@ -576,7 +576,8 @@ function assembleSubAgentPrompt(params: {
 - **模型优先级**：`subAgentConfig.model` > minimax 传入 `model`
   - **关键修复**：`subAgentConfig.model` 可能是 alias（如 `"minimax_model"`），需要从 `settings.models[alias].model` 解析为真实 model name（如 `"MiniMax-M3"`）
   - 解析失败（alias 不在 models 表）→ 保留原 alias（兼容 alias 即 model name 的场景）
-- **prompt 注入**：用 `PromptAssembler.assemble(subAgentConfig.promptTemplate, { cwd, roleName, tools }, subAgentConfig.promptVariables)` 渲染 → 传给 `runAgentLoop({ ..., prompt: assembled })`
+- **prompt 注入**：先用 `PromptAssembler.assemble(...)` 渲染功能 prompt，再用 `composeAgentPrompt(getRoleSkin(subAgentConfig.skin), functionalPrompt)` 把固定英文 persona 放在前面，传给 `runAgentLoop({ ..., prompt })`
+- **skin 默认值**：`subAgentConfig.skin` 缺失或未注册时回退 `defaultRoleSkin = "immortan-joe"`；没有 `subAgentConfig` 时仍不注入任何 prompt
 - **链路**：`runAgentLoop.prompt` → `createTurnContext.prompt` → `buildMessages` → OpenAI system message → minimax 收到
 
 #### debug log 字段（`spawn-agent.ts` `debugLog({ kind: "spawn_agent", ... })`）
@@ -595,6 +596,8 @@ function assembleSubAgentPrompt(params: {
 | `subAgentConfig.model = "minimax_model"` (alias) | 从 `settings.models["minimax_model"].model` 解析为 `"MiniMax-M3"` |
 | alias 在 settings.models 找不到 | 保留原 alias |
 | PromptAssembler 抛错 | `assembleSubAgentPrompt` catch → 返回 undefined + `debugLog(kind: "sub_agent_prompt_error")` |
+| `subAgentConfig.skin = "nux"` | system prompt 以固定英文 Nux persona 开始，后接功能 prompt |
+| `subAgentConfig.skin` 缺失或未知 | 回退 `defaultRoleSkin` 的英文 persona |
 | minimax 传入 `tools = ["web-search"]` 但 subAgentConfig.tools 存在 | 忽略 minimax 的 tools，用 subAgentConfig.tools |
 
 ### 5. Good / Base / Bad Cases
@@ -614,7 +617,8 @@ function assembleSubAgentPrompt(params: {
 - `MAIN_AGENT_TOOL_NAMES` 包含 `[spawn_agent, read-file, bash]`
 - `createDefaultToolRegistry` 注册全部 13 个工具（sanity check）
 - `runAgentLoop` 只把白名单工具传给 provider（mock provider 验证）
-- `subAgentConfig` 含 `promptTemplate + promptVariables` → 子 agent 收到正确 prompt + 工具集限定
+- `subAgentConfig` 含 `promptTemplate + promptVariables + skin` → 子 agent 收到英文 persona、正确功能 prompt 与限定工具集
+- 主 agent chat / resume / TUI 入口 → persona 位于 orchestrator 功能 prompt 之前
 - `subAgentConfig.tools` 覆盖 minimax 传入 `tools`
 - 无 `subAgentConfig` → 无 prompt，minimax 传入 `tools` 生效
 - `subAgentConfig.model` alias 解析（`minimax_model` → `MiniMax-M3`）

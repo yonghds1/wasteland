@@ -18,7 +18,7 @@ import { Box, Text, useApp, useInput } from 'ink';
 
 import { t } from '../locales/index.js';
 import type { InitWizardInput } from '../config/config-writer.js';
-import { BORDER, ERROR, MUTED, PRIMARY, SUCCESS, WARNING } from './utils/colors.js';
+import { wastelandTheme } from '../theme/wasteland/index.js';
 
 type ProviderType = 'openai-compatible' | 'anthropic';
 
@@ -67,9 +67,7 @@ export interface InitWizardProps {
   /** 完成后回调，父组件用于收集结果 */
   onComplete: (result: InitWizardResult) => void;
   /** 写入函数（DI 供测试注入） */
-  writeConfig: (
-    input: InitWizardInput
-  ) => Promise<{ settingsPath: string; authPath: string }>;
+  writeConfig: (input: InitWizardInput) => Promise<{ settingsPath: string; authPath: string }>;
 }
 
 /**
@@ -99,11 +97,17 @@ export function InitWizard({ onComplete, writeConfig }: InitWizardProps): React.
   });
 
   return (
-    <Box flexDirection="column" borderStyle="round" borderColor={BORDER} paddingX={2} paddingY={1}>
-      <Text color={PRIMARY} bold>
+    <Box
+      flexDirection="column"
+      borderStyle={wastelandTheme.decorations.borderStyle}
+      borderColor={wastelandTheme.colors.border}
+      paddingX={2}
+      paddingY={1}
+    >
+      <Text color={wastelandTheme.colors.primary} bold>
         {t('commands.init.wizard.title')}
       </Text>
-      <Text color={MUTED}>{t('commands.init.wizard.subtitle')}</Text>
+      <Text color={wastelandTheme.colors.muted}>{t('commands.init.wizard.subtitle')}</Text>
       <Box marginTop={1} flexDirection="column">
         {step === 'provider-type' && (
           <ProviderTypeStep
@@ -186,7 +190,9 @@ export function InitWizard({ onComplete, writeConfig }: InitWizardProps): React.
             }}
           />
         )}
-        {step === 'submitting' && <Text color={MUTED}>{t('commands.init.wizard.writing')}</Text>}
+        {step === 'submitting' && (
+          <Text color={wastelandTheme.colors.muted}>{t('commands.init.wizard.writing')}</Text>
+        )}
         {step === 'done' && resultPaths && (
           <DoneStep
             settingsPath={resultPaths.settingsPath}
@@ -208,7 +214,7 @@ export function InitWizard({ onComplete, writeConfig }: InitWizardProps): React.
         )}
       </Box>
       <Box marginTop={1}>
-        <Text color={MUTED}>{t('commands.init.wizard.footer')}</Text>
+        <Text color={wastelandTheme.colors.muted}>{t('commands.init.wizard.footer')}</Text>
       </Box>
     </Box>
   );
@@ -240,13 +246,13 @@ function ProviderTypeStep({
   return (
     <Box flexDirection="column">
       <Text bold>{t('commands.init.wizard.providerType.label')}</Text>
-      <Text color={MUTED}>{t('commands.init.wizard.providerType.hint')}</Text>
+      <Text color={wastelandTheme.colors.muted}>{t('commands.init.wizard.providerType.hint')}</Text>
       <Box flexDirection="column" marginTop={1}>
         {PROVIDER_TYPE_OPTIONS.map((option, index) => {
           const selected = index === typeIndex;
           const symbol = selected ? '▶' : ' ';
           return (
-            <Text key={option.value} color={selected ? PRIMARY : undefined}>
+            <Text key={option.value} color={selected ? wastelandTheme.colors.primary : undefined}>
               {`${symbol} ${t(option.labelKey)} (${option.value})`}
             </Text>
           );
@@ -309,17 +315,17 @@ function TextInputStep({
   return (
     <Box flexDirection="column">
       <Text bold>{label}</Text>
-      {hint && <Text color={MUTED}>{hint}</Text>}
+      {hint && <Text color={wastelandTheme.colors.muted}>{hint}</Text>}
       <Box marginTop={1}>
-        <Text color={PRIMARY}>
+        <Text color={wastelandTheme.colors.primary}>
           {'> '}
           <Text color={undefined}>{display}</Text>
-          <Text color={MUTED}>█</Text>
+          <Text color={wastelandTheme.colors.muted}>█</Text>
         </Text>
       </Box>
       {error && (
         <Box marginTop={1}>
-          <Text color={ERROR}>{error}</Text>
+          <Text color={wastelandTheme.colors.error}>{error}</Text>
         </Box>
       )}
     </Box>
@@ -354,23 +360,30 @@ function ConfirmStep({
       <Text bold>{t('commands.init.wizard.confirm.title')}</Text>
       <Box marginTop={1} flexDirection="column">
         <Text>
-          {t('commands.init.wizard.confirm.providerName')}: <Text color={PRIMARY}>{providerName}</Text>
+          {t('commands.init.wizard.confirm.providerName')}:{' '}
+          <Text color={wastelandTheme.colors.primary}>{providerName}</Text>
         </Text>
         <Text>
-          {t('commands.init.wizard.confirm.providerType')}: <Text color={PRIMARY}>{providerType}</Text>
+          {t('commands.init.wizard.confirm.providerType')}:{' '}
+          <Text color={wastelandTheme.colors.primary}>{providerType}</Text>
         </Text>
         <Text>
-          {t('commands.init.wizard.confirm.baseUrl')}: <Text color={PRIMARY}>{baseUrl}</Text>
+          {t('commands.init.wizard.confirm.baseUrl')}:{' '}
+          <Text color={wastelandTheme.colors.primary}>{baseUrl}</Text>
         </Text>
         <Text>
-          {t('commands.init.wizard.confirm.apiKey')}: <Text color={PRIMARY}>{maskedKey}</Text>
+          {t('commands.init.wizard.confirm.apiKey')}:{' '}
+          <Text color={wastelandTheme.colors.primary}>{maskedKey}</Text>
         </Text>
         <Text>
-          {t('commands.init.wizard.confirm.model')}: <Text color={PRIMARY}>{modelId}</Text>
+          {t('commands.init.wizard.confirm.model')}:{' '}
+          <Text color={wastelandTheme.colors.primary}>{modelId}</Text>
         </Text>
       </Box>
       <Box marginTop={1}>
-        <Text color={WARNING}>{t('commands.init.wizard.confirm.enterToSubmit')}</Text>
+        <Text color={wastelandTheme.colors.warning}>
+          {t('commands.init.wizard.confirm.enterToSubmit')}
+        </Text>
       </Box>
     </Box>
   );
@@ -393,19 +406,21 @@ function DoneStep({
 
   return (
     <Box flexDirection="column">
-      <Text color={SUCCESS} bold>
+      <Text color={wastelandTheme.colors.success} bold>
         {t('commands.init.wizard.done.title')}
       </Text>
       <Box marginTop={1} flexDirection="column">
         <Text>
-          <Text color={MUTED}>settings</Text>: {settingsPath}
+          <Text color={wastelandTheme.colors.muted}>settings</Text>: {settingsPath}
         </Text>
         <Text>
-          <Text color={MUTED}>auth</Text>: {authPath}
+          <Text color={wastelandTheme.colors.muted}>auth</Text>: {authPath}
         </Text>
       </Box>
       <Box marginTop={1}>
-        <Text color={MUTED}>{t('commands.init.wizard.done.enterToContinue')}</Text>
+        <Text color={wastelandTheme.colors.muted}>
+          {t('commands.init.wizard.done.enterToContinue')}
+        </Text>
       </Box>
     </Box>
   );
@@ -426,12 +441,14 @@ function ErrorStep({
 
   return (
     <Box flexDirection="column">
-      <Text color={ERROR} bold>
+      <Text color={wastelandTheme.colors.error} bold>
         {t('commands.init.wizard.error.title')}
       </Text>
-      <Text color={ERROR}>{message}</Text>
+      <Text color={wastelandTheme.colors.error}>{message}</Text>
       <Box marginTop={1}>
-        <Text color={MUTED}>{t('commands.init.wizard.done.enterToContinue')}</Text>
+        <Text color={wastelandTheme.colors.muted}>
+          {t('commands.init.wizard.done.enterToContinue')}
+        </Text>
       </Box>
     </Box>
   );

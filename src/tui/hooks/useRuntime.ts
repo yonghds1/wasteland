@@ -8,14 +8,17 @@
 import { Subject } from 'rxjs';
 
 import { initializeRuntime } from '@core/shared/initialize-runtime.js';
-import { runAgentLoop, MAIN_AGENT_TOOL_NAMES, filterToolRegistry } from '@core/runtime/agent-loop.js';
+import {
+  runAgentLoop,
+  MAIN_AGENT_TOOL_NAMES,
+  filterToolRegistry,
+} from '@core/runtime/agent-loop.js';
 import { enableDebugLog } from '@core/runtime/debug-logger.js';
 import { UserInputBridge } from '@core/runtime/user-input-bridge.js';
-import { loadSkin } from '../../skins/index.js';
-import { initI18n, t } from '../../locales/index.js';
+import { composeAgentPrompt } from '../../skins/index.js';
+import { initI18n } from '../../locales/index.js';
 import type { TuiRuntimeContext, TuiConfig, TuiFullConfig } from '../types.js';
 import type { ChatInputTurn } from '@core/runtime/event-types.js';
-import type { Skin } from '../../skins/index.js';
 
 /**
  * TUI 运行时上下文（扩展版，包含清理资源）
@@ -90,7 +93,7 @@ export async function createTuiRuntime(
     mode: 'interactive',
     maxStepsPerTurn: runtime.loadedSettings.settings.runtime.maxStepsPerTurn,
     existingSession: session,
-    prompt: runtime.resolvedRuntime.prompt,
+    prompt: composeAgentPrompt(runtime.skin, runtime.resolvedRuntime.prompt),
     providerRegistry: runtime.providerRegistry,
     providerSettings: runtime.resolvedRuntime.providerConfig,
     skillExecutor: runtime.skillExecutor,
@@ -122,14 +125,8 @@ export async function createTuiRuntime(
     defaultProvider: runtime.loadedSettings.settings.defaultProvider,
   };
 
-  // 8. 加载皮肤配置（TUI 特有）
-  let skin: Skin | null = null;
-  try {
-    const skinId = runtime.loadedSettings.settings.runtime.skinId ?? 'immortan-joe';
-    skin = await loadSkin(skinId, language);
-  } catch (error) {
-    console.warn(t('tui.failedToLoadSkin'), error instanceof Error ? error.message : String(error));
-  }
+  // 8. 使用 initializeRuntime 已选择的角色 skin
+  const skin = runtime.skin;
 
   // 返回扩展的上下文（包含 runtime 用于清理）
   return {

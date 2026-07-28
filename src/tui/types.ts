@@ -8,8 +8,12 @@ import type { Observable, Subject } from 'rxjs';
 import type { RuntimeEvent, InputSource, ChatInputTurn } from '../core/runtime/event-types.js';
 import type { DebugTraceEvent } from '../core/runtime/debug-events.js';
 import type { SessionManager, SessionMetadata } from '../core/runtime/session-manager.js';
-import type { ProviderSettings, ModelSettings, RoleSettings } from '../config/settings-types.js';
-import type { Skin } from '../skins/index.js';
+import type {
+  ProviderSettings,
+  ModelSettings,
+  SubAgentSettings,
+} from '../config/settings-types.js';
+import type { RoleSkin } from '../skins/index.js';
 
 /**
  * TUI 运行时上下文
@@ -34,7 +38,7 @@ export interface TuiRuntimeContext {
   /** 会话管理器 */
   sessionManager: SessionManager;
   /** 皮肤配置 */
-  skin: Skin | null;
+  skin: RoleSkin;
   /** 是否在 UI 上展示模型的思考块（minimax/DeepSeek R1 等把 <think> 拼到 content） */
   showThinking: boolean;
   /** Spinner 帧切换间隔（毫秒），默认 80 */
@@ -76,7 +80,7 @@ export interface TuiConfigSources {
 export interface TuiFullConfig {
   providers: Record<string, ProviderSettings>;
   models: Record<string, ModelSettings>;
-  subAgents: Record<string, RoleSettings>;
+  subAgents: Record<string, SubAgentSettings>;
   sources: TuiConfigSources;
   defaultProvider: string;
 }

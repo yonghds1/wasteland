@@ -365,7 +365,7 @@ Why correct:
 // src/core/runtime/agent-loop.ts runAgentLoop params 新增
 export function runAgentLoop(params: {
   // ... 既有
-  prompt?: string;  // 角色 system prompt（主 agent 用 resolvedRuntime.prompt；子 agent 用 subAgentConfig 组装的 prompt）
+  prompt?: string;  // 最终 system prompt（入口先拼英文 persona + resolvedRuntime.prompt；子 agent 同样先拼 persona）
   loadedSettings?: LoadedWastelandSettings;  // 透传到 dispatchToolCall → spawn-agent 用于读 subAgents 配置
 }): AgentRun;
 
@@ -381,6 +381,8 @@ function buildMessages(params: {
 ### 3. Contracts
 
 - `runAgentLoop` 接受 `prompt?: string` 参数
+- chat / resume / TUI 入口用 `composeAgentPrompt(runtime.skin, resolvedRuntime.prompt)` 组装主 Agent prompt，persona 必须位于功能 prompt 之前
+- `spawn-agent.ts` 用 `subAgentConfig.skin` 选择英文 persona，再追加 worker 功能 prompt
 - `runTurnLoop` 透传 `prompt` 到 `createTurnContext`
 - `createTurnContext` 把 `prompt` 存到 `TurnContext.prompt`
 - `buildMessages` 检测 `params.prompt` 非空时插入 `{ role: 'system', content: prompt }` 作为第一条消息
@@ -408,6 +410,8 @@ function buildMessages(params: {
 
 - `buildMessages({ prompt: '...' })` 在 messages[0] 插入 `{ role: 'system', content: '...' }`
 - `buildMessages({ prompt: undefined })` 不插入 system message
+- 主 Agent chat / resume / TUI 入口注入英文 persona，并保持 persona 在 orchestrator prompt 之前
+- 子 Agent 配置 skin 后收到对应英文 persona + worker 功能 prompt
 - `runAgentLoop` 透传 `prompt` 到 `buildMessages`（mock provider 验证 messages 数组）
 
 ### 7. Wrong vs Correct

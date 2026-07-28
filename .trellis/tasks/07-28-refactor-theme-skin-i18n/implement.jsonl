@@ -1,0 +1,23 @@
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "前端组件规范：theme 颜色/字体使用规则，skin 角色文字注入方式"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "useRuntime.ts 加载 theme + selectedSkin 的状态管理"}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "目录结构：theme/ 与 skins/ 的新位置与命名规范"}
+{"file": ".trellis/spec/frontend/hook-guidelines.md", "reason": "useRuntime.ts 等 hooks 加载 theme/skin 的规范"}
+{"file": ".trellis/spec/backend/runtime-contracts.md", "reason": "runtime 行为：subAgentSettings.skin 字段 + assembleSubAgentPrompt 注入 persona"}
+{"file": ".trellis/spec/backend/tool-runtime-contracts.md", "reason": "工具合约：spawn-agent.ts 读 subAgentConfig.skin 注入 persona"}
+{"file": ".trellis/spec/backend/index.md", "reason": "spec 体系入口"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "测试与 lint 规范：theme/skin 测试 + i18n 校验"}
+{"file": "src/locales/i18n.ts", "reason": "i18n 函数 t() / tObject / tArray API：皮肤 messages 通过 t() 解析"}
+{"file": "src/locales/en.json", "reason": "英文 locale：加 skins.{role}.{label,thinking,greeting} 节点"}
+{"file": "src/locales/zh.json", "reason": "中文 locale：加 skins.{role}.{label,thinking,greeting} 节点"}
+{"file": "src/prompts/role-templates.ts", "reason": "ROLE_WORKER 模板：persona 字段（与 skin persona 区分）"}
+{"file": "src/tui/utils/colors.ts", "reason": "旧版颜色常量：迁到 src/theme/wasteland/colors.ts 后删除"}
+{"file": "src/tools/spawn-agent.ts", "reason": "PR2 已实现的 assembleSubAgentPrompt：扩展读 subAgentConfig.skin"}
+{"file": "src/tui/hooks/useRuntime.ts", "reason": "mainAgent persona 注入：runAgentLoop({ prompt }) 拼装"}
+{"file": "src/commands/chat.ts", "reason": "CLI 路径：mainAgent persona 注入同 useRuntime"}
+{"file": "src/commands/resume.ts", "reason": "resume 路径：mainAgent persona 注入"}
+{"file": "src/skins/immortan-joe/index.ts", "reason": "旧版混杂 theme + skin：拆到 theme/wasteland/ + skins/roles/immortan-joe/"}
+{"file": "src/config/settings-types.ts", "reason": "SubAgentSettings 加 skin?: string 字段"}
+{"file": "src/tui/components/ChatMessageList.tsx", "reason": "TUI 渲染：skin?.ui.X → theme.X + selectedSkin.roleUi.X + systemCommon.X"}
+{"file": "src/tui/components/ChatInputBar.tsx", "reason": "TUI 渲染替换"}
+{"file": "src/tui/components/StatusBar.tsx", "reason": "TUI 渲染替换"}
+{"file": "src/tui/types.ts", "reason": "TuiRuntimeContext 类型：theme + selectedSkin 类型"}

@@ -7,7 +7,52 @@
     "notFound": "Skin \"{{skinId}}\" not found: {{skinPath}}",
     "incomplete": "Skin configuration incomplete: missing required fields",
     "missingCommandName": "Skin configuration incomplete: cli.commandName is required",
-    "missingGreeting": "Skin configuration incomplete: roles.main.greeting is required"
+    "missingGreeting": "Skin configuration incomplete: roles.main.greeting is required",
+    "system": {
+      "labels": {
+        "user": "User",
+        "system": "System",
+        "tool": "Tool",
+        "error": "Error",
+        "success": "Success",
+        "warn": "Warning",
+        "userName": "Rider",
+        "session": "Session"
+      },
+      "messages": {
+        "noResponse": "No response was returned.",
+        "executionFailed": "Execution failed.",
+        "executionComplete": "Execution complete.",
+        "spawnAgentHandled": "spawn_agent is handled by the runtime dispatcher.",
+        "toolRegistry": "The requested tool is not available in the registry.",
+        "startupFailed": "Runtime startup failed."
+      }
+    },
+    "immortan-joe": {
+      "label": "Immortan Joe",
+      "thinking": "Immortan Joe is weighing your request...",
+      "greeting": "You may make your wish.",
+      "errorPrefix": "The Citadel",
+      "catchphrases": [
+        "I am the bounty!",
+        "Wish, and I shall grant!",
+        "The Citadel's grace upon you!"
+      ]
+    },
+    "nux": {
+      "label": "Nux",
+      "thinking": "Nux is scouting the wasteland...",
+      "greeting": "Witness me. I will find what you need.",
+      "errorPrefix": "War Rig",
+      "catchphrases": ["Witness me!", "The wasteland reveals its trail!", "I found it!"]
+    },
+    "furiosa": {
+      "label": "Imperator Furiosa",
+      "thinking": "Furiosa is analyzing the route...",
+      "greeting": "State the objective. I will chart the route.",
+      "errorPrefix": "Imperator",
+      "catchphrases": ["The route is clear.", "We move with purpose.", "The evidence holds."]
+    }
   },
   "prompts": {
     "builtinRoleNotFound": "Builtin role not found: {{ref}}",

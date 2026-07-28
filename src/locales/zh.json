@@ -7,7 +7,48 @@
     "notFound": "皮肤 \"{{skinId}}\" 不存在: {{skinPath}}",
     "incomplete": "皮肤配置不完整: 缺少必要字段",
     "missingCommandName": "皮肤配置不完整: cli.commandName 是必需的",
-    "missingGreeting": "皮肤配置不完整: roles.main.greeting 是必需的"
+    "missingGreeting": "皮肤配置不完整: roles.main.greeting 是必需的",
+    "system": {
+      "labels": {
+        "user": "用户",
+        "system": "系统",
+        "tool": "工具",
+        "error": "错误",
+        "success": "成功",
+        "warn": "警告",
+        "userName": "骑手",
+        "session": "会话"
+      },
+      "messages": {
+        "noResponse": "未收到任何响应。",
+        "executionFailed": "执行失败。",
+        "executionComplete": "执行完成。",
+        "spawnAgentHandled": "spawn_agent 由运行时分发器处理。",
+        "toolRegistry": "工具注册表中没有请求的工具。",
+        "startupFailed": "运行时启动失败。"
+      }
+    },
+    "immortan-joe": {
+      "label": "不死老乔",
+      "thinking": "不死老乔正在审视你的愿望...",
+      "greeting": "我允许你许愿。",
+      "errorPrefix": "圣殿",
+      "catchphrases": ["我即恩赐！", "许愿吧，我成全！", "圣殿之恩，降临于你！"]
+    },
+    "nux": {
+      "label": "纳克斯",
+      "thinking": "纳克斯正在废土中侦察...",
+      "greeting": "见证我吧，我会找到你要的东西。",
+      "errorPrefix": "战车",
+      "catchphrases": ["见证我！", "废土显出了踪迹！", "我找到了！"]
+    },
+    "furiosa": {
+      "label": "弗瑞奥萨指挥官",
+      "thinking": "弗瑞奥萨正在分析路线...",
+      "greeting": "说明目标，我来规划路线。",
+      "errorPrefix": "指挥官",
+      "catchphrases": ["路线已经清晰。", "我们目标明确地前进。", "证据经得住检验。"]
+    }
   },
   "prompts": {
     "builtinRoleNotFound": "内置角色不存在: {{ref}}",
@@ -73,7 +114,12 @@
         "title": "圣殿最高指挥官",
         "personality": "威严、命令式、说话充满信念",
         "greeting": "我允许你许愿。",
-        "catchphrases": ["我即恩赐！", "许愿吧，我成全！", "圣殿之恩，降临于你！", "奉我之恩，废土得生！"]
+        "catchphrases": [
+          "我即恩赐！",
+          "许愿吧，我成全！",
+          "圣殿之恩，降临于你！",
+          "奉我之恩，废土得生！"
+        ]
       },
       "workers": {
         "researcher": {

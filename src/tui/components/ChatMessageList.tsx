@@ -20,27 +20,14 @@ import React from 'react';
 import { Text, Box } from 'ink';
 import { interval, scan, type Subscription } from 'rxjs';
 import { useAppContext, type Message } from '../context/AppContext.js';
-import { t } from '../../locales/index.js';
+import { t, tArray } from '../../locales/index.js';
+import { systemCommon, type RoleSkin } from '../../skins/index.js';
+import { wastelandTheme } from '../../theme/wasteland/index.js';
 import { splitThinkTags } from '../../ui/think-tags.js';
-import { getRoleGreeting, getRoleCatchphrase } from '../../skins/index.js';
-import type { Skin } from '../../skins/index.js';
-import {
-  TEXT,
-  MSG_BORDER_USER,
-  MSG_BORDER_ASSISTANT,
-  MSG_BORDER_TOOL,
-  MSG_BORDER_SYSTEM,
-  MUTED,
-  PRIMARY,
-  SECONDARY,
-  SUCCESS,
-  WARNING,
-  STREAMING_CURSOR,
-} from '../utils/colors.js';
 
 interface ChatMessageListProps {
   width: number;
-  skin?: Skin | null;
+  selectedSkin: RoleSkin;
   /** 是否展示 <think> 思考块，默认 true */
   showThinking?: boolean;
   /** Spinner 帧切换间隔（毫秒），默认 80 */
@@ -51,10 +38,10 @@ interface ChatMessageListProps {
 
 export function ChatMessageList({
   width,
-  skin,
+  selectedSkin,
   showThinking = true,
-  spinnerIntervalMs = 80,
-  typewriterRateMs = 30,
+  spinnerIntervalMs = wastelandTheme.animations.spinnerIntervalMs,
+  typewriterRateMs = wastelandTheme.animations.typewriterRateMs,
 }: ChatMessageListProps): React.ReactElement {
   const { state } = useAppContext();
   const messages = state.session.messages;
@@ -64,15 +51,11 @@ export function ChatMessageList({
       {/* 欢迎消息 */}
       {messages.length === 0 && (
         <Box flexDirection="column" alignItems="center" justifyContent="center" paddingY={2}>
-          <Text color={PRIMARY} bold>
-            {skin ? getRoleGreeting(skin, 'main') : t('tui.session.messages.welcome')}
+          <Text color={wastelandTheme.colors.primary} bold>
+            {t(selectedSkin.roleUi.greetingKey)}
           </Text>
-          {skin && (
-            <Text color={SECONDARY}>{getRoleCatchphrase(skin, 'main')}</Text>
-          )}
-          <Text color={MUTED}>
-            {t('tui.session.messages.chatStartHint')}
-          </Text>
+          <Text color={wastelandTheme.colors.secondary}>{getRoleCatchphrase(selectedSkin)}</Text>
+          <Text color={wastelandTheme.colors.muted}>{t('tui.session.messages.chatStartHint')}</Text>
         </Box>
       )}
 
@@ -82,7 +65,7 @@ export function ChatMessageList({
           key={message.id}
           message={message}
           width={width}
-          skin={skin}
+          selectedSkin={selectedSkin}
           showThinking={showThinking}
         />
       ))}
@@ -91,7 +74,7 @@ export function ChatMessageList({
       {state.session.isStreaming && state.session.streamingContent && (
         <StreamingBlock
           width={width}
-          skin={skin}
+          selectedSkin={selectedSkin}
           content={state.session.streamingContent}
           showThinking={showThinking}
           spinnerIntervalMs={spinnerIntervalMs}
@@ -102,13 +85,12 @@ export function ChatMessageList({
 
       {/* 通用活动指示器：isThinking（等首个 chunk）或 isStreaming（流式中），
           仅在还没显示 streamingContent 时（避免与 StreamingBlock 重复） */}
-      {(state.session.isThinking || state.session.isStreaming) && !state.session.streamingContent && (
-        <Box flexDirection="row" marginTop={1}>
-          <Text color={WARNING}>
-            {skin?.ui.messages.thinking ?? t('tui.session.messages.thinking')}
-          </Text>
-        </Box>
-      )}
+      {(state.session.isThinking || state.session.isStreaming) &&
+        !state.session.streamingContent && (
+          <Box flexDirection="row" marginTop={1}>
+            <Text color={wastelandTheme.colors.warning}>{t(selectedSkin.roleUi.thinkingKey)}</Text>
+          </Box>
+        )}
     </Box>
   );
 }
@@ -188,10 +170,10 @@ const SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', 
  * 给用户"系统还在工作"的视觉信号，与服务端 chunk 粒度解耦。
  *
  * @param intervalMs - 帧切换间隔，默认 80ms（10 帧 = 完整一圈 ~800ms）
- * @param color - spinner 颜色（默认 SECONDARY）
+ * @param color - spinner 颜色（默认 wastelandTheme.colors.secondary）
  */
 function Spinner({
-  intervalMs = 80,
+  intervalMs = wastelandTheme.animations.spinnerIntervalMs,
   color,
 }: {
   intervalMs?: number;
@@ -202,7 +184,7 @@ function Spinner({
     const t = setInterval(() => setIdx((i) => (i + 1) % SPINNER_FRAMES.length), intervalMs);
     return () => clearInterval(t);
   }, [intervalMs]);
-  return <Text color={color ?? SECONDARY}>{SPINNER_FRAMES[idx]}</Text>;
+  return <Text color={color ?? wastelandTheme.colors.secondary}>{SPINNER_FRAMES[idx]}</Text>;
 }
 
 // ============================================================
@@ -225,11 +207,12 @@ function ThinkingBlock({ thinking, width, streaming }: ThinkingBlockProps): Reac
   return (
     <Box flexDirection="column" width={width} marginTop={1} paddingLeft={1}>
       <Box flexDirection="row">
-        <Text color={MUTED} dimColor>
-          {streaming ? ' ⏳ Thinking...' : ' 💭 Thinking'}
+        <Text color={wastelandTheme.colors.muted} dimColor>
+          {streaming ? ' ⏳ ' : ' 💭 '}
+          {t('ui.streaming.thinking')}
         </Text>
       </Box>
-      <Text color={MUTED} dimColor wrap="wrap">
+      <Text color={wastelandTheme.colors.muted} dimColor wrap="wrap">
         {thinking}
       </Text>
     </Box>
@@ -243,13 +226,18 @@ function ThinkingBlock({ thinking, width, streaming }: ThinkingBlockProps): Reac
 interface MessageItemProps {
   message: Message;
   width: number;
-  skin?: Skin | null;
+  selectedSkin: RoleSkin;
   showThinking: boolean;
 }
 
-function MessageItem({ message, width, skin, showThinking }: MessageItemProps): React.ReactElement {
+function MessageItem({
+  message,
+  width,
+  selectedSkin,
+  showThinking,
+}: MessageItemProps): React.ReactElement {
   const labelColor = getMessageColor(message.type);
-  const label = getMessageLabel(message.type, skin);
+  const label = getMessageLabel(message.type, selectedSkin);
 
   // 工具消息 & 子 Agent 系统消息:紧凑单行(opencode 风格)
   if (message.type === 'tool' || (message.type === 'system' && message.content.startsWith('['))) {
@@ -257,7 +245,7 @@ function MessageItem({ message, width, skin, showThinking }: MessageItemProps): 
     const split = splitThinkTags(message.content);
     return (
       <Box width={width}>
-        <Text color={MUTED}>  ⏺ </Text>
+        <Text color={wastelandTheme.colors.muted}> ⏺ </Text>
         <Text color={getToolColor(message.content)}>{split.content || message.content}</Text>
       </Box>
     );
@@ -267,7 +255,7 @@ function MessageItem({ message, width, skin, showThinking }: MessageItemProps): 
   if (message.type === 'system') {
     return (
       <Box width={width} marginTop={1}>
-        <Text color={MUTED}>  {message.content}</Text>
+        <Text color={wastelandTheme.colors.muted}> {message.content}</Text>
       </Box>
     );
   }
@@ -279,10 +267,8 @@ function MessageItem({ message, width, skin, showThinking }: MessageItemProps): 
       <Text color={labelColor} bold>
         {label}
       </Text>
-      {showThinking && split.thinking && (
-        <ThinkingBlock thinking={split.thinking} width={width} />
-      )}
-      <Text color={TEXT}>{split.content}</Text>
+      {showThinking && split.thinking && <ThinkingBlock thinking={split.thinking} width={width} />}
+      <Text color={wastelandTheme.colors.text}>{split.content}</Text>
     </Box>
   );
 }
@@ -293,7 +279,7 @@ function MessageItem({ message, width, skin, showThinking }: MessageItemProps): 
 
 interface StreamingBlockProps {
   width: number;
-  skin?: Skin | null;
+  selectedSkin: RoleSkin;
   content: string;
   showThinking: boolean;
   spinnerIntervalMs?: number;
@@ -304,11 +290,11 @@ interface StreamingBlockProps {
 
 function StreamingBlock({
   width,
-  skin,
+  selectedSkin,
   content,
   showThinking,
-  spinnerIntervalMs = 80,
-  typewriterRateMs = 30,
+  spinnerIntervalMs = wastelandTheme.animations.spinnerIntervalMs,
+  typewriterRateMs = wastelandTheme.animations.typewriterRateMs,
   isStreaming = true,
 }: StreamingBlockProps): React.ReactElement {
   const split = splitThinkTags(content);
@@ -323,21 +309,22 @@ function StreamingBlock({
   return (
     <Box flexDirection="column" width={width} marginTop={1}>
       <Box flexDirection="row">
-        {hasContent && <Spinner intervalMs={spinnerIntervalMs} color={SECONDARY} />}
-        <Text color={SECONDARY} bold>
-          {hasContent ? ' ' : ''}{skin?.ui.labels.assistant ?? t('tui.session.messages.assistant')}
+        {hasContent && (
+          <Spinner intervalMs={spinnerIntervalMs} color={wastelandTheme.colors.secondary} />
+        )}
+        <Text color={wastelandTheme.colors.secondary} bold>
+          {hasContent ? ' ' : ''}
+          {t(selectedSkin.roleUi.labelKey)}
         </Text>
       </Box>
       {showThinking && split.thinking && (
-        <ThinkingBlock
-          thinking={split.thinking}
-          width={width}
-          streaming={split.hasUnclosed}
-        />
+        <ThinkingBlock thinking={split.thinking} width={width} streaming={split.hasUnclosed} />
       )}
-      <Text color={TEXT}>
+      <Text color={wastelandTheme.colors.text}>
         {revealedContent}
-        <Text color={STREAMING_CURSOR}>▊</Text>
+        <Text color={wastelandTheme.colors.primary}>
+          {wastelandTheme.decorations.streamingCursor}
+        </Text>
       </Text>
     </Box>
   );
@@ -347,31 +334,36 @@ function StreamingBlock({
 // 辅助函数
 // ============================================================
 
+function getRoleCatchphrase(skin: RoleSkin): string {
+  const phrases = tArray(skin.roleUi.catchphrasesKey);
+  return phrases.length > 0 ? phrases[Math.floor(Math.random() * phrases.length)] : '';
+}
+
 function getMessageColor(type: Message['type']): string {
   switch (type) {
     case 'user':
-      return MSG_BORDER_USER;
+      return wastelandTheme.colors.messageBorderUser;
     case 'assistant':
-      return MSG_BORDER_ASSISTANT;
+      return wastelandTheme.colors.messageBorderAssistant;
     case 'tool':
-      return MSG_BORDER_TOOL;
+      return wastelandTheme.colors.messageBorderTool;
     case 'system':
-      return MSG_BORDER_SYSTEM;
+      return wastelandTheme.colors.messageBorderSystem;
     default:
-      return MUTED;
+      return wastelandTheme.colors.muted;
   }
 }
 
-function getMessageLabel(type: Message['type'], skin?: Skin | null): string {
+function getMessageLabel(type: Message['type'], selectedSkin: RoleSkin): string {
   switch (type) {
     case 'user':
-      return skin?.ui.labels.user ?? t('tui.session.messages.user');
+      return t(systemCommon.labels.user);
     case 'assistant':
-      return skin?.ui.labels.assistant ?? t('tui.session.messages.assistant');
+      return t(selectedSkin.roleUi.labelKey);
     case 'tool':
-      return t('tui.session.messages.tool');
+      return t(systemCommon.labels.tool);
     case 'system':
-      return skin?.ui.labels.system ?? t('tui.session.messages.system');
+      return t(systemCommon.labels.system);
     default:
       return t('tui.session.messages.message');
   }
@@ -379,13 +371,13 @@ function getMessageLabel(type: Message['type'], skin?: Skin | null): string {
 
 function getToolColor(content: string): string {
   if (content.includes('✅') || content.includes('success')) {
-    return SUCCESS;
+    return wastelandTheme.colors.success;
   }
   if (content.includes('❌') || content.includes('error')) {
-    return WARNING;
+    return wastelandTheme.colors.warning;
   }
   if (content.includes('🔧')) {
-    return PRIMARY;
+    return wastelandTheme.colors.primary;
   }
-  return MUTED;
+  return wastelandTheme.colors.muted;
 }

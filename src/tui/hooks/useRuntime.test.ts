@@ -22,6 +22,11 @@ vi.mock('@core/shared/initialize-runtime.js', () => ({
       list: vi.fn().mockReturnValue(['local']),
     },
     provider: { id: 'local', runStep: vi.fn() },
+    skin: {
+      id: 'immortan-joe',
+      persona: { fullPrompt: 'Immortan Joe persona' },
+      roleUi: { labelKey: 'skins.immortan-joe.label' },
+    },
     toolRegistry: { get: vi.fn(), list: vi.fn() },
     permissionGate: {
       check: vi.fn().mockResolvedValue({ decision: 'allow', mode: 'default' }),
@@ -74,10 +79,9 @@ vi.mock('@core/runtime/agent-loop.js', () => ({
 }));
 
 vi.mock('../../skins/index.js', () => ({
-  loadSkin: vi.fn().mockResolvedValue({
-    id: 'immortan-joe',
-    name: 'Immortan Joe',
-  }),
+  composeAgentPrompt: vi.fn((_skin: unknown, prompt?: string) =>
+    prompt ? `Immortan Joe persona\n\n${prompt}` : 'Immortan Joe persona'
+  ),
 }));
 
 vi.mock('../../locales/index.js', () => ({
@@ -102,6 +106,18 @@ describe('createTuiRuntime', () => {
     const context = await createTuiRuntime('/test');
 
     expect(context.providerId).toBe('local');
+  });
+
+  it('应该把主角色英文 persona 注入 system prompt', async () => {
+    const { runAgentLoop } = await import('@core/runtime/agent-loop.js');
+
+    await createTuiRuntime('/test');
+
+    expect(runAgentLoop).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        prompt: expect.stringContaining('Immortan Joe persona'),
+      })
+    );
   });
 
   it('应该支持 roleName 和 providerName 参数', async () => {

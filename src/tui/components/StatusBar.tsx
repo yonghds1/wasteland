@@ -12,7 +12,7 @@ import React from 'react';
 import { Text, Box } from 'ink';
 import { useAppContext } from '../context/AppContext.js';
 import { t } from '../../locales/index.js';
-import { PRIMARY, SECONDARY, MUTED, SUCCESS, WARNING, BACKGROUND_DARKER } from '../utils/colors.js';
+import { wastelandTheme } from '../../theme/wasteland/index.js';
 import type { TuiRuntimeContext } from '../types.js';
 
 interface StatusBarProps {
@@ -27,26 +27,37 @@ export function StatusBar({ width, runtime }: StatusBarProps): React.ReactElemen
   const sep = ' · ';
 
   return (
-    <Box flexShrink={0} width={width} paddingX={1} backgroundColor={BACKGROUND_DARKER}>
-      <Text color={PRIMARY} bold>{runtime.skin?.ui.banner.title ?? t('tui.header.title')}</Text>
-      <Text color={MUTED}>{sep}</Text>
-      <Text color={SECONDARY}>{runtime.providerId}</Text>
-      <Text color={MUTED}>{sep}</Text>
-      <Text color={MUTED}>{t('tui.statusbar.tools', { count: String(toolCount) })}</Text>
+    <Box
+      flexShrink={0}
+      width={width}
+      paddingX={1}
+      backgroundColor={wastelandTheme.colors.backgroundDarker}
+    >
+      <Text color={wastelandTheme.colors.primary} bold>
+        {t(runtime.skin.roleUi.labelKey)}
+      </Text>
+      <Text color={wastelandTheme.colors.muted}>{sep}</Text>
+      <Text color={wastelandTheme.colors.secondary}>{runtime.providerId}</Text>
+      <Text color={wastelandTheme.colors.muted}>{sep}</Text>
+      <Text color={wastelandTheme.colors.muted}>
+        {t('tui.statusbar.tools', { count: String(toolCount) })}
+      </Text>
       {runningAgents > 0 && (
         <>
-          <Text color={MUTED}>{sep}</Text>
-          <Text color={SUCCESS}>{t('tui.statusbar.runningAgents', { count: String(runningAgents) })}</Text>
+          <Text color={wastelandTheme.colors.muted}>{sep}</Text>
+          <Text color={wastelandTheme.colors.success}>
+            {t('tui.statusbar.runningAgents', { count: String(runningAgents) })}
+          </Text>
         </>
       )}
 
       {/* 右侧状态 */}
       <Box flexGrow={1} justifyContent="flex-end">
         {state.session.isThinking && (
-          <Text color={WARNING}>{runtime.skin?.ui.messages.thinking ?? t('tui.session.messages.thinking')}</Text>
+          <Text color={wastelandTheme.colors.warning}>{t(runtime.skin.roleUi.thinkingKey)}</Text>
         )}
         {state.session.isStreaming && (
-          <Text color={SUCCESS}>{t('tui.session.messages.streaming')}</Text>
+          <Text color={wastelandTheme.colors.success}>{t('tui.session.messages.streaming')}</Text>
         )}
       </Box>
     </Box>

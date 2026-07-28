@@ -24,6 +24,7 @@ import { createDefaultToolRegistry } from '../../tools/default-registry.js';
 import { ToolRegistry } from '../../tools/tool-registry.js';
 import { createSkillRegistry } from '../../skills/skill-discovery.js';
 import { SkillExecutor } from '../../skills/skill-executor.js';
+import { getRoleSkin, type RoleSkin } from '../../skins/index.js';
 
 // ============================================================
 // Types
@@ -47,6 +48,8 @@ export type RuntimeEnvironment = {
   permissionGate: PermissionGate;
   /** 已解析的运行时配置 */
   resolvedRuntime: ResolvedChatRuntime;
+  /** 当前主 Agent 的内容 skin */
+  skin: RoleSkin;
   /** MCP 管理器（启动/停止） */
   mcpManager: {
     startMCP: () => Promise<void>;
@@ -113,7 +116,10 @@ export async function initializeRuntime(
     cwd,
   });
 
-  // 3. 创建 Provider 注册表并解析 Provider
+  // 3. 解析主 Agent 内容 skin（未注册 ID 回退到默认 skin）
+  const skin = getRoleSkin(loadedSettings.settings.runtime.skinId);
+
+  // 4. 创建 Provider 注册表并解析 Provider
   const providerRegistry = createDefaultProviderRegistry();
   const provider = providerRegistry.resolve(
     resolvedRuntime.providerName,
@@ -138,7 +144,7 @@ export async function initializeRuntime(
   const a2aAgents = loadedSettings.settings.a2aAgents;
   const { toolRegistry, startMCP, stopMCP, startA2A, stopA2A } = createDefaultToolRegistry(
     mcpServers,
-    a2aAgents,
+    a2aAgents
   );
 
   // 7. 创建 SkillExecutor
@@ -155,9 +161,7 @@ export async function initializeRuntime(
     await startMCP();
   } catch (error) {
     // MCP 启动失败不阻塞运行时初始化
-    console.warn(
-      `MCP startup failed: ${error instanceof Error ? error.message : String(error)}`
-    );
+    console.warn(`MCP startup failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 
   // 9. 启动 A2A（可选，失败不阻塞）
@@ -165,9 +169,7 @@ export async function initializeRuntime(
     await startA2A();
   } catch (error) {
     // A2A 启动失败不阻塞运行时初始化
-    console.warn(
-      `A2A startup failed: ${error instanceof Error ? error.message : String(error)}`
-    );
+    console.warn(`A2A startup failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 
   return {
@@ -178,6 +180,7 @@ export async function initializeRuntime(
     toolRegistry,
     permissionGate,
     resolvedRuntime,
+    skin,
     mcpManager: { startMCP, stopMCP },
     a2aManager: { startA2A, stopA2A },
     loadedSettings,

@@ -15,7 +15,7 @@ import {
   type ProviderSettings,
   type RawWastelandSettings,
   type ResolvedWastelandSettings,
-  type RoleSettings,
+  type SubAgentSettings,
 } from './settings-types.js';
 import {
   findProjectConfigDir,
@@ -122,12 +122,15 @@ function validateModelSettings(value: unknown, sourcePath: string): Record<strin
   return models;
 }
 
-function validateRoleSettings(value: unknown, sourcePath: string): Record<string, RoleSettings> {
+function validateRoleSettings(
+  value: unknown,
+  sourcePath: string
+): Record<string, SubAgentSettings> {
   if (!isRecord(value)) {
     throw new Error(`配置文件 ${sourcePath} 中 subAgents 必须是对象。`);
   }
 
-  const roles: Record<string, RoleSettings> = {};
+  const roles: Record<string, SubAgentSettings> = {};
 
   for (const [roleId, roleSettings] of Object.entries(value)) {
     if (!isRecord(roleSettings)) {
@@ -136,6 +139,14 @@ function validateRoleSettings(value: unknown, sourcePath: string): Record<string
 
     if (typeof roleSettings.model !== 'string' || roleSettings.model.trim().length === 0) {
       throw new Error(`配置文件 ${sourcePath} 中 subAgents.${roleId}.model 必须是非空字符串。`);
+    }
+
+    if (
+      'skin' in roleSettings &&
+      roleSettings.skin !== undefined &&
+      (typeof roleSettings.skin !== 'string' || roleSettings.skin.trim().length === 0)
+    ) {
+      throw new Error(`配置文件 ${sourcePath} 中 subAgents.${roleId}.skin 必须是非空字符串。`);
     }
 
     if ('permissionMode' in roleSettings && roleSettings.permissionMode !== undefined) {
@@ -156,6 +167,7 @@ function validateRoleSettings(value: unknown, sourcePath: string): Record<string
     roles[roleId] = {
       ...roleSettings,
       model: roleSettings.model.trim(),
+      skin: typeof roleSettings.skin === 'string' ? roleSettings.skin.trim() : undefined,
       permissionMode:
         typeof roleSettings.permissionMode === 'string'
           ? validatePermissionMode(
@@ -216,10 +228,7 @@ async function parseSettings(raw: unknown, sourcePath: string): Promise<RawWaste
     }
 
     if ('skinId' in raw.runtime && raw.runtime.skinId !== undefined) {
-      if (
-        typeof raw.runtime.skinId !== 'string' ||
-        raw.runtime.skinId.trim().length === 0
-      ) {
+      if (typeof raw.runtime.skinId !== 'string' || raw.runtime.skinId.trim().length === 0) {
         throw new Error(`配置文件 ${sourcePath} 中 runtime.skinId 必须是非空字符串。`);
       }
 
@@ -351,7 +360,10 @@ async function parseSettings(raw: unknown, sourcePath: string): Promise<RawWaste
     const parallel: NonNullable<RawWastelandSettings['parallel']> = {};
 
     if ('maxConcurrency' in raw.parallel && raw.parallel.maxConcurrency !== undefined) {
-      if (typeof raw.parallel.maxConcurrency !== 'number' || !Number.isInteger(raw.parallel.maxConcurrency)) {
+      if (
+        typeof raw.parallel.maxConcurrency !== 'number' ||
+        !Number.isInteger(raw.parallel.maxConcurrency)
+      ) {
         throw new Error(`配置文件 ${sourcePath} 中 parallel.maxConcurrency 必须是整数。`);
       }
 
@@ -470,7 +482,7 @@ function mergeSettings(
   const mergedA2AAgents: A2AAgentsConfig = [...(base.a2aAgents ?? [])];
   if (next.a2aAgents) {
     for (const agent of next.a2aAgents) {
-      const existingIndex = mergedA2AAgents.findIndex(a => a.name === agent.name);
+      const existingIndex = mergedA2AAgents.findIndex((a) => a.name === agent.name);
       if (existingIndex >= 0) {
         mergedA2AAgents[existingIndex] = agent;
       } else {
@@ -628,7 +640,7 @@ function resolveSettingsAuthRefs(
       value: settings.subAgents,
       auth,
       env,
-    }) as Record<string, RoleSettings>,
+    }) as Record<string, SubAgentSettings>,
     runtime: {
       ...settings.runtime,
     },
@@ -706,7 +718,10 @@ function applyEnvironmentOverrides(
 
   const showThinkingEnv = env.WASTELAND_SHOW_THINKING ?? env.JOE_SHOW_THINKING;
   if (typeof showThinkingEnv === 'string' && showThinkingEnv.trim().length > 0) {
-    resolved.runtime.showThinking = parseBooleanOverride(showThinkingEnv, 'WASTELAND_SHOW_THINKING');
+    resolved.runtime.showThinking = parseBooleanOverride(
+      showThinkingEnv,
+      'WASTELAND_SHOW_THINKING'
+    );
   }
 
   const spinnerEnv = env.WASTELAND_SPINNER_INTERVAL_MS ?? env.JOE_SPINNER_INTERVAL_MS;

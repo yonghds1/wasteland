@@ -51,7 +51,7 @@ export function ChatArea({ runtime, sendMessage }: ChatAreaProps): React.ReactEl
         ) : (
           <ChatMessageList
             width={terminalColumns}
-            skin={runtime.skin}
+            selectedSkin={runtime.skin}
             showThinking={runtime.showThinking}
             spinnerIntervalMs={runtime.spinnerIntervalMs}
             typewriterRateMs={runtime.typewriterRateMs}
@@ -60,9 +60,7 @@ export function ChatArea({ runtime, sendMessage }: ChatAreaProps): React.ReactEl
       </Box>
 
       {/* 底部输入框(sessions 页时隐藏) */}
-      {!isSessionsPage && (
-        <ChatInputBar width={terminalColumns} skin={runtime.skin} sendMessage={sendMessage} />
-      )}
+      {!isSessionsPage && <ChatInputBar width={terminalColumns} sendMessage={sendMessage} />}
     </Box>
   );
 }

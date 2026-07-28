@@ -17,7 +17,7 @@ import {
   resolvePanelWidth,
   wrapText,
 } from './terminal-theme.js';
-import { theme } from './themes/index.js';
+import { wastelandTheme } from '../theme/wasteland/index.js';
 import { splitThinkTags } from './think-tags.js';
 
 // ============================================================
@@ -76,13 +76,13 @@ const TOOL_DISPLAY_VERBS: Record<string, string> = {
 // ============================================================
 
 /** Secondary color (bold) */
-const SECONDARY_COLOR = hexToFgBold(theme.secondary);
+const SECONDARY_COLOR = hexToFgBold(wastelandTheme.colors.secondary);
 
 /** Success color (bold) */
-const SUCCESS_COLOR = hexToFgBold(theme.success);
+const SUCCESS_COLOR = hexToFgBold(wastelandTheme.colors.success);
 
 /** Error color (bold) */
-const ERROR_COLOR = hexToFgBold(theme.error);
+const ERROR_COLOR = hexToFgBold(wastelandTheme.colors.error);
 
 // ============================================================
 // Agent 上下文追踪
@@ -615,7 +615,9 @@ export async function renderRuntimeEvents(
             if (style === 'interactive') {
               flushTurnSpacing(event.turn);
               stdout.write('\n');
-              stdout.write(`${paint('?', ANSI.bold, ANSI.cyan)} ${paint(event.question, ANSI.bold, ANSI.white)}\n`);
+              stdout.write(
+                `${paint('?', ANSI.bold, ANSI.cyan)} ${paint(event.question, ANSI.bold, ANSI.white)}\n`
+              );
               if (event.options && event.options.length > 0) {
                 stdout.write(`${paint('Options:', ANSI.dim)} ${event.options.join(', ')}\n`);
               }

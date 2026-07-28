@@ -7,12 +7,17 @@
 import { Command } from 'commander';
 import { Subject } from 'rxjs';
 
+import { composeAgentPrompt } from '../skins/index.js';
 import { t } from '../locales/index.js';
 
 import { resolveDefaultTraceDir } from '../config/paths.js';
 import { initializeRuntime } from '../core/shared/initialize-runtime.js';
 import { createSessionIndex, type SessionDetail } from '../core/runtime/session-index.js';
-import { runAgentLoop, MAIN_AGENT_TOOL_NAMES, filterToolRegistry } from '../core/runtime/agent-loop.js';
+import {
+  runAgentLoop,
+  MAIN_AGENT_TOOL_NAMES,
+  filterToolRegistry,
+} from '../core/runtime/agent-loop.js';
 import { createPermissionGate } from '../core/runtime/permission-gate.js';
 import { renderRuntimeEvents } from '../ui/terminal-renderer.js';
 import { renderDebugTrace } from '../ui/debug-renderer.js';
@@ -149,7 +154,7 @@ export function createResumeCommand(): Command {
             mode: 'single',
             maxStepsPerTurn,
             existingSession: resumedSession,
-            prompt: resolvedRuntime.prompt,
+            prompt: composeAgentPrompt(runtime.skin, resolvedRuntime.prompt),
             providerRegistry: runtime.providerRegistry,
             providerSettings: resolvedRuntime.providerConfig,
             skillExecutor: runtime.skillExecutor,
@@ -203,7 +208,7 @@ export function createResumeCommand(): Command {
             mode: 'interactive',
             maxStepsPerTurn,
             existingSession: resumedSession,
-            prompt: resolvedRuntime.prompt,
+            prompt: composeAgentPrompt(runtime.skin, resolvedRuntime.prompt),
             providerRegistry: runtime.providerRegistry,
             providerSettings: resolvedRuntime.providerConfig,
             skillExecutor: runtime.skillExecutor,

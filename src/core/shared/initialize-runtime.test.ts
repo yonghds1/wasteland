@@ -91,6 +91,8 @@ describe('initializeRuntime', () => {
     expect(result).toHaveProperty('toolRegistry');
     expect(result).toHaveProperty('permissionGate');
     expect(result).toHaveProperty('resolvedRuntime');
+    expect(result).toHaveProperty('skin');
+    expect(result.skin.id).toBe('immortan-joe');
     expect(result).toHaveProperty('mcpManager');
     expect(result).toHaveProperty('loadedSettings');
   });
@@ -164,6 +166,7 @@ describe('RuntimeEnvironment type', () => {
       toolRegistry: {} as any,
       permissionGate: {} as any,
       resolvedRuntime: {} as any,
+      skin: {} as any,
       mcpManager: { startMCP: async () => {}, stopMCP: async () => {} },
       a2aManager: { startA2A: async () => {}, stopA2A: async () => {} },
       loadedSettings: {} as any,

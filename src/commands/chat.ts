@@ -10,17 +10,19 @@ import { Command } from 'commander';
 
 import { resolveDefaultTraceDir } from '@config/paths.js';
 import type { ChatInputTurn, RuntimeMode } from '@core/runtime/event-types.js';
-import { runAgentLoop, MAIN_AGENT_TOOL_NAMES, filterToolRegistry } from '@core/runtime/agent-loop.js';
+import {
+  runAgentLoop,
+  MAIN_AGENT_TOOL_NAMES,
+  filterToolRegistry,
+} from '@core/runtime/agent-loop.js';
 import { UserInputBridge } from '@core/runtime/user-input-bridge.js';
 import { initializeRuntime, type RuntimeEnvironment } from '@core/shared/initialize-runtime.js';
 import { renderDebugTrace, type DebugFormat } from '@ui/debug-renderer.js';
 import { CliInputAdapter } from '@ui/cli-input-adapter.js';
 import { CliOutputAdapter } from '@ui/cli-output-adapter.js';
-import {
-  createSingleTurnInput,
-  readPipedInput,
-} from '@ui/readline-input.js';
+import { createSingleTurnInput, readPipedInput } from '@ui/readline-input.js';
 import { detectTTY } from '@ui/tty-detect.js';
+import { composeAgentPrompt } from '../skins/index.js';
 import { t } from '../locales/index.js';
 
 // ============================================================
@@ -97,7 +99,7 @@ async function runChatSession(params: {
       cwd: params.cwd,
       mode: params.mode,
       maxStepsPerTurn: params.maxStepsPerTurn,
-      prompt: params.prompt,
+      prompt: composeAgentPrompt(runtime.skin, params.prompt),
       providerRegistry: runtime.providerRegistry,
       providerSettings: runtime.resolvedRuntime.providerConfig,
       skillExecutor: runtime.skillExecutor,

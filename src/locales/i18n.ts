@@ -99,7 +99,7 @@ export function getLanguage(): Language {
 /**
  * 获取翻译值（支持嵌套路径和插值）
  *
- * @param key - 翻译键（如 "skin.name"）
+ * @param key - 翻译键（如 "skins.immortan-joe.label"）
  * @param params - 插值参数（如 { name: "Joe" }）
  * @param lang - 语言代码（可选，默认使用当前语言）
  * @returns 翻译后的字符串
@@ -133,7 +133,7 @@ export function t(key: string, params?: Record<string, string>, lang?: Language)
 /**
  * 获取嵌套对象
  *
- * @param key - 翻译键（如 "skin.roles.main"）
+ * @param key - 翻译键（如 "skins.system.labels"）
  * @returns 翻译后的对象
  */
 export function tObject<T = Record<string, unknown>>(key: string): T {
@@ -154,7 +154,7 @@ export function tObject<T = Record<string, unknown>>(key: string): T {
 /**
  * 获取数组
  *
- * @param key - 翻译键（如 "skin.roles.main.catchphrases"）
+ * @param key - 翻译键（如 "skins.furiosa.catchphrases"）
  * @param lang - 语言代码（可选，默认使用当前语言）
  * @returns 翻译后的数组
  */
