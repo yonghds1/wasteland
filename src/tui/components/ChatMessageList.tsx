@@ -24,6 +24,7 @@ import { getSkin, type Skin } from '@skins/index.js';
 import { resolvePalette } from '@theme/palette.js';
 import { wastelandTheme } from '@theme/wasteland/index.js';
 import { splitThinkTags } from '@ui/think-tags.js';
+import { describeAllowPattern } from '@core/runtime/permission-gate.js';
 import { Scrollbar } from './Scrollbar.js';
 import { useMouseWheel } from '../mouse/useMouseWheel.js';
 import {
@@ -199,6 +200,8 @@ export function ChatMessageList({
         }
         // 仅 pending 时响应 selection 高亮
         const interactive = isPending || (!isHistory && !pending);
+        // always 可记模式：有则展示规则，无则置灰（仅本次允许）
+        const allowPattern = pending ? describeAllowPattern(pending.toolName, pending.input) : null;
         visualLines.push(
           <Box key={`${message.id}-perm-opt-0`} width={contentWidth} height={1} flexDirection="row">
             <Text
@@ -213,11 +216,12 @@ export function ChatMessageList({
         visualLines.push(
           <Box key={`${message.id}-perm-opt-1`} width={contentWidth} height={1} flexDirection="row">
             <Text
-              color={interactive && currentSel === 1 ? wastelandTheme.colors.primary : wastelandTheme.colors.muted}
-              bold={interactive && currentSel === 1}
-              dimColor={!interactive}
+              color={interactive && currentSel === 1 && allowPattern ? wastelandTheme.colors.primary : wastelandTheme.colors.muted}
+              bold={interactive && currentSel === 1 && !!allowPattern}
+              dimColor={!interactive || !allowPattern}
             >
-              {interactive && currentSel === 1 ? '   ▶ ' : '     '}[a] Always allow (本会话永久允许)
+              {interactive && currentSel === 1 && allowPattern ? '   ▶ ' : '     '}
+              {allowPattern ? `[a] Always allow ${allowPattern.label} (本会话)` : '[a] 该工具仅支持本次允许'}
             </Text>
           </Box>
         );

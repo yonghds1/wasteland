@@ -12,6 +12,9 @@ import type { Readable, Writable } from 'node:stream';
 import { filter, fromEvent, map, scan, takeUntil, tap, type Observable } from 'rxjs';
 
 import type { ChatInputTurn } from '@core/runtime/event-types.js';
+import type { PermissionGate } from '@core/runtime/permission-gate.js';
+import { describeAllowPattern } from '@core/runtime/permission-gate.js';
+import type { PendingInputContext } from '@core/runtime/user-input-bridge.js';
 import type { SkillExecutor } from '@core/skills/skill-executor.js';
 import {
   executeCommandSync,
@@ -46,7 +49,13 @@ export type CliInputAdapterParams = {
   /** 本地命令回调（可选） */
   onCommand?: (result: SyncCommandResult) => void;
   /** 用户输入桥接器（用于 ask-user 工具） */
-  userInputBridge?: { isPending: () => boolean; provideInput: (input: string) => void };
+  userInputBridge?: {
+    isPending: () => boolean;
+    provideInput: (input: string) => void;
+    getPendingContext?: () => PendingInputContext | null;
+  };
+  /** 权限闸门（用于 always 关键字注册 session 规则；不传则 always 降级为本次允许） */
+  permissionGate?: PermissionGate;
 };
 
 // ============================================================
@@ -84,7 +93,12 @@ export class CliInputAdapter implements InputAdapter {
   private renderPrompt: () => void;
   private skillExecutor?: SkillExecutor;
   private onCommand?: (result: SyncCommandResult) => void;
-  private userInputBridge?: { isPending: () => boolean; provideInput: (input: string) => void };
+  private userInputBridge?: {
+    isPending: () => boolean;
+    provideInput: (input: string) => void;
+    getPendingContext?: () => PendingInputContext | null;
+  };
+  private permissionGate?: PermissionGate;
 
   constructor(params?: CliInputAdapterParams) {
     const input = params?.input ?? process.stdin;
@@ -92,6 +106,7 @@ export class CliInputAdapter implements InputAdapter {
     this.skillExecutor = params?.skillExecutor;
     this.onCommand = params?.onCommand;
     this.userInputBridge = params?.userInputBridge;
+    this.permissionGate = params?.permissionGate;
 
     const intro = params?.intro ?? createInteractiveIntro();
     const promptText = params?.promptText ?? '> ';
@@ -117,10 +132,20 @@ export class CliInputAdapter implements InputAdapter {
 
     this.input$ = fromEvent<string>(this.rl, 'line').pipe(
       // ---- tap: 处理 ask-user 输入路由 ----
-      // 如果 UserInputBridge 有待处理的输入请求，路由输入到它
+      // 如果 UserInputBridge 有待处理的输入请求，路由输入到它。
+      // 关键字 always：注册 session 规则后同样放行本次（注册失败则降级为本次允许）。
       tap((line) => {
         if (this.userInputBridge?.isPending()) {
-          this.userInputBridge.provideInput(line.trim());
+          const answer = line.trim();
+          if (answer.toLowerCase() === 'always') {
+            const registered = this.registerAlwaysFromBridge();
+            this.userInputBridge?.provideInput('always');
+            if (!registered) {
+              this.output.write('(该工具仅支持本次允许)\n');
+            }
+          } else {
+            this.userInputBridge?.provideInput(answer);
+          }
           this.renderPrompt();
         }
       }),
@@ -253,6 +278,26 @@ export class CliInputAdapter implements InputAdapter {
    */
   prompt(): void {
     this.renderPrompt();
+  }
+
+  /**
+   * 基于桥接的待处理上下文注册 session 级 always 规则。
+   *
+   * @returns 是否成功注册（无上下文/无闸门/无可记模式返回 false，调用方降级为本次允许）
+   */
+  private registerAlwaysFromBridge(): boolean {
+    const ctx = this.userInputBridge?.getPendingContext?.() ?? null;
+    const gate = this.permissionGate;
+    if (!ctx || !gate?.addSessionRule) return false;
+    const pattern = describeAllowPattern(ctx.toolName, ctx.input);
+    if (!pattern) return false;
+    gate.addSessionRule({
+      toolName: ctx.toolName,
+      decision: 'allow',
+      inputPrefix: { key: pattern.key, prefix: pattern.prefix },
+      reason: `cli always: ${pattern.label}`,
+    });
+    return true;
   }
 
   /**

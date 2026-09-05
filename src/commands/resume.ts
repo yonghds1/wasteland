@@ -294,6 +294,7 @@ export function createResumeCommand(): Command {
           const inputAdapter = new CliInputAdapter({
             skillExecutor: runtime.skillExecutor,
             userInputBridge,
+            permissionGate: runtime.permissionGate,
           });
 
           const work: Promise<void>[] = [

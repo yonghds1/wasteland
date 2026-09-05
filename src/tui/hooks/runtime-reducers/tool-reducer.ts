@@ -141,13 +141,15 @@ export function reduceToolEvent(
         type: 'system',
         content: `? ${event.question}`,
       });
-      // 统一 pending：解析 toolName/command 供卡片展示
+      // 统一 pending：解析 toolName/command 供卡片展示；
+      // toolName/input 优先取事件结构化字段（dispatch 侧填写），回退 question 正则。
       const q = event.question;
       const m = q.match(/是否允许执行\s*([^\s(?]+)(?:\s*\(([^)]+)\))?/);
       permission.pending = {
         callId: event.callId,
-        toolName: m?.[1] ?? 'ask-user',
+        toolName: event.toolName ?? m?.[1] ?? 'ask-user',
         command: m?.[2],
+        input: event.input ? { ...event.input } : undefined,
         question: q,
         status: 'pending',
         timestamp: new Date().toISOString(),
@@ -166,7 +168,12 @@ export function reduceToolEvent(
       });
       if (permission.pending && permission.pending.callId === event.callId) {
         const ans = event.answer.trim().toLowerCase();
-        const decision: PermissionCard['decision'] = ans === 'yes' || ans === 'y' || ans === '是' ? 'allow' : 'deny';
+        const decision: PermissionCard['decision'] =
+          ans === 'always'
+            ? 'allow_always'
+            : ans === 'yes' || ans === 'y' || ans === '是'
+              ? 'allow'
+              : 'deny';
         permission.history = [
           ...permission.history,
           { ...permission.pending, status: 'resolved', decision, timestamp: new Date().toISOString() },

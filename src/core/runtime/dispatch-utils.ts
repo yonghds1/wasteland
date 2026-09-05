@@ -24,6 +24,7 @@ import {
 } from './event-types.js';
 import type { PermissionGate } from './permission-gate.js';
 import type { SessionMetadata } from './session-manager.js';
+import type { PendingInputContext } from './user-input-bridge.js';
 
 /** ISO 时间戳生成器 */
 export function createTimestamp(): string {
@@ -104,7 +105,9 @@ export function requestPermissionConfirmation(
     session: SessionMetadata;
     turn: number;
     call: ToolCall;
-    userInputBridge?: { requestInput(): Promise<string> };
+    userInputBridge?: {
+      requestInput(context?: PendingInputContext): Promise<string>;
+    };
   },
   rawDecision: ReturnType<PermissionGate['evaluate']>
 ): Observable<{ allowed: boolean; askEvents: RuntimeEvent[] }> {
@@ -115,7 +118,11 @@ export function requestPermissionConfirmation(
     return of({ allowed: false, askEvents: [] });
   }
   return defer(async () => {
-    const answer = await params.userInputBridge?.requestInput() ?? '';
+    const answer = (await params.userInputBridge?.requestInput({
+      callId: params.call.id,
+      toolName: params.call.toolName,
+      input: params.call.input,
+    })) ?? '';
     const receivedEvent: RuntimeEvent = {
       type: 'user_input_received',
       sessionId: params.session.id,
@@ -123,7 +130,9 @@ export function requestPermissionConfirmation(
       callId: params.call.id,
       answer,
     };
-    const allowed = /^(y|yes|是)$/i.test(answer.trim());
+    // 'always' 由 UI 侧先注册 session 规则（见 ChatInputBar/CliInputAdapter），
+    // 此处同样放行本次；规则注册本身不经过 answer 字符串。
+    const allowed = /^(y|yes|是|always)$/i.test(answer.trim());
     return { allowed, askEvents: [receivedEvent] as RuntimeEvent[] };
   });
 }

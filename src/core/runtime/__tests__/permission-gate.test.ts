@@ -19,7 +19,8 @@ vi.mock('@locales/index.js', () => ({
 }));
 
 import {
-  createPermissionGate
+  createPermissionGate,
+  describeAllowPattern,
 } from '../permission-gate.js';
 import type { ToolCall } from '../../../tools/tool-types.js';
 
@@ -334,5 +335,83 @@ describe('createPermissionGate', () => {
       expect(gate.evaluate(makeCall(), 'write').decision).toBe('ask');
       expect(gate.evaluate(makeCall(), 'execute').decision).toBe('deny');
     });
+  });
+});
+
+describe('session rules (once/always 内存级)', () => {
+  function bashCall(command: string) {
+    return { id: 'call-1', toolName: 'bash', input: { command } };
+  }
+
+  it('addSessionRule 注册后同 pattern 放行', () => {
+    const gate = createPermissionGate({ mode: 'default' });
+    expect(gate.evaluate(bashCall('git status'), 'execute').decision).toBe('ask');
+    gate.addSessionRule?.({
+      toolName: 'bash',
+      decision: 'allow',
+      inputPrefix: { key: 'command', prefix: 'git status' },
+    });
+    expect(gate.evaluate(bashCall('git status --porcelain'), 'execute').decision).toBe('allow');
+  });
+
+  it('前缀不匹配继续 ask', () => {
+    const gate = createPermissionGate({ mode: 'default' });
+    gate.addSessionRule?.({
+      toolName: 'bash',
+      decision: 'allow',
+      inputPrefix: { key: 'command', prefix: 'git status' },
+    });
+    expect(gate.evaluate(bashCall('git push origin main'), 'execute').decision).toBe('ask');
+    expect(gate.evaluate(bashCall('ls'), 'execute').decision).toBe('ask');
+  });
+
+  it('静态 deny 盖过 session 放行（防静默提权）', () => {
+    const gate = createPermissionGate({
+      mode: 'default',
+      rules: [{ toolName: 'bash', decision: 'deny' }],
+    });
+    gate.addSessionRule?.({
+      toolName: 'bash',
+      decision: 'allow',
+      inputPrefix: { key: 'command', prefix: 'git status' },
+    });
+    expect(gate.evaluate(bashCall('git status'), 'execute').decision).toBe('deny');
+  });
+
+  it('clearSessionRules 清空后恢复 ask', () => {
+    const gate = createPermissionGate({ mode: 'default' });
+    gate.addSessionRule?.({
+      toolName: 'bash',
+      decision: 'allow',
+      inputPrefix: { key: 'command', prefix: 'git status' },
+    });
+    expect(gate.evaluate(bashCall('git status'), 'execute').decision).toBe('allow');
+    gate.clearSessionRules?.();
+    expect(gate.evaluate(bashCall('git status'), 'execute').decision).toBe('ask');
+  });
+});
+
+describe('describeAllowPattern', () => {
+  it('bash 取命令首两 token', () => {
+    expect(describeAllowPattern('bash', { command: 'git status --porcelain' })).toEqual({
+      key: 'command',
+      prefix: 'git status',
+      label: 'bash git status*',
+    });
+  });
+
+  it('edit 系取完整 path', () => {
+    expect(describeAllowPattern('edit-file', { path: '/a/b.ts' })).toEqual({
+      key: 'path',
+      prefix: '/a/b.ts',
+      label: 'edit-file /a/b.ts*',
+    });
+  });
+
+  it('无映射工具/空值/非字符串返回 null（UI 只给 once）', () => {
+    expect(describeAllowPattern('spawn_agent', { task: 'x' })).toBeNull();
+    expect(describeAllowPattern('bash', {})).toBeNull();
+    expect(describeAllowPattern('bash', { command: '   ' })).toBeNull();
+    expect(describeAllowPattern('bash', undefined)).toBeNull();
   });
 });

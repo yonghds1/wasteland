@@ -651,3 +651,44 @@ Why correct:
 - `settings.models[alias].model` 是 model 别名解析的唯一权威位置
 - 未找到 alias 时保留原值（兼容 alias 即 model name 的场景，如直接写 `"gpt-4o"`）
 - 避免 minimax API 收到未解析的 alias 导致 404/400 错误
+
+---
+
+## Scenario: once/always 会话级记住 + 弹窗 bypass 入口拆除
+
+### 1. Scope / Trigger
+
+- Trigger: 权限弹窗选项 2（`2`/`a`）曾发送 `/perm bypass` 把**全局**切到免确认，用户不敢点；且 `spawn_agent` 等无模式工具点了也没用。
+- Trigger: OpenCode/Claude Code 常规做法是 once（本次）/ always（记住同类，session 级内存），落盘是二期且只落本地忽略文件。
+
+### 2. Signatures
+
+```ts
+// permission-gate.ts
+type PermissionRule = { toolName?: string; riskLevel?: ToolRiskLevel; decision; reason?; inputPrefix?: { key: string; prefix: string } };
+gate.addSessionRule(rule: PermissionRule): void;   // 内存，进程结束即焚
+gate.clearSessionRules(): void;                    // 预留（单进程多 session 时调用）
+describeAllowPattern(toolName: string, input?: ToolInput): AllowPattern | null;
+// bash→command 首两 token（如 "git status"），edit/write/read→path 全值，git→subcommand；
+// 无映射/空值返回 null（UI 只给 once）。
+
+// 回答协议（dispatch-utils requestPermissionConfirmation）：
+// 'yes' → 本次放行；'always' → 本次放行（规则由 UI 侧先注册）；其他 → 拒绝。
+```
+
+### 3. Contracts
+
+- 优先级：静态 deny > session 放行 > 静态 ask/allow > 模式默认。session always 永远盖不过显式 deny。
+- 弹窗选项 2 = always（内存 session 规则），**禁止再发 `/perm bypass`**；`Shift+Tab` 与手输 `/perm` 保留（显式自愿行为）。
+- 无可记模式的工具：选项 2 置灰并跳过，不静默降级。
+- `user_input_requested` 携带 `toolName` + `input`（可选字段，ask-user 工具可不填）；UI 由此推导模式，不正则反解析 question。
+- CLI：`always`/`once`/`yes`/`no` 关键字，复用同一 helper；无 gate/无 pattern 时降级本次允许并提示。
+- 子 agent 与父共享 gate 实例，同 session 自动跟进（落盘前无跨 session 继承问题）。
+```
+
+### 4. Tests Required
+
+- gate：前缀命中/未命中、静态 deny 优先、clear 生效（`permission-gate.test.ts`）。
+- 回答语义：`always` 放行本次（`permission-confirm.test.ts`）。
+- TUI：选项 2 注册规则且不发 bypass、无模式时忽略（`ChatInputBar.test.tsx`）。
+- CLI：`always` 关键字注册+放行、降级提示（`cli-input-adapter.test.ts`）。

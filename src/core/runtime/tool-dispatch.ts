@@ -354,7 +354,10 @@ export function dispatchToolCall(params: {
               : params.call.input?.subcommand
                 ? `是否允许执行 git ${params.call.input.subcommand}?`
                 : `是否允许执行 ${params.call.toolName}?`,
-          options: ['yes', 'no'],
+          options: ['yes', 'always', 'no'],
+          // 结构化上下文：UI 推导 once/always 模式用，不再依赖 question 正则
+          toolName: params.call.toolName,
+          input: { ...params.call.input },
         })
       : of<RuntimeEvent>();
 

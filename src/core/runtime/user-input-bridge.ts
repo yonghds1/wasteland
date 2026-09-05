@@ -7,6 +7,18 @@
 
 import { Subject, firstValueFrom } from 'rxjs';
 
+import type { ToolInput } from '@tools/tool-types.js';
+
+/**
+ * 待处理输入请求的结构化上下文（权限问询时由 dispatch 侧填入，
+ * CLI 等无事件订阅的 UI 由此推导 once/always 模式）。
+ */
+export type PendingInputContext = {
+  callId: string;
+  toolName: string;
+  input: ToolInput;
+};
+
 /**
  * 用户输入桥接器
  *
@@ -23,11 +35,16 @@ export class UserInputBridge {
   /** 是否有待处理的输入请求 */
   private pending = false;
 
+  /** 待处理请求的结构化上下文（无则为 null，如 ask-user 工具问答）。 */
+  private pendingContext: PendingInputContext | null = null;
+
   /** 等待用户输入 */
-  async requestInput(): Promise<string> {
+  async requestInput(context?: PendingInputContext): Promise<string> {
     this.pending = true;
+    this.pendingContext = context ?? null;
     const answer = await firstValueFrom(this.responseSubject);
     this.pending = false;
+    this.pendingContext = null;
     return answer;
   }
 
@@ -41,6 +58,11 @@ export class UserInputBridge {
   /** 是否有待处理的输入请求 */
   isPending(): boolean {
     return this.pending;
+  }
+
+  /** 取待处理请求的结构化上下文（无 pending 或无上下文时返回 null）。 */
+  getPendingContext(): PendingInputContext | null {
+    return this.pending ? this.pendingContext : null;
   }
 
   /** 清理资源 */

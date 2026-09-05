@@ -460,6 +460,12 @@ export type RuntimeEvent =
       callId: string;
       question: string;
       options?: string[];
+      /**
+       * 权限问询的结构化上下文（权限 ask 分支填写，ask-user 工具可不填）。
+       * UI 由此推导 once/always 模式，无需正则反解析 question。
+       */
+      toolName?: string;
+      input?: Record<string, unknown>;
     }
   | {
       /** 用户输入响应事件（用户回答后触发） */

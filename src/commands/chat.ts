@@ -238,6 +238,7 @@ export function configureChatCommand(cmd: Command): Command {
       const inputAdapter = new CliInputAdapter({
         skillExecutor: runtime.skillExecutor,
         userInputBridge,
+        permissionGate: runtime.permissionGate,
       });
 
       // 创建输出适配器

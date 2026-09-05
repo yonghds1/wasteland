@@ -82,6 +82,8 @@ export interface PermissionCard {
   callId: string;
   toolName: string;
   command?: string;
+  /** 触发问询的完整工具输入（once/always 模式推导与 session 规则注册用）。 */
+  input?: Record<string, unknown>;
   question: string;
   status: 'pending' | 'resolved';
   decision?: 'allow' | 'deny' | 'allow_always';

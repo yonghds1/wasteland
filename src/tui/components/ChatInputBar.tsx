@@ -16,6 +16,7 @@ import { useAppContext } from '../context/AppContext.js';
 import { t } from '@locales/index.js';
 import { wastelandTheme } from '@theme/wasteland/index.js';
 import { getAgentMode } from '@config/agent-mode-state.js';
+import { describeAllowPattern } from '@core/runtime/permission-gate.js';
 import { resolveContextWindow } from '@core/runtime/context-manager.js';
 import type { Skin } from '@skins/index.js';
 import type { TuiRuntimeContext } from '../types.js';
@@ -57,54 +58,76 @@ export function ChatInputBar({ width, sendMessage, selectedSkin, providerId, run
       return;
     }
 
-    // 优先处理权限确认交互（OpenCode 规范：↑/↓ 选择 + Enter 确认，或 1/2/3/Y/A/N/Esc 单键秒级响应）
-    if (runtime?.userInputBridge?.isPending()) {
+    // 优先处理权限确认交互（↑/↓ 选择 + Enter 确认，或 1/2/3/Y/A/N/Esc 单键秒级响应）。
+    // 选项语义：once=本次允许；always=记住同类（session 级内存规则，不落盘）；
+    // 无可记模式的工具只给 once（选项 2 置灰并跳过）。全局 bypass 已从弹窗移除，
+    // 只能经 Shift+Tab 或手输 /perm 主动进入。
+    const bridge = runtime?.userInputBridge;
+    if (bridge?.isPending()) {
+      const pending = state.permission?.pending ?? null;
+      const pattern = pending ? describeAllowPattern(pending.toolName, pending.input) : null;
+      const gate = runtime?.permissionGate;
+      const canRemember = pattern !== null && typeof gate?.addSessionRule === 'function';
+
+      const resetSelection = (): void => {
+        setState((prev) => ({ ...prev, permissionSelection: 0 }));
+        setInput('');
+      };
+      const confirmOnce = (): void => {
+        bridge.provideInput('yes');
+        resetSelection();
+      };
+      const confirmAlways = (): void => {
+        // 无可记模式或无闸门时忽略（不静默降级为 once，避免误解）
+        if (!pattern || !gate?.addSessionRule) return;
+        gate.addSessionRule({
+          toolName: pending?.toolName ?? '',
+          decision: 'allow',
+          inputPrefix: { key: pattern.key, prefix: pattern.prefix },
+          reason: `ask-user always: ${pattern.label}`,
+        });
+        bridge.provideInput('always');
+        resetSelection();
+      };
+      const deny = (): void => {
+        bridge.provideInput('no');
+        resetSelection();
+      };
+      // 箭头在选项间移动；无可记模式时跳过索引 1
+      const moveSel = (dir: 1 | -1): void => {
+        setState((prev) => {
+          let next = (prev.permissionSelection + dir + 3) % 3;
+          if (!canRemember && next === 1) next = (next + dir + 3) % 3;
+          return { ...prev, permissionSelection: next };
+        });
+      };
+
       if (key.upArrow) {
-        setState((prev) => ({
-          ...prev,
-          permissionSelection: (prev.permissionSelection - 1 + 3) % 3,
-        }));
+        moveSel(-1);
         return;
       }
       if (key.downArrow) {
-        setState((prev) => ({
-          ...prev,
-          permissionSelection: (prev.permissionSelection + 1) % 3,
-        }));
+        moveSel(1);
         return;
       }
 
       if (key.return) {
-        if (state.permissionSelection === 0) {
-          runtime.userInputBridge.provideInput('yes');
-        } else if (state.permissionSelection === 1) {
-          sendMessage('/perm bypass');
-          runtime.userInputBridge.provideInput('yes');
-        } else {
-          runtime.userInputBridge.provideInput('no');
-        }
-        setState((prev) => ({ ...prev, permissionSelection: 0 }));
-        setInput('');
+        if (state.permissionSelection === 0) confirmOnce();
+        else if (state.permissionSelection === 1) confirmAlways();
+        else deny();
         return;
       }
 
       if (inputChar === '1' || inputChar === 'y' || inputChar === 'Y') {
-        runtime.userInputBridge.provideInput('yes');
-        setState((prev) => ({ ...prev, permissionSelection: 0 }));
-        setInput('');
+        confirmOnce();
         return;
       }
       if (inputChar === '2' || inputChar === 'a' || inputChar === 'A') {
-        sendMessage('/perm bypass');
-        runtime.userInputBridge.provideInput('yes');
-        setState((prev) => ({ ...prev, permissionSelection: 0 }));
-        setInput('');
+        confirmAlways();
         return;
       }
       if (inputChar === '3' || inputChar === 'n' || inputChar === 'N' || key.escape) {
-        runtime.userInputBridge.provideInput('no');
-        setState((prev) => ({ ...prev, permissionSelection: 0 }));
-        setInput('');
+        deny();
         return;
       }
       // 等待权限确认时拦截其他无关字符输入，防止误发聊天消息
