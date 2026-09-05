@@ -1,0 +1,93 @@
+{
+  "name": "wasteland",
+  "version": "0.1.79",
+  "description": "Wasteland CLI - A post-apocalyptic themed multi-agent CLI system",
+  "type": "module",
+  "main": "./dist/cli.js",
+  "bin": {
+    "wasteland": "./bin/wasteland.js"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "clean": "node -e \"import('node:fs').then(fs => fs.rmSync('dist', { recursive: true, force: true }))\"",
+    "build": "node scripts/bump-version.mjs && tsc -p tsconfig.json --outDir dist && node scripts/fix-dist-paths.mjs && node scripts/copy-assets.mjs",
+    "build:no-bump": "tsc -p tsconfig.json --outDir dist && node scripts/fix-dist-paths.mjs && node scripts/copy-assets.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:full": "npm run build:no-bump && vitest run",
+    "test:watch": "vitest",
+    "check": "npm run typecheck && npm run lint && npm run validate:i18n && npm run check:locale-parity && npm run check:contrast && npm test",
+    "check:fast": "npm run typecheck && npm run lint",
+    "check:i18n": "npm run validate:i18n && npm run check:locale-parity",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "format": "prettier --write 'src/**/*.{ts,tsx,json}'",
+    "format:check": "prettier --check 'src/**/*.{ts,tsx,json}'",
+    "validate:i18n": "node scripts/validate-i18n.js",
+    "check:locale-parity": "node --import tsx scripts/check-locale-parity.ts",
+    "check:contrast": "node --import tsx scripts/check-contrast.ts",
+    "dev": "tsx src/cli.ts",
+    "setup": "tsx src/cli.ts setup",
+    "setup:force": "tsx src/cli.ts setup --force",
+    "tui": "tsx src/cli.ts tui",
+    "tui:build": "npm run build && node ./bin/wasteland.js tui",
+    "prepublishOnly": "npm run build && node scripts/prune-dist.mjs",
+    "aliases": "./scripts/create-aliases.sh",
+    "aliases:switch": "./scripts/create-aliases.sh",
+    "completion": "./scripts/install-completion.sh",
+    "completion:install": "./scripts/install-completion.sh"
+  },
+  "keywords": [
+    "cli",
+    "commander",
+    "typescript",
+    "multi-agent",
+    "agent",
+    "tui",
+    "ink",
+    "rxjs",
+    "mcp",
+    "llm"
+  ],
+  "author": "yonghds1 <yonghds1@gmail.com>",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yonghds1/wasteland.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yonghds1/wasteland/issues"
+  },
+  "homepage": "https://github.com/yonghds1/wasteland#readme",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@alcyone-labs/zod-to-json-schema": "^4.0.10",
+    "cheerio": "^1.2.0",
+    "clipboardy": "^5.3.2",
+    "commander": "^14.0.2",
+    "ink": "^7.0.3",
+    "react": "^19.2.6",
+    "rxjs": "^7.8.2",
+    "turndown": "^7.2.4",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^25.9.1",
+    "@types/react": "^19.2.15",
+    "@types/turndown": "^5.0.6",
+    "eslint": "^10.4.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.8.3",
+    "tsx": "^4.22.3",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.60.0",
+    "vitest": "^4.1.7"
+  }
+}

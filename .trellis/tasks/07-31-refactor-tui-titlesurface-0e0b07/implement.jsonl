@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/frontend/theme-skin.md", "reason": "本次更新 wastelandColors.titleSurface = '#0E0B07' 的设计/可见度文档,需同步到 spec §3 Contracts;沉淀 'ΔRGB ≥ 8 才是终端可见级别' 这条工程经验(防止后续 agent 再次选定 L-2pp 级别的色)。"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "核对:StatusBar 用法合规(top-bar auxiliary,paddingY={1},backgroundColor 仍由 wasteland titleSurface 主题 token 驱动);不引 raw hex。"}

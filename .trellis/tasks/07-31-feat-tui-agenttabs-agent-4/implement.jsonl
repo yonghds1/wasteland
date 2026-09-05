@@ -1,0 +1,3 @@
+{"file": ".trellis/spec/frontend/focus-management.md", "reason": "§3 Convention 'Esc is bidirectional toggle' 契约保持;本任务在 focusArea 切到 agentTabs 时重置 selectedIdx,需对齐 spec 中 'Tab cycle members MUST handle keyboard input' 的 gating 规则。"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "§Pure-function extraction rule:4 态视觉决策必须提取为 pure function getAgentTabStyle,组件渲染消费。"}
+{"file": ".trellis/spec/frontend/theme-skin.md", "reason": "§Palette Quantization Caveat:4 态视觉用 Ink 颜色(#E6B450 primary 等)都是 > 50 RGB 通道值,palette-safe;bg highlight 用 backgroundDarker 也是 palette-safe。"}

@@ -1,0 +1,6 @@
+{"file": ".trellis/spec/frontend/theme-skin.md", "reason": "skin/theme 分层契约；明确 SkinUi.colors 字段边界与 wastelandTheme 的关系"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "TUI 组件视觉 token 来源约定；ChatMessageList 改造时引用"}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "src/ 下目录命名约定；新文件 palette.ts / contrast.ts / check-*.ts 的落位"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "typecheck + test baseline；新 lint 脚本的接入位置"}
+{"file": "research/color-contrast-standards.md", "reason": "APCA-only 决策依据、阈值 (Lc 75/60/45)、7 个不达标皮肤清单、apca-w3 vendor 策略"}
+{"file": "research/i18n-fallback-cli-patterns.md", "reason": "build-time parity lint 模式参考；lazygit mergo.Merge 行为对照；DEFAULT_LANGUAGE='en' 不变"}

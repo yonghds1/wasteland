@@ -1,0 +1,33 @@
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "verify 组件用 theme 颜色（无硬编码），skin roleUi 文字用 i18n key"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "verify theme + selectedSkin 在 useRuntime 正确加载/缓存"}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "verify 目录结构：theme/ 和 skins/ 的新位置（不分错）"}
+{"file": ".trellis/spec/frontend/hook-guidelines.md", "reason": "verify useRuntime 加载规范"}
+{"file": ".trellis/spec/backend/runtime-contracts.md", "reason": "verify subAgentSettings.skin 字段 + assembleSubAgentPrompt 注入 persona"}
+{"file": ".trellis/spec/backend/tool-runtime-contracts.md", "reason": "verify spawn-agent.ts 读 subAgentConfig.skin 注入 persona（与主 agent minimax persona 一致英文）"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "verify lint + typecheck + 测试（419+5 通过）+ i18n 校验"}
+{"file": "src/locales/i18n.ts", "reason": "verify t(key, params, lang) 解析 skin.roleUi.labelKey 等 i18n key"}
+{"file": "src/locales/en.json", "reason": "verify skins.{role}.{label,thinking,greeting} 节点存在"}
+{"file": "src/locales/zh.json", "reason": "verify skins.{role}.{label,thinking,greeting} 节点存在"}
+{"file": "src/theme/wasteland/colors.ts", "reason": "verify 颜色方案：废土黄/橙 + 暗背景 + 语义色"}
+{"file": "src/theme/wasteland/typography.ts", "reason": "verify 字体 family/weight/size"}
+{"file": "src/theme/wasteland/spacing.ts", "reason": "verify padding/margin/border 宽度"}
+{"file": "src/theme/wasteland/decorations.ts", "reason": "verify border style + ASCII banner"}
+{"file": "src/theme/wasteland/animations.ts", "reason": "verify spinner/typewriter 常量"}
+{"file": "src/theme/wasteland/index.ts", "reason": "verify wastelandTheme = colors + typography + spacing + decorations + animations"}
+{"file": "src/skins/system/common.ts", "reason": "verify 系统级 UI labels + 通用 messages（不依赖角色）"}
+{"file": "src/skins/roles/immortan-joe/persona.ts", "reason": "verify persona 是英文（minimax 看到）"}
+{"file": "src/skins/roles/immortan-joe/roleUi.ts", "reason": "verify roleUi 用 i18n key（labelKey/thinkingKey/greetingKey）"}
+{"file": "src/skins/roles/immortan-joe/index.ts", "reason": "verify skin 入口（persona + roleUi）"}
+{"file": "src/skins/roles/nux/", "reason": "verify nux 角色（信息收集、年轻战士）"}
+{"file": "src/skins/roles/furiosa/", "reason": "verify furiosa 角色（分析、精确指挥）"}
+{"file": "src/skins/roles/index.ts", "reason": "verify 角色注册表 + defaultRoleSkin"}
+{"file": "src/config/settings-types.ts", "reason": "verify SubAgentSettings.skin?: string 字段"}
+{"file": "src/tools/spawn-agent.ts", "reason": "verify assembleSubAgentPrompt 读 skin 注入 persona"}
+{"file": "src/tui/hooks/useRuntime.ts", "reason": "verify mainAgent persona 注入（从 selectedSkin.persona 拼装）"}
+{"file": "src/commands/chat.ts", "reason": "verify CLI 路径 mainAgent persona 注入"}
+{"file": "src/commands/resume.ts", "reason": "verify resume 路径 mainAgent persona 注入"}
+{"file": "src/tui/components/ChatMessageList.tsx", "reason": "verify 替换 skin?.ui.X → theme.X + selectedSkin.roleUi.X + systemCommon.X"}
+{"file": "src/tui/components/ChatInputBar.tsx", "reason": "verify 替换"}
+{"file": "src/tui/components/StatusBar.tsx", "reason": "verify 替换"}
+{"file": "src/tui/types.ts", "reason": "verify TuiRuntimeContext 加 theme + selectedSkin 字段"}
+{"file": ".wasteland/settings.json", "reason": "verify subAgents 各自带 skin 字段，promptVariables 统一英文（移除 .zh）"}

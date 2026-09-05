@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/frontend/theme-skin.md", "reason": "主题契约源:本次新增 wastelandColors.surfaceSunken 颜色 token,需要在 colors.ts 与 theme-skin.md 的 wastelandColors schema 同步。token 值 '#2A2014' 是经 HSL/APCA 设计分析得到的(§2 'Signatures' 与 §3 'Contracts')。"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "组件层约束:StatusBar paddingY 改动 → flexShrink=0 + flexGrow=1 链不变(§Top-bar Auxiliary);AgentTabs borderStyle 恒定 → 仍是 top-bar 单行组件(高度变化在布局链中吸收)。"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "质量门:lint + typecheck + test 全绿;新增 token 后 wasteland theme 与所有 skin 的 contrast 必须仍过阈值 checkContrast(§Five-gate checklist 之一)。"}
+{"file": ".trellis/spec/frontend/focus-management.md", "reason": "AgentTabs 改动对齐本 spec §3 Convention 'Tab cycle members MUST handle keyboard input':borderStyle 永远 single 后,Layout shift 消除,符合 Esc bidirectional toggle 不破坏视觉连续性的诉求。"}

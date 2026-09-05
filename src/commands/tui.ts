@@ -1,0 +1,83 @@
+/**
+ * TUI 命令
+ *
+ * 启动交互式 TUI Dashboard
+ */
+
+import { Command } from 'commander';
+
+import { detectTTY } from '@ui/tty-detect.js';
+import { runTUI } from '@tui/index.js';
+import { createTuiRuntime, cleanupTuiRuntime } from '@tui/hooks/useRuntime.js';
+import { resolveAgentMode } from '@core/shared/initialize-runtime.js';
+import { getOrLoadSettings } from '@config/loaded-settings.js';
+import { initI18n, t } from '@locales/index.js';
+
+export function createTuiCommand(): Command {
+  return new Command('tui')
+    .description(t('commands.tui.description'))
+    .option('-r, --role <name>', t('commands.chat.options.role'))
+    .option('-p, --provider <name>', t('commands.chat.options.provider'))
+    .option('--dangerously-skip-permissions', t('commands.chat.options.dangerouslySkipPermissions'))
+    .option('--permission-mode <mode>', t('commands.chat.options.permissionMode'))
+    .option('--debug', t('commands.chat.options.debug'))
+    .option('--mode <mode>', t('commands.chat.options.mode'))
+    .option('--attach <session>', t('commands.tui.options.attach'))
+    .action(async (options) => {
+      // 初始化 i18n
+      const loadedSettings = await getOrLoadSettings(process.cwd(), process.env);
+      const language = loadedSettings.settings.runtime.language;
+      await initI18n(language);
+
+      // TTY 检测
+      const tty = detectTTY();
+
+      if (!tty.isInteractive) {
+        console.error(t('commands.tui.errors.noTty'));
+        console.error('');
+        console.error(t('commands.tui.errors.currentEnv'));
+        console.error(
+          `  - stdin TTY:  ${tty.stdinIsTTY ? t('commands.tui.errors.yes') : t('commands.tui.errors.no')}`
+        );
+        console.error(
+          `  - stdout TTY: ${tty.stdoutIsTTY ? t('commands.tui.errors.yes') : t('commands.tui.errors.no')}`
+        );
+        console.error('');
+        console.error(t('commands.tui.errors.runDirectly'));
+        console.error('  wasteland tui');
+        console.error('');
+        console.error(t('commands.tui.errors.useCli'));
+        console.error("  wasteland chat --message 'your message'");
+        process.exit(1);
+      }
+
+      try {
+        const explicitPermissionMode = options.dangerouslySkipPermissions
+          ? 'bypass_permissions'
+          : options.permissionMode;
+
+        // 创建 TUI 运行时（--mode 启动参数收窄为 single/multi 后透传）
+        const runtime = await createTuiRuntime(
+          process.cwd(),
+          options.role,
+          options.provider,
+          resolveAgentMode(options.mode),
+          explicitPermissionMode
+        );
+
+        try {
+          // 启动 TUI
+          await runTUI(runtime);
+        } finally {
+          // 清理资源
+          await cleanupTuiRuntime(runtime);
+        }
+      } catch (error) {
+        console.error(
+          t('commands.tui.errors.failed'),
+          error instanceof Error ? error.message : error
+        );
+        process.exit(1);
+      }
+    });
+}

@@ -1,0 +1,11 @@
+{"file": ".trellis/tasks/07-29-cleanup-skins-global-state/prd.md", "reason": "验收时核对 Acceptance Criteria"}
+{"file": ".trellis/spec/backend/runtime-contracts.md", "reason": "verify initializeRuntime 启动校验符合 spec"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "verify 单源真相（runtime.skin = settings.runtime.skinId）"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "verify lint + typecheck + i18n 校验 + 单测全绿"}
+{"file": "src/skins/index.ts", "reason": "verify export 已删 + 模块级 state 已删 + getSkin(name) 保留"}
+{"file": "src/commands/skin.ts", "reason": "verify /skin load 写 settings + /skin show 读 settings"}
+{"file": "src/core/shared/initialize-runtime.ts", "reason": "verify 启动校验 warning + fallback 路径"}
+{"file": "src/core/shared/initialize-runtime.test.ts", "reason": "verify 测试覆盖合法/非法/缺省场景"}
+{"file": "src/config/load-settings.ts", "reason": "verify runtime.skinId 已有 schema 校验保持不退化"}
+{"file": "src/locales/en.json", "reason": "verify commands.skin.load.success 文案"}
+{"file": "src/locales/zh.json", "reason": "verify commands.skin.load.success 文案"}

@@ -1,0 +1,8 @@
+{"file":".trellis/spec/guides/index.md","reason":"Shared thinking guidance for review."}
+{"file":".trellis/spec/guides/communication-language-policy.md","reason":"Ensure user-facing outputs and docs stay aligned with project language policy."}
+{"file":".trellis/spec/backend/index.md","reason":"Review runtime changes against backend architecture rules."}
+{"file":".trellis/spec/backend/directory-structure.md","reason":"Check the resulting file ownership against agreed structure."}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Apply current quality and documentation-update expectations."}
+{"file":"docs/architecture/agent-cli.md","reason":"Verify the implementation still matches the documented target architecture."}
+{"file":"docs/project-structure.md","reason":"Verify actual files conform to the planned structure."}
+{"file":"docs/implementation/phase-1-agent-runtime.md","reason":"Check the implementation against the Phase 1 scope and acceptance."}

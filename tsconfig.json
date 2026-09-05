@@ -1,0 +1,45 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "rootDir": "src",
+    "outDir": "dist",
+    "strict": true,
+    "noEmitOnError": true,
+    "declaration": true,
+    "sourceMap": false,
+    "skipLibCheck": true,
+    "incremental": true,
+    "tsBuildInfoFile": "node_modules/.cache/tsc.tsbuildinfo",
+    "jsx": "react",
+    "esModuleInterop": true,
+    "types": [
+      "node"
+    ],
+    "paths": {
+      "@core/*": ["./src/core/*"],
+      "@core/shared/*": ["./src/core/shared/*"],
+      "@core/runtime/*": ["./src/core/runtime/*"],
+      "@core/skills/*": ["./src/skills/*"],
+      "@core/logger/*": ["./src/core/logger/*"],
+      "@config/*": ["./src/config/*"],
+      "@providers/*": ["./src/providers/*"],
+      "@tools/*": ["./src/tools/*"],
+      "@locales/*": ["./src/locales/*"],
+      "@skins/*": ["./src/skins/*"],
+      "@acp/*": ["./src/acp/*"],
+      "@theme/*": ["./src/theme/*"],
+      "@ui/*": ["./src/ui/*"],
+      "@tui/*": ["./src/tui/*"]
+    }
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx"
+  ],
+  "exclude": [
+    "src/test-*.ts",
+    "test/**/*.ts"
+  ]
+}

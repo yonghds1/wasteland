@@ -1,0 +1,3 @@
+{"file":".trellis/tasks/08-02-refactor-homage-skin-names/prd.md","reason":"Confirmed requirements, naming decisions, legal-risk boundaries, and implementation scope for homage skin updates."}
+{"file":".trellis/spec/frontend/theme-skin.md","reason":"Skin/theme contract, default skin behavior, contrast/i18n validation expectations, and shipped skin documentation constraints."}
+{"file":"docs/architecture/role-skin.md","reason":"Current architecture documentation for built-in skin IDs, labels, role assignments, and extension steps."}

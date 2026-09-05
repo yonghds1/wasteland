@@ -1,0 +1,3 @@
+{"file":".trellis/tasks/08-02-refactor-homage-skin-names/prd.md","reason":"Acceptance criteria and forbidden IP-risk terms to verify after implementation."}
+{"file":".trellis/spec/frontend/theme-skin.md","reason":"Validation commands and skin contract for APCA/i18n/runtime fallback behavior."}
+{"file":"docs/architecture/role-skin.md","reason":"Ensure docs remain consistent with implemented skin labels and built-in role table."}

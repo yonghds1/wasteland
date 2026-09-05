@@ -1,0 +1,6 @@
+{"file": "src/roles/", "reason": "verify 目录结构正确（orchestrator/researcher/developer/analyst/tester）"}
+{"file": "src/skins/", "reason": "verify 皮肤目录（immortan-joe/nux/furiosa/max/...）含 skinUi.ts + colors"}
+{"file": "src/skins/types.ts", "reason": "verify SkinUi 类型含 colors: {label?, text?, thinking?}"}
+{"file": "src/tui/components/ChatMessageList.tsx", "reason": "verify 角色名用 skin.colors.label，回复用 skin.colors.text，未设 fallback theme"}
+{"file": "src/tui/components/StatusBar.tsx", "reason": "verify banner 用 skin.colors.label"}
+{"file": "test/theme-skin.test.js", "reason": "verify 425+ 测试通过"}

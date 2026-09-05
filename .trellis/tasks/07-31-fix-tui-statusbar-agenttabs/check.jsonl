@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/frontend/theme-skin.md", "reason": "check:① wastelandColors.surfaceSunken 已存在并有合法 hex 值;② 在 primary text 上的 APCA Lc ≥ 60(text 阈值,见 spec §3 'Contrast thresholds');③ theme check-build 在 npm run check 中通过(contrast 脚本失败 0)。"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "check:① StatusBar 仍为 top-bar auxiliary(single logical row,flexShrink=0);② paddingY={1} 不破坏 AgentTabs 的 panel 组件独立性;③ AgentTabs borderStyle 永远 'single' 后聚焦/失焦高度差 0,布局无抖动。"}
+{"file": ".trellis/spec/frontend/focus-management.md", "reason": "check:① Esc from inputBar 仍落到 agentTabs(本任务不破这条契约);② AgentTabs focused 时 useInput 仍响应 ←/→/Enter;③ Esc 双向 toggle 没退化(回归 07-31 fix)。"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "check 五门:lint + typecheck + validate:i18n + check:locale-parity + test 全绿;AgentTabs.test.ts 现有 cases(含本任务新增/调整)全部 pass;npm run check 不报 contrast 失败。"}

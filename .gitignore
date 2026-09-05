@@ -1,0 +1,44 @@
+# Dependencies & build artifacts
+node_modules/
+dist/
+bin/links/
+.wasteland/
+.daynight/
+.nightowl/
+.idea/
+.cursor/
+.gemini/
+.serena/
+
+# Trellis local data
+.trellis/workspace/*/
+.trellis/.runtime/
+.trellis/.developer
+.trellis/.current-task
+.trellis/.ralph-state.json
+.trellis/.agents/
+.trellis/.agent-log
+.trellis/.session-id
+.trellis/.plan-log
+.trellis/.backup-*
+
+# Claude local settings
+.claude/settings.local.json
+.claude/plans/
+.claude/worktrees/
+
+# Python
+**/__pycache__/
+**/*.pyc
+
+# Lockfiles & local logs
+pnpm-lock.yaml
+*.log
+
+# Open source hygiene
+.env
+.env.*
+*.tgz
+coverage/
+.DS_Store
+Thumbs.db

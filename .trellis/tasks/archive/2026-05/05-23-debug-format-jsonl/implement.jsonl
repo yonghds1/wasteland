@@ -1,0 +1,3 @@
+{"path": ".trellis/spec/backend/runtime-contracts.md", "reason": "runtime 事件模型和配置优先级约定"}
+{"path": ".trellis/tasks/05-23-debug-format-jsonl/prd.md", "reason": "任务需求和验收标准"}
+{"path": ".trellis/tasks/05-23-debug-format-jsonl/research/cli-debug-output-conventions.md", "reason": "业界 CLI debug 输出惯例研究"}

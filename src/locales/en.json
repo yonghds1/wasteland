@@ -1,0 +1,1078 @@
+{
+  "cli": {
+    "description": "Wasteland - Multi-agent CLI system",
+    "devDescription": "Development mode compatibility entry."
+  },
+  "skins": {
+    "notFound": "Skin \"{{skinId}}\" not found: {{skinPath}}",
+    "incomplete": "Skin configuration incomplete: missing required fields",
+    "missingCommandName": "Skin configuration incomplete: cli.commandName is required",
+    "missingGreeting": "Skin configuration incomplete: roles.main.greeting is required",
+    "system": {
+      "labels": {
+        "user": "User",
+        "system": "System",
+        "tool": "Tool",
+        "error": "Error",
+        "success": "Success",
+        "warn": "Warning",
+        "userName": "Rider",
+        "session": "Session"
+      },
+      "messages": {
+        "noResponse": "No response was returned.",
+        "executionFailed": "Execution failed.",
+        "executionComplete": "Execution complete.",
+        "spawnAgentHandled": "spawn_agent is handled by the runtime dispatcher.",
+        "toolRegistry": "The requested tool is not available in the registry.",
+        "startupFailed": "Runtime startup failed."
+      }
+    }
+  },
+  "prompts": {
+    "builtinRoleNotFound": "Builtin role not found: {{ref}}",
+    "invalidTemplateRef": "Invalid template reference: {{ref}}",
+    "templateFileNotFound": "Template file not found: {{filePath}}",
+    "sectionFileNotFound": "Section file not found: {{filePath}}"
+  },
+  "config": {
+    "cannotParsePromptTemplate": "Cannot parse promptTemplate: {{template}}",
+    "roleNotDefined": "Role not defined: {{roleName}}. Available sub-roles: {{availableRoles}}",
+    "modelNotDefined": "Role {{roleName}} references undefined model: {{modelName}}. Available models: {{availableModels}}",
+    "providerNoModels": "Provider \"{{providerName}}\" has no configured models. Available models: {{availableModels}}",
+    "providerMultipleModels": "Warning: Provider \"{{providerName}}\" has multiple models: {{modelNames}}. Auto-selected: {{selectedModel}}"
+  },
+  "mcp": {
+    "serverStarted": "[MCP] Server {{name}} started: {{serverInfo}} v{{version}}",
+    "serverHasTools": "[MCP] Server {{name}} has {{count}} tools",
+    "serversFailed": "[MCP] Some servers failed to start:",
+    "failedToParseMessage": "Failed to parse message: {{line}}",
+    "serverAlreadyRegistered": "MCP server already registered: {{name}}",
+    "serverNotFound": "MCP server not found: {{name}}",
+    "serverNotStarted": "MCP server not started: {{name}}",
+    "clientAlreadyStarted": "MCP client already started",
+    "failedToCreateStdio": "Failed to create stdio streams",
+    "clientNotInitialized": "MCP client not initialized",
+    "spawnAgentHandled": "spawn_agent should be handled by dispatchToolCall",
+    "mcpToolRegistry": "MCP tool {{name}} should be executed via MCPToolRegistry",
+    "startupFailed": "MCP servers startup failed:"
+  },
+  "utils": {
+    "failedToRunScript": "Failed to run create-aliases.sh:"
+  },
+  "commands": {
+    "skin": {
+      "list": {
+        "title": "Available skins",
+        "empty": "No skins found.",
+        "emptyHint": "Create a skin configuration file in .wasteland/.skins/<skin-id>/ directory.",
+        "name": "Name",
+        "description": "Description",
+        "version": "Version",
+        "command": "Command",
+        "aliases": "Aliases"
+      },
+      "show": {
+        "title": "Current skin",
+        "empty": "No skin loaded.",
+        "emptyHint": "Use 'wasteland skin list' to view available skins."
+      },
+      "load": {
+        "success": "Loaded skin: {{name}} ({{id}}) — persisted to settings (takes effect on next startup)",
+        "invalidId": "Unknown skin id: \"{{id}}\". Use 'wasteland skin list' to see available skins.",
+        "command": "Command name: {{command}}",
+        "aliases": "Aliases: {{aliases}}",
+        "symlinks": "Updated role alias symlinks",
+        "error": "Failed to load skin: {{error}}"
+      },
+      "info": {
+        "title": "Skin details: {{name}}",
+        "id": "ID",
+        "description": "Description",
+        "author": "Author",
+        "version": "Version",
+        "cliConfig": "CLI Configuration",
+        "commandName": "Command name",
+        "aliases": "Aliases",
+        "cliVersion": "Version",
+        "cliDescription": "Description",
+        "roleConfig": "Role Configuration",
+        "mainRole": "Main role",
+        "subRoles": "Sub roles",
+        "metadata": "Metadata",
+        "createdAt": "Created at",
+        "updatedAt": "Updated at",
+        "tags": "Tags",
+        "error": "Failed to get skin info: {{error}}"
+      }
+    },
+    "sessions": {
+      "list": {
+        "description": "List local sessions",
+        "options": {
+          "limit": "Max number of results",
+          "search": "Search keyword",
+          "provider": "Filter by Provider",
+          "mode": "Filter by mode",
+          "sort": "Sort order",
+          "json": "Output as JSON"
+        },
+        "found": "Found {{count}} sessions:",
+        "error": "Failed to list sessions: {{error}}"
+      },
+      "show": {
+        "description": "Show session details",
+        "options": {
+          "json": "Output as JSON"
+        },
+        "notFound": "Session not found: {{id}}",
+        "error": "Failed to show session: {{error}}",
+        "title": "Session details: {{id}}",
+        "time": "Time",
+        "provider": "Provider",
+        "mode": "Mode",
+        "cwd": "Working directory",
+        "messages": "Messages",
+        "role": "Role",
+        "user": "User",
+        "assistant": "Assistant",
+        "preview": "Preview",
+        "subAgent": "Sub Agent",
+        "noMessages": "(no messages)",
+        "compaction": "Context compaction",
+        "compactionCount": "Compactions",
+        "compactionSummarized": "Summarized",
+        "compactionSync": "Sync cuts",
+        "compactionTokensSaved": "Tokens saved"
+      },
+      "delete": {
+        "description": "Delete session",
+        "options": {
+          "confirm": "Confirm deletion"
+        },
+        "confirmRequired": "To delete session, add --confirm parameter.",
+        "deleted": "Deleted: {{id}}",
+        "error": "Failed to delete session: {{error}}"
+      },
+      "stats": {
+        "description": "Show session statistics",
+        "options": {
+          "json": "Output as JSON"
+        },
+        "title": "Session statistics:",
+        "totalSessions": "Total sessions:",
+        "totalMessages": "Total messages:",
+        "earliest": "Earliest session:",
+        "latest": "Latest session:",
+        "error": "Failed to get statistics: {{error}}"
+      },
+      "switch": {
+        "description": "Switch to specified session (interactive selection)",
+        "options": {
+          "interactive": "Interactive session selection"
+        },
+        "noSessions": "No sessions to switch to",
+        "title": "Available sessions:",
+        "name": "Name",
+        "preview": "Preview",
+        "time": "Time",
+        "none": "None",
+        "input": {
+          "prompt": "Select session number",
+          "quit": "quit",
+          "invalid": "Invalid selection"
+        },
+        "success": "Switched to session: {{id}}",
+        "failed": "Switch failed"
+      },
+      "rename": {
+        "description": "Rename session",
+        "success": "Session {{id}} renamed to: {{name}}",
+        "failed": "Rename failed"
+      },
+      "tag": {
+        "description": "Add tags to session",
+        "success": "Added tags to session {{id}}: {{tags}}",
+        "failed": "Failed to add tags"
+      },
+      "untag": {
+        "description": "Remove tags from session",
+        "success": "Removed tags from session {{id}}: {{tags}}",
+        "failed": "Failed to remove tags"
+      },
+      "cleanup": {
+        "description": "Clean up expired sessions",
+        "options": {
+          "maxAge": "Maximum retention days",
+          "dryRun": "Show sessions to be cleaned without actual deletion"
+        },
+        "noSessions": "No sessions to clean up",
+        "title": "Sessions to be cleaned:",
+        "found": "Found {{count}} expired sessions",
+        "cleaned": "Cleaned {{count}} sessions",
+        "failed": "Failed to clean sessions"
+      },
+      "unknown": "Unknown"
+    },
+    "chat": {
+      "description": "Start interactive chat session",
+      "options": {
+        "once": "Single input, suitable for scripts or testing",
+        "provider": "Provider name, currently registered:",
+        "role": "Parse model and default permissions by specified role",
+        "debug": "Output debug trace to stderr",
+        "debugFormat": "Debug output format: pretty (default) or jsonl",
+        "dangerouslySkipPermissions": "Bypass all permission prompts (Claude Code compatible, high risk)",
+        "permissionMode": "Permission mode: default | accept_edits | bypass_permissions",
+        "mode": "Agent mode override: single | multi (takes effect on startup)"
+      },
+      "errors": {
+        "permissionMode": "Permission mode not supported:",
+        "mode": "Agent mode not supported:",
+        "emptyStdin": "stdin input is empty, cannot start session."
+      }
+    },
+    "modeCommand": {
+      "switched": "Switched agent mode to \"{{mode}}\". Takes effect on next message.",
+      "invalid": "Invalid agent mode: \"{{mode}}\". Use single or multi.",
+      "failed": "Failed to update agent mode: {{error}}"
+    },
+    "skillCommand": {
+      "context": "/context executed in agent loop, showing context info.",
+      "status": "/status executed in agent loop, showing session status.",
+      "init": "/init executed in agent loop, initializing CLAUDE.md.",
+      "review": "/review executed in agent loop, starting code review.",
+      "skills": "/skills executed in agent loop, listing available skills."
+    },
+    "resume": {
+      "description": "Resume previous session",
+      "options": {
+        "sessionId": "Session ID (if not specified, resume the latest session)",
+        "message": "Message to send after resuming",
+        "provider": "Specify Provider",
+        "role": "Parse model and default permissions by specified role",
+        "debug": "Enable debug mode",
+        "debugFormat": "Debug output format: pretty (default) or jsonl",
+        "permissionMode": "Permission mode: default | accept_edits | bypass_permissions",
+        "list": "List resumable sessions",
+        "all": "Show all sessions (including completed)"
+      },
+      "notFound": "Session not found:",
+      "noSession": "No session to resume.",
+      "resuming": "Resuming session:",
+      "time": "Time:",
+      "messageCount": "Messages:",
+      "list": {
+        "title": "Resumable Sessions",
+        "empty": "No resumable sessions",
+        "current": "current",
+        "preview": "Preview",
+        "time": "Time",
+        "messages": "Messages",
+        "searching": "Searching for resumable sessions..."
+      },
+      "validation": {
+        "noRecords": "Session has no history records",
+        "noMessages": "Session has no user messages"
+      }
+    },
+    "tui": {
+      "description": "Start interactive TUI Dashboard",
+      "options": {
+        "attach": "Attach to existing session"
+      },
+      "errors": {
+        "noTty": "Error: TUI requires interactive terminal (TTY) environment.",
+        "currentEnv": "Current environment:",
+        "yes": "Yes",
+        "no": "No",
+        "runDirectly": "Please run directly in terminal:",
+        "useCli": "Or use CLI mode:",
+        "failed": "TUI startup failed:"
+      }
+    },
+    "config": {
+      "current": {
+        "description": "Show current effective runtime configuration.",
+        "options": {
+          "role": "Parse current effective configuration by specified role"
+        }
+      }
+    },
+    "init": {
+      "description": "First-run config wizard: interactively generate ~/.wasteland/settings.json and auth.json",
+      "options": {
+        "force": "Overwrite existing user configuration"
+      },
+      "existingConfig": "Existing configuration detected:",
+      "existingHint": "Use --force to overwrite, or edit the files above directly.",
+      "nonInteractive": "First-run init requires an interactive terminal. Run:\n  wasteland init\ndirectly, or manually create ~/.wasteland/settings.json and auth.json.",
+      "cancelled": "Init cancelled.",
+      "success": "Configuration written. Continuing startup...",
+      "wizard": {
+        "title": "wasteland First-Run Init",
+        "subtitle": "Configure Multi-Agent network and survival armor skins from scratch. Editable anytime.",
+        "footer": "↑↓ select · Enter confirm/next · Esc back · Ctrl+C cancel",
+        "writing": "Writing configuration...",
+        "language": {
+          "label": "选择语言 / Select Language",
+          "hint": "请选择界面交互语言 / Please choose your preferred interface language",
+          "zh": "简体中文 (Chinese - zh)",
+          "en": "English (en)"
+        },
+        "mode": {
+          "label": "Select Wasteland Operating Mode",
+          "hint": "Wasteland is architected around multi-agent collaboration by default",
+          "multi": "Multi-Agent Collaboration Mode (Multi-Agent) [Recommended · Enabled]",
+          "single": "Single-Agent Mode (Single-Agent) [Not fully implemented - Disabled]"
+        },
+        "provider": {
+          "selectLabel": "Select AI Model Provider to Add",
+          "selectHint": "You can configure multiple providers, minimum 1 required",
+          "keyLabel": "Enter API Key for {{provider}}",
+          "keyHint": "Press Tab to toggle mask. Saved to ~/.wasteland/auth.json",
+          "tabMaskHint": "[Tab] Toggle plain/mask",
+          "fetchingModels": "Probing available models from {{provider}}...",
+          "modelLabel": "Select or enter model for {{provider}}",
+          "modelHint": "Server model name, e.g. deepseek-chat, gpt-4o",
+          "modelSelectHint": "Successfully fetched {{count}} models from server. Use arrow keys to select or enter custom",
+          "modelEmptyHint": "Could not fetch models from server endpoint. Please enter model ID manually (e.g. deepseek-chat, gpt-4o)",
+          "manualModelOption": "【+ Enter custom model ID manually】",
+          "loopTitle": "Configured Providers ({{count}})",
+          "loopHint": "Minimum 1 provider required. Add another or continue",
+          "loopDone": "【Done adding providers, proceed to next step】",
+          "loopAddMore": "【+ Add another provider】",
+          "deepseek": "DeepSeek (Cost-effective reasoning/code, Native)",
+          "openai": "OpenAI (GPT-4o / o1 / GPT-4.5)",
+          "qwen": "Qwen (Alibaba Cloud DashScope)",
+          "glm": "GLM (Zhipu BigModel Platform)",
+          "minimax": "MiniMax (Text-01 / M3)",
+          "ollama": "Ollama (Local Private Deployment, No Key)",
+          "opencodeZen": "OpenCode Zen (Pay-as-you-go Gateway, /zen/v1)",
+          "opencodeGo": "OpenCode Go ($10/mo Subscription Gateway, /zen/go/v1)",
+          "custom": "Custom Provider (OpenAI Compatible API)",
+          "customNameLabel": "Enter Custom Provider Name",
+          "customNameHint": "Unique identifier in settings.json (letters, digits, underscore, dash, e.g. openrouter, siliconflow)",
+          "customBaseUrlLabel": "Enter Custom API Base URL",
+          "customBaseUrlHint": "Starts with http:// or https://, e.g. https://api.siliconflow.cn/v1"
+        },
+        "providerType": {
+          "label": "Select provider protocol type",
+          "hint": "Use arrow keys to select, Enter to confirm",
+          "openaiCompatible": "OpenAI-compatible (DeepSeek / GLM / OpenAI / self-hosted)",
+          "anthropic": "Anthropic official protocol"
+        },
+        "providerName": {
+          "label": "Provider name",
+          "hint": "Used as the key under providers in settings.json (letters/digits/underscore/dash)"
+        },
+        "baseUrl": {
+          "label": "API baseUrl",
+          "hint": "Example: https://api.deepseek.com/v1"
+        },
+        "apiKey": {
+          "label": "Enter API Key for [Main Agent]",
+          "hint": "Press Tab to toggle mask. Saved to ~/.wasteland/auth.json",
+          "tabMaskHint": "[Tab] Toggle plain/mask"
+        },
+        "modelId": {
+          "label": "Confirm Core Reasoning Model for [Main Agent]",
+          "hint": "Pre-filled with recommended model. Press Enter to accept or edit"
+        },
+        "subAgentStrategy": {
+          "label": "Select Configuration Strategy for [Sub-Agents]",
+          "hint": "Sub-agents handle concurrent execution of code, search, test tasks",
+          "reuse": "[Recommended] Reuse Main Agent configuration (Zero config, shared model & key)",
+          "custom": "Configure independent model for Sub-agents (e.g. Claude for Main, DeepSeek for Workers)",
+          "single": "Single Agent Mode (Do not enable multi-agent concurrency)"
+        },
+        "subAgentModel": {
+          "label": "Enter Cost-effective Model ID for [Sub-Agents (Workers)]",
+          "hint": "Recommended: fast, cost-effective models for high-frequency concurrent subtasks"
+        },
+        "assign": {
+          "mainTitle": "Select Provider and Model for [Main Agent (Orchestrator)]",
+          "mainHint": "Responsible for intent planning, task decomposition and orchestration",
+          "subStrategyTitle": "Select Model Assignment Strategy for [Sub-Agent Matrix]",
+          "subStrategyHint": "Wasteland includes 4 specialized workers (Developer/Researcher/Tester/Analyst)",
+          "unifiedOption": "[Recommended] Unified cost-effective model for all sub-agents (Fast & simple)",
+          "inheritOption": "All sub-agents reuse Main Agent configuration (Shared base model)",
+          "roleByRoleOption": "Fine-grained per-role customization (Advanced: distinct models per role)",
+          "unifiedSubTitle": "Select Provider and Model for [All Sub-Agents (Workers)]",
+          "unifiedSubHint": "Applies to Developer, Researcher, Tester, and Analyst",
+          "devTitle": "Custom: [Developer Worker]",
+          "devHint": "Handles code authoring, refactoring and debugging",
+          "resTitle": "Custom: [Researcher Worker]",
+          "resHint": "Handles search, exploration, and information retrieval",
+          "testTitle": "Custom: [Tester Worker]",
+          "testHint": "Handles test running, verification and quality check",
+          "anaTitle": "Custom: [Analyst Worker]",
+          "anaHint": "Handles system analysis, code review and architecture inspection"
+        },
+        "skin": {
+          "label": "Select Initial Survival Armor Skin (Press Enter to accept default)",
+          "hint": "Defines TUI palette and status catchphrases",
+          "previewLabel": "Skin Traits"
+        },
+        "a2a": {
+          "title": "Configure A2A Agent-to-Agent Ecosystem (Optional)",
+          "hint": "Enables Wasteland orchestrator & workers to collaborate with external AI coding assistants",
+          "controls": "Press [Space] to toggle · Press [↑/↓] to move · Press [Enter] to confirm (skip if none selected) · Press [Esc] to go back"
+        },
+        "confirm": {
+          "title": "Confirm Initial Configuration",
+          "language": "Language",
+          "mode": "Operating Mode",
+          "providersCount": "Configured Providers Pool",
+          "mainAgent": "Main Agent (Orchestrator)",
+          "subAgent": "Sub-Agent Matrix",
+          "a2a": "A2A Collaboration Ecosystem",
+          "a2aNone": "No external A2A agents enabled (skipped)",
+          "personas": "Default Enabled Personas & Skins",
+          "personasHint": "Official default personas enabled (customizable in ~/.wasteland/skins.json)",
+          "mainPersona": "Main Orchestrator: Immortan Jiao (warlord-immortal)",
+          "vanguardPersona": "Elite Vanguard: Imperator Fuza (fury-vanguard)",
+          "devPersona": "Developer: Rikktus (v8-mechanic)",
+          "resPersona": "Researcher: Nuxx (sand-scout)",
+          "testPersona": "Tester: Majer (bullet-tester)",
+          "anaPersona": "Analyst: Dooff (doof-analyst)",
+          "providerName": "Provider name",
+          "providerType": "Protocol type",
+          "baseUrl": "API Base URL",
+          "apiKey": "API Key",
+          "model": "Main Model ID",
+          "subModel": "Sub-Agent Model ID",
+          "enterToSubmit": "Press Enter to write config and launch · Press Esc to go back"
+        },
+        "done": {
+          "title": "✓ Init complete",
+          "enterToContinue": "Press Enter to continue"
+        },
+        "error": {
+          "title": "Write failed"
+        },
+        "errors": {
+          "emptyProviderName": "Provider name cannot be empty",
+          "invalidProviderName": "Only letters, digits, underscore and dash are allowed",
+          "emptyBaseUrl": "baseUrl cannot be empty",
+          "invalidBaseUrl": "baseUrl must start with http:// or https://",
+          "emptyApiKey": "API Key cannot be empty",
+          "emptyModelId": "Model ID cannot be empty",
+          "emptySubAgentModelId": "Sub-Agent Model ID cannot be empty",
+          "noProviders": "At least 1 provider must be configured"
+        }
+      }
+    },
+    "export": {
+      "description": "Export session as markdown (default: latest)",
+      "notFound": "Session not found:",
+      "noSession": "No session available to export.",
+      "options": {
+        "sessionId": "Session ID (default: latest)"
+      }
+    },
+    "context": {
+      "description": "View current context usage and token consumption statistics",
+      "options": {
+        "sessionId": "Session ID (optional, default to latest session)",
+        "format": "Output format (text/json/markdown/html)",
+        "details": "Show detailed information",
+        "history": "Show usage history",
+        "historyLimit": "Number of history entries to show",
+        "color": "Disable colors",
+        "watch": "Real-time update mode",
+        "watchInterval": "Update interval (seconds)"
+      },
+      "notFound": "Session statistics not found",
+      "noSession": "Please start a session first, or specify a session ID",
+      "history": {
+        "description": "View context usage history",
+        "options": {
+          "limit": "Number of entries to show",
+          "format": "Output format (text/json)"
+        },
+        "title": "Context Usage History",
+        "empty": "No usage history available",
+        "header": "Turn  |  Time  |  Token Usage  |  Usage Ratio"
+      },
+      "compaction": {
+        "description": "View compaction history",
+        "options": {
+          "limit": "Number of entries to show",
+          "format": "Output format (text/json)"
+        },
+        "title": "Compaction History",
+        "empty": "No compaction records available",
+        "header": "Time  |  Reason  |  Removed Messages  |  Tokens Saved  |  Usage Change"
+      },
+      "trend": {
+        "description": "View usage trend chart",
+        "options": {
+          "width": "Chart width"
+        },
+        "title": "Token Usage Trend",
+        "empty": "No usage history available"
+      }
+    },
+    "rename": {
+      "description": "Rename session",
+      "arguments": {
+        "sessionId": "Session ID",
+        "newName": "New name (optional)"
+      },
+      "options": {
+        "generate": "Auto-generate name",
+        "strategy": "Generation strategy (date_based/content_based/tag_based/hybrid)",
+        "interactive": "Interactive input for new name"
+      },
+      "notFound": "Session {{id}} not found",
+      "currentName": "Current name",
+      "sessionId": "Session ID",
+      "createdAt": "Created at",
+      "input": {
+        "prompt": "Enter new name",
+        "generate": "auto-generate",
+        "quit": "quit"
+      },
+      "validation": {
+        "empty": "Name cannot be empty",
+        "tooLong": "Name cannot exceed 100 characters",
+        "invalidChars": "Name contains invalid characters",
+        "invalid": "Invalid name"
+      },
+      "generate": {
+        "auto": "Auto-generated name",
+        "newSession": "New session",
+        "untagged": "Untagged session"
+      },
+      "suggestion": "Suggested",
+      "success": "Session {{id}} renamed to: {{name}}",
+      "failed": "Rename failed",
+      "autoRename": {
+        "description": "Batch auto-rename unnamed sessions",
+        "options": {
+          "dryRun": "Show sessions to be renamed without actual modification",
+          "prefix": "Add prefix"
+        },
+        "failed": "Failed to get session list",
+        "noSessions": "No sessions to rename",
+        "found": "Found {{count}} unnamed sessions",
+        "willRename": "Will rename {{count}} sessions",
+        "renamed": "Renamed {{count}} sessions"
+      }
+    },
+    "logs": {
+      "description": "Read wasteland runtime logs",
+      "options": {
+        "dir": "Logs directory (default <cwd>/.wasteland/logs)"
+      },
+      "errors": {
+        "description": "List recent entries from error.jsonl (warn/error)",
+        "options": {
+          "tail": "Number of entries to show from the tail"
+        }
+      },
+      "show": {
+        "description": "Show all runtime + error entries for a given sessionId",
+        "options": {
+          "tail": "Max number of entries to show"
+        }
+      },
+      "tail": {
+        "description": "Tail the current runtime-<date>.jsonl (optionally --follow)",
+        "options": {
+          "level": "Minimum log level: debug|info|warn|error",
+          "scope": "Comma-separated scopes (e.g. tool,turn)",
+          "tail": "Number of entries to show from the tail",
+          "follow": "Keep watching the file for new entries"
+        }
+      }
+    }
+  },
+  "tui": {
+    "header": {
+      "title": "wasteland",
+      "session": "Session",
+      "debug": "Debug",
+      "guide": "Guide"
+    },
+    "agentTabs": {
+      "mainShortLabel": "Main"
+    },
+    "footer": {
+      "inputMode": "[Input Mode]",
+      "filterMode": "[Filter Mode]",
+      "editMode": "[Edit Mode]",
+      "exitConfirm": "[Exit Confirm]",
+      "helpMode": "[Help]",
+      "escCancel": "Esc Cancel",
+      "enterSend": "Enter Send",
+      "ctrlCExit": "Ctrl+C Exit",
+      "tabSwitchField": "Tab Switch Field",
+      "arrowSwitchValue": "←/→ Switch Value",
+      "escClose": "Esc Close",
+      "enterConfirm": "Enter Confirm",
+      "yConfirmExit": "y Confirm Exit",
+      "nCancel": "n or other key Cancel",
+      "hOrEscClose": "h or Esc Close Help",
+      "help": "Help",
+      "switchPage": "Switch Page",
+      "exit": "Exit",
+      "scroll": "↑/↓ Scroll",
+      "enterInput": "Enter Input",
+      "expand": "Expand",
+      "filter": "Filter",
+      "clear": "Clear",
+      "switch": "↑/↓ Switch",
+      "edit": "Edit",
+      "saveProject": "Ctrl+S Project",
+      "saveUser": "Ctrl+U User",
+      "reset": "Ctrl+R Reset",
+      "sessionPage": "Session Page",
+      "debugPage": "Debug Page",
+      "guidePage": "Guide Page"
+    },
+    "exit": {
+      "title": "Confirm Exit",
+      "confirm": "Confirm Exit",
+      "pressY": "Press",
+      "toConfirm": "to confirm exit",
+      "cancel": "or other key to cancel"
+    },
+    "session": {
+      "agentTree": {
+        "running": "Running:"
+      },
+      "input": {
+        "mode": "[Input Mode]",
+        "escCancel": "Esc Cancel",
+        "enterSend": "Enter Send",
+        "tabSwitch": "Tab Switch Area",
+        "tabPlaceholder": "Tab to switch to input here...",
+        "ctrlEnterHint": "Enter to start typing",
+        "placeholder": {
+          "focused": "Send a message",
+          "unfocused": "Press Tab to focus input"
+        },
+        "label": "INPUT",
+        "hintMultiline": "Enter Send · Shift+Enter Newline · Esc Exit",
+        "statusBar": {
+          "skin": "Skin",
+          "mode": "Mode",
+          "permission": "Permission",
+          "provider": "Model",
+          "ctx": "Context",
+          "shortcuts": "Shift+Tab cycle permissions · /help for commands · Esc exit"
+        }
+      },
+      "messages": {
+        "user": "User",
+        "assistant": "Assistant",
+        "tool": "Tool",
+        "system": "System",
+        "message": "Message",
+        "welcome": "◆ wasteland",
+        "chatStartHint": "In the wasteland, type to begin, /help for commands",
+        "startHint": "In the wasteland, type below to begin",
+        "tabHint": "Tab Switch Page ┊ h Help ┊ q Exit",
+        "title": "Messages",
+        "count": "{{count}}",
+        "thinking": "Thinking...",
+        "streaming": "Streaming",
+        "autoScrollPaused": "(Auto-scroll paused)"
+      }
+    },
+    "statusbar": {
+      "runningAgents": "⚡ {{count}} agents",
+      "tools": "{{count}} tools",
+      "viewing": "viewing: {{name}} ▶"
+    },
+    "toolError": "Error: {{error}}",
+    "contextCompacted": "Context compacted: removed {{removedCount}} messages, saved ~{{tokensSaved}} tokens",
+    "contextCompactedSummarized": "Context compacted: removed {{removedCount}} messages, saved ~{{tokensSaved}} tokens (early context preserved via summary)",
+    "contextBudgetWarning": "⚠ Context budget: prompt {{promptTokens}} + history {{historyTokens}} / window {{contextWindow}}",
+    "runtimeEventStreamError": "Runtime event stream error:",
+    "debugTraceStreamError": "Debug trace stream error:",
+    "failedToLoadSkin": "Failed to load skin:",
+    "config": {
+      "title": "Guide",
+      "docs": {
+        "location": {
+          "title": "Config File Location",
+          "project": "Project:",
+          "user": "User:",
+          "priority": "Priority: CLI args > Env vars > Project config > User config > Defaults"
+        },
+        "structure": {
+          "title": "settings.json Structure"
+        },
+        "fields": {
+          "title": "Field Descriptions",
+          "defaultRole": "Default agent role (e.g. orchestrator)",
+          "permissionMode": "Permission mode: default | accept_edits | bypass_permissions",
+          "maxStepsPerTurn": "Max tool steps per turn (default: 30)",
+          "language": "UI language: en | zh",
+          "providerType": "API protocol: openai-compatible | anthropic | local"
+        },
+        "env": {
+          "title": "Environment Variables",
+          "home": "Override config home directory",
+          "provider": "Override default provider",
+          "debug": "Enable debug mode (true/false)"
+        }
+      }
+    },
+    "debug": {
+      "count": "{{count}}",
+      "filtering": "Filtering",
+      "hint": "↑/↓ Scroll | f Filter | c Clear",
+      "traceLog": "Trace Log",
+      "filter": "Filter",
+      "call": "Call",
+      "success": "Success",
+      "failed": "Failed",
+      "permission": "Permission:",
+      "createSubAgent": "Create SubAgent:",
+      "agentDone": "Agent Done:",
+      "executeSkill": "Execute Skill:",
+      "sendRequest": "Send Request",
+      "receiveResponse": "Receive Response",
+      "waitingTrace": "Waiting for trace data...",
+      "useDebugHint": "Use --debug to start with detailed tracing",
+      "usageExample": "wasteland chat --debug --message \"your message\"",
+      "details": "Details:",
+      "rawData": "Raw Data:",
+      "filterCondition": "Filter Condition:",
+      "none": "None",
+      "modifyFilter": "f Modify",
+      "filterTitle": "Filter",
+      "filterHint": "Tab Switch Field | ←/→ Switch Value | Esc Close",
+      "currentFilter": "Current Filter:",
+      "noMessages": "(No messages)",
+      "summary": "Summary:"
+    }
+  },
+  "skills": {
+    "help": {
+      "description": "All commands for surviving the wasteland, in one place.",
+      "title": "Wasteland Manual",
+      "commands": "Available Commands",
+      "sessionCommands": "Session Commands",
+      "closeHint": "Press Esc to close",
+      "showHelp": "Show help",
+      "showTools": "Show available tool list",
+      "showSkills": "Show available skill list",
+      "clearHistory": "Clear session history",
+      "exitSession": "Leave the wasteland",
+      "shortcuts": "Shortcuts",
+      "switchFocus": "Switch focus area",
+      "sendMessage": "Send message",
+      "cancelInput": "Cancel input/return",
+      "exit": "Exit",
+      "builtInTools": "Built-in Tools",
+      "readOnlyTools": "Read-only Tools",
+      "writeTools": "Write Tools",
+      "executeTools": "Execute Tools",
+      "skillSystem": "Skill System",
+      "skillDescription": "Skills are advanced workflows that can orchestrate multiple tool calls.",
+      "usage": "Usage:",
+      "example": "Example:",
+      "initContext": "Initialize project context",
+      "showOverview": "Show project overview",
+      "runSkillsHint": "Run /skills to see all available skills.",
+      "currentSession": "Current Session:",
+      "workDir": "Working Directory:",
+      "skillName": "skill-name",
+      "params": "params",
+      "options": "options",
+      "topicDesc": "Help topic: commands, tools, skills, all",
+      "localCommands": {
+        "title": "Local commands",
+        "description": "Handled directly by the TUI; not routed through the skill system.",
+        "logs": "View live runtime logs (switch to Logs page)",
+        "logsClose": "Return from Logs page to chat",
+        "clear": "Clear the current chat surface",
+        "exit": "Exit wasteland",
+        "sessions": "Browse and resume past sessions",
+        "mode": "Switch agent mode (single/multi); writes config, takes effect after restart",
+        "context": "View current context usage and token consumption statistics"
+      },
+      "categories": {
+        "skill": "Skills",
+        "local": "Local commands",
+        "session": "Sessions",
+        "exit": "Exit"
+      }
+    },
+    "status": {
+      "description": "Show current session status and statistics",
+      "title": "Session Status",
+      "basicInfo": "Basic Info",
+      "sessionId": "Session ID:",
+      "currentTurn": "Current Turn:",
+      "workDir": "Working Directory:",
+      "messageHistory": "Message History",
+      "userMessages": "User Messages:",
+      "assistantMessages": "Assistant Messages:",
+      "total": "Total:",
+      "toolStatus": "Tool Status",
+      "permissionSettings": "Permission Settings",
+      "mode": "Mode:",
+      "session": "Session:",
+      "turn": "Turn:",
+      "history": "History:",
+      "tools": "Tools:",
+      "directory": "Directory:",
+      "items": "",
+      "available": " available",
+      "levelTools": " level tools:",
+      "formatDesc": "Output format: simple, detailed, json"
+    },
+    "context": {
+      "description": "Description:",
+      "collecting": "Collecting project info...",
+      "project": "Project:",
+      "directory": "Directory:",
+      "files": "Files:",
+      "overview": "Project Overview",
+      "name": "Name:",
+      "version": "Version:",
+      "structure": "Directory Structure",
+      "keyFiles": "Key Files",
+      "otherFiles": "and {{count}} other files",
+      "commonCommands": "Common Commands",
+      "items": "",
+      "detailedDesc": "Show detailed info (including file tree)"
+    },
+    "tools": {
+      "description": "Show detailed information of all available tools",
+      "noMatch": "No matching tools",
+      "noTools": "No available tools",
+      "availableTools": "Available Tools",
+      "readOnly": "Read-only Tools",
+      "write": "Write Tools",
+      "execute": "Execute Tools",
+      "riskLevel": "Risk Level:",
+      "params": "Parameters:",
+      "required": "(Required)",
+      "example": "Example:",
+      "hint": "Hint: Use --detailed to view parameter info",
+      "filterDesc": "Filter: read, write, execute, or tool name prefix",
+      "detailedDesc": "Show detailed parameter info",
+      "items": ""
+    },
+    "review": {
+      "description": "Code review: analyze changed files for common code quality issues",
+      "stagedDesc": "Only review staged changes",
+      "unstagedDesc": "Only review unstaged changes",
+      "fileDesc": "File path to review",
+      "llmDesc": "Enable LLM semantic analysis",
+      "analyzing": "Analyzing changed files...",
+      "noChanges": "No changed files found. Please make some code changes first.",
+      "foundFiles": "Found {{count}} changed files",
+      "cannotRead": "Cannot read",
+      "findings": "issues",
+      "title": "📋 Code Review Report",
+      "changedFiles": "Changed Files",
+      "issues": "Issues Found",
+      "llmAnalysis": "🤖 LLM Semantic Analysis",
+      "llmAnalyzing": "Running LLM analysis...",
+      "llmNotAvailable": "LLM not available (no provider configured)",
+      "llmNotSupported": "LLM analysis not supported yet",
+      "llmNoChanges": "No diff content available",
+      "llmNoResponse": "LLM returned no analysis result",
+      "llmError": "LLM analysis error",
+      "totalIssues": "Found {{count}} issues in total"
+    },
+    "init": {
+      "description": "Initialize CLAUDE.md project context file",
+      "templateType": "Template type: default, minimal, full",
+      "force": "Override existing file",
+      "initContext": "Initialize project context:",
+      "alreadyExists": "CLAUDE.md already exists. Use --force to override.",
+      "project": "Project",
+      "gettingStructure": "Getting project structure...",
+      "autoGenerated": "Auto-generated project context",
+      "toDo": "To be added",
+      "writeFileNotAvailable": "write-file tool not available",
+      "writing": "Writing file...",
+      "writeFailed": "Write failed:",
+      "created": "Created CLAUDE.md:",
+      "cannotGetStructure": "Cannot get project structure",
+      "templates": {
+        "default": "# Project Context\n\n## Overview\n{description}\n\n## Project Structure\n```\n{structure}\n```\n\n## Key Files\n- `src/` - Source code directory\n- `tests/` - Test files directory\n\n## Development Guidelines\n- Follow existing code style\n- Run tests before commit\n- Update related documentation\n\n## Important Notes\n- Keep code concise and clear\n- Comment complex logic\n- Handle edge cases",
+        "minimal": "# Project Context\n\n{description}\n\n## Key Conventions\n- Follow existing code style\n- Run tests before commit",
+        "full": "# Project Context\n\n## Project Overview\n{description}\n\n## Tech Stack\n- Runtime: Node.js\n- Language: TypeScript\n- Package Manager: npm\n\n## Project Structure\n```\n{structure}\n```\n\n## Development Guide\n\n### Environment Setup\n```bash\nnpm install\n```\n\n### Common Commands\n- `npm run build` - Build project\n- `npm run test` - Run tests\n- `npm run lint` - Lint code\n\n### Code Standards\n- Write all new code in TypeScript\n- Follow existing naming conventions\n- Add documentation comments for public APIs\n\n### Commit Standards\n- Write clear commit messages\n- Ensure tests pass before commit\n- Split large changes into small commits\n\n## Architecture\n{architecture}\n\n## Known Issues\n{issues}\n\n## Future Plans\n{future}"
+      }
+    },
+    "common": {
+      "unknownSkill": "Unknown skill:",
+      "paramError": "Parameter error:",
+      "alias": "Alias:",
+      "params": "Parameters:",
+      "example": "Example:",
+      "noSkills": "No available skills.",
+      "availableSkills": "Available Skills",
+      "missingRequiredParam": "Missing required parameter:",
+      "mustBeString": "Must be a string",
+      "mustBeOneOf": "Must be one of:",
+      "mustBeNumber": "Must be a number",
+      "mustBeBoolean": "Must be a boolean",
+      "mustBeArray": "Must be an array",
+      "mustBeObject": "Must be an object",
+      "noParams": "No parameters",
+      "optionalValues": "Optional values:",
+      "default": "Default:",
+      "toolNotExist": "Tool not found:",
+      "executing": "Executing:",
+      "stepFailed": "Step failed:",
+      "skillExecComplete": "Skill execution completed",
+      "skillMissingName": "Skill {{path}} missing 'name' field",
+      "skillMissingDescription": "Skill {{path}} missing 'description' field",
+      "skillModuleDefaultExport": "Skill module {{path}} must have a default export",
+      "skillModuleSkillObject": "Skill module {{path}} must export a Skill object",
+      "loadSkillFailed": "Failed to load skill {{path}}:"
+    },
+    "logsHelp": {
+      "title": "Logs subcommands",
+      "helpText": "Logs page — view runtime logs (current session + disk history).\n\nFilters compose: /logs show + /logs level + /logs scope can all stack.\nSource legend in table: [D]=disk history  [L]=live (current session)\n\nSubcommands:\n  /logs              Enter Logs page (keep current filter)\n  /logs close        Return to chat page\n  /logs all          Clear all filters, show full log history\n  /logs errors       Set level=error only (most severe)\n  /logs show <sid>   Filter by sessionId (substring match, e.g. \"2026-08\")\n  /logs level <l>    Set min level: debug|info|warn|error\n  /logs scope <s>    Set scope filter (comma-separated, e.g. \"tool,provider\")\n  /logs help         Show this help\n\nExamples:\n  /logs show 2026-08-08_230211\n  /logs level debug\n  /logs scope tool,permission\n  /logs show abc level error scope provider\n  /logs all\n\nKeys in Logs page:\n  ↑/↓   Select entry (↑=older, ↓=newer)\n  Enter Expand selected entry's full JSON\n  P     Pause/resume follow new entries\n  L     Cycle min level\n  S     Cycle scope\n  K     Cycle event kind\n  /     Enter sessionId filter\n  C     Clear current entries\n  Esc   Return to chat page"
+    }
+  },
+  "tools": {
+    "editFile": {
+      "needRelativePath": "edit-file requires a relative path within the current working directory.",
+      "needOldString": "edit-file requires a non-empty old_string parameter.",
+      "needBothOldAndNew": "Single-edit mode requires both old_string and new_string parameters.",
+      "needEdits": "edit-file requires a non-empty edits array, or both old_string and new_string parameters.",
+      "conflict": "The edits parameter cannot be used together with old_string/new_string. Choose only one edit mode.",
+      "noMatch": "No matching string found. Ensure old_string exactly matches file content...",
+      "noMatchInEdit": "Edits item {{index}}: no matching string found. Ensure old_string exactly matches file content.",
+      "multipleMatches": "Found {{count}} matches, but replace_all is false...",
+      "multipleMatchesInEdit": "Edits item {{index}}: found {{count}} matches, but replace_all is false for this item.",
+      "success": "File edited successfully (replaced {{count}} times)."
+    },
+    "readFile": {
+      "offsetOutOfRange": "offset {{offset}} exceeds file range (file has {{total}} lines).",
+      "needRelativePath": "read-file requires a relative path within the current working directory."
+    },
+    "askUser": {
+      "missingQuestion": "Missing question parameter",
+      "options": "Options:"
+    },
+    "bash": {
+      "needCommand": "bash tool requires a non-empty command field."
+    },
+    "spawnAgent": {
+      "noResponse": "Child agent did not return a response.",
+      "executionComplete": "Child agent execution completed",
+      "executionFailed": "Child agent execution failed",
+      "roleUser": "User",
+      "roleAssistant": "Assistant",
+      "historyHeader": "## Previous Conversation History",
+      "currentTaskHeader": "## Current Task"
+    },
+    "grep": {
+      "needPattern": "grep tool requires a non-empty pattern field. Example: { \"pattern\": \"TODO\", \"include\": \"*.ts\" }"
+    },
+    "git": {
+      "needSubcommand": "git tool requires a non-empty subcommand. Example: { \"subcommand\": \"status\" }",
+      "needCommitMessage": "git commit requires a non-empty message field. Example: { \"subcommand\": \"commit\", \"message\": \"feat: add new feature\" }",
+      "blockedSubcommand": "git command \"{{command}}\" is blocked for safety reasons.",
+      "forcePushDenied": "Force push is not allowed for safety reasons.",
+      "unsupportedSubcommand": "Unsupported git subcommand: \"{{subcommand}}\". Supported: status, diff, log, add, commit, branch, checkout, push, pull.",
+      "timeout": "Git command timed out. Please try again."
+    },
+    "webSearch": {
+      "needQuery": "web-search tool requires a non-empty query parameter. Example: { \"query\": \"TypeScript best practices\" }"
+    }
+  },
+  "runtime": {
+    "noFinalMessage": "Current provider did not return a final message.",
+    "maxStepsReached": "Current turn has reached the maximum tool steps limit...",
+    "noToolRegistry": "Current runtime is not configured with tool registry or permission gate.",
+    "readBeforeEdit": "read-before-edit check failed.",
+    "toolNotFound": "Tool not found:",
+    "toolFailed": "Tool execution failed.",
+    "mustReadBeforeEdit": "Must read file before editing. Use /read command first.",
+    "permissionBypass": "Mode bypass_permissions allows all tool calls.",
+    "permissionAcceptEdits": "Mode accept_edits requires confirmation for execute tools.",
+    "permissionAcceptEditsAllows": "Mode accept_edits allows {{count}} tools.",
+    "permissionDefault": "Mode default allows read tools.",
+    "permissionDefaultRequires": "Mode default requires confirmation for {{count}} tools.",
+    "permissionRuleHit": "Tool rule hit:",
+    "parallelAgentsRunning": "Running {{count}} agents: {{names}}"
+  },
+  "providers": {
+    "typeEmpty": "provider type cannot be empty.",
+    "typeRegistered": "provider type already registered:",
+    "idEmpty": "provider id cannot be empty.",
+    "alreadyRegistered": "provider already registered:",
+    "unsupportedProtocol": "Unsupported API protocol type:",
+    "unsupportedProvider": "Unsupported provider:",
+    "openai": {
+      "missingModel": "provider openai-compatible missing model configuration.",
+      "missingBaseUrl": "provider openai-compatible missing baseUrl configuration.",
+      "requestFailed": "openai-compatible request failed:",
+      "invalidJson": "openai-compatible returned unparseable JSON.",
+      "missingChoices": "openai-compatible response missing choices[0].",
+      "unexpectedResponse": "openai-compatible returned unexpected response:",
+      "contentNotString": "openai-compatible assistant content is not a string.",
+      "contentEmpty": "openai-compatible assistant content is empty."
+    },
+    "claude": {
+      "missingApiKey": "provider claude missing apiKey configuration.",
+      "missingModel": "provider claude missing model configuration.",
+      "requestFailed": "claude request failed:",
+      "unexpectedResponse": "claude returned unexpected response:"
+    },
+    "local": {
+      "toolCompleted": "Tool {{tool}} completed.",
+      "toolNoPermission": "Tool {{tool}} not executed: permission denied.",
+      "toolFailed": "Tool {{tool}} execution failed: unknown error."
+    },
+    "toolAdapter": {
+      "readFile": "Read file content",
+      "editFile": "Precisely edit file",
+      "writeFile": "Create or overwrite file",
+      "bash": "Execute shell command",
+      "createSubAgent": "Create and run sub Agent",
+      "filePath": "File path to read",
+      "startLine": "Starting line number",
+      "oldString": "Original string to replace",
+      "newString": "New string to replace with",
+      "writePath": "File path to write",
+      "content": "Complete file content",
+      "command": "Shell command to execute",
+      "subAgentId": "Unique identifier for sub Agent",
+      "invalidJson": "Cannot parse tool parameters: invalid JSON format. Raw parameters:",
+      "unknownParseError": "Unknown parse error."
+    },
+    "messageBuilder": {
+      "noOutput": "(No output)",
+      "toolFailed": "Tool execution failed."
+    }
+  },
+  "ui": {
+    "spinner": {
+      "thinking": "Thinking",
+      "analyzing": "Analyzing",
+      "processing": "Processing",
+      "generating": "Generating",
+      "reasoning": "Reasoning",
+      "computing": "Computing",
+      "understanding": "Understanding",
+      "preparing": "Preparing",
+      "welcome": "Type a message to start conversation, /help to view commands",
+      "goodbye": "Goodbye!"
+    },
+    "terminal": {
+      "thinking": "Thinking...",
+      "unhandledEvent": "Unhandled runtime event:"
+    },
+    "streaming": {
+      "thinking": "Thinking...",
+      "thinkingCompleted": "(Thinking completed)",
+      "streaming": "Streaming"
+    }
+  }
+}

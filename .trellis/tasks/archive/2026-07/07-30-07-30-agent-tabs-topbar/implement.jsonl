@@ -1,0 +1,7 @@
+{"file": ".trellis/tasks/07-30-07-30-agent-tabs-topbar/prd.md", "reason": "本任务 PRD(完整设计稿)"}
+{"file": ".trellis/workspace/yonghds1/notes/2026-07-30-tui-subagent-plan.md", "reason": "完整设计 v4 + 演化历史"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "TUI 组件命名约定"}
+{"file": ".trellis/spec/frontend/focus-management.md", "reason": "FocusArea/Tab cycle 规范"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "AppContext 全局状态模式"}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "TUI 文件组织"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "测试 + lint + i18n 约定"}

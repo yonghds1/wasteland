@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "后端质量红线（测试/lint/typecheck）"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "前端组件质量红线"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "校验错误路径符合规范"}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "InitWizard TS 类型安全校验"}

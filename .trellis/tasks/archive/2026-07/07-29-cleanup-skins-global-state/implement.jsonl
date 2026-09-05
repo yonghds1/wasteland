@@ -1,0 +1,10 @@
+{"file": ".trellis/tasks/07-29-cleanup-skins-global-state/prd.md", "reason": "H1 严格清理 + H4 持久化的设计决策与 ADR"}
+{"file": ".trellis/spec/backend/runtime-contracts.md", "reason": "initializeRuntime 的契约（H3 启动校验 runtime.skinId）"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "测试 + lint + i18n 校验规范"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "settings.runtime.skin 状态管理 + 单源真相原则"}
+{"file": "src/skins/index.ts", "reason": "需删除 export setCurrentSkin/getCurrentSkin/loadSkin + 模块级 _currentSkinId；保留 getSkin(name) 静态查"}
+{"file": "src/commands/skin.ts", "reason": "/skin load 重写为写 settings.runtime.skinId；/skin show 改读持久化的值"}
+{"file": "src/core/shared/initialize-runtime.ts", "reason": "启动时校验 settings.runtime.skinId 在 tuiSkins 注册，warning + fallback"}
+{"file": "src/core/shared/initialize-runtime.test.ts", "reason": "新增校验路径单测：合法/非法/缺省场景"}
+{"file": "src/locales/en.json", "reason": "commands.skin.load.success 文案加"持久化，下次启动生效"语意"}
+{"file": "src/locales/zh.json", "reason": "commands.skin.load.success 文案加"持久化，下次启动生效"语意"}

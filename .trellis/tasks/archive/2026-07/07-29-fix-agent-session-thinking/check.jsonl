@@ -1,0 +1,5 @@
+{"file": "src/tools/spawn-agent.ts", "reason": "verify sub agent session 有 session_end record（closeSession 调用）"}
+{"file": "src/tui/components/ChatMessageList.tsx", "reason": "verify Thinking 块用 skin.colors.thinking，未设时 fallback wastelandTheme.colors.muted"}
+{"file": "test/tools/spawn-agent.test.js", "reason": "verify 451+ 既有测试 + 新增长 session 完整性测试"}
+{"file": "test/theme-skin.test.js", "reason": "verify Thinking 颜色 priority"}
+{"file": ".wasteland/sessions/*.jsonl", "reason": "verify sub agent 完成后 jsonl 包含 session_end 记录"}

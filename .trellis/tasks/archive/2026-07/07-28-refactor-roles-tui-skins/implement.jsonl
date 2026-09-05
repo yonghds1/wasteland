@@ -1,0 +1,11 @@
+{"file": "src/theme/wasteland/colors.ts", "reason": "wastelandTheme.colors 作为 skinUi.colors 未设时的 fallback"}
+{"file": "src/skins/roles/types.ts", "reason": "旧 RoleUi/Persona/Skin 类型 → 改为新 roles/types.ts + skins/types.ts"}
+{"file": "src/skins/roles/index.ts", "reason": "旧角色注册表 → 拆为 roles/index.ts + skins/index.ts"}
+{"file": "src/skins/roles/*/persona.ts", "reason": "旧 persona → 迁到 roles/*/system.ts（纯指令，去掉 style/voice/constraints）"}
+{"file": "src/skins/roles/*/roleUi.ts", "reason": "旧 roleUi → 迁到 skins/*/skinUi.ts（加 colors 字段）"}
+{"file": "src/skins/index.ts", "reason": "当前角色注册表导出 → 仅留 TUI skin 导出 + defaultSkin"}
+{"file": "src/tui/hooks/useRuntimeEvents.ts", "reason": "agentSkinMap 用 skin 颜色渲染"}
+{"file": "src/tui/components/ChatMessageList.tsx", "reason": "MessageItem 用 skin.skinUi.colors 替代 wastelandTheme.colors.*"}
+{"file": "src/tui/components/StatusBar.tsx", "reason": "banner 用 skin.skinUi.colors.label"}
+{"file": "src/tui/components/ChatInputBar.tsx", "reason": "prompt 颜色用 skin.skinUi.colors.label"}
+{"file": "src/tools/spawn-agent.ts", "reason": "subAgentConfig.role → 选 roles/*/system.ts；subAgentConfig.skin → 选 skins/*/skinUi.ts"}

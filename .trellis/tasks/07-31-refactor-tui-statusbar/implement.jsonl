@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/frontend/theme-skin.md", "reason": "本次新增 wastelandColors.titleSurface token,需同步到 theme-skin.md §3 Contracts;HSL/与主背景对比/APCA/调用点都要写入,作为本任务的 anti-pattern 防 regression(防止后续 agent 再造 surfaceSunken 那种‘突兀色’)。"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "StatusBar 顶层设计原则(top-bar auxiliary §)要求 background 由主题 token 驱动;titleSurface 是 StatusBar 唯一允许调用点,需要在 spec 记下。"}

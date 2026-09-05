@@ -1,0 +1,8 @@
+{"file": ".trellis/tasks/07-29-cleanup-zombie-active-tasks/prd.md", "reason": "清理任务的决策清单与 ADR"}
+{"file": ".trellis/tasks/05-30-implement-missing-tools/prd.md", "reason": "verify zombie 判定（实现是否实际完成）"}
+{"file": ".trellis/tasks/05-30-unify-test-framework/prd.md", "reason": "verify zombie 判定（vitest 是否已默认）"}
+{"file": ".trellis/tasks/06-15-next-steps/prd.md", "reason": "判定 meta 占位"}
+{"file": ".trellis/tasks/06-16-brainstorm/prd.md", "reason": "判定是否被并行执行 commit 落地"}
+{"file": ".trellis/tasks/06-17-brainstorm-next/prd.md", "reason": "MCP 协议完善是否已 done"}
+{"file": ".trellis/tasks/06-21-brainstorm-next2/prd.md", "reason": "web-search 增强是否有 round 2 待做"}
+{"file": ".trellis/tasks/06-21-brainstorm-next3/prd.md", "reason": "多 Agent 协作方向确认"}

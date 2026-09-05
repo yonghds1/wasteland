@@ -1,0 +1,18 @@
+{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/backend/logging-guidelines.md", "reason": "现有 logging 约定(待此 PR 重写)"}
+{"file": ".trellis/spec/backend/runtime-contracts.md", "reason": "RxJS events$ / debug$ / SessionRecord schema 契约"}
+{"file": ".trellis/spec/backend/cli-tui-contracts.md", "reason": "TUI 与 CLI 行为契约"}
+{"file": ".trellis/spec/backend/directory-structure.md", "reason": "src/core/logger/ 与 .wasteland/logs/ 落点"}
+{"file": ".trellis/spec/backend/tool-runtime-contracts.md", "reason": "MCP/A2A/file-audit 工具接入点约束"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "error.jsonl 行为契约"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "vitest 单测/集成测试规范"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "LogsPage.tsx Ink/React 组件约定"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "App.tsx 顶层 page 路由 + filter reducer"}
+{"file": ".trellis/spec/frontend/hook-guidelines.md", "reason": "useRuntimeEvents 订阅 log$ Subject"}
+{"file": ".trellis/spec/frontend/focus-management.md", "reason": "LogsPage 双栏 + 行选中 focus"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "TUI 测试/lint/scan"}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "LogEntry / LogLevel / LogScope 联合类型"}
+{"file": ".trellis/spec/frontend/theme-skin.md", "reason": "TUI debug 面板主题渲染"}
+{"file": ".trellis/tasks/07-29-design-logging-system/research/opencode-logging.md", "reason": "opencode 三层 sink / bus / 无轮转 反例"}
+{"file": ".trellis/tasks/07-29-design-logging-system/research/claude-code-logging.md", "reason": "Claude Code transcript 字段名/subagent meta/5 段时间/last-prompt cursor"}
+{"file": ".trellis/tasks/07-29-design-logging-system/prd.md", "reason": "本任务唯一事实来源"}

@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "顶部辅助带模式约束:AgentTabs 必须 flexShrink=0、与 ChatInputBar 解耦、1 行。本次去框改造不能破坏这些布局约束。"}
+{"file": ".trellis/spec/frontend/theme-skin.md", "reason": "wastelandTheme.colors token 体系与 Palette Quantization Caveat:borderDim 是 palette-safe 的轻底线色,用于 agentbar 底线和输入框底线。"}
+{"file": ".trellis/spec/frontend/focus-management.md", "reason": "focus cycle 契约:agentTabs 仍在 ['inputBar','agentTabs'] cycle 中,去框不能影响 useInput gating 和 Esc 双向 toggle。"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "纯函数提取规则:getAgentTabStyle 已有,去框后仍需保持可单测;视觉决策不能硬编码在 render 里。"}

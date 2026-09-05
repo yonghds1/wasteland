@@ -1,0 +1,7 @@
+{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/backend/logging-guidelines.md", "reason": "校验 logger 实现与现有约定一致"}
+{"file": ".trellis/spec/backend/runtime-contracts.md", "reason": "校验 events$/debug$/SessionRecord 不被破坏"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "vitest/typecheck/lint 覆盖度"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "TUI 测试/lint 一致性"}
+{"file": ".trellis/tasks/07-29-design-logging-system/prd.md", "reason": "对照 AC1-AC22 验证实现"}
+{"file": ".trellis/tasks/07-29-design-logging-system/research/claude-code-logging.md", "reason": "对照 transcript 字段名兼容性(AC11)"}

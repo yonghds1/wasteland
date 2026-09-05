@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Top-bar Auxiliary 段描述需要改:从 'StatusBar / AgentTabs 双 top-bar 组件' 改为 'AgentTabs 单组件含 skin label + status prose + agent 树导航 三合一'。父布局 ChatArea.tsx 中 <StatusBar> 引用消失,§中描述要跟着变。"}
+{"file": ".trellis/spec/frontend/focus-management.md", "reason": "Esc bidirectional toggle 契约保持不动(inputBar ↔ agentTabs),但 §3 'Status Bar Layout' 段描述(若有)要更新为'agentTabs 是顶部唯一辅助组件';console.log 加 +setFocusArea('agentTabs') 行为不破坏。"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "五门质量检查:typecheck/lint/contrast/locale-parity/i18n validate 全绿;新增 2 个 AgentTabs pure-function 测试覆盖 getMainTabLabel / getRightSideProse;删除 StatusBar.tsx 后 grep 不留死引用。"}
+{"file": ".trellis/spec/frontend/theme-skin.md", "reason": "Theme contract 没动(无颜色 token 改动);history-and-iterations 段(StatusBar Title 表面 token)仍有效——titleSurface #0E0B07 现在用于 AgentTabs 的 borderBottomColor + backgroundColor 同一行,而非独立 StatusBar 行。"}

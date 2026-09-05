@@ -1,0 +1,6 @@
+{"file": ".trellis/tasks/07-30-07-30-help-dialog-mode/prd.md", "reason": "本任务 PRD(完整设计)"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "TUI 组件约定"}
+{"file": ".trellis/spec/frontend/focus-management.md", "reason": "FocusArea 与 dialog 状态机"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "AppContext 全局状态模式"}
+{"file": ".trellis/spec/backend/cli-tui-contracts.md", "reason": "TUI/CLI 契约"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "测试与 lint 约定"}

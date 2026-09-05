@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/backend/runtime-contracts.md", "reason": "审查 provider 契约合规：归一化 usage schema 不被破坏、AgentProvider 接口不变、供应商差异不泄漏到链路"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "质量基线审查：新代码符合禁止模式与代码标准，无死代码/重复"}

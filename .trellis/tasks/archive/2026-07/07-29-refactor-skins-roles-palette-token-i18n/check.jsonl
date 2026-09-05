@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "lint/typecheck/test baseline；新增 parity + contrast lint 需挂在 npm run check"}
+{"file": ".trellis/spec/frontend/theme-skin.md", "reason": "skin 颜色字段语义；palette token 不能越权到 LLM system prompt"}
+{"file": "research/color-contrast-standards.md", "reason": "APCA Lc 阈值表的依据；check-contrast.ts 必须用 Lc 75/60/45"}
+{"file": "research/i18n-fallback-cli-patterns.md", "reason": "check-locale-parity.ts 校验标准——递归对比所有 nested key，缺失即失败"}

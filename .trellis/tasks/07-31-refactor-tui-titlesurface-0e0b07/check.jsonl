@@ -1,0 +1,3 @@
+{"file": ".trellis/spec/frontend/theme-skin.md", "reason": "check:① titleSurface 已切到 '#0E0B07';② spec 文档更新可见度诊断与设计动机;③ §3 Contracts 仍合规(contrast thresholds 与 wasteland hue 范围)。"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "check:① StatusBar 仍 top-bar auxiliary;② 唯一调用点是 StatusBar.tsx;③ 未引 raw hex。"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "check 五门:typecheck/lint/contrast/locale-parity/i18n validate 全绿;AgentTabs 39/39 仍 pass(本任务仅调值,JSX 不动 → 回归守卫)。"}

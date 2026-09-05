@@ -1,0 +1,8 @@
+{"file":".trellis/spec/guides/index.md","reason":"Shared thinking guidance for implementation work."}
+{"file":".trellis/spec/guides/communication-language-policy.md","reason":"Project-level language policy for user-facing behavior and docs."}
+{"file":".trellis/spec/backend/index.md","reason":"Backend architecture rules including RxJS-first and doc-backed runtime changes."}
+{"file":".trellis/spec/backend/directory-structure.md","reason":"Current and target structure constraints for runtime/provider/ui refactoring."}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Current CLI quality expectations and documentation-update requirement."}
+{"file":"docs/architecture/agent-cli.md","reason":"Repository-level target architecture for the agent CLI."}
+{"file":"docs/project-structure.md","reason":"Directory ownership and migration rules for phase 1 implementation."}
+{"file":"docs/implementation/phase-1-agent-runtime.md","reason":"Phase 1 implementation scope, deliverables, and order."}

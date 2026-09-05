@@ -1,0 +1,36 @@
+{"file": ".trellis/spec/backend/runtime-contracts.md", "reason": "SubAgentSettings.skins 字段替代 skin + SkinOccupancy 行为合约"}
+{"file": ".trellis/spec/backend/tool-runtime-contracts.md", "reason": "spawn-agent.ts assembleSubAgentPrompt 读 skins 候选 + 占用管理 + fallback 合约"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "SkinOccupancy in-memory Map 状态管理 + 释放机制"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "皮肤 label 英文 + 角色选择随机性"}
+{"file": ".trellis/spec/frontend/theme-skin.md", "reason": "新皮肤结构 + SkinOccupancy 注册 + 候选列表"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "测试 + lint + i18n 校验规范"}
+{"file": "src/skins/roles/types.ts", "reason": "RolePersona / RoleUi / RoleSkin 类型扩展（候选列表字段）"}
+{"file": "src/skins/roles/index.ts", "reason": "皮肤注册表 + defaultRoleSkin + getRoleSkin 接收 skins 列表"}
+{"file": "src/skins/index.ts", "reason": "导出 skinOccupancy + getRoleSkin + roles"}
+{"file": "src/tools/spawn-agent.ts", "reason": "assembleSubAgentPrompt 改用 subAgentConfig.skins 候选列表 + SkinOccupancy.tryAcquire"}
+{"file": "src/core/runtime/agent-loop.ts", "reason": "agent_completed / session_ended event 释放 SkinOccupancy 占用"}
+{"file": "src/core/shared/initialize-runtime.ts", "reason": "SubAgentSettings.skins 字段解析"}
+{"file": "src/config/settings-types.ts", "reason": "SubAgentSettings.skins?: string[] 替代 skin?: string"}
+{"file": "src/tui/hooks/useRuntime.ts", "reason": "subAgentConfig.skins 传递"}
+{"file": "src/commands/chat.ts", "reason": "subAgentConfig.skins 传递"}
+{"file": "src/commands/resume.ts", "reason": "subAgentConfig.skins 传递"}
+{"file": "src/locales/en.json", "reason": "12 个新皮肤 i18n 节点（label 用英文）"}
+{"file": "src/locales/zh.json", "reason": "12 个新皮肤 i18n 节点（label 用英文）"}
+{"file": "test/skin-occupancy.test.js", "reason": "SkinOccupancy 单测（占用/释放/全占用 fallback）"}
+{"file": "test/theme-skin.test.js", "reason": "扩展：12 个新皮肤 + 候选列表 + 随机选择"}
+{"file": ".wasteland/settings.json", "reason": "subAgents 改用 skins 候选列表（已 gitignore 不入 commit，本地生效）"}
+{"file": "docs/architecture/role-skin.md", "reason": "12 个新皮肤描述 + SkinOccupancy 文档"}
+{"file": ".trellis/spec/frontend/theme-skin.md", "reason": "更新 spec 描述新皮肤 + 候选列表 + 占用机制"}
+{"file": "src/skins/roles/max/", "reason": "Max 独立皮肤（不属于任何 subAgent）"}
+{"file": "src/skins/roles/bullet-farmer/", "reason": "Bullet Farmer 皮肤（researcher 候选）"}
+{"file": "src/skins/roles/valkyrie/", "reason": "Valkyrie 皮肤（researcher 候选）"}
+{"file": "src/skins/roles/organic-mechanic/", "reason": "Organic Mechanic 皮肤（developer 候选）"}
+{"file": "src/skins/roles/toast/", "reason": "Toast 皮肤（developer 候选）"}
+{"file": "src/skins/roles/miss-giddy/", "reason": "Miss Giddy 皮肤（analyst 候选）"}
+{"file": "src/skins/roles/capable/", "reason": "Capable 皮肤（analyst 候选）"}
+{"file": "src/skins/roles/doof-warrior/", "reason": "Doof Warrior 皮肤（tester 候选）"}
+{"file": "src/skins/roles/splendid-angharad/", "reason": "Splendid Angharad 皮肤（tester 候选）"}
+{"file": "src/skins/roles/dag/", "reason": "Dag 皮肤（tester 候选）"}
+{"file": "src/core/runtime/skin-occupancy.ts", "reason": "SkinOccupancy registry（新建）"}
+{"file": "src/core/shared/initialize-runtime.test.ts", "reason": "更新测试（SubAgentSettings.skins 字段）"}
+{"file": "src/tui/hooks/useRuntime.test.ts", "reason": "更新测试（subAgentConfig.skins 传递）"}

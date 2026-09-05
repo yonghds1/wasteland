@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "check:① StatusBar 已被删除;② AgentTabs 仍为 top-bar auxiliary 模式(single logical row,flexShrink=0,paddingX=1 + borderBottom);③ 父 layout ChatArea.tsx 不再 import StatusBar。"}
+{"file": ".trellis/spec/frontend/focus-management.md", "reason": "check:① Tab cycle ['inputBar', 'agentTabs'] 仍保持;② Esc 双向 toggle 仍工作(App.tsx:295-303);③ App.tsx 的 setFocusArea('agentTabs') / setInputMode(true/false) 行为不破。"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "check 五门:typecheck/lint/contrast(13 skins)/check:locale-parity/i18n validate 全绿;AgentTabs.test.ts 现 39 + 新增 ≥2 cases 全部 pass;npm test 全量 690 baseline 等同(忽略 3 个预存在 logs.test.ts 失败)。"}
+{"file": ".trellis/spec/frontend/theme-skin.md", "reason": "check:① theme-skin.md 不动色板 token;② status bar 相关段(history)仍合规,palette quantization caveat 仍记录(适用于 AgentTabs 边线);③ contrast 验证 13 skins 仍通过。"}

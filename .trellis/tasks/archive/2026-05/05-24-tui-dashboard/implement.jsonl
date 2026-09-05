@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/backend/directory-structure.md", "reason": "了解项目目录结构，正确放置 TUI 模块"}
+{"file": ".trellis/spec/backend/runtime-contracts.md", "reason": "Runtime 事件流契约，用于订阅 Agent 事件"}
+{"file": ".trellis/spec/backend/tool-runtime-contracts.md", "reason": "工具运行时契约，了解工具调用流程"}
+{"file": ".trellis/spec/backend/logging-guidelines.md", "reason": "日志规范，确保 TUI 日志格式一致"}

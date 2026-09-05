@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/backend/tool-runtime-contracts.md", "reason": "检查工具合同、权限闸门、工具生命周期是否符合规范"}
+{"file": ".trellis/spec/backend/runtime-contracts.md", "reason": "检查 RuntimeEvent、SessionRecord 是否正确扩展"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "检查类型注释、RxJS 规范、测试覆盖是否符合质量要求"}
+{"file": ".trellis/tasks/05-23-implement-edit-file-and-write-file-tools/prd.md", "reason": "对照验收标准检查实现是否完整"}

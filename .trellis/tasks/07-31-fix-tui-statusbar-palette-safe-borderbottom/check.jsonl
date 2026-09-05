@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/frontend/theme-skin.md", "reason": "check:① 'Palette Quantization Caveat' 段已写入 §3 Contracts;② 明确指出 xterm-256color 量子索引 16=black + 6×6×6 cube 的约束;③ 留交叉引用给 titleSurface 段。"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "check:① StatusBar 仍 top-bar auxiliary;② borderBottom + content 1 行的设计不破坏辅助行模式(§Top-bar Auxiliary 文档);③ App.tsx/ChatArea.tsx 父布局不需要改(高度增量在 flexGrow 链里吸收)。"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "check 五门:typecheck/lint/contrast/locale-parity/i18n validate 全绿;AgentTabs 39/39 仍 pass。"}
+{"file": ".trellis/spec/frontend/focus-management.md", "reason": "check StatusBar 与 AgentTabs 边框风格协调:同用 borderDim 作暗色参考,跨组件视觉一致(focus-management §Top-bar Auxiliary implicit rule)。"}

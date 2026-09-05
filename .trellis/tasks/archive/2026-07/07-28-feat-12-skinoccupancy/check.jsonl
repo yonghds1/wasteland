@@ -1,0 +1,56 @@
+{"file": ".trellis/spec/backend/runtime-contracts.md", "reason": "verify SubAgentSettings.skins?: string[] 替代 skin 字段"}
+{"file": ".trellis/spec/backend/tool-runtime-contracts.md", "reason": "verify spawn-agent.ts assembleSubAgentPrompt 读 skins 候选 + SkinOccupancy 占用 + fallback"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "verify SkinOccupancy in-memory Map 状态管理 + 释放"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "verify 皮肤 label 英文 + 角色选择随机性"}
+{"file": ".trellis/spec/frontend/theme-skin.md", "reason": "verify 12 个新皮肤结构 + SkinOccupancy 注册 + 候选列表"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "verify lint + typecheck + 测试（425+10 通过）+ i18n 校验"}
+{"file": "src/skins/roles/types.ts", "reason": "verify RolePersona / RoleUi / RoleSkin 类型"}
+{"file": "src/skins/roles/index.ts", "reason": "verify 皮肤注册表 + defaultRoleSkin + getRoleSkin 接收 skins 列表"}
+{"file": "src/skins/index.ts", "reason": "verify 导出 skinOccupancy + getRoleSkin + roles"}
+{"file": "src/tools/spawn-agent.ts", "reason": "verify assembleSubAgentPrompt 改用 subAgentConfig.skins 候选列表 + SkinOccupancy.tryAcquire"}
+{"file": "src/core/runtime/agent-loop.ts", "reason": "verify agent_completed / session_ended event 释放 SkinOccupancy 占用"}
+{"file": "src/core/shared/initialize-runtime.ts", "reason": "verify SubAgentSettings.skins 字段解析"}
+{"file": "src/config/settings-types.ts", "reason": "verify SubAgentSettings.skins?: string[] 替代 skin?: string"}
+{"file": "src/tui/hooks/useRuntime.ts", "reason": "verify subAgentConfig.skins 传递"}
+{"file": "src/commands/chat.ts", "reason": "verify subAgentConfig.skins 传递"}
+{"file": "src/commands/resume.ts", "reason": "verify subAgentConfig.skins 传递"}
+{"file": "src/locales/en.json", "reason": "verify 12 个新皮肤 i18n 节点（label 用英文）"}
+{"file": "src/locales/zh.json", "reason": "verify 12 个新皮肤 i18n 节点（label 用英文）"}
+{"file": "test/skin-occupancy.test.js", "reason": "verify SkinOccupancy 单测（占用/释放/全占用 fallback）"}
+{"file": "test/theme-skin.test.js", "reason": "verify 12 个新皮肤 + 候选列表 + 随机选择"}
+{"file": ".wasteland/settings.json", "reason": "verify subAgents 改用 skins 候选列表（本地生效）"}
+{"file": "docs/architecture/role-skin.md", "reason": "verify 12 个新皮肤描述 + SkinOccupancy 文档"}
+{"file": ".trellis/spec/frontend/theme-skin.md", "reason": "verify 更新 spec 描述新皮肤 + 候选列表 + 占用机制"}
+{"file": "src/skins/roles/max/persona.ts", "reason": "verify Max persona 是英文 + 不属于任何 subAgent（独立）"}
+{"file": "src/skins/roles/max/roleUi.ts", "reason": "verify Max roleUi"}
+{"file": "src/skins/roles/bullet-farmer/persona.ts", "reason": "verify Bullet Farmer persona"}
+{"file": "src/skins/roles/bullet-farmer/roleUi.ts", "reason": "verify Bullet Farmer roleUi"}
+{"file": "src/skins/roles/valkyrie/persona.ts", "reason": "verify Valkyrie persona"}
+{"file": "src/skins/roles/valkyrie/roleUi.ts", "reason": "verify Valkyrie roleUi"}
+{"file": "src/skins/roles/organic-mechanic/persona.ts", "reason": "verify Organic Mechanic persona"}
+{"file": "src/skins/roles/organic-mechanic/roleUi.ts", "reason": "verify Organic Mechanic roleUi"}
+{"file": "src/skins/roles/toast/persona.ts", "reason": "verify Toast persona"}
+{"file": "src/skins/roles/toast/roleUi.ts", "reason": "verify Toast roleUi"}
+{"file": "src/skins/roles/miss-giddy/persona.ts", "reason": "verify Miss Giddy persona"}
+{"file": "src/skins/roles/miss-giddy/roleUi.ts", "reason": "verify Miss Giddy roleUi"}
+{"file": "src/skins/roles/capable/persona.ts", "reason": "verify Capable persona"}
+{"file": "src/skins/roles/capable/roleUi.ts", "reason": "verify Capable roleUi"}
+{"file": "src/skins/roles/doof-warrior/persona.ts", "reason": "verify Doof Warrior persona"}
+{"file": "src/skins/roles/doof-warrior/roleUi.ts", "reason": "verify Doof Warrior roleUi"}
+{"file": "src/skins/roles/splendid-angharad/persona.ts", "reason": "verify Splendid Angharad persona"}
+{"file": "src/skins/roles/splendid-angharad/roleUi.ts", "reason": "verify Splendid Angharad roleUi"}
+{"file": "src/skins/roles/dag/persona.ts", "reason": "verify Dag persona"}
+{"file": "src/skins/roles/dag/roleUi.ts", "reason": "verify Dag roleUi"}
+{"file": "src/core/runtime/skin-occupancy.ts", "reason": "verify SkinOccupancy 行为（占用/释放/全占用 fallback）"}
+{"file": "src/core/shared/initialize-runtime.test.ts", "reason": "verify 测试更新"}
+{"file": "src/tui/hooks/useRuntime.test.ts", "reason": "verify 测试更新"}
+{"file": "src/skins/roles/max/index.ts", "reason": "verify Max skin 入口"}
+{"file": "src/skins/roles/bullet-farmer/index.ts", "reason": "verify Bullet Farmer skin 入口"}
+{"file": "src/skins/roles/valkyrie/index.ts", "reason": "verify Valkyrie skin 入口"}
+{"file": "src/skins/roles/organic-mechanic/index.ts", "reason": "verify Organic Mechanic skin 入口"}
+{"file": "src/skins/roles/toast/index.ts", "reason": "verify Toast skin 入口"}
+{"file": "src/skins/roles/miss-giddy/index.ts", "reason": "verify Miss Giddy skin 入口"}
+{"file": "src/skins/roles/capable/index.ts", "reason": "verify Capable skin 入口"}
+{"file": "src/skins/roles/doof-warrior/index.ts", "reason": "verify Doof Warrior skin 入口"}
+{"file": "src/skins/roles/splendid-angharad/index.ts", "reason": "verify Splendid Angharad skin 入口"}
+{"file": "src/skins/roles/dag/index.ts", "reason": "verify Dag skin 入口"}

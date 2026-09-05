@@ -1,0 +1,1078 @@
+{
+  "cli": {
+    "description": "Wasteland - 多智能体 CLI 系统",
+    "devDescription": "开发模式兼容入口。"
+  },
+  "skins": {
+    "notFound": "皮肤 \"{{skinId}}\" 不存在: {{skinPath}}",
+    "incomplete": "皮肤配置不完整: 缺少必要字段",
+    "missingCommandName": "皮肤配置不完整: cli.commandName 是必需的",
+    "missingGreeting": "皮肤配置不完整: roles.main.greeting 是必需的",
+    "system": {
+      "labels": {
+        "user": "用户",
+        "system": "系统",
+        "tool": "工具",
+        "error": "错误",
+        "success": "成功",
+        "warn": "警告",
+        "userName": "骑手",
+        "session": "会话"
+      },
+      "messages": {
+        "noResponse": "未收到任何响应。",
+        "executionFailed": "执行失败。",
+        "executionComplete": "执行完成。",
+        "spawnAgentHandled": "spawn_agent 由运行时分发器处理。",
+        "toolRegistry": "工具注册表中没有请求的工具。",
+        "startupFailed": "运行时启动失败。"
+      }
+    }
+  },
+  "prompts": {
+    "builtinRoleNotFound": "内置角色不存在: {{ref}}",
+    "invalidTemplateRef": "无效的模板引用: {{ref}}",
+    "templateFileNotFound": "模板文件不存在: {{filePath}}",
+    "sectionFileNotFound": "段落文件不存在: {{filePath}}"
+  },
+  "config": {
+    "cannotParsePromptTemplate": "无法解析 promptTemplate: {{template}}",
+    "roleNotDefined": "当前未定义角色: {{roleName}}。可用的子角色: {{availableRoles}}",
+    "modelNotDefined": "角色 {{roleName}} 引用了未定义的 model: {{modelName}}。可用的 models: {{availableModels}}",
+    "providerNoModels": "Provider \"{{providerName}}\" 没有配置任何 model。可用的 models: {{availableModels}}",
+    "providerMultipleModels": "警告: Provider \"{{providerName}}\" 有多个 model: {{modelNames}}。已自动选择: {{selectedModel}}"
+  },
+  "mcp": {
+    "serverStarted": "[MCP] 服务器 {{name}} 已启动: {{serverInfo}} v{{version}}",
+    "serverHasTools": "[MCP] 服务器 {{name}} 有 {{count}} 个工具",
+    "serversFailed": "[MCP] 以下服务器启动失败:",
+    "failedToParseMessage": "解析消息失败: {{line}}",
+    "serverAlreadyRegistered": "MCP 服务器已注册: {{name}}",
+    "serverNotFound": "MCP 服务器未找到: {{name}}",
+    "serverNotStarted": "MCP 服务器未启动: {{name}}",
+    "clientAlreadyStarted": "MCP 客户端已启动",
+    "failedToCreateStdio": "创建 stdio 流失败",
+    "clientNotInitialized": "MCP 客户端未初始化",
+    "spawnAgentHandled": "spawn_agent 应由 dispatchToolCall 处理",
+    "mcpToolRegistry": "MCP 工具 {{name}} 应通过 MCPToolRegistry 执行",
+    "startupFailed": "MCP 服务器启动失败:"
+  },
+  "utils": {
+    "failedToRunScript": "运行 create-aliases.sh 失败:"
+  },
+  "commands": {
+    "skin": {
+      "list": {
+        "title": "可用皮肤",
+        "empty": "没有找到皮肤。",
+        "emptyHint": "请在 .wasteland/.skins/<skin-id>/ 目录中创建皮肤配置文件。",
+        "name": "名称",
+        "description": "描述",
+        "version": "版本",
+        "command": "命令",
+        "aliases": "别名"
+      },
+      "show": {
+        "title": "当前皮肤",
+        "empty": "当前没有加载皮肤。",
+        "emptyHint": "使用 'wasteland skin list' 查看可用皮肤。"
+      },
+      "load": {
+        "success": "已加载皮肤: {{name}} ({{id}}) — 已持久化到 settings，下次启动生效",
+        "invalidId": "未知的皮肤 ID：\"{{id}}\"。请用 'wasteland skin list' 查看可用皮肤。",
+        "command": "命令名: {{command}}",
+        "aliases": "别名: {{aliases}}",
+        "symlinks": "已更新角色别名符号链接",
+        "error": "加载皮肤失败: {{error}}"
+      },
+      "info": {
+        "title": "皮肤详情: {{name}}",
+        "id": "ID",
+        "description": "描述",
+        "author": "作者",
+        "version": "版本",
+        "cliConfig": "CLI 配置",
+        "commandName": "命令名",
+        "aliases": "别名",
+        "cliVersion": "版本",
+        "cliDescription": "描述",
+        "roleConfig": "角色配置",
+        "mainRole": "主角色",
+        "subRoles": "子角色",
+        "metadata": "元数据",
+        "createdAt": "创建时间",
+        "updatedAt": "更新时间",
+        "tags": "标签",
+        "error": "获取皮肤信息失败: {{error}}"
+      }
+    },
+    "sessions": {
+      "list": {
+        "description": "列出本地 session",
+        "options": {
+          "limit": "最大返回数量",
+          "search": "搜索关键词",
+          "provider": "按 Provider 过滤",
+          "mode": "按模式过滤",
+          "sort": "排序方式",
+          "json": "输出 JSON 格式"
+        },
+        "found": "找到 {{count}} 个 session:",
+        "error": "列出 session 失败: {{error}}"
+      },
+      "show": {
+        "description": "查看 session 详情",
+        "options": {
+          "json": "输出 JSON 格式"
+        },
+        "notFound": "Session 不存在: {{id}}",
+        "error": "查看 session 失败: {{error}}",
+        "title": "Session 详情: {{id}}",
+        "time": "时间",
+        "provider": "Provider",
+        "mode": "模式",
+        "cwd": "工作目录",
+        "messages": "消息",
+        "role": "角色",
+        "user": "用户",
+        "assistant": "助手",
+        "preview": "预览",
+        "subAgent": "子 Agent",
+        "noMessages": "(无消息)",
+        "compaction": "上下文压缩",
+        "compactionCount": "压缩次数",
+        "compactionSummarized": "摘要压缩",
+        "compactionSync": "同步切割",
+        "compactionTokensSaved": "节省 token"
+      },
+      "delete": {
+        "description": "删除 session",
+        "options": {
+          "confirm": "确认删除"
+        },
+        "confirmRequired": "要删除 session，请添加 --confirm 参数。",
+        "deleted": "已删除: {{id}}",
+        "error": "删除 session 失败: {{error}}"
+      },
+      "stats": {
+        "description": "显示 session 统计信息",
+        "options": {
+          "json": "输出 JSON 格式"
+        },
+        "title": "Session 统计信息:",
+        "totalSessions": "总 session 数:",
+        "totalMessages": "总消息数:",
+        "earliest": "最早 session:",
+        "latest": "最新 session:",
+        "error": "获取统计信息失败: {{error}}"
+      },
+      "switch": {
+        "description": "切换到指定的会话（交互式选择）",
+        "options": {
+          "interactive": "交互式选择会话"
+        },
+        "noSessions": "没有可切换的会话",
+        "title": "可切换的会话:",
+        "name": "名称",
+        "preview": "预览",
+        "time": "时间",
+        "none": "无",
+        "input": {
+          "prompt": "请选择会话编号",
+          "quit": "退出",
+          "invalid": "无效的选择"
+        },
+        "success": "已切换到会话: {{id}}",
+        "failed": "切换失败"
+      },
+      "rename": {
+        "description": "重命名会话",
+        "success": "会话 {{id}} 已重命名为: {{name}}",
+        "failed": "重命名失败"
+      },
+      "tag": {
+        "description": "为会话添加标签",
+        "success": "已为会话 {{id}} 添加标签: {{tags}}",
+        "failed": "添加标签失败"
+      },
+      "untag": {
+        "description": "从会话移除标签",
+        "success": "已从会话 {{id}} 移除标签: {{tags}}",
+        "failed": "移除标签失败"
+      },
+      "cleanup": {
+        "description": "清理过期会话",
+        "options": {
+          "maxAge": "最大保留天数",
+          "dryRun": "仅显示将要清理的会话，不实际删除"
+        },
+        "noSessions": "没有需要清理的会话",
+        "title": "将要清理的会话:",
+        "found": "找到 {{count}} 个过期会话",
+        "cleaned": "已清理 {{count}} 个会话",
+        "failed": "清理会话失败"
+      },
+      "unknown": "未知"
+    },
+    "chat": {
+      "description": "启动交互式聊天会话",
+      "options": {
+        "once": "单次输入，适合脚本或测试",
+        "provider": "provider 名称，当前已注册:",
+        "role": "按指定 role 解析模型与默认权限",
+        "debug": "输出调试追踪到 stderr",
+        "debugFormat": "调试输出格式：pretty（默认）或 jsonl",
+        "dangerouslySkipPermissions": "跳过所有权限检查直接执行（与 Claude Code 一致，高危）",
+        "permissionMode": "权限模式：default | accept_edits | bypass_permissions",
+        "mode": "Agent 模式覆盖：single | multi（启动时生效）"
+      },
+      "errors": {
+        "permissionMode": "当前不支持 permission mode:",
+        "mode": "当前不支持 agent mode:",
+        "emptyStdin": "stdin 输入为空，无法启动会话。"
+      }
+    },
+    "modeCommand": {
+      "switched": "已切换 agent 模式为 \"{{mode}}\"，下一条消息生效。",
+      "invalid": "无效的 agent 模式: \"{{mode}}\"，请使用 single 或 multi。",
+      "failed": "更新 agent 模式失败: {{error}}"
+    },
+    "skillCommand": {
+      "context": "/context 已在 agent loop 内执行，查看状态信息。",
+      "status": "/status 已在 agent loop 内执行，显示当前会话状态。",
+      "init": "/init 已在 agent loop 内执行，初始化项目 CLAUDE.md。",
+      "review": "/review 已在 agent loop 内执行，启动代码审查。",
+      "skills": "/skills 已在 agent loop 内执行，列出可用技能。"
+    },
+    "resume": {
+      "description": "恢复之前的会话",
+      "options": {
+        "sessionId": "Session ID（如果不指定，恢复最新的 session）",
+        "message": "恢复后发送的消息",
+        "provider": "指定 Provider",
+        "role": "按指定 role 解析模型与默认权限",
+        "debug": "启用调试模式",
+        "debugFormat": "调试输出格式：pretty（默认）或 jsonl",
+        "permissionMode": "权限模式：default | accept_edits | bypass_permissions",
+        "list": "列出可恢复的会话",
+        "all": "显示所有会话（包括已完成的）"
+      },
+      "notFound": "Session 不存在:",
+      "noSession": "没有可恢复的 session。",
+      "resuming": "恢复 session:",
+      "time": "时间:",
+      "messageCount": "消息数:",
+      "list": {
+        "title": "可恢复的会话列表",
+        "empty": "没有可恢复的会话",
+        "current": "当前",
+        "preview": "预览",
+        "time": "时间",
+        "messages": "消息数",
+        "searching": "正在查找可恢复的会话..."
+      },
+      "validation": {
+        "noRecords": "会话没有历史记录",
+        "noMessages": "会话没有用户消息"
+      }
+    },
+    "tui": {
+      "description": "启动交互式 TUI Dashboard",
+      "options": {
+        "attach": "附加到已有 session"
+      },
+      "errors": {
+        "noTty": "错误: TUI 需要交互式终端 (TTY) 环境。",
+        "currentEnv": "当前环境:",
+        "yes": "是",
+        "no": "否",
+        "runDirectly": "请在终端中直接运行:",
+        "useCli": "或使用 CLI 模式:",
+        "failed": "TUI 启动失败:"
+      }
+    },
+    "config": {
+      "current": {
+        "description": "输出当前生效的运行时配置。",
+        "options": {
+          "role": "按指定 role 解析当前生效配置"
+        }
+      }
+    },
+    "init": {
+      "description": "首次运行配置向导：交互式生成 ~/.wasteland/settings.json 与 auth.json",
+      "options": {
+        "force": "覆盖已有的用户配置"
+      },
+      "existingConfig": "已检测到现有配置:",
+      "existingHint": "使用 --force 覆盖，或直接编辑上述文件。",
+      "nonInteractive": "首次初始化需要交互式终端。请直接在终端中运行:\n  wasteland init\n或手动创建 ~/.wasteland/settings.json 与 auth.json。",
+      "cancelled": "初始化已取消。",
+      "success": "配置写入完成，继续启动...",
+      "wizard": {
+        "title": "wasteland 首次初始化",
+        "subtitle": "从零配置多智能体协同网络及末日战甲，所有配置稍后可随时调整。",
+        "footer": "↑↓ 选择 · Enter 确认/下一步 · Esc 返回上一步 · Ctrl+C 取消",
+        "writing": "写入配置中...",
+        "language": {
+          "label": "选择语言 / Select Language",
+          "hint": "请选择界面交互语言 / Please choose your preferred interface language",
+          "zh": "简体中文 (Chinese - zh)",
+          "en": "English (en)"
+        },
+        "mode": {
+          "label": "请选择 Wasteland 的运行模式",
+          "hint": "Wasteland 核心为多智能体协同架构，支持主脑调度工人并发作业",
+          "multi": "多 Agent 协同模式 (Multi-Agent) [默认推荐 · 已启用]",
+          "single": "单 Agent 独立模式 (Single-Agent) [暂未实现完备 - 禁用]"
+        },
+        "provider": {
+          "selectLabel": "请选择要添加的 AI 模型供应商",
+          "selectHint": "可添加多个供应商，最少添加 1 个",
+          "keyLabel": "请输入 {{provider}} 的 API Key",
+          "keyHint": "按 Tab 切换掩码显示，内容将写入 ~/.wasteland/auth.json",
+          "tabMaskHint": "[Tab] 切换明文/掩码",
+          "fetchingModels": "正在连接 {{provider}} 探测可用模型列表...",
+          "modelLabel": "请选择或输入 {{provider}} 的模型名称",
+          "modelHint": "服务端识别的模型名，例如 deepseek-chat、gpt-4o",
+          "modelSelectHint": "已从服务端成功获取 {{count}} 个可用模型，使用方向键选择或手动输入",
+          "modelEmptyHint": "未能从远端端点自动拉取模型列表，请手动输入模型 ID (例如 deepseek-chat、gpt-4o)",
+          "manualModelOption": "【+ 手动输入其它模型 ID】",
+          "loopTitle": "当前已配置的供应商 ({{count}} 个)",
+          "loopHint": "最少配置 1 个供应商，可继续添加或进入下一步",
+          "loopDone": "【完成供应商配置，进入下一步】",
+          "loopAddMore": "【+ 继续添加下一个供应商】",
+          "deepseek": "DeepSeek (高性价比推理/代码，官方原生)",
+          "openai": "OpenAI (GPT-4o / o1 / GPT-4.5)",
+          "qwen": "通义千问 Qwen (阿里云 DashScope 平台)",
+          "glm": "智谱 GLM (智谱开放平台 BigModel)",
+          "minimax": "MiniMax (稀宇科技 海螺模型)",
+          "ollama": "Ollama (本地私有化部署，无需 Key)",
+          "opencodeZen": "OpenCode Zen (官方按量付费网关，端点 /zen/v1)",
+          "opencodeGo": "OpenCode Go (官方 $10/月包月订阅，端点 /zen/go/v1)",
+          "custom": "自定义 Provider (兼容 OpenAI 协议 / 第三方中转)",
+          "customNameLabel": "请输入自定义 Provider 名称",
+          "customNameHint": "作为 settings.json 中的标识（仅限字母、数字、短横线、下划线，例如 openrouter、siliconflow）",
+          "customBaseUrlLabel": "请输入自定义 API Base URL",
+          "customBaseUrlHint": "以 http:// 或 https:// 开头，例如 https://api.siliconflow.cn/v1"
+        },
+        "providerType": {
+          "label": "选择 provider 协议类型",
+          "hint": "使用方向键选择，Enter 确认",
+          "openaiCompatible": "OpenAI 兼容 (DeepSeek / GLM / OpenAI / 自建等)",
+          "anthropic": "Anthropic 官方协议"
+        },
+        "providerName": {
+          "label": "Provider 名称",
+          "hint": "作为 settings.json 中 providers 的 key（英文/数字/下划线）"
+        },
+        "baseUrl": {
+          "label": "API baseUrl",
+          "hint": "示例: https://api.deepseek.com/v1"
+        },
+        "apiKey": {
+          "label": "请输入【主 Agent】的 API Key",
+          "hint": "按 Tab 切换掩码显示，内容将写入 ~/.wasteland/auth.json",
+          "tabMaskHint": "[Tab] 切换明文/掩码"
+        },
+        "modelId": {
+          "label": "请确认【主 Agent】的核心思考模型",
+          "hint": "已预填平台推荐模型，按 Enter 直接采纳，也可手动修改"
+        },
+        "subAgentStrategy": {
+          "label": "请选择【子 Agent (任务工人)】的配置策略",
+          "hint": "子 Agent 专门负责并发执行代码、搜索、测试等高频子任务",
+          "reuse": "【推荐】直接复用主 Agent 配置 (零门槛，共用同一模型与 Key)",
+          "custom": "为子 Agent 独立配置模型 (例如主脑用 Claude/GPT-4o，工人用高性价比模型)",
+          "single": "仅单 Agent 模式 (暂不启用多智能体并发派发功能)"
+        },
+        "subAgentModel": {
+          "label": "请输入用于【子 Agent (工人)】的高性价比模型名称",
+          "hint": "建议选用响应快速、低成本的模型（如 deepseek-chat、qwen-turbo）"
+        },
+        "assign": {
+          "mainTitle": "请选择【主 Agent (总控主脑)】的供应商与模型",
+          "mainHint": "负责全局意图理解、任务拆解与多 Agent 协同编排",
+          "subStrategyTitle": "请选择【子 Agent 任务工人矩阵】的模型分配策略",
+          "subStrategyHint": "Wasteland 内置 4 个专业子 Agent (Developer/Researcher/Tester/Analyst)",
+          "unifiedOption": "【推荐】所有子 Agent 统一使用独立经济型模型 (高性价比，一键设置全员工人)",
+          "inheritOption": "所有子 Agent 完全复用主脑配置 (零额外模型，与主脑共用同一底座)",
+          "roleByRoleOption": "按工种精细化定制每个子 Agent (进阶模式：代码/搜索/测试各用专精模型)",
+          "unifiedSubTitle": "请选择【全体子 Agent (工人)】统一使用的供应商与模型",
+          "unifiedSubHint": "将自动应用于 Developer(编码)、Researcher(搜索)、Tester(测试)、Analyst(分析)",
+          "devTitle": "定制: 【Developer 代码开发工人】",
+          "devHint": "负责代码编写、重构与 Bug 调试",
+          "resTitle": "定制: 【Researcher 信息研究员】",
+          "resHint": "负责搜索、探索、信息收集与资料整理",
+          "testTitle": "定制: 【Tester 质量测试员】",
+          "testHint": "负责运行测试套件、验证功能与代码质检",
+          "anaTitle": "定制: 【Analyst 架构分析师】",
+          "anaHint": "负责系统分析、代码审查与架构评估"
+        },
+        "skin": {
+          "label": "请选择初始末日战甲皮肤 (回车直接采纳默认)",
+          "hint": "定义 TUI 界面配色调色板与角色口头禅",
+          "previewLabel": "战甲特征"
+        },
+        "a2a": {
+          "title": "A2A 跨智能体协同生态配置 (可选)",
+          "hint": "启用后，Wasteland 主脑及工人可直接通过工具调用外部编码智能体",
+          "controls": "按 [空格] 勾选/取消 · 按 [↑/↓] 移动 · 按 [Enter] 确认并继续 (全不选直接按回车可跳过) · 按 [Esc] 返回上一步"
+        },
+        "confirm": {
+          "title": "请确认以下初始化配置",
+          "language": "界面语言",
+          "mode": "运行模式",
+          "providersCount": "供应商配置池",
+          "mainAgent": "主 Agent (总控主脑)",
+          "subAgent": "子 Agent 矩阵",
+          "a2a": "A2A 跨智能体协同生态",
+          "a2aNone": "未启用外部 A2A 智能体 (跳过)",
+          "personas": "智能体默认人设皮肤",
+          "personasHint": "已自动启用官方默认人设 (支持在 ~/.wasteland/skins.json 中自定义)",
+          "mainPersona": "主脑 (Orchestrator): 不死老蕉 (warlord-immortal)",
+          "vanguardPersona": "精锐领航 (Vanguard): 独臂弗莎 (fury-vanguard)",
+          "devPersona": "Developer: 巨汉瑞克 (v8-mechanic)",
+          "resPersona": "Researcher: 暴走纳克斯 (sand-scout)",
+          "testPersona": "Tester: 弹头麦哲 (bullet-tester)",
+          "anaPersona": "Analyst: 电音杜夫 (doof-analyst)",
+          "providerName": "Provider 名称",
+          "providerType": "协议类型",
+          "baseUrl": "API 端点",
+          "apiKey": "API Key",
+          "model": "主模型 ID",
+          "subModel": "子模型 ID",
+          "enterToSubmit": "按 Enter 写入配置并启航 · 按 Esc 返回上一步修改"
+        },
+        "done": {
+          "title": "✓ 初始化完成",
+          "enterToContinue": "按 Enter 继续"
+        },
+        "error": {
+          "title": "写入失败"
+        },
+        "errors": {
+          "emptyProviderName": "Provider 名称不能为空",
+          "invalidProviderName": "只允许字母、数字、下划线和短横线",
+          "emptyBaseUrl": "baseUrl 不能为空",
+          "invalidBaseUrl": "baseUrl 需以 http:// 或 https:// 开头",
+          "emptyApiKey": "API Key 不能为空",
+          "emptyModelId": "模型 ID 不能为空",
+          "emptySubAgentModelId": "子 Agent 模型 ID 不能为空",
+          "noProviders": "至少需要配置 1 个供应商"
+        }
+      }
+    },
+    "export": {
+      "description": "将会话导出为 markdown（默认最近 session）",
+      "notFound": "未找到 session:",
+      "noSession": "没有可导出的 session。",
+      "options": {
+        "sessionId": "session ID（省略则用最近）"
+      }
+    },
+    "context": {
+      "description": "查看当前 context 使用情况、token 消耗统计",
+      "options": {
+        "sessionId": "会话 ID（可选，默认使用最新会话）",
+        "format": "输出格式 (text/json/markdown/html)",
+        "details": "显示详细信息",
+        "history": "显示使用历史",
+        "historyLimit": "历史记录显示条数",
+        "color": "禁用颜色",
+        "watch": "实时更新模式",
+        "watchInterval": "更新间隔（秒）"
+      },
+      "notFound": "未找到会话统计信息",
+      "noSession": "请先启动一个会话，或指定会话 ID",
+      "history": {
+        "description": "查看 context 使用历史",
+        "options": {
+          "limit": "显示条数",
+          "format": "输出格式 (text/json)"
+        },
+        "title": "Context 使用历史",
+        "empty": "暂无使用历史",
+        "header": "轮次  |  时间  |  Token 使用量  |  使用率"
+      },
+      "compaction": {
+        "description": "查看压缩历史",
+        "options": {
+          "limit": "显示条数",
+          "format": "输出格式 (text/json)"
+        },
+        "title": "压缩历史",
+        "empty": "暂无压缩记录",
+        "header": "时间  |  原因  |  移除消息数  |  节省 Tokens  |  使用率变化"
+      },
+      "trend": {
+        "description": "查看使用趋势图",
+        "options": {
+          "width": "图表宽度"
+        },
+        "title": "Token 使用趋势",
+        "empty": "暂无使用历史"
+      }
+    },
+    "rename": {
+      "description": "重命名会话",
+      "arguments": {
+        "sessionId": "会话 ID",
+        "newName": "新名称（可选）"
+      },
+      "options": {
+        "generate": "自动生成名称",
+        "strategy": "生成策略 (date_based/content_based/tag_based/hybrid)",
+        "interactive": "交互式输入新名称"
+      },
+      "notFound": "会话 {{id}} 不存在",
+      "currentName": "当前名称",
+      "sessionId": "会话 ID",
+      "createdAt": "创建时间",
+      "input": {
+        "prompt": "请输入新名称",
+        "generate": "自动生成",
+        "quit": "退出"
+      },
+      "validation": {
+        "empty": "名称不能为空",
+        "tooLong": "名称不能超过100个字符",
+        "invalidChars": "名称包含无效字符",
+        "invalid": "名称无效"
+      },
+      "generate": {
+        "auto": "自动生成的名称",
+        "newSession": "新会话",
+        "untagged": "未分类会话"
+      },
+      "suggestion": "建议使用",
+      "success": "会话 {{id}} 已重命名为: {{name}}",
+      "failed": "重命名失败",
+      "autoRename": {
+        "description": "批量自动重命名未命名的会话",
+        "options": {
+          "dryRun": "仅显示将要重命名的会话，不实际修改",
+          "prefix": "添加前缀"
+        },
+        "failed": "获取会话列表失败",
+        "noSessions": "没有需要重命名的会话",
+        "found": "找到 {{count}} 个未命名的会话",
+        "willRename": "将重命名 {{count}} 个会话",
+        "renamed": "已重命名 {{count}} 个会话"
+      }
+    },
+    "logs": {
+      "description": "查看 wasteland 运行时日志",
+      "options": {
+        "dir": "日志目录（默认 <cwd>/.wasteland/logs）"
+      },
+      "errors": {
+        "description": "查看 error.jsonl 最近条目（warn/error）",
+        "options": {
+          "tail": "显示条目数"
+        }
+      },
+      "show": {
+        "description": "显示指定 sessionId 的所有 runtime + error 条目",
+        "options": {
+          "tail": "最大显示条目数"
+        }
+      },
+      "tail": {
+        "description": "跟踪当前 runtime-<date>.jsonl（可选 --follow）",
+        "options": {
+          "level": "最低日志级别: debug|info|warn|error",
+          "scope": "逗号分隔的 scope（如 tool,turn）",
+          "tail": "显示条目数",
+          "follow": "持续监控文件新条目"
+        }
+      }
+    }
+  },
+  "tui": {
+    "header": {
+      "title": "wasteland",
+      "session": "会话",
+      "debug": "调试",
+      "guide": "指南"
+    },
+    "agentTabs": {
+      "mainShortLabel": "Main"
+    },
+    "footer": {
+      "inputMode": "[输入模式]",
+      "filterMode": "[过滤模式]",
+      "editMode": "[编辑模式]",
+      "exitConfirm": "[退出确认]",
+      "helpMode": "[帮助]",
+      "escCancel": "Esc 取消",
+      "enterSend": "Enter 发送",
+      "ctrlCExit": "Ctrl+C 退出",
+      "tabSwitchField": "Tab 切换字段",
+      "arrowSwitchValue": "←/→ 切换值",
+      "escClose": "Esc 关闭",
+      "enterConfirm": "Enter 确认",
+      "yConfirmExit": "y 确认退出",
+      "nCancel": "n 或其他键取消",
+      "hOrEscClose": "h 或 Esc 关闭帮助",
+      "help": "帮助",
+      "switchPage": "切换页面",
+      "exit": "退出",
+      "scroll": "↑/↓ 滚动",
+      "enterInput": "Enter 输入",
+      "expand": "展开",
+      "filter": "过滤",
+      "clear": "清空",
+      "switch": "↑/↓ 切换",
+      "edit": "编辑",
+      "saveProject": "Ctrl+S 项目",
+      "saveUser": "Ctrl+U 用户",
+      "reset": "Ctrl+R 重置",
+      "sessionPage": "会话页面",
+      "debugPage": "调试页面",
+      "guidePage": "指南页面"
+    },
+    "exit": {
+      "title": "确认退出",
+      "confirm": "确认退出",
+      "pressY": "按",
+      "toConfirm": "确认退出",
+      "cancel": "或其他键取消"
+    },
+    "session": {
+      "agentTree": {
+        "running": "运行:"
+      },
+      "input": {
+        "mode": "[输入模式]",
+        "escCancel": "Esc 取消",
+        "enterSend": "Enter 发送",
+        "tabSwitch": "Tab 切换区域",
+        "tabPlaceholder": "Tab 切换到此处输入...",
+        "ctrlEnterHint": "Enter 进入输入模式",
+        "placeholder": {
+          "focused": "输入消息",
+          "unfocused": "按 Tab 切换到输入框"
+        },
+        "label": "输入",
+        "hintMultiline": "Enter 发送 · Shift+Enter 换行 · Esc 退出",
+        "statusBar": {
+          "skin": "皮肤",
+          "mode": "模式",
+          "permission": "权限",
+          "provider": "模型",
+          "ctx": "上下文",
+          "shortcuts": "Shift+Tab 切换权限 · /help 查看命令 · Esc 退出"
+        }
+      },
+      "messages": {
+        "user": "用户",
+        "assistant": "助手",
+        "tool": "工具",
+        "system": "系统",
+        "message": "消息",
+        "welcome": "◆ wasteland",
+        "chatStartHint": "在 wasteland 中,输入消息开始对话,`/help` 查看指令",
+        "startHint": "在 wasteland 中,在下方输入消息开始对话",
+        "tabHint": "Tab 切换页面 ┊ h 帮助 ┊ q 退出",
+        "title": "消息",
+        "count": "{{count}} 条",
+        "thinking": "思考中...",
+        "streaming": "流式中",
+        "autoScrollPaused": "(已暂停自动滚动)"
+      }
+    },
+    "statusbar": {
+      "runningAgents": "⚡ {{count}} 个 agent",
+      "tools": "{{count}} 工具",
+      "viewing": "正在查看: {{name}} ▶"
+    },
+    "toolError": "错误: {{error}}",
+    "contextCompacted": "上下文已压缩：移除 {{removedCount}} 条消息，节省约 {{tokensSaved}} token",
+    "contextCompactedSummarized": "上下文已压缩：移除 {{removedCount}} 条消息，节省约 {{tokensSaved}} token（已摘要保留早期上下文）",
+    "contextBudgetWarning": "⚠ 上下文预算：prompt {{promptTokens}} + history {{historyTokens}} / 窗口 {{contextWindow}}",
+    "runtimeEventStreamError": "运行时事件流错误:",
+    "debugTraceStreamError": "调试跟踪流错误:",
+    "failedToLoadSkin": "加载皮肤失败:",
+    "config": {
+      "title": "指南",
+      "docs": {
+        "location": {
+          "title": "配置文件位置",
+          "project": "项目配置:",
+          "user": "用户配置:",
+          "priority": "优先级: CLI 参数 > 环境变量 > 项目配置 > 用户配置 > 默认值"
+        },
+        "structure": {
+          "title": "settings.json 结构"
+        },
+        "fields": {
+          "title": "配置项说明",
+          "defaultRole": "默认 Agent 角色 (如 orchestrator)",
+          "permissionMode": "权限模式: default | accept_edits | bypass_permissions",
+          "maxStepsPerTurn": "单轮最大工具步数 (默认: 30)",
+          "language": "界面语言: en | zh",
+          "providerType": "API 协议: openai-compatible | anthropic | local"
+        },
+        "env": {
+          "title": "环境变量",
+          "home": "覆盖配置主目录",
+          "provider": "覆盖默认 provider",
+          "debug": "启用调试模式 (true/false)"
+        }
+      }
+    },
+    "debug": {
+      "count": "{{count}} 条",
+      "filtering": "过滤中",
+      "hint": "↑/↓ 滚动 | f 过滤 | c 清空",
+      "traceLog": "Trace 日志",
+      "filter": "过滤",
+      "call": "调用",
+      "success": "成功",
+      "failed": "失败",
+      "permission": "权限:",
+      "createSubAgent": "创建子Agent:",
+      "agentDone": "Agent完成:",
+      "executeSkill": "执行技能:",
+      "sendRequest": "发送请求",
+      "receiveResponse": "收到响应",
+      "waitingTrace": "等待 trace 数据...",
+      "useDebugHint": "使用 --debug 启动以查看详细追踪",
+      "usageExample": "wasteland chat --debug --message \"你的消息\"",
+      "details": "详情:",
+      "rawData": "原始数据:",
+      "filterCondition": "过滤条件:",
+      "none": "无",
+      "modifyFilter": "f 修改",
+      "filterTitle": "过滤器",
+      "filterHint": "Tab 切换字段 | ←/→ 切换值 | Esc 关闭",
+      "currentFilter": "当前过滤:",
+      "noMessages": "(无消息)",
+      "summary": "摘要:"
+    }
+  },
+  "skills": {
+    "help": {
+      "description": "在废土上求生的指令,皆录于此",
+      "title": "废土操作手册",
+      "commands": "可用命令",
+      "sessionCommands": "会话命令",
+      "closeHint": "按 Esc 关闭",
+      "showHelp": "显示帮助",
+      "showTools": "显示可用工具列表",
+      "showSkills": "显示可用技能列表",
+      "clearHistory": "清除会话历史",
+      "exitSession": "离开 wasteland",
+      "shortcuts": "快捷键",
+      "switchFocus": "切换焦点区域",
+      "sendMessage": "发送消息",
+      "cancelInput": "取消输入/返回",
+      "exit": "退出",
+      "builtInTools": "内置工具",
+      "readOnlyTools": "只读工具",
+      "writeTools": "写入工具",
+      "executeTools": "执行工具",
+      "skillSystem": "技能系统",
+      "skillDescription": "技能是高级工作流，可以编排多个工具调用。",
+      "usage": "使用方法:",
+      "example": "示例:",
+      "initContext": "初始化项目上下文",
+      "showOverview": "显示项目概览",
+      "runSkillsHint": "运行 /skills 查看所有可用技能。",
+      "currentSession": "当前会话:",
+      "workDir": "工作目录:",
+      "skillName": "技能名",
+      "params": "参数",
+      "options": "选项",
+      "topicDesc": "帮助主题: commands, tools, skills, all",
+      "localCommands": {
+        "title": "本地命令",
+        "description": "由 TUI 直接分发,不走 skill 系统。",
+        "logs": "查看实时运行时日志(切换到 Logs page)",
+        "logsClose": "从 Logs page 返回 chat",
+        "clear": "清空当前聊天界面",
+        "exit": "退出 wasteland",
+        "sessions": "浏览和恢复历史会话",
+        "mode": "切换 agent 模式(single/multi),写回配置,重启后生效",
+        "context": "查看当前 context 使用情况和 token 消耗统计"
+      },
+      "categories": {
+        "skill": "技能",
+        "local": "本地命令",
+        "session": "会话",
+        "exit": "退出"
+      }
+    },
+    "status": {
+      "description": "显示当前会话状态和统计信息",
+      "title": "会话状态",
+      "basicInfo": "基本信息",
+      "sessionId": "会话 ID:",
+      "currentTurn": "当前轮次:",
+      "workDir": "工作目录:",
+      "messageHistory": "消息历史",
+      "userMessages": "用户消息:",
+      "assistantMessages": "助手消息:",
+      "total": "总计:",
+      "toolStatus": "工具状态",
+      "permissionSettings": "权限设置",
+      "mode": "模式:",
+      "session": "会话:",
+      "turn": "轮次:",
+      "history": "历史:",
+      "tools": "工具:",
+      "directory": "目录:",
+      "items": "条",
+      "available": "个可用",
+      "levelTools": "级工具:",
+      "formatDesc": "输出格式: simple, detailed, json"
+    },
+    "context": {
+      "description": "描述:",
+      "collecting": "收集项目信息...",
+      "project": "项目:",
+      "directory": "目录:",
+      "files": "文件:",
+      "overview": "项目概览",
+      "name": "名称:",
+      "version": "版本:",
+      "structure": "目录结构",
+      "keyFiles": "关键文件",
+      "otherFiles": "以及 {{count}} 个其他文件",
+      "commonCommands": "常用命令",
+      "items": "个",
+      "detailedDesc": "显示详细信息（包括文件树）"
+    },
+    "tools": {
+      "description": "显示所有可用工具的详细信息",
+      "noMatch": "没有匹配的工具",
+      "noTools": "没有可用工具",
+      "availableTools": "可用工具",
+      "readOnly": "只读工具",
+      "write": "写入工具",
+      "execute": "执行工具",
+      "riskLevel": "风险等级:",
+      "params": "参数:",
+      "required": "(必需)",
+      "example": "示例:",
+      "hint": "提示: 使用 --detailed 查看参数信息",
+      "filterDesc": "过滤条件: read, write, execute, 或工具名前缀",
+      "detailedDesc": "显示详细参数信息",
+      "items": "个"
+    },
+    "review": {
+      "description": "代码审查: 分析变更文件，检查常见代码质量问题",
+      "stagedDesc": "仅审查已暂存的变更",
+      "unstagedDesc": "仅审查未暂存的变更",
+      "fileDesc": "指定审查的文件路径",
+      "llmDesc": "启用 LLM 语义分析",
+      "analyzing": "正在分析变更文件...",
+      "noChanges": "没有发现变更文件。请先进行代码修改。",
+      "foundFiles": "发现 {{count}} 个变更文件",
+      "cannotRead": "无法读取",
+      "findings": "个问题",
+      "title": "📋 代码审查报告",
+      "changedFiles": "变更文件",
+      "issues": "问题发现",
+      "llmAnalysis": "🤖 LLM 语义分析",
+      "llmAnalyzing": "正在进行 LLM 分析...",
+      "llmNotAvailable": "LLM 不可用（未配置 provider）",
+      "llmNotSupported": "LLM 分析暂不支持",
+      "llmNoChanges": "没有可用的 diff 内容",
+      "llmNoResponse": "LLM 未返回分析结果",
+      "llmError": "LLM 分析出错",
+      "totalIssues": "共发现 {{count}} 个问题"
+    },
+    "init": {
+      "description": "初始化 CLAUDE.md 项目上下文文件",
+      "templateType": "模板类型: default, minimal, full",
+      "force": "覆盖已存在的文件",
+      "initContext": "初始化项目上下文:",
+      "alreadyExists": "CLAUDE.md 已存在。使用 --force 覆盖。",
+      "project": "项目",
+      "gettingStructure": "获取项目结构...",
+      "autoGenerated": "自动生成的项目上下文",
+      "toDo": "待补充",
+      "writeFileNotAvailable": "write-file 工具不可用",
+      "writing": "写入文件...",
+      "writeFailed": "写入失败:",
+      "created": "已创建 CLAUDE.md:",
+      "cannotGetStructure": "无法获取项目结构",
+      "templates": {
+        "default": "# 项目上下文\n\n## 概述\n{description}\n\n## 项目结构\n```\n{structure}\n```\n\n## 关键文件\n- `src/` - 源代码目录\n- `tests/` - 测试文件目录\n\n## 开发规范\n- 遵循现有代码风格\n- 提交前运行测试\n- 更新相关文档\n\n## 重要事项\n- 保持代码简洁清晰\n- 注释复杂逻辑\n- 处理边界情况",
+        "minimal": "# 项目上下文\n\n{description}\n\n## 关键约定\n- 遵循现有代码风格\n- 提交前运行测试",
+        "full": "# 项目上下文\n\n## 项目概述\n{description}\n\n## 技术栈\n- 运行时: Node.js\n- 语言: TypeScript\n- 包管理器: npm\n\n## 项目结构\n```\n{structure}\n```\n\n## 开发指南\n\n### 环境设置\n```bash\nnpm install\n```\n\n### 常用命令\n- `npm run build` - 构建项目\n- `npm run test` - 运行测试\n- `npm run lint` - 代码检查\n\n### 代码规范\n- 使用 TypeScript 编写所有新代码\n- 遵循现有命名约定\n- 为公共 API 编写文档注释\n\n### 提交规范\n- 编写清晰的提交信息\n- 提交前确保测试通过\n- 大型更改拆分为小提交\n\n## 架构说明\n{architecture}\n\n## 已知问题\n{issues}\n\n## 未来计划\n{future}"
+      }
+    },
+    "common": {
+      "unknownSkill": "未知技能:",
+      "paramError": "参数错误:",
+      "alias": "别名:",
+      "params": "参数:",
+      "example": "示例:",
+      "noSkills": "没有可用的技能。",
+      "availableSkills": "可用技能",
+      "missingRequiredParam": "缺少必需参数:",
+      "mustBeString": "必须是字符串",
+      "mustBeOneOf": "必须是以下值之一:",
+      "mustBeNumber": "必须是数字",
+      "mustBeBoolean": "必须是布尔值",
+      "mustBeArray": "必须是数组",
+      "mustBeObject": "必须是对象",
+      "noParams": "无参数",
+      "optionalValues": "可选值:",
+      "default": "默认:",
+      "toolNotExist": "工具不存在:",
+      "executing": "执行:",
+      "stepFailed": "步骤失败:",
+      "skillExecComplete": "技能执行完成",
+      "skillMissingName": "技能 {{path}} 缺少 'name' 字段",
+      "skillMissingDescription": "技能 {{path}} 缺少 'description' 字段",
+      "skillModuleDefaultExport": "技能模块 {{path}} 必须有默认导出",
+      "skillModuleSkillObject": "技能模块 {{path}} 必须导出 Skill 对象",
+      "loadSkillFailed": "加载技能失败 {{path}}:"
+    },
+    "logsHelp": {
+      "title": "Logs 子命令",
+      "helpText": "Logs 页面 — 查看运行时日志(当前 session + 磁盘历史)\n\n过滤器可叠加: /logs show + /logs level + /logs scope 可以组合使用\n表格来源标识: [D]=磁盘历史  [L]=实时(当前 session)\n\n子命令:\n  /logs              进入 Logs page(保留当前过滤)\n  /logs close        回到 chat page\n  /logs all          清除所有过滤,显示全量日志\n  /logs errors       仅显示 error 级别(最严重)\n  /logs show <sid>   按 sessionId 过滤(子串匹配,如 \"2026-08\")\n  /logs level <l>    设置最低 level: debug|info|warn|error\n  /logs scope <s>    设置 scope 过滤(逗号分隔,如 \"tool,provider\")\n  /logs help         显示此帮助\n\n示例:\n  /logs show 2026-08-08_230211\n  /logs level debug\n  /logs scope tool,permission\n  /logs show abc level error scope provider\n  /logs all\n\nLogs page 快捷键:\n  ↑/↓   选择条目(↑=更早, ↓=更新)\n  Enter 展开选中条目的完整 JSON\n  P     暂停/恢复跟随新条目\n  L     循环切换最低 level\n  S     循环切换 scope\n  K     循环切换事件 kind\n  /     输入 sessionId 过滤\n  C     清空当前条目\n  Esc   回到 chat page"
+    }
+  },
+  "tools": {
+    "editFile": {
+      "needRelativePath": "edit-file 需要一个位于当前工作目录内的相对路径。",
+      "needOldString": "edit-file 需要非空的 old_string 参数。",
+      "needBothOldAndNew": "单处编辑模式需要同时提供 old_string 与 new_string 参数。",
+      "needEdits": "edit-file 需要提供非空的 edits 数组，或同时提供 old_string 与 new_string 参数。",
+      "conflict": "edits 参数不能与 old_string/new_string 同时使用，请只选择一种编辑模式。",
+      "noMatch": "未找到匹配的字符串。请确保 old_string 与文件内容完全一致...",
+      "noMatchInEdit": "第 {{index}} 条 edits 未找到匹配的字符串。请确保 old_string 与文件内容完全一致。",
+      "multipleMatches": "找到 {{count}} 处匹配，但 replace_all 为 false...",
+      "multipleMatchesInEdit": "第 {{index}} 条 edits 找到 {{count}} 处匹配，但该条 replace_all 为 false。",
+      "success": "成功编辑文件（替换了 {{count}} 处）。"
+    },
+    "readFile": {
+      "offsetOutOfRange": "offset {{offset}} 超出文件范围（文件共 {{total}} 行）。",
+      "needRelativePath": "read-file 需要一个位于当前工作目录内的相对路径。"
+    },
+    "askUser": {
+      "missingQuestion": "缺少 question 参数",
+      "options": "选项:"
+    },
+    "bash": {
+      "needCommand": "bash 工具需要非空 command 字段。"
+    },
+    "spawnAgent": {
+      "noResponse": "子 Agent 未返回响应",
+      "executionComplete": "子 Agent 执行完成",
+      "executionFailed": "子 Agent 执行失败",
+      "roleUser": "用户",
+      "roleAssistant": "助手",
+      "historyHeader": "## 之前的对话历史",
+      "currentTaskHeader": "## 当前任务"
+    },
+    "grep": {
+      "needPattern": "grep 工具需要非空 pattern 字段。示例：{ \"pattern\": \"TODO\", \"include\": \"*.ts\" }"
+    },
+    "git": {
+      "needSubcommand": "git 工具需要非空 subcommand 字段。示例：{ \"subcommand\": \"status\" }",
+      "needCommitMessage": "git commit 需要非空 message 字段。示例：{ \"subcommand\": \"commit\", \"message\": \"feat: add new feature\" }",
+      "blockedSubcommand": "git 命令 \"{{command}}\" 因安全原因被禁止。",
+      "forcePushDenied": "出于安全考虑，禁止 force push。",
+      "unsupportedSubcommand": "不支持的 git 子命令: \"{{subcommand}}\"。支持的子命令: status, diff, log, add, commit, branch, checkout, push, pull。",
+      "timeout": "Git 命令执行超时，请重试。"
+    },
+    "webSearch": {
+      "needQuery": "web-search 工具需要非空 query 参数。示例：{ \"query\": \"TypeScript best practices\" }"
+    }
+  },
+  "runtime": {
+    "noFinalMessage": "当前 provider 未返回最终消息。",
+    "maxStepsReached": "当前单轮已达到最大工具步数限制...",
+    "noToolRegistry": "当前运行时未配置 tool registry 或 permission gate。",
+    "readBeforeEdit": "read-before-edit 检查未通过。",
+    "toolNotFound": "未找到工具:",
+    "toolFailed": "工具执行失败。",
+    "mustReadBeforeEdit": "必须先读取文件才能编辑。请使用 /read 命令先读取文件。",
+    "permissionBypass": "模式 bypass_permissions 允许所有工具调用。",
+    "permissionAcceptEdits": "模式 accept_edits 对 execute 工具要求确认。",
+    "permissionAcceptEditsAllows": "模式 accept_edits 允许 {{count}} 工具。",
+    "permissionDefault": "模式 default 允许 read 工具。",
+    "permissionDefaultRequires": "模式 default 对 {{count}} 工具要求确认。",
+    "permissionRuleHit": "工具规则命中：",
+    "parallelAgentsRunning": "正在运行 {{count}} 个 Agent: {{names}}"
+  },
+  "providers": {
+    "typeEmpty": "provider type 不能为空。",
+    "typeRegistered": "provider type 已注册:",
+    "idEmpty": "provider id 不能为空。",
+    "alreadyRegistered": "provider 已注册:",
+    "unsupportedProtocol": "当前不支持的 API 协议类型:",
+    "unsupportedProvider": "当前不支持的 provider:",
+    "openai": {
+      "missingModel": "provider openai-compatible 缺少 model 配置。",
+      "missingBaseUrl": "provider openai-compatible 缺少 baseUrl 配置。",
+      "requestFailed": "openai-compatible 请求失败：",
+      "invalidJson": "openai-compatible 返回了无法解析的 JSON。",
+      "missingChoices": "openai-compatible 返回结果缺少 choices[0]。",
+      "unexpectedResponse": "openai-compatible 返回了意外的响应：",
+      "contentNotString": "openai-compatible 返回的 assistant content 不是字符串。",
+      "contentEmpty": "openai-compatible 返回的 assistant content 为空。"
+    },
+    "claude": {
+      "missingApiKey": "provider claude 缺少 apiKey 配置。",
+      "missingModel": "provider claude 缺少 model 配置。",
+      "requestFailed": "claude 请求失败",
+      "unexpectedResponse": "claude 返回了意外的响应"
+    },
+    "local": {
+      "toolCompleted": "工具 {{tool}} 已完成。",
+      "toolNoPermission": "工具 {{tool}} 未执行：权限未通过。",
+      "toolFailed": "工具 {{tool}} 执行失败：未知错误。"
+    },
+    "toolAdapter": {
+      "readFile": "读取文件内容",
+      "editFile": "精确编辑文件",
+      "writeFile": "创建或覆写文件",
+      "bash": "执行 shell 命令",
+      "createSubAgent": "创建并运行子 Agent",
+      "filePath": "要读取的文件路径",
+      "startLine": "起始行号",
+      "oldString": "要替换的原始字符串",
+      "newString": "替换后的新字符串",
+      "writePath": "要写入的文件路径",
+      "content": "文件的完整内容",
+      "command": "要执行的 shell 命令",
+      "subAgentId": "子 Agent 的唯一标识符",
+      "invalidJson": "无法解析工具参数：无效的 JSON 格式。原始参数：",
+      "unknownParseError": "未知解析错误。"
+    },
+    "messageBuilder": {
+      "noOutput": "(无输出)",
+      "toolFailed": "工具执行失败。"
+    }
+  },
+  "ui": {
+    "spinner": {
+      "thinking": "思考中",
+      "analyzing": "分析中",
+      "processing": "处理中",
+      "generating": "生成中",
+      "reasoning": "推理中",
+      "computing": "计算中",
+      "understanding": "理解中",
+      "preparing": "准备中",
+      "welcome": "输入消息开始对话，/help 查看命令",
+      "goodbye": "再见!"
+    },
+    "terminal": {
+      "thinking": "思考中...",
+      "unhandledEvent": "未处理的运行时事件："
+    },
+    "streaming": {
+      "thinking": "思考中...",
+      "thinkingCompleted": "（思考完成）",
+      "streaming": "流式中"
+    }
+  }
+}

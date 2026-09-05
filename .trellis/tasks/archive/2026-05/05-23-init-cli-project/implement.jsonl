@@ -1,0 +1,3 @@
+{"file":".trellis/spec/guides/index.md","reason":"Project-wide guidance for how to use shared Trellis guides during implementation."}
+{"file":".trellis/spec/guides/communication-language-policy.md","reason":"User-facing communication and bilingual policy for this repository."}
+{"file":".trellis/tasks/05-23-init-cli-project/research/cli-stack-options.md","reason":"Chosen CLI stack and rationale for the scaffold architecture."}

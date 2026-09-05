@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/backend/tool-runtime-contracts.md", "reason": "工具合同、ToolRegistry、权限闸门、工具生命周期分发的规范真源"}
+{"file": ".trellis/spec/backend/runtime-contracts.md", "reason": "RuntimeEvent、SessionRecord、会话历史审计的规范真源"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "TypeScript 类型注释规范、RxJS 代码可读性规范、测试要求"}
+{"file": ".trellis/tasks/05-23-implement-edit-file-and-write-file-tools/prd.md", "reason": "本任务的 PRD，包含需求、验收标准、技术方案"}

@@ -1,0 +1,8 @@
+{"file": "src/tools/spawn-agent.ts", "reason": "子 agent session 完整性：closeSession + session_end 写入"}
+{"file": "src/tui/components/ChatMessageList.tsx", "reason": "Thinking 块 + StreamingBlock 用 skin.colors.thinking 替代 wastelandTheme.colors.muted"}
+{"file": "src/core/runtime/session-manager.ts", "reason": "closeSession API 已存在，确认 session_end record 写入路径"}
+{"file": "src/core/runtime/agent-loop.ts", "reason": "runTurnLoop 的 end$ 在 take(1) 退订时未执行——确认不需要 agent-loop 改动，只在 spawn-agent 处显式 close"}
+{"file": "src/skins/types.ts", "reason": "SkinUi.colors.thinking 已确认存在（之前 PR #21b2b9c）"}
+{"file": "src/skins/immortan-joe/skinUi.ts", "reason": "colors.thinking 定义参考"}
+{"file": "test/tools/spawn-agent.test.js", "reason": "子 agent session 完整性测试（jsonl 含 session_end）"}
+{"file": "test/theme-skin.test.js", "reason": "Thinking 颜色验证（skin 优先 + fallback）"}

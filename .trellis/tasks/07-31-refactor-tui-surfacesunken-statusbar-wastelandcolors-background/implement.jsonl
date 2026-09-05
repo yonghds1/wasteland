@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/frontend/theme-skin.md", "reason": "本次需删除本 spec §3 Contracts 中关于 wastelandColors.surfaceSunken 的整段(之前引入,现在回退)。"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "不变项的 reference(核对 StatusBar 仍为 top-bar auxiliary + paddingY 保留,本次只动 backgroundColor 选择的 token)。"}

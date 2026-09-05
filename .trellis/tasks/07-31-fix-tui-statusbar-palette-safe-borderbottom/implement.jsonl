@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/frontend/theme-skin.md", "reason": "本次新增 §3 Contracts 'Palette Quantization Caveat' 段,沉淀 'xterm-256color 下深色 backgroundColor 等同 palette 索引 16=black,只能靠 palette-safe 边框/前景色做视觉区分' 这条工程经验。"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "核对:StatusBar 用法合规(top-bar auxiliary);borderBottom 与 AgentTabs 的 border 风格呼应(都基于 borderDim 系列)。"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "五门回归:typecheck/lint/contrast/locale-parity/i18n validate 全绿;AgentTabs.test.ts 39/39 仍 pass(本任务仅加 StatusBar borderBottom prop)。"}
+{"file": ".trellis/spec/frontend/focus-management.md", "reason": "框边风格参考:AgentTabs 用 borderFocused / borderDim 作聚焦态切换,本任务 StatusBar 用 borderDim 作底部 1 条边 —— 同一系列 token 跨组件复用,符合 spec 中关于'wasteland 主色协调'的隐含约定。"}

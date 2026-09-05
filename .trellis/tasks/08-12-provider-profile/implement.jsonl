@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/backend/runtime-contracts.md", "reason": "provider contract 规范真源；改 openai.ts usage 读取 / context-manager 窗口解析必须保持归一化边界（ProviderStreamEvent.usage 统一 schema）"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "代码标准与禁止模式；新建 profiles.ts 与改 adapter 遵守现有质量基线"}
+{"file": ".trellis/spec/backend/directory-structure.md", "reason": "模块组织约定；决定 profiles.ts 落点与现有 providers/ 结构一致"}
+{"file": ".trellis/spec/guides/communication-language-policy.md", "reason": "语言政策；代码注释与用户可见文案的语言约定"}

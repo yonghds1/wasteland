@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "check:① AgentTabs 仍 flexShrink=0 单行;② 与 ChatInputBar 仍完全解耦;③ 去框后 paddingX 保持可读间距。"}
+{"file": ".trellis/spec/frontend/theme-skin.md", "reason": "check:① 底线用 borderDim(palette-safe index 59);② 不引入新 token;③ contrast 13 skins 仍通过。"}
+{"file": ".trellis/spec/frontend/focus-management.md", "reason": "check:① Esc 双向 toggle 不破;② agentTabs useInput gating 不破;③ selected 态去掉 ▶ 后方向键仍能移动 selectedIdx。"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "check:① getAgentTabStyle 仍为 pure function;② selected 态不再返回 hasSelectionArrow=true;③ 现有 AgentTabs.test.ts 全部 pass。"}
