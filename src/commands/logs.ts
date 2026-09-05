@@ -465,9 +465,16 @@ export function parseLevelOption(value: string): LogLevel | null {
 
 /**
  * 创建 `wasteland logs` 顶层命令（含 3 个子命令）。
+ *
+ * 已废弃：TUI LogsPage 为唯一日志界面（见 memory / logging-guidelines §20）。
+ * 子命令保留可用，但每次执行先打 stderr 废弃提示，指路 TUI。
  */
 export function createLogsCommand(): Command {
   const logs = new Command('logs').description(t('commands.logs.description'));
+
+  logs.hook('preAction', () => {
+    process.stderr.write(`${t('commands.logs.deprecated')}\n`);
+  });
 
   logs
     .command('errors')

@@ -563,6 +563,7 @@
     },
     "logs": {
       "description": "Read wasteland runtime logs",
+      "deprecated": "⚠ wasteland logs is deprecated: use the TUI Logs page (wasteland /logs) instead, which is fully featured (search/filter/conversation merge/export)",
       "options": {
         "dir": "Logs directory (default <cwd>/.wasteland/logs)"
       },
@@ -691,6 +692,8 @@
     "contextCompacted": "Context compacted: removed {{removedCount}} messages, saved ~{{tokensSaved}} tokens",
     "contextCompactedSummarized": "Context compacted: removed {{removedCount}} messages, saved ~{{tokensSaved}} tokens (early context preserved via summary)",
     "contextBudgetWarning": "⚠ Context budget: prompt {{promptTokens}} + history {{historyTokens}} / window {{contextWindow}}",
+    "conversationBadge": "💬 Conversation",
+    "globalTimelineLoading": "Loading global timeline... ({{done}}/{{total}} sessions)",
     "runtimeEventStreamError": "Runtime event stream error:",
     "debugTraceStreamError": "Debug trace stream error:",
     "failedToLoadSkin": "Failed to load skin:",

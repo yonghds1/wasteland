@@ -166,7 +166,9 @@ WASTELAND_DEBUG=1 WASTELAND_LOG_LEVEL=warn wasteland
 
 `JOE_DEBUG` 是 `WASTELAND_DEBUG` 的旧 alias；新配置应使用 `WASTELAND_*` 名称。
 
-## 9. CLI 子命令
+## 9. CLI 子命令（已废弃）
+
+> ⚠ `wasteland logs` 已废弃：TUI LogsPage 为唯一日志界面（搜索/过滤/对话合并/导出）。子命令保留可用，每次执行打印 stderr 提示后继续。
 
 查看独立错误流，默认显示最近 20 条：
 

@@ -27,6 +27,7 @@ import {
   type FocusArea
 } from '../../context/AppContext.js';
 import { listSessions, loadSessionEntries, getCachedSessionEntries } from '@core/logger/file-log-loader.js';
+import { createSessionIndex } from '@core/runtime/session-index.js';
 import type { SessionSummaryOnDisk } from '@core/logger/file-log-loader.js';
 import {
   start,
@@ -47,6 +48,11 @@ vi.mock('@core/logger/file-log-loader.js', () => ({
   getCachedSessionEntries: vi.fn(),
 }));
 
+// transcript 加载走 session-index；默认无 transcript，单个测试可覆写。
+vi.mock('@core/runtime/session-index.js', () => ({
+  createSessionIndex: vi.fn(),
+}));
+
 beforeEach(() => {
   vi.mocked(listSessions).mockReset();
   vi.mocked(loadSessionEntries).mockReset();
@@ -54,6 +60,10 @@ beforeEach(() => {
   vi.mocked(listSessions).mockResolvedValue([]);
   vi.mocked(loadSessionEntries).mockResolvedValue([]);
   vi.mocked(getCachedSessionEntries).mockReturnValue(undefined);
+  vi.mocked(createSessionIndex).mockReset();
+  vi.mocked(createSessionIndex).mockReturnValue({
+    getSession: vi.fn().mockResolvedValue(null),
+  } as never);
 });
 function createTestState(): AppState {
   return {
@@ -1719,3 +1729,101 @@ describe('LogsPage 导航增强（Tab/Shift+Tab 循环切换 session）', () => 
   });
 });
 
+
+// ============================================================
+// 对话合并视图（T 切换 + transcript 行）
+// ============================================================
+
+describe('LogsPage 对话合并视图（T 切换）', () => {
+  const sessions = [makeSessionSummary('s1', 2)];
+  const entries: LogEntry[] = [
+    start('bash', '2026-08-10T01:00:00.000Z'),
+    end('bash', '2026-08-10T01:00:01.000Z', 100),
+  ];
+
+  beforeEach(() => {
+    vi.mocked(createSessionIndex).mockReturnValue({
+      getSession: vi.fn().mockResolvedValue({
+        id: 's1',
+        records: [
+          { type: 'message', role: 'user', turn: 1, content: 'transcript-hello-marker', timestamp: '2026-08-10T01:00:00.500Z' },
+        ],
+      }),
+    } as never);
+  });
+
+  it('默认关闭：无徽标、无 transcript 行', async () => {
+    const output = await renderLogsWithSessionEntries(sessions, { s1: entries }, []);
+    // 注：本文件未 initI18n，t() 回退 key；徽标断言用最长连续子串
+    //（终端多栏布局会把徽标切成不连续片段），开关行为由有无判定
+    const flat = output.replace(/\s+/g, '');
+    expect(flat).not.toContain('tui.conversationBad');
+    expect(output).not.toContain('[user] transcript-hello-marker');
+  });
+
+  it('按 T 开启：徽标与 transcript 行出现', async () => {
+    const output = await renderLogsWithSessionEntries(sessions, { s1: entries }, ['t']);
+    const flat = output.replace(/\s+/g, '');
+    expect(flat).toContain('tui.conversationBad');
+    expect(output).toContain('[user] transcript-hello-marker');
+  });
+
+  it('再按 T 关闭：transcript 行消失', async () => {
+    const output = await renderLogsWithSessionEntries(sessions, { s1: entries }, ['t', 't']);
+    const flat = output.replace(/\s+/g, '');
+    expect(flat).not.toContain('tui.conversationBad');
+    expect(output).not.toContain('[user] transcript-hello-marker');
+  });
+});
+
+// ============================================================
+// 同毫秒卡片独立展开（seq 键回归）
+// ============================================================
+
+describe('LogsPage 同毫秒卡片独立展开', () => {
+  it('Enter 只展开首卡，detail 头出现一次', async () => {
+    const ts = '2026-08-10T01:00:00.000Z';
+    const mk = (message: string): LogEntry => ({
+      version: 1,
+      timestamp: ts,
+      level: 'info',
+      scope: 'session',
+      sessionId: 's1',
+      message,
+    });
+    const output = await renderLogsWithSessionEntries(
+      [makeSessionSummary('s1', 2)],
+      { s1: [mk('aaa-first-row'), mk('bbb-second-row')] },
+      ['\r'],
+    );
+    // 两行都渲染，但只有首卡展开
+    expect(output).toContain('aaa-first-row');
+    expect(output).toContain('bbb-second-row');
+    expect(output.split('── detail @').length - 1).toBe(1);
+  });
+});
+
+// ============================================================
+// Omnibox sid 跳转选中
+// ============================================================
+
+describe('LogsPage Omnibox sid 跳转', () => {
+  it('sid:s2 收窄左栏并选中 s2，右栏显示 s2 日志', async () => {
+    const sessions = [makeSessionSummary('s1', 1), makeSessionSummary('s2', 1)];
+    const mk = (sessionId: string, message: string): LogEntry => ({
+      version: 1,
+      timestamp: '2026-08-10T01:00:00.000Z',
+      level: 'info',
+      scope: 'session',
+      sessionId,
+      message,
+    });
+    const output = await renderLogsWithSessionEntries(
+      sessions,
+      { s1: [mk('s1', 'AAA-S1-MARKER')], s2: [mk('s2', 'BBB-S2-MARKER')] },
+      ['/', ...'sid:s2', '\r'],
+    );
+    expect(output).toContain('BBB-S2-MARKER');
+    expect(output).not.toContain('AAA-S1-MARKER');
+  });
+});

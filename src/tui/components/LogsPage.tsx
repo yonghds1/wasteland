@@ -38,6 +38,7 @@ import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { join } from 'node:path';
 import { Box, Text, useStdout } from 'ink';
 import { wastelandTheme } from '@theme/wasteland/index.js';
+import { t } from '@locales/index.js';
 import type { LogEntry, LogLevel } from '@core/logger/index.js';
 import {
   listSessions,
@@ -879,7 +880,7 @@ export function LogsPage({
           {sessionFilter && <Text color={wastelandTheme.colors.primary}>[S:{sessionFilter}]</Text>}
           {errorFocus && <Text color={wastelandTheme.colors.error} bold>[🛑 ErrorOnly]</Text>}
           {keywordFilter && <Text color={wastelandTheme.colors.success}>[🔍 {keywordFilter}]</Text>}
-          {showConversation && <Text color={wastelandTheme.colors.secondary}>[💬 对话]</Text>}
+          {showConversation && <Text color={wastelandTheme.colors.secondary}>[{t('tui.conversationBadge')}]</Text>}
         </Box>
       </Box>
 
@@ -1035,8 +1036,8 @@ export function LogsPage({
                 <Box marginTop={1}>
                   <Text color={wastelandTheme.colors.muted}>
                     {globalLoadProgress
-                      ? `Loading global timeline... (${globalLoadProgress.done}/${globalLoadProgress.total} sessions)`
-                      : 'Loading global timeline...'}
+                      ? t('tui.globalTimelineLoading', { done: String(globalLoadProgress.done), total: String(globalLoadProgress.total) })
+                      : t('tui.globalTimelineLoading', { done: '0', total: '…' })}
                   </Text>
                 </Box>
               )}

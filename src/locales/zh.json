@@ -563,6 +563,7 @@
     },
     "logs": {
       "description": "查看 wasteland 运行时日志",
+      "deprecated": "⚠ wasteland logs 已废弃：请用 TUI 日志页（wasteland /logs）查看，功能完整（搜索/过滤/对话合并/导出）",
       "options": {
         "dir": "日志目录（默认 <cwd>/.wasteland/logs）"
       },
@@ -691,6 +692,8 @@
     "contextCompacted": "上下文已压缩：移除 {{removedCount}} 条消息，节省约 {{tokensSaved}} token",
     "contextCompactedSummarized": "上下文已压缩：移除 {{removedCount}} 条消息，节省约 {{tokensSaved}} token（已摘要保留早期上下文）",
     "contextBudgetWarning": "⚠ 上下文预算：prompt {{promptTokens}} + history {{historyTokens}} / 窗口 {{contextWindow}}",
+    "conversationBadge": "💬 对话",
+    "globalTimelineLoading": "正在加载全局时间线...（{{done}}/{{total}} sessions）",
     "runtimeEventStreamError": "运行时事件流错误:",
     "debugTraceStreamError": "调试跟踪流错误:",
     "failedToLoadSkin": "加载皮肤失败:",
