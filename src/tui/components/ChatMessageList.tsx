@@ -24,7 +24,6 @@ import { getSkin, type Skin } from '@skins/index.js';
 import { resolvePalette } from '@theme/palette.js';
 import { wastelandTheme } from '@theme/wasteland/index.js';
 import { splitThinkTags } from '@ui/think-tags.js';
-import { describeAllowPattern } from '@core/runtime/permission-gate.js';
 import { Scrollbar } from './Scrollbar.js';
 import { useMouseWheel } from '../mouse/useMouseWheel.js';
 import {
@@ -52,6 +51,8 @@ interface ChatMessageListProps {
   spinnerIntervalMs?: number;
   /** 打字机逐字符揭示间隔（毫秒），默认 30 */
   typewriterRateMs?: number;
+  /** 是否显示侧边栏 */
+  showInspector?: boolean;
 }
 
 export function ChatMessageList({
@@ -61,6 +62,7 @@ export function ChatMessageList({
   showThinking = true,
   spinnerIntervalMs = wastelandTheme.animations.spinnerIntervalMs,
   typewriterRateMs: _typewriterRateMs = wastelandTheme.animations.typewriterRateMs,
+  showInspector = false,
 }: ChatMessageListProps): React.ReactElement {
   const { stdout } = useStdout();
   const { state } = useAppContext();
@@ -137,7 +139,6 @@ export function ChatMessageList({
             )
           : null;
         const isHistory = !!historyEntry;
-        const currentSel = state.permissionSelection ?? 0;
 
         // 历史态：置灰 + 结果徽章，不再高亮交互
         if (isHistory && historyEntry) {
@@ -198,51 +199,7 @@ export function ChatMessageList({
             );
           });
         }
-        // 仅 pending 时响应 selection 高亮
-        const interactive = isPending || (!isHistory && !pending);
-        // always 可记模式：有则展示规则，无则置灰（仅本次允许）
-        const allowPattern = pending ? describeAllowPattern(pending.toolName, pending.input) : null;
-        visualLines.push(
-          <Box key={`${message.id}-perm-opt-0`} width={contentWidth} height={1} flexDirection="row">
-            <Text
-              color={interactive && currentSel === 0 ? wastelandTheme.colors.success : wastelandTheme.colors.muted}
-              bold={interactive && currentSel === 0}
-              dimColor={!interactive}
-            >
-              {interactive && currentSel === 0 ? '   ▶ ' : '     '}[y] Allow once (允许本次)
-            </Text>
-          </Box>
-        );
-        visualLines.push(
-          <Box key={`${message.id}-perm-opt-1`} width={contentWidth} height={1} flexDirection="row">
-            <Text
-              color={interactive && currentSel === 1 && allowPattern ? wastelandTheme.colors.primary : wastelandTheme.colors.muted}
-              bold={interactive && currentSel === 1 && !!allowPattern}
-              dimColor={!interactive || !allowPattern}
-            >
-              {interactive && currentSel === 1 && allowPattern ? '   ▶ ' : '     '}
-              {allowPattern ? `[a] Always allow ${allowPattern.label} (本会话)` : '[a] 该工具仅支持本次允许'}
-            </Text>
-          </Box>
-        );
-        visualLines.push(
-          <Box key={`${message.id}-perm-opt-2`} width={contentWidth} height={1} flexDirection="row">
-            <Text
-              color={interactive && currentSel === 2 ? wastelandTheme.colors.error : wastelandTheme.colors.muted}
-              bold={interactive && currentSel === 2}
-              dimColor={!interactive}
-            >
-              {interactive && currentSel === 2 ? '   ▶ ' : '     '}[n] Deny (拒绝)
-            </Text>
-          </Box>
-        );
-        visualLines.push(
-          <Box key={`${message.id}-perm-hint`} width={contentWidth} height={1} flexDirection="row">
-            <Text color={wastelandTheme.colors.muted} dimColor>
-              {'     '}(↑/↓ to move · Enter to confirm · or press Y/A/N/Esc)
-            </Text>
-          </Box>
-        );
+        // 选项已搬进输入框内（ChatInputBar 权限态）；消息流只留 `?` 存档行与历史徽章。
         continue;
       }
 
@@ -288,26 +245,26 @@ export function ChatMessageList({
         if (content.trim().length > 0) {
           // 正文已有，思考过程折叠为 1 行紧凑摘要
           visualLines.push(
-            <Box key={`${message.id}-think-collapsed`} width={contentWidth} height={1}>
+            <Box key={`${message.id}-think-collapsed`} width={contentWidth} height={1} paddingLeft={2}>
               <Text color={thinkingColor ?? wastelandTheme.colors.muted} dimColor italic>
-                {' '}💭 思考过程 (共 {lineCount} 行，已折叠)
+                💭 思考过程 (共 {lineCount} 行，已折叠)
               </Text>
             </Box>
           );
         } else {
           // 纯思考消息（无正文）
           visualLines.push(
-            <Box key={`${message.id}-think-head`} width={contentWidth} height={1}>
+            <Box key={`${message.id}-think-head`} width={contentWidth} height={1} paddingLeft={2}>
               <Text color={thinkingColor ?? wastelandTheme.colors.muted} dimColor italic>
-                {' '}💭 {t('ui.streaming.thinking')}
+                💭 {t('ui.streaming.thinking')}
               </Text>
             </Box>
           );
           const thinkLines = wrapTextToLines(split.thinking, contentWidth - 4);
           thinkLines.forEach((tLine, idx) => {
             visualLines.push(
-              <Box key={`${message.id}-think-${idx}`} width={contentWidth} height={1} overflow="hidden">
-                <Text color={thinkingColor ?? wastelandTheme.colors.muted} dimColor italic>   {tLine}</Text>
+              <Box key={`${message.id}-think-${idx}`} width={contentWidth} height={1} overflow="hidden" paddingLeft={4}>
+                <Text color={thinkingColor ?? wastelandTheme.colors.muted} dimColor italic>{tLine}</Text>
               </Box>
             );
           });
@@ -328,9 +285,9 @@ export function ChatMessageList({
         });
       } else if (split.thinking) {
         visualLines.push(
-          <Box key={`${message.id}-think-done`} width={contentWidth} height={1}>
+          <Box key={`${message.id}-think-done`} width={contentWidth} height={1} paddingLeft={2}>
             <Text color={thinkingColor ?? wastelandTheme.colors.muted} dimColor italic>
-              {' '}{t('ui.streaming.thinkingCompleted')}
+              {t('ui.streaming.thinkingCompleted')}
             </Text>
           </Box>
         );
@@ -338,7 +295,7 @@ export function ChatMessageList({
     }
   }
 
-  // (3) 流式输出展平（OpenCode 风格：思考中仅占 1 行动画，正文生成后折叠）
+  // (3) 流式输出展平
   if (state.session.isStreaming && state.session.streamingContent) {
     if (visualLines.length > 0) {
       visualLines.push(<Box key="streaming-space" width={contentWidth} height={1} />);
@@ -355,23 +312,21 @@ export function ChatMessageList({
     if (showThinking && split.thinking) {
       const lineCount = split.thinking.split('\n').filter((l) => l.trim().length > 0).length || 1;
       if (hasContent) {
-        // 思考结束，正文已在生成：思考块收起为 1 行
         visualLines.push(
-          <Box key="streaming-think-collapsed" width={contentWidth} height={1}>
+          <Box key="streaming-think-collapsed" width={contentWidth} height={1} paddingLeft={2}>
             <Text color={palette.thinking} dimColor italic>
-              {' '}💭 思考完成 (共 {lineCount} 行)
+              💭 思考完成 (共 {lineCount} 行)
             </Text>
           </Box>
         );
       } else {
-        // 正在思考阶段：单行展示最新思考动向，不瀑布式霸屏
         const rawLines = split.thinking.trim().split('\n').filter((l) => l.trim().length > 0);
         const latestLine = rawLines[rawLines.length - 1] ?? '';
         const preview = latestLine.length > 25 ? '…' + latestLine.slice(-25) : latestLine;
         visualLines.push(
-          <Box key="streaming-think-active" width={contentWidth} height={1} flexDirection="row" overflow="hidden">
+          <Box key="streaming-think-active" width={contentWidth} height={1} flexDirection="row" overflow="hidden" paddingLeft={2}>
             <Text color={palette.thinking} dimColor italic>
-              {' '}Thinking ({lineCount} lines)... {preview ? `[${preview}]` : ''}
+              Thinking ({lineCount} lines)... {preview ? `[${preview}]` : ''}
             </Text>
           </Box>
         );
@@ -397,53 +352,55 @@ export function ChatMessageList({
   const runningSubAgents = subAgents.filter((a) => a.status === 'running');
   const runningTool = state.session.tools.find((t) => t.status === 'running');
 
-  if (runningSubAgents.length > 0 && viewFilter === undefined) {
-    visualLines.push(
-      <Box key="subagents-header" width={contentWidth} height={1} marginTop={1} flexDirection="row">
-        <Text color={wastelandTheme.colors.primary} bold>
-          ⏺ Running {runningSubAgents.length} subagent{runningSubAgents.length > 1 ? 's' : ''} in parallel ({elapsedSec}s):
-        </Text>
-      </Box>
-    );
-    subAgents.forEach((agent, idx) => {
-      const isRunning = agent.status === 'running';
-      const roleLabel = agent.roleName || agent.name;
-      const taskText = agent.task ? ` · ${agent.task}` : '';
-      const icon = isRunning ? currentSpinnerIcon : '✓';
-      const color = isRunning ? wastelandTheme.colors.secondary : wastelandTheme.colors.success;
-
+  if (!showInspector) {
+    if (runningSubAgents.length > 0 && viewFilter === undefined) {
       visualLines.push(
-        <Box key={`subagent-item-${agent.id}`} width={contentWidth} height={1} flexDirection="row" overflow="hidden">
-          <Text color={color} bold>
-            {'  '}{icon} [{idx + 1}] {roleLabel}{taskText}
+        <Box key="subagents-header" width={contentWidth} height={1} marginTop={1} flexDirection="row">
+          <Text color={wastelandTheme.colors.primary} bold>
+            ⏺ Running {runningSubAgents.length} subagent{runningSubAgents.length > 1 ? 's' : ''} in parallel ({elapsedSec}s):
           </Text>
         </Box>
       );
-      if (isRunning && agent.currentAction) {
+      subAgents.forEach((agent, idx) => {
+        const isRunning = agent.status === 'running';
+        const roleLabel = agent.roleName || agent.name;
+        const taskText = agent.task ? ` · ${agent.task}` : '';
+        const icon = isRunning ? currentSpinnerIcon : '✓';
+        const color = isRunning ? wastelandTheme.colors.secondary : wastelandTheme.colors.success;
+
         visualLines.push(
-          <Box key={`subagent-action-${agent.id}`} width={contentWidth} height={1} flexDirection="row" overflow="hidden">
-            <Text color={wastelandTheme.colors.muted} dimColor>
-              {'    '}└ {agent.currentAction}
+          <Box key={`subagent-item-${agent.id}`} width={contentWidth} height={1} flexDirection="row" overflow="hidden" paddingLeft={2}>
+            <Text color={color} bold>
+              {icon} [{idx + 1}] {roleLabel}{taskText}
             </Text>
           </Box>
         );
-      }
-    });
-  } else if (!state.session.streamingContent && (state.session.isThinking || state.session.isStreaming || isWorking)) {
-    visualLines.push(
-      <Box key="thinking-indicator" width={contentWidth} height={1} marginTop={1} flexDirection="row">
-        <Text color={wastelandTheme.colors.secondary}>{currentSpinnerIcon} </Text>
-        {runningTool ? (
-          <Text color={wastelandTheme.colors.primary} bold>
-            Run {runningTool.name} ({elapsedSec}s)...
-          </Text>
-        ) : (
-          <Text color={palette.thinking} dimColor italic>
-            Thinking ({elapsedSec}s)...
-          </Text>
-        )}
-      </Box>
-    );
+        if (isRunning && agent.currentAction) {
+          visualLines.push(
+            <Box key={`subagent-action-${agent.id}`} width={contentWidth} height={1} flexDirection="row" overflow="hidden" paddingLeft={4}>
+              <Text color={wastelandTheme.colors.muted} dimColor>
+                └ {agent.currentAction}
+              </Text>
+            </Box>
+          );
+        }
+      });
+    } else if (!state.session.streamingContent && (state.session.isThinking || state.session.isStreaming || isWorking)) {
+      visualLines.push(
+        <Box key="thinking-indicator" width={contentWidth} height={1} marginTop={1} flexDirection="row">
+          <Text color={wastelandTheme.colors.secondary}>{currentSpinnerIcon} </Text>
+          {runningTool ? (
+            <Text color={wastelandTheme.colors.primary} bold>
+              Run {runningTool.name} ({elapsedSec}s)...
+            </Text>
+          ) : (
+            <Text color={palette.thinking} dimColor italic>
+              Thinking ({elapsedSec}s)...
+            </Text>
+          )}
+        </Box>
+      );
+    }
   }
 
   const totalLines = visualLines.length;

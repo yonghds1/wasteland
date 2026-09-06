@@ -660,10 +660,19 @@
         "statusBar": {
           "skin": "Skin",
           "mode": "Mode",
-          "permission": "Permission",
+          "permission": "Perm",
           "provider": "Model",
-          "ctx": "Context",
-          "shortcuts": "Shift+Tab cycle permissions · /help for commands · Esc exit"
+          "ctx": "Ctx",
+          "shortcuts": "Shift+Tab to toggle perm · /help for commands · Esc to blur"
+        },
+        "hints": {
+          "default": "enter to send · esc to blur · shift+enter for new line · / for commands · ↑↓ for history",
+          "permission": "↑↓ select · enter confirm · Y/A/N shortcuts",
+          "permissionTitle": "△ Permission · {{toolName}} Pending",
+          "yes": "[y] Allow once",
+          "always": "[a] Remember: {{label}} (Session)",
+          "alwaysDisabled": "[a] Tool supports allow once only",
+          "no": "[n] Deny"
         }
       },
       "messages": {
@@ -682,6 +691,16 @@
         "streaming": "Streaming",
         "autoScrollPaused": "(Auto-scroll paused)"
       }
+    },
+    "inspector": {
+      "plan": "── CURRENT PLAN ──",
+      "subagents": "── ACTIVE AGENTS ──",
+      "tool": "── ACTIVE TOOL ──",
+      "mode": "Mode",
+      "perm": "Perm",
+      "tokens": "Tokens",
+      "tools": "Tools",
+      "toggle": "Ctrl+O to toggle"
     },
     "statusbar": {
       "runningAgents": "⚡ {{count}} agents",

@@ -125,7 +125,7 @@ function renderBar(pending: ReturnType<typeof makePending> | null) {
     </AppContext.Provider>,
     { stdin: stdin as never, stdout: stdout as never, patchConsole: false }
   );
-  return { instance, stdin, provideInput, gate, sendMessage };
+  return { instance, stdin, stdout, provideInput, gate, sendMessage };
 }
 
 describe('ChatInputBar 权限确认', () => {
@@ -179,5 +179,52 @@ describe('ChatInputBar 权限确认', () => {
       instance.unmount();
       await instance.waitUntilExit();
     }
+  });
+});
+
+describe('ChatInputBar 框内权限渲染', () => {
+  async function renderAndCollect(
+    pending: ReturnType<typeof makePending> | null,
+    keys: string[] = []
+  ): Promise<string> {
+    const { instance, stdin, stdout } = renderBar(pending);
+    try {
+      await settle();
+      for (const key of keys) {
+        stdin.writeData(key);
+        await settle();
+      }
+      await settle();
+    } finally {
+      instance.unmount();
+      await instance.waitUntilExit();
+    }
+    return stdout.output;
+  }
+
+  it('pending 时框内显示标题/命令/三选项与规则', async () => {
+    const pending = { ...makePending('bash', { command: 'git status' }), command: 'git status' };
+    const output = await renderAndCollect(pending);
+    // 注：本文件未 initI18n，t() 回退 key；断言 key 即断言渲染分支走到
+    expect(output).toContain('hints.permissionTitle');
+    expect(output).toContain('git status');
+    expect(output).toContain('hints.always');
+    expect(output).not.toMatch(/hints\.alwaysDisabled/);
+    expect(output).toContain('hints.yes');
+    expect(output).toContain('hints.no');
+  });
+
+  it('无可记模式时选项 2 置灰提示', async () => {
+    const pending = makePending('spawn_agent', { task: 'x' });
+    const output = await renderAndCollect(pending);
+    expect(output).toContain('hints.alwaysDisabled');
+    // 'hints.always' 是 'hints.alwaysDisabled' 的子串，用词边界精确断言启用态未出现
+    expect(output).not.toMatch(/hints\.always(?!Disabled)/);
+  });
+
+  it('非 pending 时显示输入占位、无权限标题', async () => {
+    const output = await renderAndCollect(null);
+    expect(output).not.toContain('Permission ·');
+    expect(output).not.toContain('[y]');
   });
 });

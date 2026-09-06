@@ -60,6 +60,7 @@ export interface ToolCall {
   name: string;
   status: 'pending' | 'running' | 'success' | 'error';
   duration?: number;
+  args?: string;
 }
 
 export interface TraceEvent {

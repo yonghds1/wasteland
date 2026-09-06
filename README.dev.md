@@ -36,6 +36,18 @@ npm run test:full     # 发布前：先构建再测，验证构建产物不断
 
 > 💡 **提示**：如果仅想编译而不递增版本号（例如执行单测时），可使用 `npm run build:no-bump`。
 
+### 版本号纪律（必读）
+
+`npm run build` 每次都会自动 +patch，**反复打测试包会导致版本号无意义漂移**（如一天内从 0.2.0 漂到 0.2.15）：
+
+| 场景 | 用法 |
+|---|---|
+| 本地开发/调试 | `npm run dev`（跑源码，不构建） |
+| 打测试包自测 | `npm run build:no-bump` → `npm pack` → `npm install -g ./wasteland-<ver>.tgz`（版本号不动） |
+| 正式发版 | 手动把 `package.json` 定到目标号（小功能 `0.x.0`，修 bug 才跟随自增），再 `npm run build` + `npm pack` + `npm publish` |
+
+规则一句话：**只有正式发版才允许版本号变化；测试包永远 no-bump。**
+
 ---
 
 ## 🧪 模拟发布与本地全局安装测试

@@ -40,6 +40,7 @@ export function reduceToolEvent(
         id: event.callId,
         name: event.toolName,
         status: 'pending',
+        args: event.input ? JSON.stringify(event.input) : undefined,
       });
       if (event.toolName === 'spawn_agent' && event.input && typeof event.input === 'object') {
         const childName = (event.input as Record<string, unknown>).name;

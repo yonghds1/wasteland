@@ -664,6 +664,15 @@
           "provider": "模型",
           "ctx": "上下文",
           "shortcuts": "Shift+Tab 切换权限 · /help 查看命令 · Esc 退出"
+        },
+        "hints": {
+          "default": "enter 发送 · esc 退出输入 · shift+enter 换行 · / 命令 · ↑↓历史",
+          "permission": "↑↓选择 · 回车确认 · Y/A/N 快捷键",
+          "permissionTitle": "△ Permission · {{toolName}} 拦截",
+          "yes": "[y] 本次允许",
+          "always": "[a] 记住这类：{{label}}（本会话）",
+          "alwaysDisabled": "[a] 该工具仅支持本次允许",
+          "no": "[n] 拒绝"
         }
       },
       "messages": {
@@ -682,6 +691,16 @@
         "streaming": "流式中",
         "autoScrollPaused": "(已暂停自动滚动)"
       }
+    },
+    "inspector": {
+      "plan": "── CURRENT PLAN ──",
+      "subagents": "── ACTIVE AGENTS ──",
+      "tool": "── ACTIVE TOOL ──",
+      "mode": "模式",
+      "perm": "权限",
+      "tokens": "消耗",
+      "tools": "工具统计",
+      "toggle": "Ctrl+O 显示/隐藏"
     },
     "statusbar": {
       "runningAgents": "⚡ {{count}} 个 agent",

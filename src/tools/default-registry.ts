@@ -11,6 +11,7 @@ import { createWebSearchTool } from './web-search.js';
 import { createWriteFileTool } from './write-file.js';
 import { createAskUserTool } from './ask-user.js';
 import { createA2AAgentTool } from './a2a-agent-tool.js';
+import { createTuiUpdatePanelTool } from './tui-update-panel.js';
 import {
   createTaskCreateTool,
   createTaskUpdateTool,
@@ -120,6 +121,7 @@ export function createDefaultToolRegistry(
     createAskUserTool(),
     createGitTool(),
     createSpawnAgentPlaceholder(),
+    createTuiUpdatePanelTool(),
     // 任务管理工具
     createTaskCreateTool(),
     createTaskUpdateTool(),

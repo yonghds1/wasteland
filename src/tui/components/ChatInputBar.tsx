@@ -10,14 +10,12 @@
  * - Esc: 取消输入
  */
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Text, Box, useInput } from 'ink';
 import { useAppContext } from '../context/AppContext.js';
 import { t } from '@locales/index.js';
 import { wastelandTheme } from '@theme/wasteland/index.js';
-import { getAgentMode } from '@config/agent-mode-state.js';
 import { describeAllowPattern } from '@core/runtime/permission-gate.js';
-import { resolveContextWindow } from '@core/runtime/context-manager.js';
 import type { Skin } from '@skins/index.js';
 import type { TuiRuntimeContext } from '../types.js';
 
@@ -32,9 +30,10 @@ interface ChatInputBarProps {
   runtime?: TuiRuntimeContext;
 }
 
-export function ChatInputBar({ width, sendMessage, selectedSkin, providerId, runtime }: ChatInputBarProps): React.ReactElement {
+export function ChatInputBar({ width, sendMessage, runtime }: ChatInputBarProps): React.ReactElement {
   const { state, setState, setInputMode, setFocusArea } = useAppContext();
   const [input, setInput] = useState('');
+  const [cursorOffset, setCursorOffset] = useState(0);
 
   // 自动进入输入模式（但用户按 Esc 主动退出后不自动拉回，需按 Enter 重新进入）
   const prevInputModeRef = useRef(state.inputMode);
@@ -59,9 +58,6 @@ export function ChatInputBar({ width, sendMessage, selectedSkin, providerId, run
     }
 
     // 优先处理权限确认交互（↑/↓ 选择 + Enter 确认，或 1/2/3/Y/A/N/Esc 单键秒级响应）。
-    // 选项语义：once=本次允许；always=记住同类（session 级内存规则，不落盘）；
-    // 无可记模式的工具只给 once（选项 2 置灰并跳过）。全局 bypass 已从弹窗移除，
-    // 只能经 Shift+Tab 或手输 /perm 主动进入。
     const bridge = runtime?.userInputBridge;
     if (bridge?.isPending()) {
       const pending = state.permission?.pending ?? null;
@@ -72,6 +68,7 @@ export function ChatInputBar({ width, sendMessage, selectedSkin, providerId, run
       const resetSelection = (): void => {
         setState((prev) => ({ ...prev, permissionSelection: 0 }));
         setInput('');
+        setCursorOffset(0);
       };
       const confirmOnce = (): void => {
         bridge.provideInput('yes');
@@ -137,26 +134,38 @@ export function ChatInputBar({ width, sendMessage, selectedSkin, providerId, run
     // Enter:Shift/Alt+Enter 换行,否则发送
     if (key.return) {
       if (key.shift || key.meta) {
-        setInput((prev) => prev + '\n');
+        setInput((prev) => prev.slice(0, cursorOffset) + '\n' + prev.slice(cursorOffset));
+        setCursorOffset((prev) => prev + 1);
       } else if (input.trim()) {
         sendMessage(input);
         setInput('');
+        setCursorOffset(0);
       }
       return;
     }
 
     // Esc 退出输入模式
-    // 注意:不在此处 setFocusArea —— 焦点下一站由 App.tsx 的 Esc 双向 toggle 决定
-    // (inputMode → agentTabs;agentTabs → inputBar)。否则 ChatInputBar 与 App 父子
-    // useInput 都会写 focusArea,后跑的子组件会覆盖父组件,导致焦点被钉到 null。
     if (key.escape) {
       setInputMode(false);
       return;
     }
 
+    if (key.leftArrow) {
+      setCursorOffset((prev) => Math.max(0, prev - 1));
+      return;
+    }
+
+    if (key.rightArrow) {
+      setCursorOffset((prev) => Math.min(input.length, prev + 1));
+      return;
+    }
+
     // Backspace 删除末字符(含换行)
     if (key.backspace || key.delete) {
-      setInput((prev) => prev.slice(0, -1));
+      if (cursorOffset > 0) {
+        setInput((prev) => prev.slice(0, cursorOffset - 1) + prev.slice(cursorOffset));
+        setCursorOffset((prev) => prev - 1);
+      }
       return;
     }
 
@@ -165,7 +174,7 @@ export function ChatInputBar({ width, sendMessage, selectedSkin, providerId, run
       return;
     }
 
-    // 普通字符输入(保留 Shift 以支持大写,Enter 已在上方拦截, 过滤 ANSI 与 SGR 鼠标报文残片)
+    // 普通字符输入
     if (
       inputChar &&
       !inputChar.startsWith('\x1b') &&
@@ -178,184 +187,153 @@ export function ChatInputBar({ width, sendMessage, selectedSkin, providerId, run
       inputChar !== '\n' &&
       !key.tab
     ) {
-      setInput((prev) => prev + inputChar);
+      setInput((prev) => prev.slice(0, cursorOffset) + inputChar + prev.slice(cursorOffset));
+      setCursorOffset((prev) => prev + inputChar.length);
     }
   });
 
   const isCommand = input.startsWith('/');
   const isPendingPermission = Boolean(runtime?.userInputBridge?.isPending());
-  const lines = input.split('\n');
-  const promptColor = isPendingPermission
-    ? wastelandTheme.colors.warning
-    : isCommand
-      ? wastelandTheme.colors.secondary
-      : wastelandTheme.colors.primary;
+  
+  // 注入光标字符用于渲染
+  const displayInput = state.inputMode && !isPendingPermission
+    ? input.slice(0, cursorOffset) + wastelandTheme.decorations.streamingCursor + input.slice(cursorOffset)
+    : input;
+  
+  const lines = displayInput.split('\n');
+  const MAX_VISIBLE_INPUT_ROWS = 5;
   const contentColor = isCommand ? wastelandTheme.colors.secondary : wastelandTheme.colors.success;
-  // 主题输入提示符
-  const promptSymbol = isPendingPermission ? '?' : wastelandTheme.decorations.prompt;
-  const promptIndent = ' '.repeat(promptSymbol.length + 1);
-  // 框体颜色
-  const borderColor = isPendingPermission
-    ? wastelandTheme.colors.warning
-    : state.inputMode
-      ? wastelandTheme.colors.borderFocused
-      : wastelandTheme.colors.borderDim;
-  // 最小输入行数
-  const minInputRows = 2;
-  // Token 使用量
-  const { usage } = state.session;
-  // Context window: 动态解析当前模型的 context window（优先读取用户配置，再查表）
-  const configuredContextWindow =
-    Object.values(state.fullConfig?.models ?? {}).find((m) => m.model === state.config.model)?.contextWindow ??
-    state.fullConfig?.models?.['default']?.contextWindow;
-  const contextWindow = resolveContextWindow(state.config.model, configuredContextWindow);
-  // 格式化 token 数（k 表示千，M 表示百万）
-  const formatTokens = (n: number): string => {
-    if (n === 0) return '──';
-    if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
-    if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
-    return String(n);
-  };
 
-  // 权限徽章渲染
+  const pendingPermission = state.permission?.pending ?? null;
+  const allowPattern =
+    pendingPermission != null
+      ? describeAllowPattern(pendingPermission.toolName, pendingPermission.input)
+      : null;
+  const permissionSelection = state.permissionSelection ?? 0;
+
   const renderPermissionBadge = () => {
     const mode = state.config?.permissionMode ?? 'default';
     if (mode === 'bypass_permissions') {
       return (
         <Text color={wastelandTheme.colors.error} bold>
-          {t('tui.session.input.statusBar.permission')}: skip-all
+          skip-all
         </Text>
       );
     }
     if (mode === 'accept_edits') {
       return (
         <Text color={wastelandTheme.colors.warning}>
-          {t('tui.session.input.statusBar.permission')}: auto-edit
+          auto-edit
         </Text>
       );
     }
     return (
       <Text color={wastelandTheme.colors.muted} dimColor>
-        {t('tui.session.input.statusBar.permission')}: default
+        default
       </Text>
     );
   };
 
-  // 稳定台词管理：单轮锁定 + 超时温和轮播，彻底消除每帧随机抽取导致的台词疯狂抽搐
-  // 角色专属台词（固定 1 行，置于输入框上方，静默常驻无多余 spinner 噪点）
-  const idleQuote = useMemo(() => {
-    const list = selectedSkin?.catchphrases?.length ? selectedSkin.catchphrases : selectedSkin?.greeting ?? [];
-    return list.length > 0 ? list[0] : '';
-  }, [selectedSkin]);
-
-  const characterFlavor = useMemo(() => {
-    if (idleQuote && selectedSkin) {
-      return {
-        text: `${selectedSkin.label}: ${idleQuote}`,
-        color: wastelandTheme.colors.muted,
-        dim: true,
-      };
-    }
-    return null;
-  }, [idleQuote, selectedSkin]);
-
   return (
-    <Box flexDirection="column" width={width} flexShrink={0}>
-      {/* 顶部分隔线 */}
-      <Text color={borderColor}>
-        {wastelandTheme.decorations.separator.repeat(width)}
-      </Text>
-      {/* 角色台词 / 动态运行状态固定单行 */}
-      {characterFlavor && (
-        <Box paddingX={1}>
-          <Text color={characterFlavor.color} dimColor={characterFlavor.dim}>
-            {characterFlavor.text}
+    <Box flexDirection="column" width={width} flexShrink={0} paddingX={1} paddingTop={1}>
+      {isPendingPermission && pendingPermission ? (
+        <Box flexDirection="column" backgroundColor="#0A0A0A" paddingLeft={1} borderLeftColor={wastelandTheme.colors.warning} borderStyle="single" borderTop={false} borderRight={false} borderBottom={false}>
+          <Box flexDirection="row">
+            <Text color={wastelandTheme.colors.warning} bold>
+              {t('tui.session.input.hints.permissionTitle', { toolName: pendingPermission.toolName })}
+            </Text>
+          </Box>
+          {pendingPermission.command && (
+            <Box flexDirection="row" backgroundColor={wastelandTheme.colors.backgroundSecondary || wastelandTheme.colors.borderDim} paddingLeft={1} marginTop={1} marginBottom={1}>
+              <Text color={wastelandTheme.colors.secondary}>$ {pendingPermission.command}</Text>
+            </Box>
+          )}
+          <Box flexDirection="row">
+            <Text
+              color={permissionSelection === 0 ? wastelandTheme.colors.success : wastelandTheme.colors.muted}
+              bold={permissionSelection === 0}
+              dimColor={permissionSelection !== 0}
+            >
+              {permissionSelection === 0 ? '▶ ' : '  '}
+              {t('tui.session.input.hints.yes')}
+            </Text>
+          </Box>
+          <Box flexDirection="row">
+            <Text
+              color={permissionSelection === 1 && allowPattern ? wastelandTheme.colors.primary : wastelandTheme.colors.muted}
+              bold={permissionSelection === 1 && !!allowPattern}
+              dimColor={permissionSelection !== 1 || !allowPattern}
+            >
+              {permissionSelection === 1 && allowPattern ? '▶ ' : '  '}
+              {allowPattern ? t('tui.session.input.hints.always', { label: allowPattern.label }) : t('tui.session.input.hints.alwaysDisabled')}
+            </Text>
+          </Box>
+          <Box flexDirection="row">
+            <Text
+              color={permissionSelection === 2 ? wastelandTheme.colors.error : wastelandTheme.colors.muted}
+              bold={permissionSelection === 2}
+              dimColor={permissionSelection !== 2}
+            >
+              {permissionSelection === 2 ? '▶ ' : '  '}
+              {t('tui.session.input.hints.no')}
+            </Text>
+          </Box>
+        </Box>
+      ) : (
+        <Box flexDirection="column">
+          {/* 靠左的醒目状态栏（只保留权限模式） */}
+          <Box flexDirection="row" justifyContent="flex-start" marginBottom={0}>
+            <Text color={wastelandTheme.colors.muted} dimColor>
+              {t('tui.session.input.statusBar.permission')}:{' '}
+            </Text>
+            {renderPermissionBadge()}
+          </Box>
+          {input ? (
+            <>
+              {lines.slice(-MAX_VISIBLE_INPUT_ROWS).map((line, i) => (
+                <Box key={i} flexDirection="row">
+                  <Text color={state.inputMode ? wastelandTheme.colors.primary : wastelandTheme.colors.muted} bold={state.inputMode}>
+                    {i === 0 ? '❯ ' : '  '}
+                  </Text>
+                  <Text color={contentColor} dimColor={!state.inputMode}>
+                    {line}
+                  </Text>
+                </Box>
+              ))}
+            </>
+          ) : (
+            <Box flexDirection="row">
+              <Text color={state.inputMode ? wastelandTheme.colors.primary : wastelandTheme.colors.muted} bold={state.inputMode}>
+                ❯{' '}
+              </Text>
+              {state.inputMode ? (
+                <Text color={wastelandTheme.colors.primary}>{wastelandTheme.decorations.streamingCursor}</Text>
+              ) : null}
+              <Text color={wastelandTheme.colors.muted} dimColor>
+                {state.inputMode
+                  ? ' ' + t('tui.session.input.placeholder.focused')
+                  : ' ' + t('tui.session.input.placeholder.unfocused')}
+              </Text>
+            </Box>
+          )}
+        </Box>
+      )}
+      
+      {/* 动态隐藏的快捷键提示 */}
+      {!isPendingPermission && input === '' && (
+        <Box flexDirection="row" marginTop={1}>
+          <Text color={wastelandTheme.colors.muted} dimColor>
+            {t('tui.session.input.hints.default')}
           </Text>
         </Box>
       )}
-      {/* 输入内容（最小 2 行） */}
-      <Box flexDirection="column" paddingX={1}>
-        {input ? (
-          <>
-            {lines.map((line, i) => (
-              <Box key={i} flexDirection="row">
-                <Text color={promptColor} bold>
-                  {i === 0 ? `${promptSymbol} ` : promptIndent}
-                </Text>
-                <Text color={contentColor}>
-                  {line}
-                  {i === lines.length - 1 && (
-                    <Text color={wastelandTheme.colors.primary}>
-                      {wastelandTheme.decorations.streamingCursor}
-                    </Text>
-                  )}
-                </Text>
-              </Box>
-            ))}
-            {/* 填充到最小行数 */}
-            {Array.from({ length: Math.max(0, minInputRows - lines.length) }, (_, i) => (
-              <Box key={`pad-${i}`} flexDirection="row">
-                <Text>{promptIndent}</Text>
-              </Box>
-            ))}
-          </>
-        ) : (
-          <>
-            <Box flexDirection="row">
-              <Text color={promptColor} bold>
-                {promptSymbol}{' '}
-              </Text>
-              <Text
-                color={isPendingPermission ? wastelandTheme.colors.warning : wastelandTheme.colors.muted}
-                bold={isPendingPermission}
-              >
-                {isPendingPermission
-                  ? '? [Permission] ↑/↓ to move · Enter to confirm · or press Y/A/N/Esc'
-                  : state.inputMode
-                    ? t('tui.session.input.placeholder.focused')
-                    : t('tui.session.input.placeholder.unfocused')}
-              </Text>
-            </Box>
-            <Box flexDirection="row">
-              <Text>{promptIndent}</Text>
-            </Box>
-          </>
-        )}
-      </Box>
-      {/* 底部状态栏：左侧信息（皮肤/模式/provider/ctx/turns） + 右侧快捷键提示 */}
-      <Box flexDirection="row" paddingX={1} justifyContent="space-between">
-        <Box flexDirection="row">
-          {selectedSkin && (
-            <>
-              <Text color={wastelandTheme.colors.muted} dimColor>
-                {t('tui.session.input.statusBar.skin')}: {selectedSkin.label}
-              </Text>
-              <Text color={wastelandTheme.colors.muted} dimColor> · </Text>
-            </>
-          )}
+      {isPendingPermission && (
+        <Box flexDirection="row" marginTop={1}>
           <Text color={wastelandTheme.colors.muted} dimColor>
-            {t('tui.session.input.statusBar.mode')}: {state.config.mode ?? getAgentMode()}
-          </Text>
-          <Text color={wastelandTheme.colors.muted} dimColor> · </Text>
-          {renderPermissionBadge()}
-          {(state.config.model || providerId) && (
-            <>
-              <Text color={wastelandTheme.colors.muted} dimColor> · </Text>
-              <Text color={wastelandTheme.colors.muted} dimColor>
-                {t('tui.session.input.statusBar.provider')}: {state.config.model || providerId}
-                {state.config.model && providerId && providerId !== 'openai-compatible' ? ` (${providerId})` : ''}
-              </Text>
-            </>
-          )}
-          <Text color={wastelandTheme.colors.muted} dimColor> · </Text>
-          <Text color={wastelandTheme.colors.muted} dimColor>
-            {t('tui.session.input.statusBar.ctx')}: {formatTokens(usage.totalTokens)}/{formatTokens(contextWindow)}
+            {t('tui.session.input.hints.permission')}
           </Text>
         </Box>
-        <Text color={wastelandTheme.colors.muted} dimColor>
-          {t('tui.session.input.statusBar.shortcuts')}
-        </Text>
-      </Box>
+      )}
     </Box>
   );
 }
