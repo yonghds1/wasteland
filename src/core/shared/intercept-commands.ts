@@ -31,7 +31,7 @@ import {
   executeCommandSync,
   type SyncCommandResult,
 } from './command-executor-sync.js';
-import type { CommandWriter } from '@ui/cli-command-writer.js';
+import type { CommandWriter } from './command-writer.js';
 
 /**
  * RxJS 操作符：拦截本地命令，统一调用 writer 渲染结果。

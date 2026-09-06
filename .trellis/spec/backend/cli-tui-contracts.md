@@ -124,7 +124,8 @@ class CliInputAdapter implements InputAdapter {
   destroy(): void;
 }
 
-// TUI 实现
+// TUI 实现（注意：TuiInputAdapter 类不存在；TUI 用 Subject + useRuntimeEvents 直连，
+// 见 docs/architecture/input-output-adapters.md「TUI 使用」节）
 class TuiInputAdapter implements InputAdapter {
   constructor(params: {
     subject: Subject<ChatInputTurn>;
@@ -264,9 +265,9 @@ function createTuiRenderer(params: {
 | 新增接口 | 位置 | 说明 |
 |----------|------|------|
 | `RuntimeEnvironment` | `@core/shared/initialize-runtime.ts` | 统一生命周期管理 |
-| `InputAdapter` | `@core/adapters/input-adapter.ts` | 输入适配接口 |
-| `OutputAdapter` | `@core/adapters/output-adapter.ts` | 输出转换接口 |
-| `DefaultOutputAdapter` | `@core/adapters/output-adapter.ts` | 默认输出适配器实现 |
+| `InputAdapter` | `@core/input-adapter.ts` | 输入适配接口 |
+| `OutputAdapter` | `@core/output-adapter.ts` | 输出转换接口 |
+| `DefaultOutputAdapter` | `@core/output-adapter.ts` | 默认输出适配器实现 |
 | `executeLocalCommand` | `@core/shared/local-commands.ts` | 本地命令处理 |
 | `createHelpCommandsSection` 等 4 段 helper | `@core/shared/command-handlers.ts` | `/help` dialog 内容生成（07-30） |
 

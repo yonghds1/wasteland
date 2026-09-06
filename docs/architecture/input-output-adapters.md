@@ -24,8 +24,8 @@ wasteland 采用 **UI 分层架构**,通过 **适配器模式(Adapter Pattern)**
 │              UI Layer (可替换,经 adapter 接入 core)          │
 │                                                             │
 │   ┌───────────────────────┐   主界面 (唯一)                 │
-│   │  TuiInputAdapter      │   src/tui/                      │
-│   │  TuiOutputAdapter     │   Ink / React                   │
+│   │  TUI (无专用 adapter 类)│   src/tui/                      │
+│   │  Subject + useRuntimeEvents hook 直连                   │
 │   └───────────────────────┘                                 │
 │                                                             │
 │   ┌───────────────────────┐   非交互 fallback               │
@@ -36,7 +36,7 @@ wasteland 采用 **UI 分层架构**,通过 **适配器模式(Adapter Pattern)**
                           ↓  core 不依赖具体 UI
 ┌─────────────────────────────────────────────────────────────┐
 │              Adapter 层 (抽象 + 默认实现)                    │
-│   src/core/adapters/                                        │
+│   src/core/input-adapter.ts / src/core/output-adapter.ts    │
 │   InputAdapter / OutputAdapter 抽象                         │
 │   DefaultOutputAdapter (RuntimeEvent -> DisplayEvent 1:1)   │
 └─────────────────────────────────────────────────────────────┘
@@ -56,7 +56,7 @@ wasteland 采用 **UI 分层架构**,通过 **适配器模式(Adapter Pattern)**
 ### InputAdapter
 
 ```typescript
-// src/core/adapters/input-adapter.ts
+// src/core/input-adapter.ts
 
 export interface InputAdapter {
   /**
@@ -75,7 +75,7 @@ export interface InputAdapter {
 ### OutputAdapter
 
 ```typescript
-// src/core/adapters/output-adapter.ts
+// src/core/output-adapter.ts
 
 export interface OutputAdapter {
   /**
@@ -96,48 +96,42 @@ export interface OutputAdapter {
 
 | 类名 | 文件 | 用途 |
 |------|------|------|
-| `TuiInputAdapter` | `src/tui/tui-input-adapter.ts` | TUI 输入（主界面，React Subject） |
+| （无专用类，直接 Subject + `useRuntimeEvents` hook） | `src/tui/hooks/useRuntime.ts` | TUI 输入（主界面，React Subject） |
 | `CliInputAdapter` | `src/ui/cli-input-adapter.ts` | CLI 输入（非交互 fallback，readline） |
 
 ### OutputAdapter 实现
 
 | 类名 | 文件 | 用途 |
 |------|------|------|
-| `TuiOutputAdapter` | `src/tui/tui-output-adapter.ts` | TUI 输出（主界面，React 状态） |
+| （无专用类，事件直译为 AppState） | `src/tui/hooks/useRuntimeEvents.ts` + `runtime-reducers/` | TUI 输出（主界面，React 状态） |
 | `CliOutputAdapter` | `src/ui/cli-output-adapter.ts` | CLI 输出（非交互 fallback，terminal-renderer） |
-| `DefaultOutputAdapter` | `src/core/adapters/output-adapter.ts` | 默认实现（1:1 映射） |
+| `DefaultOutputAdapter` | `src/core/output-adapter.ts` | 默认实现（1:1 映射） |
+
+> 注：新增 UI（如 WebUI）目前不能只实现两接口——还需复制
+> `useRuntime.ts`/`CliInputAdapter` 中的 `initializeRuntime` /
+> `startAgentLoop` / `UserInputBridge` / `permissionGate` 装配。
+> 收敛装配 Facade 是后续工作，见 `.trellis/spec/backend/cli-tui-contracts.md`。
 
 ---
 
 ## 使用示例
 
-### TUI 使用（主界面）
+### TUI 使用（主界面，无专用 adapter 类）
 
 ```typescript
-import { TuiInputAdapter } from '../tui-input-adapter.js';
-import { TuiOutputAdapter } from '../tui-output-adapter.js';
+// TUI 不设 TuiInputAdapter/TuiOutputAdapter：Subject + useRuntimeEvents 直连。
+// 参见 src/tui/hooks/useRuntime.ts（装配）与 useRuntimeEvents.ts（事件归约）。
+import { Subject } from 'rxjs';
+import type { ChatInputTurn } from '@core/runtime/event-types.js';
 import { runAgentLoop } from '@core/runtime/agent-loop.js';
 
-// 创建输入适配器
-const inputAdapter = new TuiInputAdapter({
-  skillExecutor,
-});
-
-// 创建输出适配器
-const outputAdapter = new TuiOutputAdapter({
-  onEvent: (event) => {
-    // 更新 React 状态
-  },
-});
-
-// 运行 Agent 循环
+const input$ = new Subject<ChatInputTurn>();
 const run = runAgentLoop({
-  input$: inputAdapter.input$,
-  // ... 其他参数
+  input$,
+  // ... 其他参数（与 CLI 共用 startAgentLoop 装配，见 run-agent-helpers.ts）
 });
-
-// 处理输出
-await outputAdapter.handleEvents(run.events$);
+// 输出：订阅 run.events$ 归约为 React 状态（useRuntimeEvents）
+```
 ```
 
 ### CLI 使用（非交互 fallback）
@@ -173,7 +167,7 @@ await outputAdapter.handleEvents(run.events$);
 
 ## 扩展新 UI
 
-UI 可分离是本架构的核心优势:添加新的 UI(如 Web UI、Desktop UI)无需修改 core,只需实现两个 adapter 接口并接入 `runAgentLoop`。
+UI 可分离是本架构的核心优势:添加新的 UI(如 Web UI、Desktop UI)无需修改 core；但目前除两接口外，还需复制 `useRuntime.ts`/`CliInputAdapter` 中的 `initializeRuntime` / `startAgentLoop` / `UserInputBridge` / `permissionGate` 装配（收敛装配 Facade 是后续工作）。
 
 ### 1. 实现 InputAdapter
 
@@ -245,15 +239,14 @@ await outputAdapter.handleEvents(run.events$);
 1. **解耦**:UI 和核心逻辑完全分离,core 不依赖任何具体 UI
 2. **可替换**:UI Layer 可替换,TUI 与 CLI 共享同一套 core runtime,仅 adapter 实现不同
 3. **可测试**:可以轻松 mock 输入/输出进行测试
-4. **可扩展**:添加新 UI 只需实现 `InputAdapter` / `OutputAdapter` 接口,不修改核心代码
+4. **可扩展**:添加新 UI 时 `InputAdapter` / `OutputAdapter` 接口保持稳定；但装配逻辑（`initializeRuntime`/`startAgentLoop` 等）目前各 UI 自备，见上一条。
 
 ---
 
 ## 相关文件
 
-- `src/core/adapters/input-adapter.ts` - InputAdapter 接口
-- `src/core/adapters/output-adapter.ts` - OutputAdapter 接口和 DefaultOutputAdapter
-- `src/tui/tui-input-adapter.ts` - TUI 输入适配器（主界面）
-- `src/tui/tui-output-adapter.ts` - TUI 输出适配器（主界面）
+- `src/core/input-adapter.ts` - InputAdapter 接口
+- `src/core/output-adapter.ts` - OutputAdapter 接口和 DefaultOutputAdapter
+- `src/tui/hooks/useRuntime.ts` + `useRuntimeEvents.ts` - TUI 输入装配与输出归约（无专用 adapter 类）
 - `src/ui/cli-input-adapter.ts` - CLI 输入适配器（非交互 fallback）
 - `src/ui/cli-output-adapter.ts` - CLI 输出适配器（非交互 fallback）

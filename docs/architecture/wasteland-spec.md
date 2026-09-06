@@ -260,15 +260,15 @@ wasteland 采用三层分层架构，**Core 层不依赖任何具体 UI**。UI �
 │  ┌─────────────────────────┐  ┌─────────────────────────┐ │
 │  │ TUI（唯一主界面）        │  │ CLI（非交互 fallback）   │ │
 │  │ src/tui/                │  │ src/ui/                 │ │
-│  │  TuiInputAdapter        │  │  CliInputAdapter        │ │
-│  │  TuiOutputAdapter       │  │  CliOutputAdapter       │ │
+│  │  (Subject 直连,无专用类) │  │  CliInputAdapter        │ │
+│  │                         │  │  CliOutputAdapter       │ │
 │  │  Ink / React            │  │  readline / terminal    │ │
 │  └─────────────────────────┘  └─────────────────────────┘ │
 └───────────────────────────────────────────────────────────┘
         │ input$: Observable<ChatInputTurn>      ▲
         ▼                                         │ events$: Observable<RuntimeEvent>
 ┌───────────────────────────────────────────────────────────┐
-│  Adapter 层  src/core/adapters/                           │
+│  Adapter 层  src/core/input-adapter.ts + output-adapter.ts    │
 │  InputAdapter / OutputAdapter 抽象                        │
 │  DefaultOutputAdapter（1:1 默认实现）                     │
 └───────────────────────────────────────────────────────────┘
@@ -285,17 +285,17 @@ wasteland 采用三层分层架构，**Core 层不依赖任何具体 UI**。UI �
 
 - **输入边界**：UI 层通过 `InputAdapter` 产出 `input$: Observable<ChatInputTurn>`，交由 `runAgentLoop` 消费。Core 只认该 Observable，不感知输入来自 TUI 还是 CLI。
 - **输出边界**：`runAgentLoop` 返回 `{ events$: Observable<RuntimeEvent>, debug$ }`，UI 层通过 `OutputAdapter`（`handleEvents(events$)`）消费并渲染。Core 不感知渲染方式。
-- **依赖方向**：UI 依赖 Adapter 抽象与 Core 运行时；Core 不反向依赖任何 UI 实现。新增 UI（如 Web/Desktop）只需实现 `InputAdapter` / `OutputAdapter`，无需改动 Core。
+- **依赖方向**：UI 依赖 Adapter 抽象与 Core 运行时；Core 不反向依赖任何 UI 实现。新增 UI（如 Web/Desktop）除实现 `InputAdapter` / `OutputAdapter` 外，还需复制装配逻辑（见 input-output-adapters.md 相关说明）。
 
 ### 5.3 Adapter 实现一览
 
 | 抽象 | 实现 | 文件 |
 |------|------|------|
 | `InputAdapter` | `CliInputAdapter` | `src/ui/cli-input-adapter.ts` |
-| `InputAdapter` | `TuiInputAdapter` | `src/tui/tui-input-adapter.ts` |
+| `InputAdapter` | （无专用类，Subject + `useRuntimeEvents` 直连） | `src/tui/hooks/useRuntime.ts` |
 | `OutputAdapter` | `CliOutputAdapter` | `src/ui/cli-output-adapter.ts` |
-| `OutputAdapter` | `TuiOutputAdapter` | `src/tui/tui-output-adapter.ts` |
-| `OutputAdapter` | `DefaultOutputAdapter`（1:1 映射） | `src/core/adapters/output-adapter.ts` |
+| `OutputAdapter` | （无专用类，事件直译为 AppState） | `src/tui/hooks/useRuntimeEvents.ts` |
+| `OutputAdapter` | `DefaultOutputAdapter`（1:1 映射） | `src/core/output-adapter.ts` |
 
 ## 6. 运行时架构
 

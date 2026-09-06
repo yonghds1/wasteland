@@ -71,17 +71,17 @@ wasteland 采用三层分层架构，UI 层可替换，core 不依赖任何具�
 ┌─────────────────────────────────────────────────────────────┐
 │  UI 层（可替换，core 不依赖具体 UI）                          │
 │                                                             │
-│   TUI（唯一主界面）              CLI（非交互 fallback）       │
+│   TUI（Subject 直连）            CLI（非交互 fallback）       │
 │   src/tui/                       src/ui/                     │
 │   Ink / React                    readline / terminal         │
-│   TuiInputAdapter                CliInputAdapter             │
-│   TuiOutputAdapter               CliOutputAdapter            │
+│   （无专用 adapter 类）           CliInputAdapter             │
+│                                  CliOutputAdapter             │
 └──────────────┬──────────────────────────────┬────────────────┘
                │                              │
                │   统一为 ChatInputTurn 流      │
                ▼                              ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  Adapter 层   src/core/adapters/                            │
+│  Adapter 层   src/core/input-adapter.ts + output-adapter.ts     │
 │                                                             │
 │  InputAdapter（抽象）          OutputAdapter（抽象）          │
 │  统一输入为 input$              RuntimeEvent → DisplayEvent   │
@@ -98,8 +98,8 @@ wasteland 采用三层分层架构，UI 层可替换，core 不依赖任何具�
 └─────────────────────────────────────────────────────────────┘
 ```
 
-- **UI 层**：TUI（`src/tui/`，Ink/React，`TuiInputAdapter`/`TuiOutputAdapter`）是唯一主界面；CLI（`src/ui/`，readline/terminal，`CliInputAdapter`/`CliOutputAdapter`）保留为非交互/管道/脚本 fallback。两者经同一套 adapter 接口接入 core。
-- **Adapter 层**：`src/core/adapters/` 定义 `InputAdapter`/`OutputAdapter` 抽象与 `DefaultOutputAdapter`，把 `RuntimeEvent` 1:1 映射为 `DisplayEvent`，屏蔽 UI 差异。
+- **UI 层**：TUI（`src/tui/`，Ink/React，无专用 adapter 类，Subject + `useRuntimeEvents` 直连）是唯一主界面；CLI（`src/ui/`，readline/terminal，`CliInputAdapter`/`CliOutputAdapter`）保留为非交互/管道/脚本 fallback。两者经同一套 adapter 接口接入 core。
+- **Adapter 层**：`src/core/input-adapter.ts` / `output-adapter.ts` 定义 `InputAdapter`/`OutputAdapter` 抽象与 `DefaultOutputAdapter`，把 `RuntimeEvent` 1:1 映射为 `DisplayEvent`，屏蔽 UI 差异。
 - **Core 层**：`src/core/runtime/` 负责编排（`runAgentLoop`、`session-manager`、`tool-dispatch`、`permission-gate`、`event-types`、`user-input-bridge`），与 UI 完全解耦。`runAgentLoop({ input$ })` 返回 `{ events$, debug$ }`，UI 经 adapter 订阅事件流。
 
 ## 使用示例
@@ -492,7 +492,7 @@ src/            TypeScript 源码（测试与源码同目录：src/**/*.test.ts�
 src/commands/   子命令（tui / chat / config / init / sessions / resume / skin / logs）
 src/config/     统一配置加载与 `.wasteland` 路径规则（load-settings 门面 + validate/merge/env-auth 模块）
 src/core/       核心层（与 UI 解耦）
-src/core/adapters/  InputAdapter/OutputAdapter 抽象 + DefaultOutputAdapter
+src/core/input-adapter.ts + output-adapter.ts  InputAdapter/OutputAdapter 抽象 + DefaultOutputAdapter
 src/core/logger/    日志子系统（types/log-bus/file-sink/redactor/rotation）
 src/core/runtime/   agent runtime（runAgentLoop / session-manager / tool-dispatch / permission-gate / event-types / user-input-bridge）
 src/core/shared/    runtime 初始化等共享逻辑（含 run-agent-helpers：三入口共享装配）

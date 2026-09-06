@@ -22,13 +22,13 @@
 │  ┌─────────────────────────────┐  ┌────────────────────────┐ │
 │  │  TUI(唯一主界面)            │  │  CLI(非交互 fallback)  │ │
 │  │  src/tui/  Ink / React      │  │  src/ui/  readline     │ │
-│  │  TuiInputAdapter            │  │  CliInputAdapter       │ │
-│  │  TuiOutputAdapter           │  │  CliOutputAdapter      │ │
+│  │  (Subject 直连,无专用类)     │  │  CliInputAdapter       │ │
+│  │                             │  │  CliOutputAdapter      │ │
 │  └──────────────┬──────────────┘  └────────────┬───────────┘ │
 └─────────────────┼──────────────────────────────┼────────────┘
                   ↓                              ↓
 ┌──────────────────────────────────────────────────────────────┐
-│            Adapter 层(src/core/adapters/)                    │
+│            Adapter 层(src/core/input-adapter.ts + output-adapter.ts)│
 │  InputAdapter / OutputAdapter 抽象 + DefaultOutputAdapter    │
 └──────────────────────────────┬───────────────────────────────┘
                                ↓
@@ -45,7 +45,7 @@
 | 层 | 位置 | 职责 | 依赖方向 |
 |----|------|------|----------|
 | **UI 层** | `src/tui/`、`src/ui/` | 用户交互、渲染;实现 InputAdapter/OutputAdapter | 依赖 Adapter 层与 Core 层 |
-| **Adapter 层** | `src/core/adapters/` | 输入/输出抽象接口;`DefaultOutputAdapter` 提供共用转换 | 仅依赖 Core 类型 |
+| **Adapter 层** | `src/core/input-adapter.ts` + `output-adapter.ts` | 输入/输出抽象接口;`DefaultOutputAdapter` 提供共用转换 | 仅依赖 Core 类型 |
 | **Core 层** | `src/core/runtime/`、`src/core/shared/` | Agent 循环、会话、工具分发、权限、运行时初始化 | **不依赖任何具体 UI** |
 
 关键约束:**core 不依赖具体 UI**。UI 层经 adapter 接入 core,因此 TUI 与 CLI 可独立替换,而 core 运行时保持不变。
@@ -121,7 +121,7 @@ export function executeLocalCommand(params: {
 }): LocalCommandResult;
 ```
 
-`TuiInputAdapter` 与 `CliInputAdapter` 均调用此函数,保证两端命令行为一致(包括依赖 `skillExecutor` 的 `/skills`)。
+`useRuntime` 装配的 TUI 输入流与 `CliInputAdapter` 均调用此函数,保证两端命令行为一致(包括依赖 `skillExecutor` 的 `/skills`)。
 
 ---
 
@@ -133,12 +133,10 @@ Adapter 层定义 UI 与 core 之间的契约,使 UI 可替换:
 - `OutputAdapter` — 将 `RuntimeEvent` 转换为 `DisplayEvent`(1:1 映射)。
 - `DefaultOutputAdapter` — 默认实现,CLI 与 TUI 共用,纯函数转换、无副作用。
 
-具体实现位于 UI 层:
+具体实现位于 UI 层（TUI 无专用 adapter 类，用 Subject + `useRuntimeEvents` 直连）：
 
 | 实现 | 文件 | 用途 |
 |------|------|------|
-| `TuiInputAdapter` | `src/tui/tui-input-adapter.ts` | TUI 输入(React Subject) |
-| `TuiOutputAdapter` | `src/tui/tui-output-adapter.ts` | TUI 输出(React 状态) |
 | `CliInputAdapter` | `src/ui/cli-input-adapter.ts` | CLI 输入(readline) |
 | `CliOutputAdapter` | `src/ui/cli-output-adapter.ts` | CLI 输出(terminal) |
 
@@ -167,7 +165,7 @@ Adapter 层定义 UI 与 core 之间的契约,使 UI 可替换:
 |--------|------|------|
 | Skills:TUI 缺失 `SkillExecutor` | 已统一。TUI 经 `initializeRuntime()` 初始化 `SkillExecutor`,并传入 `runAgentLoop` | `useRuntime.ts` 调用 `initializeRuntime()`;`initialize-runtime.ts` 创建 `SkillExecutor`;`runAgentLoop` 接收 `skillExecutor: runtime.skillExecutor` |
 | Role:TUI 硬编码 `undefined` | 已统一。TUI 支持 `--role`,`createTuiRuntime(cwd, roleName, providerName)` 经 `initializeRuntime` -> `resolveChatRuntime` 解析 | `src/commands/tui.ts` 提供 `-r, --role <name>` 选项 |
-| 本地命令 `/skills` `/tools` `/clear` | 已统一。两端共用 `executeLocalCommand()` | `TuiInputAdapter` 与 `CliInputAdapter` 均调用 `src/core/shared/local-commands.ts` |
+| 本地命令 `/skills` `/tools` `/clear` | 已统一。两端共用命令执行器 | TUI 装配（`useRuntime.ts`）与 `CliInputAdapter` 均经 `src/core/shared/command-executor.ts` / `command-executor-sync.ts` |
 
 ---
 

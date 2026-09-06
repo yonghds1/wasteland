@@ -18,21 +18,15 @@ import type {
   SyncErrorResult,
   SyncOutputResult,
 } from '@core/shared/command-executor-sync.js';
+import type { CommandWriter } from '@core/shared/command-writer.js';
 import type { SkillExecutor } from '@core/skills/skill-executor.js';
 import { updateRuntimeMode } from '@config/config-writer.js';
 import { setAgentMode } from '@config/agent-mode-state.js';
 import { t } from '@locales/index.js';
 import { ANSI } from './terminal-theme.js';
 
-/**
- * 命令结果写入器。
- *
- * 调用方只需 write(result)，不需要 if-else 分支。
- */
-export interface CommandWriter {
-  /** 写一条命令结果到输出 */
-  write(result: SyncCommandResult): void;
-}
+// 接口已上浮到 `@core/shared/command-writer.js`，此处 re-export 仅为兼容既有导入。
+export type { CommandWriter } from '@core/shared/command-writer.js';
 
 /**
  * CLI 命令 writer：把 SyncCommandResult 格式化为终端文本。
