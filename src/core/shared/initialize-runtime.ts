@@ -9,7 +9,8 @@ import { homedir } from 'node:os';
 
 import { loadWastelandSettings } from '@config/load-settings.js';
 import { getLoadedSettings } from '@config/loaded-settings.js';
-import { resolveDefaultSessionDir } from '@config/paths.js';
+import { resolveDefaultSessionDir, resolveProjectIdForCwd, resolveDefaultDataDir } from '@config/paths.js';
+import { ensureDataRoot, writeProjectMeta, classifyProjectId } from '@core/logger/data-store.js';
 import { resolveChatRuntime } from '@config/resolve-chat-runtime.js';
 import type { AgentMode, ResolvedChatRuntime } from '@config/resolve-chat-runtime.js';
 import { setAgentMode } from '@config/agent-mode-state.js';
@@ -181,6 +182,18 @@ export async function initializeRuntime(
     resolvedRuntime.providerName,
     resolvedRuntime.providerConfig
   );
+
+  // 5b. 解析当前项目 ID（中央数据根命名空间；git root hash 优先，失败回退路径 hash）。
+  // 必须在 SessionManager/FileSink 建之前完成，同步解析器读此缓存。
+  // 随后初始化数据根骨架 + 项目元数据（展示标签用）。
+  const projectId = await resolveProjectIdForCwd(cwd);
+  const dataRoot = resolveDefaultDataDir({ cwd, env });
+  await ensureDataRoot(dataRoot);
+  await writeProjectMeta(dataRoot, {
+    id: projectId,
+    vcs: classifyProjectId(projectId),
+    worktree: cwd,
+  });
 
   // 6. 创建 SessionManager
   const sessionDir = resolveDefaultSessionDir({
