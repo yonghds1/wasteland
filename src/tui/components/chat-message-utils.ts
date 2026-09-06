@@ -28,6 +28,25 @@ export function getVisualWidth(str: string): number {
   return width;
 }
 
+/** 两位数补零 */
+export function pad2(n: number): string {
+  return n < 10 ? `0${n}` : `${n}`;
+}
+
+/**
+ * ISO 时间戳 → 本地时区 Date（无效返回 null）。
+ *
+ * 注意：`toISOString()` 是 UTC，直接 slice 会让东八区用户看到快 8 小时的
+ * 时间（如 10:37 显示成 02:37）。所有面向用户的时间展示必须经由此函数
+ * 转本地时区，禁止直接 slice ISO 字符串。
+ */
+export function parseLocalDate(iso: string): Date | null {
+  if (typeof iso !== 'string' || iso.length === 0) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return d;
+}
+
 /** 按照终端物理列宽精确折行，确保每一行在终端上严格占据 1 个物理行 */
 export function wrapTextToLines(text: string, maxWidth: number): string[] {
   if (!text) return [''];
@@ -222,17 +241,14 @@ export function isWarnContent(content: string): boolean {
 }
 
 /**
- * ISO 时间戳 → HH:MM（紧凑格式）。
+ * ISO 时间戳 → 本地时区 HH:MM（紧凑格式）。
  *
- * 输入形如 '2026-07-29T12:34:56.789Z'，返回 '12:34'。
  * 解析失败返回空字符串（调用方决定是否显示）。
  */
 export function formatTimeHHMM(iso: string): string {
-  if (typeof iso !== 'string' || iso.length < 16) return '';
-  const hh = iso.slice(11, 13);
-  const mm = iso.slice(14, 16);
-  if (!/^\d{2}$/.test(hh) || !/^\d{2}$/.test(mm)) return '';
-  return `${hh}:${mm}`;
+  const d = parseLocalDate(iso);
+  if (!d) return '';
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 }
 
 /**

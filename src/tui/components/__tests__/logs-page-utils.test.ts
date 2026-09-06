@@ -97,8 +97,11 @@ describe('formatDuration', () => {
 });
 
 describe('formatToolTime', () => {
-  it('extracts HH:MM:SS.mmm from ISO timestamp', () => {
-    expect(formatToolTime('2026-08-10T01:02:03.456Z')).toBe('01:02:03.456');
+  it('extracts local HH:MM:SS.mmm from ISO timestamp', () => {
+    const d = new Date('2026-08-10T01:02:03.456Z');
+    const p2 = (n: number): string => String(n).padStart(2, '0');
+    const exp = `${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}.${String(d.getMilliseconds()).padStart(3, '0')}`;
+    expect(formatToolTime('2026-08-10T01:02:03.456Z')).toBe(exp);
   });
 
   it('shows placeholder for missing timestamp', () => {
@@ -110,13 +113,19 @@ describe('formatToolTime', () => {
 // T12：卡片可读性 - 时间戳紧凑化 / level 配色映射（纯函数）
 // ============================================================
 
-describe('formatTime（卡片紧凑时间戳）', () => {
-  it('丢弃毫秒，返回 HH:MM:SS', () => {
-    expect(formatTime('2026-08-10T12:04:05.789Z')).toBe('12:04:05');
+describe('formatTime（卡片紧凑时间戳，本地时区）', () => {
+  const p2 = (n: number): string => String(n).padStart(2, '0');
+  const localHMS = (iso: string): string => {
+    const d = new Date(iso);
+    return `${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`;
+  };
+
+  it('丢弃毫秒，返回本地 HH:MM:SS', () => {
+    expect(formatTime('2026-08-10T12:04:05.789Z')).toBe(localHMS('2026-08-10T12:04:05.789Z'));
   });
 
   it('无毫秒的时间戳也正常解析', () => {
-    expect(formatTime('2026-08-10T01:02:03Z')).toBe('01:02:03');
+    expect(formatTime('2026-08-10T01:02:03Z')).toBe(localHMS('2026-08-10T01:02:03Z'));
   });
 
   it('不可解析时回退为原值', () => {
@@ -124,9 +133,12 @@ describe('formatTime（卡片紧凑时间戳）', () => {
   });
 });
 
-describe('formatTimeFull（完整精度时间戳）', () => {
-  it('保留毫秒，返回 HH:MM:SS.mmm', () => {
-    expect(formatTimeFull('2026-08-10T12:04:05.789Z')).toBe('12:04:05.789');
+describe('formatTimeFull（完整精度时间戳，本地时区）', () => {
+  it('保留毫秒，返回本地 HH:MM:SS.mmm', () => {
+    const d = new Date('2026-08-10T12:04:05.789Z');
+    const p2 = (n: number): string => String(n).padStart(2, '0');
+    const exp = `${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}.${String(d.getMilliseconds()).padStart(3, '0')}`;
+    expect(formatTimeFull('2026-08-10T12:04:05.789Z')).toBe(exp);
   });
 
   it('不可解析时回退为原值', () => {

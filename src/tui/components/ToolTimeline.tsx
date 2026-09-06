@@ -25,6 +25,7 @@ import { Box, Text } from 'ink';
 import { wastelandTheme } from '@theme/wasteland/index.js';
 import type { LogEntry } from '@core/logger/index.js';
 import { ScrollableBox } from './ScrollableBox.js';
+import { pad2, parseLocalDate } from './chat-message-utils.js';
 
 // ============================================================
 // 类型
@@ -201,12 +202,12 @@ export function isSlowCall(
   return record.durationMs !== undefined && record.durationMs > thresholdMs;
 }
 
-/** ISO 时间戳 → HH:MM:SS.mmm；缺失 → '--'。 */
+/** ISO 时间戳 → 本地时区 HH:MM:SS.mmm；缺失 → '--'，非法 → 原样。 */
 export function formatToolTime(iso: string | undefined): string {
   if (!iso) return '--';
-  const m = iso.match(/T(\d{2}:\d{2}:\d{2}\.\d{3})Z/);
-  if (m) return m[1];
-  return iso.slice(11, 23) || iso;
+  const d = parseLocalDate(iso);
+  if (!d) return iso;
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}.${String(d.getMilliseconds()).padStart(3, '0')}`;
 }
 
 /** 截断字符串，超长用省略号。 */

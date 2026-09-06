@@ -14,6 +14,7 @@ import {
   type LogScope,
 } from '@core/logger/index.js';
 import type { SessionRecord } from '@core/runtime/event-types.js';
+import { pad2, parseLocalDate } from './chat-message-utils.js';
 
 /** LogsPage 视图：日志列表 / 工具调用时间线。 */
 export type LogsView = 'list' | 'timeline';
@@ -63,8 +64,8 @@ export function getShortcutHelp(
   timelineMetric: TimelineMetric,
 ): ShortcutHelpItem[] {
   const items: ShortcutHelpItem[] = [
-    { keys: '↑↓', description: '切换session' },
-    { keys: 'Tab', description: '循环session' },
+    { keys: 'Tab/←→', description: '切换面板' },
+    { keys: '↑↓', description: '滚动/切换' },
     { keys: 'N/B', description: 'session翻页' },
     { keys: 'Home/End', description: '跳转最早/最晚' },
     { keys: 'PgUp/PgDown', description: '滚动卡片' },
@@ -92,23 +93,27 @@ export function getShortcutHelp(
   return items;
 }
 
-/** ISO 时间戳 → HH:MM:SS（紧凑）。 */
+/** ISO 时间戳 → 本地时区 HH:MM:SS（紧凑；非法输入原样返回）。 */
 export function formatTime(iso: string): string {
-  const m = iso.match(/T(\d{2}:\d{2}:\d{2})(\.\d+)?Z?/);
-  if (m) return m[1];
-  return iso;
+  const d = parseLocalDate(iso);
+  if (!d) return iso;
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
 }
 
-/** ISO 时间戳 → HH:MM:SS.mmm（完整精度，用于展开详情；无毫秒时回退紧凑格式）。 */
+/** ISO 时间戳 → 本地时区 HH:MM:SS.mmm（完整精度，用于展开详情；无毫秒时回退紧凑格式）。 */
 export function formatTimeFull(iso: string): string {
-  const m = iso.match(/T(\d{2}:\d{2}:\d{2}\.\d{3})Z?/);
-  if (m) return m[1];
-  return formatTime(iso);
+  const d = parseLocalDate(iso);
+  if (!d) return formatTime(iso);
+  const ms = d.getMilliseconds();
+  if (ms === 0) return formatTime(iso);
+  return `${formatTime(iso)}.${String(ms).padStart(3, '0')}`;
 }
 
-/** ISO 时间戳 → HH:MM。 */
+/** ISO 时间戳 → 本地时区 HH:MM（非法输入原样返回）。 */
 export function formatTimeShort(iso: string): string {
-  return iso.slice(11, 16) || iso;
+  const d = parseLocalDate(iso);
+  if (!d) return iso;
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 }
 
 /** level → 颜色映射，与主题系统配色一致（error/warn/info/debug 逐级区分）。 */

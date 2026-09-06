@@ -110,55 +110,56 @@ export function buildStreamingLines(args: StreamingStatusArgs): React.ReactEleme
   }
 
   // Claude Code 规范：当有子 Agent 在后台执行时，无论是否有前置流式文字，都在流尾部展开实时任务树
-  if (!showInspector) {
-    if (runningSubAgents.length > 0 && viewFilter === undefined) {
+  // （窄屏专属：宽屏时 Inspector 右栏已展示，消息流不再重复）。
+  // 纯等待指示器（Thinking/Run + 秒数 + 中止提示）则始终渲染——首 token 到达前
+  // （模型 TTFT 常以秒计）它是唯一的等待反馈，不能因宽屏被吞掉。
+  if (runningSubAgents.length > 0 && viewFilter === undefined && !showInspector) {
+    out.push(
+      <Box key="subagents-header" width={contentWidth} height={1} marginTop={1} flexDirection="row">
+        <Text color={wastelandTheme.colors.primary} bold>
+          ⏺ Running {runningSubAgents.length} subagent{runningSubAgents.length > 1 ? 's' : ''} in parallel ({elapsedSec}s):
+        </Text>
+      </Box>
+    );
+    subAgents.forEach((agent, idx) => {
+      const isRunning = agent.status === 'running';
+      const roleLabel = agent.roleName || agent.name;
+      const taskText = agent.task ? ` · ${agent.task}` : '';
+      const icon = isRunning ? spinnerIcon : '✓';
+      const color = isRunning ? wastelandTheme.colors.secondary : wastelandTheme.colors.success;
+
       out.push(
-        <Box key="subagents-header" width={contentWidth} height={1} marginTop={1} flexDirection="row">
-          <Text color={wastelandTheme.colors.primary} bold>
-            ⏺ Running {runningSubAgents.length} subagent{runningSubAgents.length > 1 ? 's' : ''} in parallel ({elapsedSec}s):
+        <Box key={`subagent-item-${agent.id}`} width={contentWidth} height={1} flexDirection="row" overflow="hidden" paddingLeft={2}>
+          <Text color={color} bold>
+            {icon} [{idx + 1}] {roleLabel}{taskText}
           </Text>
         </Box>
       );
-      subAgents.forEach((agent, idx) => {
-        const isRunning = agent.status === 'running';
-        const roleLabel = agent.roleName || agent.name;
-        const taskText = agent.task ? ` · ${agent.task}` : '';
-        const icon = isRunning ? spinnerIcon : '✓';
-        const color = isRunning ? wastelandTheme.colors.secondary : wastelandTheme.colors.success;
-
+      if (isRunning && agent.currentAction) {
         out.push(
-          <Box key={`subagent-item-${agent.id}`} width={contentWidth} height={1} flexDirection="row" overflow="hidden" paddingLeft={2}>
-            <Text color={color} bold>
-              {icon} [{idx + 1}] {roleLabel}{taskText}
+          <Box key={`subagent-action-${agent.id}`} width={contentWidth} height={1} flexDirection="row" overflow="hidden" paddingLeft={4}>
+            <Text color={wastelandTheme.colors.muted} dimColor>
+              └ {agent.currentAction}
             </Text>
           </Box>
         );
-        if (isRunning && agent.currentAction) {
-          out.push(
-            <Box key={`subagent-action-${agent.id}`} width={contentWidth} height={1} flexDirection="row" overflow="hidden" paddingLeft={4}>
-              <Text color={wastelandTheme.colors.muted} dimColor>
-                └ {agent.currentAction}
-              </Text>
-            </Box>
-          );
-        }
-      });
-    } else if (!streamingContent && isWorking) {
-      out.push(
-        <Box key="thinking-indicator" width={contentWidth} height={1} marginTop={1} flexDirection="row">
-          <Text color={wastelandTheme.colors.secondary}>{spinnerIcon} </Text>
-          {runningTool ? (
-            <Text color={wastelandTheme.colors.primary} bold>
-              Run {runningTool.name} ({elapsedSec}s)... · {t('tui.session.messages.stopHint')}
-            </Text>
-          ) : (
-            <Text color={paletteThinking} dimColor italic>
-              Thinking ({elapsedSec}s)... · {t('tui.session.messages.stopHint')}
-            </Text>
-          )}
-        </Box>
-      );
-    }
+      }
+    });
+  } else if (!streamingContent && isWorking) {
+    out.push(
+      <Box key="thinking-indicator" width={contentWidth} height={1} marginTop={1} flexDirection="row">
+        <Text color={wastelandTheme.colors.secondary}>{spinnerIcon} </Text>
+        {runningTool ? (
+          <Text color={wastelandTheme.colors.primary} bold>
+            Run {runningTool.name} ({elapsedSec}s)... · {t('tui.session.messages.stopHint')}
+          </Text>
+        ) : (
+          <Text color={paletteThinking} dimColor italic>
+            Thinking ({elapsedSec}s)... · {t('tui.session.messages.stopHint')}
+          </Text>
+        )}
+      </Box>
+    );
   }
 
   return out;
