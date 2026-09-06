@@ -689,7 +689,9 @@
         "count": "{{count}}",
         "thinking": "Thinking...",
         "streaming": "Streaming",
-        "autoScrollPaused": "(Auto-scroll paused)"
+        "autoScrollPaused": "(Auto-scroll paused)",
+        "newLines": "▼ {{count}} new messages, press End to jump back",
+        "stopHint": "Ctrl+C to stop"
       }
     },
     "inspector": {
@@ -787,6 +789,12 @@
       "clearHistory": "Clear session history",
       "exitSession": "Leave the wasteland",
       "shortcuts": "Shortcuts",
+      "shortcutFocusTab": "Switch focus between input and tab bar",
+      "shortcutInspector": "Show/hide the inspector panel",
+      "shortcutTabDirect": "Jump directly to tab N",
+      "shortcutScroll": "Scroll message history",
+      "shortcutCompletion": "Complete command (Tab to apply, Esc to dismiss)",
+      "shortcutDetails": "Expand/collapse thinking and tool details",
       "switchFocus": "Switch focus area",
       "sendMessage": "Send message",
       "cancelInput": "Cancel input/return",

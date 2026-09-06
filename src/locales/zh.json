@@ -689,7 +689,9 @@
         "count": "{{count}} 条",
         "thinking": "思考中...",
         "streaming": "流式中",
-        "autoScrollPaused": "(已暂停自动滚动)"
+        "autoScrollPaused": "(已暂停自动滚动)",
+        "newLines": "▼ {{count}} 行新消息，按 End 回到底部",
+        "stopHint": "Ctrl+C 停止"
       }
     },
     "inspector": {
@@ -787,6 +789,12 @@
       "clearHistory": "清除会话历史",
       "exitSession": "离开 wasteland",
       "shortcuts": "快捷键",
+      "shortcutFocusTab": "在输入框与标签栏间切换焦点",
+      "shortcutInspector": "显示/隐藏右侧检查器",
+      "shortcutTabDirect": "直接切换到第 N 个标签",
+      "shortcutScroll": "上下翻看历史记录",
+      "shortcutCompletion": "补全命令（Tab 套用，Esc 关闭）",
+      "shortcutDetails": "展开/收起思考过程与工具详情",
       "switchFocus": "切换焦点区域",
       "sendMessage": "发送消息",
       "cancelInput": "取消输入/返回",

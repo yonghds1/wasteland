@@ -25,6 +25,7 @@ import { ChatInputBar } from './ChatInputBar.js';
 import { ExitConfirm } from './ExitConfirm.js';
 import { SessionIndexPage } from './SessionIndexPage.js';
 import { AgentTabs } from './AgentTabs.js';
+import { CompactStatusBar } from './CompactStatusBar.js';
 import { InspectorPanel } from './InspectorPanel.js';
 import { HelpCommandsView } from './HelpCommandsView.js';
 import { useAppContext } from '../context/AppContext.js';
@@ -76,6 +77,9 @@ export function ChatArea({ runtime, sendMessage }: ChatAreaProps): React.ReactEl
     ? Math.max(INSPECTOR_MIN_WIDTH, Math.floor(terminalColumns * 0.22))
     : 0;
   const mainWidth = showInspector ? terminalColumns - inspectorWidth : terminalColumns;
+  // 窄屏单行状态条（不挂载 Inspector 时顶替右栏沉底信息，固定 1 行）
+  const showCompactBar = !showInspector && !isSessionsPage && !isHelpDialog;
+  const listHeight = Math.max(5, viewportHeight - (showCompactBar ? 1 : 0));
 
   // 动态解析当前视口（Tab）所对应的角色 Skin（切到子 Agent 时自动展示该子 Agent 专属角色）
   const activeAgent = state.session.agents.find((a) => a.id === state.viewFilter);
@@ -101,7 +105,7 @@ export function ChatArea({ runtime, sendMessage }: ChatAreaProps): React.ReactEl
             ) : (
               <ChatMessageList
                 width={mainWidth}
-                height={viewportHeight}
+                height={listHeight}
                 selectedSkin={activeSkin}
                 showThinking={runtime.showThinking}
                 spinnerIntervalMs={runtime.spinnerIntervalMs}
@@ -110,6 +114,8 @@ export function ChatArea({ runtime, sendMessage }: ChatAreaProps): React.ReactEl
               />
             )}
           </Box>
+          {/* 窄屏单行状态条：归属对话列，位于消息流与输入框之间 */}
+          {showCompactBar && <CompactStatusBar width={mainWidth} />}
           {/* 底部输入框：归属对话列 */}
           {!isSessionsPage && !isHelpDialog && (
             <ChatInputBar

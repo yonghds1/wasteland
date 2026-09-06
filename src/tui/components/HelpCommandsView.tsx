@@ -36,6 +36,7 @@ import {
   createHelpLocalCommandsSection,
 } from '@core/shared/command-handlers.js';
 import { getCommandManager } from '@core/shared/command-manager.js';
+import { getKeymapRegistry, type KeyCombo } from '../keymap/index.js';
 import { ScrollableBox, useScroll } from './ScrollableBox.js';
 
 // ============================================================
@@ -88,6 +89,61 @@ export function buildBannerContent(): string[] {
 }
 
 /**
+ * 格式化单个按键组合为可读文本（纯函数，可单测）。
+ *
+ * - rawInput `\x1b[Z` → `Shift+Tab`（key-matcher 对 shift+tab 的编码）；
+ * - 其余按 修饰键+主键 拼接，方向键用箭头字形。
+ */
+export function formatKeyCombo(combo: KeyCombo): string {
+  if (combo.rawInput === '\x1b[Z') return 'Shift+Tab';
+  const parts: string[] = [];
+  if (combo.ctrl) parts.push('Ctrl');
+  if (combo.shift) parts.push('Shift');
+  if (combo.meta) parts.push('Alt');
+  const keyName = combo.key ?? '';
+  const keyMap: Record<string, string> = {
+    return: 'Enter',
+    escape: 'Esc',
+    tab: 'Tab',
+    backspace: 'Backspace',
+    delete: 'Del',
+    upArrow: '↑',
+    downArrow: '↓',
+    leftArrow: '←',
+    rightArrow: '→',
+    home: 'Home',
+    end: 'End',
+    pageUp: 'PageUp',
+    pageDown: 'PageDown',
+    space: 'Space',
+  };
+  const display = keyMap[keyName] ?? (keyName.length === 1 ? keyName.toUpperCase() : keyName);
+  if (display) parts.push(display);
+  return parts.join('+');
+}
+
+/**
+ * 从 keymap 注册表构建快捷键节（单一来源，不硬编码键位）。
+ *
+ * 注册表未覆盖的手工键（Tab 焦点循环、Ctrl+O 检查器、Alt+数字直达、
+ * PageUp/Down 翻页、/ 补全）追加在后，描述走 i18n（`skills.help.shortcut*`）。
+ */
+export function buildShortcutsSection(): string[] {
+  const lines: string[] = [];
+  for (const entry of getKeymapRegistry().getAll()) {
+    const combos = entry.combos.map(formatKeyCombo).filter((c) => c.length > 0).join(' / ');
+    lines.push(`- \`${combos}\` - ${entry.description}`);
+  }
+  lines.push(`- \`Tab\` - ${t('skills.help.shortcutFocusTab')}`);
+  lines.push(`- \`Ctrl+O\` - ${t('skills.help.shortcutInspector')}`);
+  lines.push(`- \`Alt+1~9\` - ${t('skills.help.shortcutTabDirect')}`);
+  lines.push(`- \`PageUp/PageDown\` - ${t('skills.help.shortcutScroll')}`);
+  lines.push(`- \`/\` - ${t('skills.help.shortcutCompletion')}`);
+  lines.push(`- \`Ctrl+T\` - ${t('skills.help.shortcutDetails')}`);
+  return lines;
+}
+
+/**
  * 从 getCommandManager 提取 skills 段文本
  *
  * 按 category 'skill' 过滤;每项展示 `name + aliases + 描述`。
@@ -125,11 +181,12 @@ export function HelpCommandsView(): React.ReactElement {
   const width = stdout?.columns ?? 80;
   const height = stdout?.rows ?? 24;
 
-  // 4 段内容(由 command-handlers 拆出的纯函数生成)
+  // 5 段内容(由 command-handlers 拆出的纯函数 + keymap 注册表生成)
   const commandsLines = useMemo(() => createHelpCommandsSection(), []);
   const toolsLines = useMemo(() => createHelpToolsSection(), []);
   const skillsLines = useMemo(() => buildSkillsSection(), []);
   const localLines = useMemo(() => createHelpLocalCommandsSection(), []);
+  const shortcutsLines = useMemo(() => buildShortcutsSection(), []);
 
   const sep = sectionSeparator(width);
   const showBanner = shouldRenderBanner(width);
@@ -141,9 +198,10 @@ export function HelpCommandsView(): React.ReactElement {
       toolsLines.length +
       skillsLines.length +
       localLines.length +
+      shortcutsLines.length +
       10 // 分隔符和其他开销
     );
-  }, [commandsLines, toolsLines, skillsLines, localLines]);
+  }, [commandsLines, toolsLines, skillsLines, localLines, shortcutsLines]);
 
   // 滚动支持
   const scroll = useScroll({
@@ -172,7 +230,7 @@ export function HelpCommandsView(): React.ReactElement {
     }
   });
 
-  // 4 段渲染器:每段标题 + 列表(▸ 替代 -)
+  // 5 段渲染器:每段标题 + 列表(▸ 替代 -)
   const renderSection = (
     title: string,
     lines: ReadonlyArray<string>
@@ -250,6 +308,11 @@ export function HelpCommandsView(): React.ReactElement {
 
         <Box flexDirection="column">
           {renderSection(t('skills.help.localCommands.title'), localLines)}
+        </Box>
+        <Text color={wastelandTheme.colors.borderDim}>{sep}</Text>
+
+        <Box flexDirection="column">
+          {renderSection(t('skills.help.shortcuts'), shortcutsLines)}
         </Box>
       </ScrollableBox>
 
