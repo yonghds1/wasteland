@@ -10,12 +10,20 @@
  * - Esc: 取消输入
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Text, Box, useInput } from 'ink';
 import { useAppContext } from '../context/AppContext.js';
 import { t } from '@locales/index.js';
 import { wastelandTheme } from '@theme/wasteland/index.js';
 import { describeAllowPattern } from '@core/engine/permission-gate.js';
+import { getCommandManager } from '@core/shared/command-manager.js';
+import {
+  applyCompletion,
+  filterCompletions,
+  moveCompletionIndex,
+  navigateHistory,
+  type CompletionItem,
+} from './command-completion.js';
 import type { Skin } from '@skins/index.js';
 import type { TuiRuntimeContext } from '../types.js';
 
@@ -34,6 +42,62 @@ export function ChatInputBar({ width, sendMessage, runtime }: ChatInputBarProps)
   const { state, setState, setInputMode, setFocusArea } = useAppContext();
   const [input, setInput] = useState('');
   const [cursorOffset, setCursorOffset] = useState(0);
+  // R2 输入历史（本会话，草稿隔离）
+  const historyRef = useRef<string[]>([]);
+  const draftRef = useRef('');
+  const [histIdx, setHistIdx] = useState<number | null>(null);
+  // R3 `/` 补全（registry 单一来源，局部 UI 态）
+  const [completionIdx, setCompletionIdx] = useState(0);
+  const [completionDismissed, setCompletionDismissed] = useState(false);
+
+  const completions = useMemo(() => {
+    // 每次输入变化时重新读取注册表：技能命令经 bootstrap 后注册，
+    // 挂载期快照会漏掉后注册项，这里跟随输入即时计算（getAll 开销可忽略）。
+    const items: CompletionItem[] = getCommandManager()
+      .getAll()
+      .map((c) => ({ name: c.name, aliases: [...c.aliases], description: c.description }));
+    return filterCompletions(input, cursorOffset, items);
+  }, [input, cursorOffset]);
+  const completionVisible =
+    state.inputMode && input.startsWith('/') && !completionDismissed && completions.length > 0;
+
+  const applySelectedCompletion = (): boolean => {
+    const item = completions[completionIdx] ?? completions[0];
+    if (!item) return false;
+    const next = applyCompletion(input, cursorOffset, item);
+    setInput(next.input);
+    setCursorOffset(next.cursor);
+    setCompletionIdx(0);
+    setCompletionDismissed(true);
+    return true;
+  };
+
+  const goHistory = (dir: 1 | -1): void => {
+    const h = historyRef.current;
+    const next = navigateHistory(h.length, histIdx, dir);
+    if (next === histIdx) return;
+    if (histIdx === null) draftRef.current = input;
+    setHistIdx(next);
+    if (next === null) {
+      setInput(draftRef.current);
+      setCursorOffset(draftRef.current.length);
+    } else {
+      const v = h[next] ?? '';
+      setInput(v);
+      setCursorOffset(v.length);
+    }
+    setCompletionDismissed(true);
+  };
+
+  const pushHistory = (value: string): void => {
+    const h = historyRef.current;
+    if (h[h.length - 1] !== value) {
+      h.push(value);
+      if (h.length > 50) h.splice(0, h.length - 50);
+    }
+    draftRef.current = '';
+    setHistIdx(null);
+  };
 
   // 自动进入输入模式（但用户按 Esc 主动退出后不自动拉回，需按 Enter 重新进入）
   const prevInputModeRef = useRef(state.inputMode);
@@ -131,22 +195,52 @@ export function ChatInputBar({ width, sendMessage, runtime }: ChatInputBarProps)
       return;
     }
 
-    // Enter:Shift/Alt+Enter 换行,否则发送
+    // R3 补全导航（优先于发送/历史）：↑↓ 移动，Tab 套用，Esc 关闭
+    if (completionVisible) {
+      if (key.upArrow) {
+        setCompletionIdx((cur) => moveCompletionIndex(cur, -1, completions.length));
+        return;
+      }
+      if (key.downArrow) {
+        setCompletionIdx((cur) => moveCompletionIndex(cur, 1, completions.length));
+        return;
+      }
+      if (key.tab) {
+        applySelectedCompletion();
+        return;
+      }
+      if (key.escape) {
+        setCompletionDismissed(true);
+        return;
+      }
+    }
+
+    // Enter:Shift/Alt+Enter 换行,否则发送（补全未关闭且仍在命令词时 Enter 优先套用）
     if (key.return) {
+      if (completionVisible && !input.includes(' ') && !input.includes('\n')) {
+        applySelectedCompletion();
+        return;
+      }
       if (key.shift || key.meta) {
         setInput((prev) => prev.slice(0, cursorOffset) + '\n' + prev.slice(cursorOffset));
         setCursorOffset((prev) => prev + 1);
       } else if (input.trim()) {
         sendMessage(input);
+        pushHistory(input);
         setInput('');
         setCursorOffset(0);
+        setCompletionIdx(0);
+        setCompletionDismissed(false);
       }
       return;
     }
 
-    // Esc 退出输入模式
+    // Esc 退出输入模式（session 页同时把焦点交到 agentTabs，与 App 双向 toggle 收敛）
     if (key.escape) {
       setInputMode(false);
+      if (state.currentPage === 'session') {
+        setFocusArea('agentTabs');
+      }
       return;
     }
 
@@ -157,6 +251,40 @@ export function ChatInputBar({ width, sendMessage, runtime }: ChatInputBarProps)
 
     if (key.rightArrow) {
       setCursorOffset((prev) => Math.min(input.length, prev + 1));
+      return;
+    }
+
+    // R2 历史召回（无补全、无换行、无修饰键时裸 ↑↓ 在历史/草稿间移动；
+    // Shift/Ctrl+↑↓ 留给消息列表视口滚动，下方翻页键透传分支会放行）
+    if (!completionVisible && !input.includes('\n') && !key.shift && !key.ctrl && !key.meta) {
+      if (key.upArrow) {
+        goHistory(-1);
+        return;
+      }
+      if (key.downArrow) {
+        goHistory(1);
+        return;
+      }
+    }
+
+    // R2 行编辑：Home/End 跳行首尾，Ctrl+U/K 清光标前/后
+    if (key.home) {
+      setCursorOffset(0);
+      return;
+    }
+    if (key.end) {
+      setCursorOffset(input.length);
+      return;
+    }
+    if (key.ctrl && (inputChar === 'u' || inputChar === 'U')) {
+      setInput((prev) => prev.slice(cursorOffset));
+      setCursorOffset(0);
+      setHistIdx(null);
+      return;
+    }
+    if (key.ctrl && (inputChar === 'k' || inputChar === 'K')) {
+      setInput((prev) => prev.slice(0, cursorOffset));
+      setHistIdx(null);
       return;
     }
 
@@ -189,6 +317,9 @@ export function ChatInputBar({ width, sendMessage, runtime }: ChatInputBarProps)
     ) {
       setInput((prev) => prev.slice(0, cursorOffset) + inputChar + prev.slice(cursorOffset));
       setCursorOffset((prev) => prev + inputChar.length);
+      setHistIdx(null);
+      setCompletionIdx(0);
+      setCompletionDismissed(false);
     }
   });
 
@@ -288,6 +419,32 @@ export function ChatInputBar({ width, sendMessage, runtime }: ChatInputBarProps)
             </Text>
             {renderPermissionBadge()}
           </Box>
+          {/* R3 `/` 补全下拉（registry 单一来源，Tab 套用，Esc 关闭） */}
+          {completionVisible && (
+            <Box flexDirection="column" marginTop={0} marginBottom={0}>
+              {completions.map((item, i) => {
+                const selected = i === Math.min(completionIdx, completions.length - 1);
+                return (
+                  <Box key={item.name} flexDirection="row">
+                    <Text
+                      color={selected ? wastelandTheme.colors.primary : wastelandTheme.colors.muted}
+                      bold={selected}
+                      dimColor={!selected}
+                    >
+                      {selected ? '▶ ' : '  '}
+                      {item.name}
+                    </Text>
+                    {item.aliases.length > 0 && (
+                      <Text color={wastelandTheme.colors.muted} dimColor>
+                        {' '}
+                        ({item.aliases.join(', ')})
+                      </Text>
+                    )}
+                  </Box>
+                );
+              })}
+            </Box>
+          )}
           {input ? (
             <>
               {lines.slice(-MAX_VISIBLE_INPUT_ROWS).map((line, i) => (
