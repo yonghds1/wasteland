@@ -2,18 +2,20 @@
  * run-agent-helpers.ts - runAgentLoop 调用点共享装配
  *
  * 收敛 `commands/chat.ts`、`commands/resume.ts`、`tui/hooks/useRuntime.ts`
- * 三处重复的 13 参数装配、debug 追踪块与退出清理。
+ * 三处重复的 13 参数装配与退出清理。
  * 曾出现 resume 分支漏传 `loadedSettings`/`debug` 的不一致，由此统一消灭。
+ *
+ * 分层注意：本文件只依赖 core/config，不依赖任何 UI。
+ * debug 追踪输出（renderDebugTrace 写 stderr/落盘）住在
+ * `src/ui/debug-trace-helper.ts`，由 CLI 调用方自行装配。
  *
  * 规范依据：`.trellis/spec/backend/runtime-contracts.md`（runAgentLoop 调用契约）、
  * `.trellis/spec/backend/cli-tui-contracts.md`（CLI/TUI 共用 RuntimeContext）。
  */
 
-import { resolveDefaultTraceDir } from '@config/paths.js';
 import { composeAgentPrompt } from '@config/roles/index.js';
 import { runAgentLoop } from '@core/runtime/agent-loop.js';
 import type { UserInputBridge } from '@core/runtime/user-input-bridge.js';
-import { renderDebugTrace, type DebugFormat } from '@ui/debug-renderer.js';
 import type { RuntimeEnvironment } from './initialize-runtime.js';
 
 type LoopParams = Parameters<typeof runAgentLoop>[0];
@@ -74,38 +76,6 @@ export function startAgentLoop(
     initialHistory: args.initialHistory,
     resolvePrompt: args.resolvePrompt,
   });
-}
-
-/**
- * debug 追踪装配块（三处曾逐字重复）。
- * debug 关闭时 no-op；`jsonl` 格式才需要 traceDir 落盘。
- */
-export function attachDebugTrace(
-  work: Promise<void>[],
-  debug$: AgentRunResult['debug$'],
-  opts: {
-    debug: boolean;
-    debugFormat: DebugFormat;
-    cwd: string;
-    projectConfigDir: string | null;
-  }
-): void {
-  if (!opts.debug) return;
-  const traceDir =
-    opts.debugFormat === 'jsonl'
-      ? resolveDefaultTraceDir({
-          cwd: opts.cwd,
-          projectConfigDir: opts.projectConfigDir,
-        })
-      : undefined;
-
-  work.unshift(
-    renderDebugTrace(debug$, {
-      output: process.stderr,
-      format: opts.debugFormat,
-      traceDir,
-    })
-  );
 }
 
 /**

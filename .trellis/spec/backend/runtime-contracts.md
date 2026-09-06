@@ -362,7 +362,7 @@ Why correct:
 ### 2. Signatures
 
 ```ts
-// src/core/runtime/agent-loop.ts runAgentLoop params 新增
+// src/core/shared/run-agent-helpers.ts runAgentLoop params 新增
 export function runAgentLoop(params: {
   // ... 既有
   prompt?: string;  // 最终 system prompt（入口先拼英文 persona + resolvedRuntime.prompt；子 agent 同样先拼 persona）
@@ -458,6 +458,7 @@ startAgentLoop(args: BaseLoopArgs & { input$: Observable<ChatInputTurn> }): Agen
 // childAgentTimeout / userInputBridge / debug / loadedSettings 透传。
 // 调用方只传差异项：input$ / existingSession / initialHistory / abort$ / resolvePrompt。
 
+// src/ui/debug-trace-helper.ts（注意：core 不依赖 UI，追踪输出只能住 UI 层）
 attachDebugTrace(
   work: Promise<void>[],
   debug$: AgentRunResult['debug$'],

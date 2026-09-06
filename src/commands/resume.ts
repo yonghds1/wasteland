@@ -18,10 +18,10 @@ import { t } from '@locales/index.js';
 
 import { initializeRuntime, resolveAgentMode } from '@core/shared/initialize-runtime.js';
 import {
-  attachDebugTrace,
   startAgentLoop,
   stopRuntimeAgents,
 } from '@core/shared/run-agent-helpers.js';
+import { attachDebugTrace } from '@ui/debug-trace-helper.js';
 import {
   enableDebugLog,
   initializeFileSinkFromEnv,
