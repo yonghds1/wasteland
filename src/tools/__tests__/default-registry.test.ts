@@ -10,8 +10,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createDefaultToolRegistry } from '../default-registry.js';
-import { SPAWN_AGENT_DESCRIPTION } from '../spawn-agent/index.js';
+import { createDefaultToolRegistry } from '../core/default-registry.js';
+import { SPAWN_AGENT_DESCRIPTION } from '@tools/agent/spawn-agent/index.js';
 import type { A2ASettings } from '@config/settings-types.js';
 
 function makeA2ASettings(

@@ -10,7 +10,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { createPermissionGate } from '../../core/engine/permission-gate.js';
-import type { ToolCall, ToolRiskLevel } from '../../tools/tool-types.js';
+import type { ToolCall, ToolRiskLevel } from '@tools/core/tool-types.js';
 import type { PermissionGate, PermissionDecision } from '../../core/engine/permission-gate.js';
 
 // ============================================================

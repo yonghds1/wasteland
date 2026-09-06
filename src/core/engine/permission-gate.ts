@@ -1,4 +1,4 @@
-import type { ToolCall, ToolInput, ToolRiskLevel } from '@tools/tool-types.js';
+import type { ToolCall, ToolInput, ToolRiskLevel } from '@tools/core/tool-types.js';
 
 import { t } from '@locales/index.js';
 

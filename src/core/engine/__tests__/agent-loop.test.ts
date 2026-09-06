@@ -19,8 +19,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { lastValueFrom, toArray, Observable, of, from, EMPTY } from 'rxjs';
 
 import { runAgentLoop } from '../agent-loop.js';
-import { ToolRegistry } from '../../../tools/tool-registry.js';
-import type { AgentTool } from '../../../tools/tool-types.js';
+import { ToolRegistry } from '@tools/core/tool-registry.js';
+import type { AgentTool } from '@tools/core/tool-types.js';
 import type { AgentProvider } from '../../../providers/provider-types.js';
 import type {
   ChatInputTurn,

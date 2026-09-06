@@ -17,9 +17,9 @@ import { describe, expect, it } from 'vitest';
 import { dispatchToolCall } from '../../engine/tool-dispatch.js';
 import { SessionManager, type SessionMetadata } from '../../session/session-manager.js';
 import { createInitialTurnState, type TurnState } from '../../engine/turn-state.js';
-import { ToolRegistry } from '../../../tools/tool-registry.js';
+import { ToolRegistry } from '@tools/core/tool-registry.js';
 import { createPermissionGate } from '../../engine/permission-gate.js';
-import type { ToolCall, ToolExecutionResult } from '../../../tools/tool-types.js';
+import type { ToolCall, ToolExecutionResult } from '@tools/core/tool-types.js';
 import type { RuntimeEvent } from '../event-types.js';
 import { UserInputBridge } from '../../engine/user-input-bridge.js';
 

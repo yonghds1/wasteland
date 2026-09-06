@@ -9,7 +9,7 @@
 
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { helpSkill } from '../help-skill.js';
-import { ToolRegistry } from '@tools/tool-registry.js';
+import { ToolRegistry } from '@tools/core/tool-registry.js';
 import { initI18n } from '@locales/i18n.js';
 import {
   createCommandManager,

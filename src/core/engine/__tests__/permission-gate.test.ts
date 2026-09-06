@@ -22,7 +22,7 @@ import {
   createPermissionGate,
   describeAllowPattern,
 } from '../permission-gate.js';
-import type { ToolCall } from '../../../tools/tool-types.js';
+import type { ToolCall } from '@tools/core/tool-types.js';
 
 // ============================================================
 // Helpers

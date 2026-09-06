@@ -18,9 +18,9 @@ import {
   createTaskUpdateTool,
   createTaskListTool,
   createTaskGetTool,
-} from '../task-tools.js';
-import type { TaskStore } from '../task-tools.js';
-import type { ToolExecutionContext, ToolExecutionResult, ToolSuccessResult, ToolErrorResult } from '../tool-types.js';
+} from '../agent/task-tools.js';
+import type { TaskStore } from '../agent/task-tools.js';
+import type { ToolExecutionContext, ToolExecutionResult, ToolSuccessResult, ToolErrorResult } from '../core/tool-types.js';
 
 // ============================================================
 // Test Helpers

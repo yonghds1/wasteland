@@ -2,7 +2,7 @@ import type { Observable } from 'rxjs';
 
 import type { TurnContext } from '@core/runtime/turn-context.js';
 import type { TurnState } from '@core/engine/turn-state.js';
-import type { ToolCall } from '@tools/tool-types.js';
+import type { ToolCall } from '@tools/core/tool-types.js';
 
 /**
  * Provider 流事件（可辨识联合类型）

@@ -7,7 +7,7 @@
 
 import { Subject, firstValueFrom } from 'rxjs';
 
-import type { ToolInput } from '@tools/tool-types.js';
+import type { ToolInput } from '@tools/core/tool-types.js';
 
 /**
  * 待处理输入请求的结构化上下文（权限问询时由 dispatch 侧填入，

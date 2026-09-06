@@ -12,8 +12,8 @@
  */
 
 import { describe, it, expect, afterEach } from 'vitest';
-import { createTerminalTool, closeAllSessions } from '../terminal.js';
-import type { ToolExecutionResult } from '../tool-types.js';
+import { createTerminalTool, closeAllSessions } from '../sys/terminal.js';
+import type { ToolExecutionResult } from '../core/tool-types.js';
 
 function assertSuccess(result: ToolExecutionResult) {
   expect(result.status).toBe('success');

@@ -15,7 +15,7 @@
 import { defer, of, type Observable } from 'rxjs';
 
 import { t } from '@locales/index.js';
-import type { ToolCall, ToolRunStatus } from '@tools/tool-types.js';
+import type { ToolCall, ToolRunStatus } from '@tools/core/tool-types.js';
 import {
   type RuntimeEvent,
   type SessionPermissionRecord,

@@ -1,5 +1,5 @@
 import type { ChatInputTurn, HistoryRecord } from './event-types.js';
-import type { ToolRegistry } from '@tools/tool-registry.js';
+import type { ToolRegistry } from '@tools/core/tool-registry.js';
 
 export type TurnContext = {
   sessionId: string;

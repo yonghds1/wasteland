@@ -2,9 +2,9 @@ import { concat, concatMap, defer, from, map, of, type Observable } from 'rxjs';
 
 import { t } from '@locales/index.js';
 
-import { executeToolCall } from '@tools/tool-runner.js';
-import { ToolRegistry } from '@tools/tool-registry.js';
-import type { ToolCall, ToolRunStatus } from '@tools/tool-types.js';
+import { executeToolCall } from '@tools/core/tool-runner.js';
+import { ToolRegistry } from '@tools/core/tool-registry.js';
+import type { ToolCall, ToolRunStatus } from '@tools/core/tool-types.js';
 import { createLogEvents, Logger } from '@core/logger/index.js';
 import { type RuntimeEvent, type HistoryRecord } from '../runtime/event-types.js';
 import { checkReadBeforeEdit } from '../runtime/file-audit.js';

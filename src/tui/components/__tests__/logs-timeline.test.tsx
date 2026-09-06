@@ -17,9 +17,9 @@ import { LogBus } from '@core/logger/log-bus.js';
 import { dispatchToolCall } from '../../../core/engine/tool-dispatch.js';
 import { SessionManager, type SessionMetadata } from '../../../core/session/session-manager.js';
 import { createInitialTurnState, type TurnState } from '../../../core/engine/turn-state.js';
-import { ToolRegistry } from '../../../tools/tool-registry.js';
+import { ToolRegistry } from '@tools/core/tool-registry.js';
 import { createPermissionGate } from '../../../core/engine/permission-gate.js';
-import type { ToolCall, ToolExecutionResult } from '../../../tools/tool-types.js';
+import type { ToolCall, ToolExecutionResult } from '@tools/core/tool-types.js';
 import {
   buildToolTimeline,
   ToolTimeline,

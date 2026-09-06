@@ -12,7 +12,7 @@ import {
   A2A_TOOL_PREFIX,
   a2aToolName,
   createA2AAgentTool,
-} from '../a2a-agent-tool.js';
+} from '../agent/a2a-agent-tool.js';
 import type { A2AAgentConfig } from '@config/settings-types.js';
 import type { Task } from '@acp/a2a-types.js';
 

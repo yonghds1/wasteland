@@ -21,7 +21,7 @@ import {
 } from './skill-parser.js';
 import { t } from '@locales/index.js';
 import type { RuntimeEvent } from '@core/runtime/event-types.js';
-import type { ToolRegistry } from '@tools/tool-registry.js';
+import type { ToolRegistry } from '@tools/core/tool-registry.js';
 import type { PermissionGate } from '@core/engine/permission-gate.js';
 import type { SessionManager, SessionMetadata } from '@core/session/session-manager.js';
 import type { AgentProvider } from '@providers/provider-types.js';

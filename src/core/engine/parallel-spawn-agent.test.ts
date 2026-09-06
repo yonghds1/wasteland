@@ -6,8 +6,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Observable, lastValueFrom, of, from, toArray } from 'rxjs';
 import { runAgentLoop } from './agent-loop.js';
-import { ToolRegistry } from '@tools/tool-registry.js';
-import type { AgentTool } from '@tools/tool-types.js';
+import { ToolRegistry } from '@tools/core/tool-registry.js';
+import type { AgentTool } from '@tools/core/tool-types.js';
 import type { AgentProvider } from '@providers/provider-types.js';
 import type { ChatInputTurn } from '../runtime/event-types.js';
 import type { SessionManager } from '../session/session-manager.js';

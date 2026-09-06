@@ -9,9 +9,9 @@ import { Subject } from 'rxjs';
 
 import { t } from '@locales/index.js';
 
-import type { AgentTool } from '@tools/tool-types.js';
-import { ToolRegistry } from '@tools/tool-registry.js';
-import { A2A_TOOL_PREFIX } from '@tools/a2a-agent-tool.js';
+import type { AgentTool } from '@tools/core/tool-types.js';
+import { ToolRegistry } from '@tools/core/tool-registry.js';
+import { A2A_TOOL_PREFIX } from '@tools/agent/a2a-agent-tool.js';
 import { createDebugTraceEvent, type DebugTraceEvent } from '../runtime/debug-events.js';
 import type { TurnState } from './turn-state.js';
 

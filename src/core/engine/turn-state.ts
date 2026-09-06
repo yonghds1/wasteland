@@ -1,4 +1,4 @@
-import type { ToolCall, ToolInput, ToolRunStatus } from '@tools/tool-types.js';
+import type { ToolCall, ToolInput, ToolRunStatus } from '@tools/core/tool-types.js';
 import type { ChatInputTurn, HistoryRecord } from '../runtime/event-types.js';
 
 export type TurnStatus = 'running' | 'completed' | 'failed';

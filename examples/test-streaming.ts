@@ -3,7 +3,7 @@ import { enableDebugLog } from '../src/core/runtime/debug-logger.js';
 import { createDefaultProviderRegistry } from '../src/providers/provider-registry.js';
 import { SessionManager } from '../src/core/runtime/session-manager.js';
 import { createPermissionGate } from '../src/core/runtime/permission-gate.js';
-import { ToolRegistry } from '../src/tools/tool-registry.js';
+import { ToolRegistry } from '../src/tools/core/tool-registry.js';
 import { of, tap, toArray, lastValueFrom } from 'rxjs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';

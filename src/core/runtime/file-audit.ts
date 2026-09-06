@@ -16,7 +16,7 @@
  * 未来可扩展为读取完整 session 文件，检查整个会话历史。
  */
 
-import type { ToolCall } from '@tools/tool-types.js';
+import type { ToolCall } from '@tools/core/tool-types.js';
 
 import { t } from '@locales/index.js';
 import { Logger } from '@core/logger/index.js';

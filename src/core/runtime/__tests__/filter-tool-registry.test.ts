@@ -12,8 +12,8 @@ import {
   MAIN_AGENT_TOOL_NAMES,
   filterToolRegistry,
 } from '../../engine/agent-loop.js';
-import { ToolRegistry } from '../../../tools/tool-registry.js';
-import type { AgentTool } from '../../../tools/tool-types.js';
+import { ToolRegistry } from '@tools/core/tool-registry.js';
+import type { AgentTool } from '@tools/core/tool-types.js';
 
 /** 构造测试用假工具 */
 function fakeTool(name: string): AgentTool {

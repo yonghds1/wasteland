@@ -14,8 +14,8 @@
  * - 本文件只负责转换格式，不做 Schema 定义
  */
 
-import type { ToolCall } from '@tools/tool-types.js';
-import { ToolRegistry } from '@tools/tool-registry.js';
+import type { ToolCall } from '@tools/core/tool-types.js';
+import { ToolRegistry } from '@tools/core/tool-registry.js';
 import { t } from '@locales/index.js';
 import type { JsonSchema, OpenAIFunctionTool, OpenAIToolCall } from './types.js';
 

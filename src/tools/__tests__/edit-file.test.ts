@@ -17,8 +17,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { initI18n } from '@locales/i18n.js';
-import { createEditFileTool } from '../edit-file.js';
-import type { ToolExecutionContext, ToolExecutionResult } from '../tool-types.js';
+import { createEditFileTool } from '../fs/edit-file.js';
+import type { ToolExecutionContext, ToolExecutionResult } from '../core/tool-types.js';
 
 function assertSuccess(result: ToolExecutionResult): Extract<ToolExecutionResult, { status: 'success' }> {
   expect(result.status).toBe('success');

@@ -12,8 +12,8 @@ import type { ProviderSettings } from '@config/settings-types.js';
 import type { TurnContext } from '@core/runtime/turn-context.js';
 import type { TurnState, TurnToolResult } from '@core/engine/turn-state.js';
 import type { HistoryRecord } from '@core/runtime/event-types.js';
-import { ToolRegistry } from '@tools/tool-registry.js';
-import type { AgentTool } from '@tools/tool-types.js';
+import { ToolRegistry } from '@tools/core/tool-registry.js';
+import type { AgentTool } from '@tools/core/tool-types.js';
 
 // ============================================================
 // Helpers

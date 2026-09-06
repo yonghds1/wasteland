@@ -22,8 +22,8 @@ import {
 import type { AgentProvider } from '@providers/provider-types.js';
 import { createPermissionGate, type PermissionGate, type PermissionMode } from '@core/engine/permission-gate.js';
 import { SessionManager } from '@core/session/session-manager.js';
-import { createDefaultToolRegistry } from '@tools/default-registry.js';
-import { ToolRegistry } from '@tools/tool-registry.js';
+import { createDefaultToolRegistry } from '@tools/core/default-registry.js';
+import { ToolRegistry } from '@tools/core/tool-registry.js';
 import { createSkillRegistry } from '@core/skills/skill-discovery.js';
 import { SkillExecutor } from '@core/skills/skill-executor.js';
 import { registerBuiltinCommands } from '@core/shared/command-manager.js';

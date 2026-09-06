@@ -27,12 +27,12 @@
 
 import type { Observable } from 'rxjs';
 
-import type { ToolCall } from '@tools/tool-types.js';
+import type { ToolCall } from '@tools/core/tool-types.js';
 import type { RuntimeEvent, HistoryRecord } from '../runtime/event-types.js';
 import type { PermissionGate } from './permission-gate.js';
 import type { SessionManager, SessionMetadata } from '../session/session-manager.js';
 import type { TurnState } from './turn-state.js';
-import type { ToolRegistry } from '@tools/tool-registry.js';
+import type { ToolRegistry } from '@tools/core/tool-registry.js';
 import type { UserInputBridge } from './user-input-bridge.js';
 import type { AgentProvider } from '@providers/provider-types.js';
 import type { ProviderRegistry } from '@providers/provider-registry.js';
