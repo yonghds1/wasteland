@@ -25,8 +25,10 @@ import { resolvePalette } from '@theme/palette.js';
 import { wastelandTheme } from '@theme/wasteland/index.js';
 import { splitThinkTags } from '@ui/think-tags.js';
 import { Scrollbar } from './Scrollbar.js';
+import { buildStreamingLines } from './streaming-status.js';
 import { useMouseWheel } from '../mouse/useMouseWheel.js';
 import {
+  countNewLines,
   wrapTextToLines,
   parsePermissionQuestion,
   useSpinnerFrame,
@@ -85,6 +87,9 @@ export function ChatMessageList({
   const [greeting] = React.useState(
     () => selectedSkin.greeting[Math.floor(Math.random() * selectedSkin.greeting.length)] ?? ''
   );
+  // R8/R9 详情态（Ctrl+T）：展开思考全文 + 工具原文，默认收起（零视口挤占）
+  // 注意：必须在 visualLines 构建之前声明（构建期即读取）。
+  const [showDetails, setShowDetails] = React.useState(false);
 
   // 1. 将所有聊天元素展平为虚拟物理行（Visual Lines）
   const visualLines: React.ReactElement[] = [];
@@ -126,6 +131,17 @@ export function ChatMessageList({
           {toolInfo.meta ? <Text color={wastelandTheme.colors.muted} dimColor>{toolInfo.meta}</Text> : null}
         </Box>
       );
+      // R9 详情态：展开完整原文多行（默认仍单行摘要）
+      if (showDetails) {
+        const fullLines = wrapTextToLines(message.content, contentWidth - 4);
+        fullLines.forEach((line, idx) => {
+          visualLines.push(
+            <Box key={`${message.id}-tool-full-${idx}`} width={contentWidth} height={1} overflow="hidden" paddingLeft={2}>
+              <Text color={wastelandTheme.colors.muted} dimColor>{line}</Text>
+            </Box>
+          );
+        });
+      }
     } else if (message.type === 'system') {
       const permInfo = parsePermissionQuestion(message.content);
       if (permInfo) {
@@ -239,10 +255,11 @@ export function ChatMessageList({
       );
 
       // Thinking 块展平（OpenCode 风格：正文存在时默认单行优雅收起，不挤占视口）
+      // R8 详情态（Ctrl+T）：展开完整思考行
       if (showThinking && split.thinking) {
         const lineCount = split.thinking.split('\n').filter((l) => l.trim().length > 0).length || 1;
         const content = split.content || '';
-        if (content.trim().length > 0) {
+        if (content.trim().length > 0 && !showDetails) {
           // 正文已有，思考过程折叠为 1 行紧凑摘要
           visualLines.push(
             <Box key={`${message.id}-think-collapsed`} width={contentWidth} height={1} paddingLeft={2}>
@@ -295,113 +312,31 @@ export function ChatMessageList({
     }
   }
 
-  // (3) 流式输出展平
-  if (state.session.isStreaming && state.session.streamingContent) {
-    if (visualLines.length > 0) {
-      visualLines.push(<Box key="streaming-space" width={contentWidth} height={1} />);
-    }
-    const split = splitThinkTags(state.session.streamingContent);
-    const hasContent = split.content.trim().length > 0;
-    visualLines.push(
-      <Box key="streaming-header" width={contentWidth} height={1} flexDirection="row">
-        <Text color={wastelandTheme.colors.secondary}>{currentSpinnerIcon}</Text>
-        <Text color={palette.label} bold> {selectedSkin.label}</Text>
-      </Box>
-    );
-
-    if (showThinking && split.thinking) {
-      const lineCount = split.thinking.split('\n').filter((l) => l.trim().length > 0).length || 1;
-      if (hasContent) {
-        visualLines.push(
-          <Box key="streaming-think-collapsed" width={contentWidth} height={1} paddingLeft={2}>
-            <Text color={palette.thinking} dimColor italic>
-              💭 思考完成 (共 {lineCount} 行)
-            </Text>
-          </Box>
-        );
-      } else {
-        const rawLines = split.thinking.trim().split('\n').filter((l) => l.trim().length > 0);
-        const latestLine = rawLines[rawLines.length - 1] ?? '';
-        const preview = latestLine.length > 25 ? '…' + latestLine.slice(-25) : latestLine;
-        visualLines.push(
-          <Box key="streaming-think-active" width={contentWidth} height={1} flexDirection="row" overflow="hidden" paddingLeft={2}>
-            <Text color={palette.thinking} dimColor italic>
-              Thinking ({lineCount} lines)... {preview ? `[${preview}]` : ''}
-            </Text>
-          </Box>
-        );
-      }
-    }
-
-    const stLines = wrapTextToLines(split.content, contentWidth - 2);
-    stLines.forEach((sLine, idx) => {
-      const isLast = idx === stLines.length - 1 && state.session.agents.every((a) => a.status !== 'running' || a.depth === 0);
-      visualLines.push(
-        <Box key={`streaming-line-${idx}`} width={contentWidth} height={1} overflow="hidden">
-          <Text color={palette.text}>
-            {sLine}
-            {isLast ? <Text color={wastelandTheme.colors.primary}>{wastelandTheme.decorations.streamingCursor}</Text> : null}
-          </Text>
-        </Box>
-      );
-    });
-  }
-
-  // Claude Code 规范：当有子 Agent 在后台执行时，无论是否有前置流式文字，都在流尾部展开实时任务树
+  // (3) 流式输出 + 后台状态尾部（抽至 streaming-status，零逻辑改动）
   const subAgents = state.session.agents.filter((a) => a.depth >= 1);
   const runningSubAgents = subAgents.filter((a) => a.status === 'running');
   const runningTool = state.session.tools.find((t) => t.status === 'running');
-
-  if (!showInspector) {
-    if (runningSubAgents.length > 0 && viewFilter === undefined) {
-      visualLines.push(
-        <Box key="subagents-header" width={contentWidth} height={1} marginTop={1} flexDirection="row">
-          <Text color={wastelandTheme.colors.primary} bold>
-            ⏺ Running {runningSubAgents.length} subagent{runningSubAgents.length > 1 ? 's' : ''} in parallel ({elapsedSec}s):
-          </Text>
-        </Box>
-      );
-      subAgents.forEach((agent, idx) => {
-        const isRunning = agent.status === 'running';
-        const roleLabel = agent.roleName || agent.name;
-        const taskText = agent.task ? ` · ${agent.task}` : '';
-        const icon = isRunning ? currentSpinnerIcon : '✓';
-        const color = isRunning ? wastelandTheme.colors.secondary : wastelandTheme.colors.success;
-
-        visualLines.push(
-          <Box key={`subagent-item-${agent.id}`} width={contentWidth} height={1} flexDirection="row" overflow="hidden" paddingLeft={2}>
-            <Text color={color} bold>
-              {icon} [{idx + 1}] {roleLabel}{taskText}
-            </Text>
-          </Box>
-        );
-        if (isRunning && agent.currentAction) {
-          visualLines.push(
-            <Box key={`subagent-action-${agent.id}`} width={contentWidth} height={1} flexDirection="row" overflow="hidden" paddingLeft={4}>
-              <Text color={wastelandTheme.colors.muted} dimColor>
-                └ {agent.currentAction}
-              </Text>
-            </Box>
-          );
-        }
-      });
-    } else if (!state.session.streamingContent && (state.session.isThinking || state.session.isStreaming || isWorking)) {
-      visualLines.push(
-        <Box key="thinking-indicator" width={contentWidth} height={1} marginTop={1} flexDirection="row">
-          <Text color={wastelandTheme.colors.secondary}>{currentSpinnerIcon} </Text>
-          {runningTool ? (
-            <Text color={wastelandTheme.colors.primary} bold>
-              Run {runningTool.name} ({elapsedSec}s)...
-            </Text>
-          ) : (
-            <Text color={palette.thinking} dimColor italic>
-              Thinking ({elapsedSec}s)...
-            </Text>
-          )}
-        </Box>
-      );
-    }
-  }
+  visualLines.push(
+    ...buildStreamingLines({
+      contentWidth,
+      streamingContent: state.session.streamingContent,
+      isStreaming: state.session.isStreaming,
+      paletteLabel: palette.label,
+      paletteText: palette.text,
+      paletteThinking: palette.thinking ?? wastelandTheme.colors.muted,
+      skinLabel: selectedSkin.label,
+      showThinking,
+      spinnerIcon: currentSpinnerIcon,
+      subAgents,
+      runningSubAgents,
+      runningTool,
+      viewFilter,
+      elapsedSec,
+      showInspector,
+      isWorking,
+      allAgentsIdle: state.session.agents.every((a) => a.status !== 'running' || a.depth === 0),
+    }),
+  );
 
   const totalLines = visualLines.length;
   const maxOffset = Math.max(0, totalLines - availableHeight);
@@ -455,9 +390,23 @@ export function ChatMessageList({
     },
   });
 
-  // 4. 键盘翻页监听（支持 PageUp/Down、Shift+↑/↓ 微调、Ctrl+U/D 翻半屏）
+  // 4. 键盘翻页监听（支持 PageUp/Down、Shift+↑/↓ 微调、Ctrl+U/D 翻半屏、Home/End 跳首尾、Ctrl+T 详情）
   useInput((input, key) => {
     const halfPage = Math.max(1, Math.floor(availableHeight / 2));
+    if (key.ctrl && (input === 't' || input === 'T')) {
+      setShowDetails((cur) => !cur);
+      return;
+    }
+    if (key.home && !state.inputMode) {
+      setStickToBottom(false);
+      setScrollOffset(0);
+      return;
+    }
+    if (key.end && !state.inputMode) {
+      setStickToBottom(true);
+      setScrollOffset(maxOffset);
+      return;
+    }
     if (key.pageUp || (key.ctrl && input === 'u')) {
       setStickToBottom(false);
       setScrollOffset((prev) => Math.max(0, prev - halfPage));
@@ -484,7 +433,10 @@ export function ChatMessageList({
   const clampedOffset = Math.max(0, Math.min(scrollOffset, maxOffset));
   const showTopHint = clampedOffset > 0;
   const maxDisplayLines = showTopHint ? Math.max(1, availableHeight - 1) : availableHeight;
-  const visibleLines = visualLines.slice(clampedOffset, clampedOffset + maxDisplayLines);
+  // R7 未读 badge：脱钉且视口下方有新行时预留末行展示
+  const pendingNew = countNewLines(totalLines, clampedOffset, maxDisplayLines, stickToBottom);
+  const contentLineBudget = pendingNew > 0 ? Math.max(1, maxDisplayLines - 1) : maxDisplayLines;
+  const visibleLines = visualLines.slice(clampedOffset, clampedOffset + contentLineBudget);
 
   return (
     <Box flexDirection="row" width={width} height={availableHeight}>
@@ -498,6 +450,13 @@ export function ChatMessageList({
           </Box>
         )}
         {visibleLines}
+        {pendingNew > 0 && (
+          <Box height={1} width={contentWidth} flexShrink={0}>
+            <Text color={wastelandTheme.colors.primary} bold>
+              {t('tui.session.messages.newLines', { count: String(pendingNew) })}
+            </Text>
+          </Box>
+        )}
       </Box>
 
       {/* 右侧垂直滚动条 */}

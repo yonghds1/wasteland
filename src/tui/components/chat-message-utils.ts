@@ -350,3 +350,18 @@ export function parseSemanticTool(rawContent: string): SemanticToolInfo {
     isError,
   };
 }
+
+/**
+ * 未读新行数（R7，纯函数，可单测）。
+ *
+ * 钉底时恒为 0；脱钉时为视口下方不可见行数。
+ */
+export function countNewLines(
+  totalLines: number,
+  scrollOffset: number,
+  maxDisplayLines: number,
+  stickToBottom: boolean,
+): number {
+  if (stickToBottom) return 0;
+  return Math.max(0, totalLines - (scrollOffset + maxDisplayLines));
+}
