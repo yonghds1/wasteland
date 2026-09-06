@@ -746,7 +746,7 @@ export function App({ runtime }: AppProps): React.ReactElement {
     // Tab / Shift+Tab 在当前页面的可聚焦区域间循环切换
     if (key.tab) {
       const focusCycle: Record<PageName, FocusArea[]> = {
-        session: ['inputBar'],
+        session: ['inputBar', 'agentTabs'],
         debug: ['traceLog'],
         config: ['configList'],
         sessions: [],
@@ -770,6 +770,25 @@ export function App({ runtime }: AppProps): React.ReactElement {
         } else if (state.focusArea === 'inputBar') {
           setInputMode(false);
         }
+      }
+      return;
+    }
+
+    // Esc 双向 toggle（session 页 inputBar ↔ agentTabs，不清 viewFilter；
+    // 权限待确认时跳过，Esc 语义归权限卡（允许/拒绝），避免误切焦点）
+    if (
+      key.escape &&
+      state.currentPage === 'session' &&
+      state.showHelp === null &&
+      !state.exitConfirmPending &&
+      !runtime.userInputBridge?.isPending()
+    ) {
+      if (state.focusArea === 'agentTabs') {
+        setFocusArea('inputBar');
+        setInputMode(true);
+      } else {
+        setFocusArea('agentTabs');
+        setInputMode(false);
       }
       return;
     }

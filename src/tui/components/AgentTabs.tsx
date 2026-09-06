@@ -36,8 +36,8 @@
  * 独立 useInput),输入区高度变化不影响 AgentTabs 位置。
  */
 
-import React, { useMemo } from 'react';
-import { Box, Text } from 'ink';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Box, Text, useInput } from 'ink';
 import { useAppContext, type AgentNode, type FocusArea } from '../context/AppContext.js';
 import { wastelandTheme } from '@theme/wasteland/index.js';
 import { t } from '@locales/index.js';
@@ -269,6 +269,19 @@ export function selectTabViewFilter(tab: AgentTab): string | undefined {
 }
 
 /**
+ * Tab 索引移动（←/→ 导航，循环不回绕，钳制在 [0, len)）。
+ *
+ * 纯函数：供 `useInput` dispatch 与单测。
+ */
+export function moveTabIndex(current: number, dir: 1 | -1, len: number): number {
+  if (len <= 0) return 0;
+  const next = current + dir;
+  if (next < 0) return 0;
+  if (next >= len) return len - 1;
+  return next;
+}
+
+/**
  * Main tab 的显示标签(07-31 statusbar 合并后引入)
  *
  * 渲染形式 `[Main | <skinLabel>]` —— "Main" 取自 locale
@@ -427,7 +440,7 @@ export interface AgentTabsProps {
 }
 
 export function AgentTabs({ runtime }: AgentTabsProps): React.ReactElement {
-  const { state } = useAppContext();
+  const { state, setViewFilter, setFocusArea, setInputMode } = useAppContext();
 
   // tab 列表构建:Main 永远第一(纯函数 buildTabs,见独立单测)
   const tabs = useMemo<AgentTab[]>(
@@ -441,13 +454,54 @@ export function AgentTabs({ runtime }: AgentTabsProps): React.ReactElement {
     return idx >= 0 ? idx : 0;
   }, [tabs, state.viewFilter]);
 
-  // 渲染样式
-  const borderColor = wastelandTheme.colors.borderDim;
+  const isFocused = state.focusArea === 'agentTabs';
+
+  // 键盘导航选中项：失焦时跟随 activeIdx，进焦后由 ←/→ 独立移动
+  const [selectedIdx, setSelectedIdx] = useState<number>(() => 0);
+  useEffect(() => {
+    if (!isFocused) {
+      setSelectedIdx(activeIdx);
+    }
+  }, [activeIdx, isFocused]);
+
+  // 键盘交互（focus-management.md §6：先 gate focusArea）
+  useInput((input, key) => {
+    if (state.focusArea !== 'agentTabs') return;
+    if (key.leftArrow) {
+      setSelectedIdx((cur) => moveTabIndex(cur, -1, tabs.length));
+      return;
+    }
+    if (key.rightArrow) {
+      setSelectedIdx((cur) => moveTabIndex(cur, 1, tabs.length));
+      return;
+    }
+    if (key.return) {
+      const tab = tabs[selectedIdx];
+      if (tab) {
+        setViewFilter(selectTabViewFilter(tab));
+      }
+      return;
+    }
+    if (key.escape) {
+      setFocusArea('inputBar');
+      setInputMode(true);
+    }
+  });
+
+  // 渲染样式（底线颜色由纯函数决策，见 getAgentBarBorderColor）
+  const borderColor = getAgentBarBorderColor(state.focusArea);
 
   const brandWidth = wastelandTheme.displayName.length + (runtime.config.model?.length ?? 0) + 8;
   const reserved = Math.max(10, brandWidth + 4);
   const terminalWidth = process.stdout.columns || 80;
-  const viewport = computeViewport(tabs, activeIdx, terminalWidth, reserved);
+  const focusIdx = isFocused ? selectedIdx : activeIdx;
+  const viewport = computeViewport(tabs, focusIdx, terminalWidth, reserved);
+
+  const colorByKey = (colorKey: 'muted' | 'primary' | 'textEmphasized'): string => {
+    if (colorKey === 'primary') return wastelandTheme.colors.primary;
+    if (colorKey === 'textEmphasized') return wastelandTheme.colors.textEmphasized;
+    return wastelandTheme.colors.muted;
+  };
 
   return (
     <Box
@@ -476,16 +530,16 @@ export function AgentTabs({ runtime }: AgentTabsProps): React.ReactElement {
           {viewport.visibleTabs.map((tab, i) => {
             const originalIdx = viewport.visibleIndices[i] ?? 0;
             const isActive = originalIdx === activeIdx;
+            const isSelected = isFocused && originalIdx === selectedIdx;
+            const style = getAgentTabStyle({ isSelected, isActive });
             const label = tab.isMain ? getMainTabLabel(runtime.skin) : tab.name;
 
-            const tabColor = isActive
-              ? wastelandTheme.colors.primary
-              : wastelandTheme.colors.muted;
+            const tabColor = colorByKey(style.colorKey);
 
             return (
               <Box key={tab.id} marginRight={1}>
-                <Text color={tabColor} bold={isActive}>
-                  {isActive ? '▶ ' : ''}[{label}]
+                <Text color={tabColor} bold={style.bold}>
+                  {isSelected ? '▶ ' : ''}[{label}]{style.hasActiveMarker ? '◆' : ''}
                 </Text>
               </Box>
             );
