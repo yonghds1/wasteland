@@ -1,0 +1,6 @@
+{"file": ".trellis/spec/frontend/index.md", "reason": "TUI frontend entry + conventions"}
+{"file": ".trellis/spec/frontend/focus-management.md", "reason": "R1 focus cycle + Esc toggle"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "top-bar 1-row + dialog pattern"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "viewFilter + local vs global"}
+{"file": ".trellis/spec/frontend/theme-skin.md", "reason": "no literals + contrast + i18n"}
+{"file": ".trellis/spec/backend/command-registry.md", "reason": "R3 single source"}

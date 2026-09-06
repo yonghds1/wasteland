@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "backend gates and conventions"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "five gates and pure-function rule for LogsPage changes"}

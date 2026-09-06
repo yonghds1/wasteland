@@ -1,0 +1,3 @@
+{"file": ".trellis/spec/backend/directory-structure.md", "reason": "paths.ts ownership and data dir placement"}
+{"file": ".trellis/spec/backend/logging-guidelines.md", "reason": "FileSink and log layout contracts"}
+{"file": ".trellis/spec/backend/cli-tui-contracts.md", "reason": "logs/sessions/resume command contracts"}
