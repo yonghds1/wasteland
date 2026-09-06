@@ -12,7 +12,6 @@ import {
   resolveDefaultSessionDir,
   setCurrentProjectId,
   WASTELAND_DATA_DIR_ENV,
-  WASTELAND_HOME_ENV,
 } from '../paths.js';
 
 afterEach(() => {

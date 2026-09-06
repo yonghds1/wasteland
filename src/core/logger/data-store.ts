@@ -20,7 +20,7 @@
 import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { PROJECT_META_FILENAME } from '@config/paths.js';
+import { PROJECT_DIRNAME } from '@config/paths.js';
 import { listSessions, type SessionSummaryOnDisk } from './file-log-loader.js';
 
 /** 当前数据版本（新数据根初始化时写入）。 */
@@ -80,7 +80,7 @@ export function classifyProjectId(projectId: string): 'git' | 'none' {
  */
 export async function ensureDataRoot(dataRoot: string): Promise<void> {
   await mkdir(dataRoot, { recursive: true });
-  await mkdir(join(dataRoot, 'project'), { recursive: true });
+  await mkdir(join(dataRoot, PROJECT_DIRNAME), { recursive: true });
   const migrationFile = join(dataRoot, 'migration');
   try {
     await readFile(migrationFile, 'utf8');
@@ -99,12 +99,12 @@ export async function writeProjectMeta(
   dataRoot: string,
   meta: Omit<ProjectMeta, 'created'> & { created?: string }
 ): Promise<void> {
-  await mkdir(join(dataRoot, 'project'), { recursive: true });
+  await mkdir(join(dataRoot, PROJECT_DIRNAME), { recursive: true });
   const full: ProjectMeta = {
     ...meta,
     created: meta.created ?? new Date().toISOString(),
   };
-  await writeFile(join(dataRoot, 'project', `${meta.id}.json`), JSON.stringify(full), 'utf8');
+  await writeFile(join(dataRoot, PROJECT_DIRNAME, `${meta.id}.json`), JSON.stringify(full), 'utf8');
 }
 
 /**
@@ -118,7 +118,7 @@ export async function readProjectMeta(
   projectId: string
 ): Promise<ProjectMeta | null> {
   try {
-    const raw = await readFile(join(dataRoot, 'project', `${projectId}.json`), 'utf8');
+    const raw = await readFile(join(dataRoot, PROJECT_DIRNAME, `${projectId}.json`), 'utf8');
     const parsed = JSON.parse(raw) as Partial<ProjectMeta>;
     if (typeof parsed.id !== 'string') return null;
     return {

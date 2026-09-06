@@ -16,7 +16,7 @@ export const WASTELAND_SESSION_DIR_ENV = 'WASTELAND_SESSION_DIR';
 export const WASTELAND_DATA_DIR_ENV = 'WASTELAND_DATA_DIR';
 // 中央数据根目录名（OpenCode 模式：单根 + projectID 命名空间，见 09-06-central-log-store）。
 export const DATA_DIRNAME = 'data';
-export const PROJECT_META_FILENAME = 'project.json';
+export const PROJECT_DIRNAME = 'project';
 export const DATA_MIGRATION_FILENAME = 'migration';
 // 非 git 目录的 projectID（与 OpenCode 的 "global" 桶一致）。
 export const GLOBAL_PROJECT_ID = 'global';
@@ -254,17 +254,11 @@ export function resolveDataProjectId(cwd: string, _projectConfigDir: string | nu
 }
 
 /**
- * 解析当前目录的 projectID（git root hash 优先），写入进程缓存。
- *
- * - git 可用且有提交 → root commit hash（排序取首）；
- * - 非 git/无提交/git 缺失 → 路径回退（deriveProjectId）；
- * - 永远不抛错（子进程失败一律回退）。
+ * 取 git root commit hash（排序取首；非 git/无提交/git 缺失返回 null，永不抛错）。
  *
  * @param cwd - 当前工作目录
- * @returns projectID 字符串
  */
-export async function resolveProjectIdForCwd(cwd: string): Promise<string> {
-  let gitRootHash: string | null = null;
+async function resolveGitRootHash(cwd: string): Promise<string | null> {
   try {
     const { stdout } = await execFileAsync('git', ['rev-list', '--max-parents=0', '--all'], {
       cwd,
@@ -275,10 +269,24 @@ export async function resolveProjectIdForCwd(cwd: string): Promise<string> {
       .map((line) => line.trim())
       .filter((line) => /^[0-9a-f]{40}$/i.test(line))
       .sort();
-    gitRootHash = roots[0] ?? null;
+    return roots[0] ?? null;
   } catch {
-    gitRootHash = null;
+    return null;
   }
+}
+
+/**
+ * 解析当前目录的 projectID（git root hash 优先），写入进程缓存。
+ *
+ * - git 可用且有提交 → root commit hash（排序取首）；
+ * - 非 git/无提交/git 缺失 → 路径回退（deriveProjectId）；
+ * - 永远不抛错（子进程失败一律回退）。
+ *
+ * @param cwd - 当前工作目录
+ * @returns projectID 字符串
+ */
+export async function resolveProjectIdForCwd(cwd: string): Promise<string> {
+  const gitRootHash = await resolveGitRootHash(cwd);
   const id = deriveProjectId({ cwd, gitRootHash });
   setCurrentProjectId(id);
   return id;
