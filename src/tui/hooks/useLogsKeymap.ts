@@ -33,6 +33,8 @@ export type LogsKeymapApi = {
   timelineMode: TimelineMode;
   timelineMetric: TimelineMetric;
   selectedSessionIdx: number;
+  selectedCardIdx: number;
+  cardWindowSize: number;
   sessions: SessionSummaryOnDisk[];
   diskSessions: SessionSummaryOnDisk[];
   sessionCards: LogEntry[];
@@ -40,11 +42,14 @@ export type LogsKeymapApi = {
   minLevel: LogLevel;
   sessionFilter: string;
   errorFocus: boolean;
+  focusedPane: 'left' | 'right';
   keywordFilter: string;
   // setters
+  setFocusedPane: (v: 'left' | 'right') => void;
   setSearchDraft: (v: string | ((prev: string) => string)) => void;
   setIsSearching: (v: boolean) => void;
   setSelectedSessionIdx: (v: number) => void;
+  setSelectedCardIdx: (v: number) => void;
   setSessionFilter: (v: string) => void;
   setTimelineMode: (v: TimelineMode) => void;
   setView: (v: LogsView) => void;
@@ -75,6 +80,8 @@ export function useLogsKeymap(api: LogsKeymapApi): void {
     timelineMode,
     timelineMetric,
     selectedSessionIdx,
+    selectedCardIdx,
+    cardWindowSize,
     sessions,
     diskSessions,
     sessionCards,
@@ -82,10 +89,13 @@ export function useLogsKeymap(api: LogsKeymapApi): void {
     minLevel,
     sessionFilter,
     errorFocus,
+    focusedPane,
     keywordFilter,
+    setFocusedPane,
     setSearchDraft,
     setIsSearching,
     setSelectedSessionIdx,
+    setSelectedCardIdx,
     setSessionFilter,
     setTimelineMode,
     setView,
@@ -144,13 +154,41 @@ export function useLogsKeymap(api: LogsKeymapApi): void {
       return;
     }
 
-    // ↑/↓：切换 session（左栏滚动保证选中可见，右栏回到顶部）
+    // ↑/↓：切换 session（左栏滚动保证选中可见，右栏回到顶部）或右侧上下移动光标
     if (key.upArrow) {
-      moveSelection(selectedSessionIdx + 1);
+      if (focusedPane === 'right' && view !== 'timeline' && sessionCards.length > 0) {
+        const newIdx = Math.max(0, selectedCardIdx - 1);
+        setSelectedCardIdx(newIdx);
+        if (newIdx < cardScroll.offset) {
+          cardScroll.setOffset(newIdx);
+        } else if (newIdx >= cardScroll.offset + cardWindowSize) {
+          cardScroll.setOffset(newIdx - cardWindowSize + 1);
+        }
+      } else {
+        moveSelection(selectedSessionIdx + 1);
+      }
+      return;
+    }
+    if (key.leftArrow) {
+      setFocusedPane('left');
+      return;
+    }
+    if (key.rightArrow) {
+      setFocusedPane('right');
       return;
     }
     if (key.downArrow) {
-      moveSelection(selectedSessionIdx - 1);
+      if (focusedPane === 'right' && view !== 'timeline' && sessionCards.length > 0) {
+        const newIdx = Math.min(sessionCards.length - 1, selectedCardIdx + 1);
+        setSelectedCardIdx(newIdx);
+        if (newIdx < cardScroll.offset) {
+          cardScroll.setOffset(newIdx);
+        } else if (newIdx >= cardScroll.offset + cardWindowSize) {
+          cardScroll.setOffset(newIdx - cardWindowSize + 1);
+        }
+      } else {
+        moveSelection(selectedSessionIdx - 1);
+      }
       return;
     }
 
@@ -227,10 +265,9 @@ export function useLogsKeymap(api: LogsKeymapApi): void {
         }
         return;
       }
-      const visibleCards = sessionCards.slice(cardScroll.offset, cardScroll.offset + 5);
-      const firstCard = visibleCards[0];
-      if (firstCard) {
-        toggleCardExpand(cardKeyOf(firstCard));
+      const selectedCard = sessionCards[selectedCardIdx];
+      if (selectedCard) {
+        toggleCardExpand(cardKeyOf(selectedCard));
       }
       return;
     }
@@ -324,7 +361,7 @@ export function useLogsKeymap(api: LogsKeymapApi): void {
     // C：复制当前聚焦日志到剪贴板
     if (inputChar === 'c' || inputChar === 'C') {
       if (view === 'list') {
-        const currentEntry = sessionCards[cardScroll.offset];
+        const currentEntry = sessionCards[selectedCardIdx];
         if (currentEntry) {
           const contentToCopy = `[${currentEntry.level}] ${currentEntry.timestamp} | ${currentEntry.scope}\nMessage: ${currentEntry.message}\nData: ${JSON.stringify(currentEntry.data, null, 2)}`;
           import('clipboardy').then(clipboard => {

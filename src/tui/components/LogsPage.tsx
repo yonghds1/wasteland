@@ -602,6 +602,15 @@ export function LogsPage({
   // 数千条 session 的卡片不预渲染（parseTimings 等耗时计算只对可见卡片执行），
   // 滚动流畅不卡顿。窗口由 ScrollableBox 的 maxVisible 计算 + 少量余量构成，
   // 窗口外的行由 ScrollableBox overflow:hidden 裁掉。
+  // Right pane selected card index
+  const [focusedPane, setFocusedPane] = useState<'left' | 'right'>('left');
+  const [selectedCardIdx, setSelectedCardIdx] = useState<number>(0);
+
+  // Reset to 0 when filter changes
+  useEffect(() => {
+    setSelectedCardIdx(0);
+  }, [minLevel, keywordFilter, errorFocus, selectedSessionIdx, view, timelineMode]);
+
   const { stdout: logsStdout } = useStdout();
   const cardWindowSize = Math.max(
     1,
@@ -784,13 +793,20 @@ export function LogsPage({
     [selectedSessionSummary, sessionCards, exportDir],
   );
 
+  const clampedSelectedIdx = (selectedCardIdx < cardScroll.offset || selectedCardIdx >= cardScroll.offset + cardWindowSize) ? cardScroll.offset : selectedCardIdx;
+
   // 本页键盘交互（实现见 useLogsKeymap，入参即本地同名状态/回调）
   useLogsKeymap({
     isSearching,
     view,
     timelineMode,
     timelineMetric,
+    focusedPane,
+    setFocusedPane,
     selectedSessionIdx,
+    selectedCardIdx: clampedSelectedIdx,
+    setSelectedCardIdx,
+    cardWindowSize,
     sessions,
     diskSessions,
     sessionCards,
@@ -1089,6 +1105,8 @@ export function LogsPage({
                 // 当前聚焦卡片：窗口顶部那张（= cardScroll.offset 指向的卡片，
                 // Enter 展开/错误跳转都以它为锚点），用 ▶ 标记聚焦位置
                 const isCurrentCard = windowIdx === 0;
+                const idx = cardScroll.offset + windowIdx;
+                const isSelectedCard = idx === selectedCardIdx;
                 const entryKind = (entry.data as Record<string, unknown> | undefined)?.kind;
                 const kindStr = typeof entryKind === 'string' ? entryKind : '-';
                 const timings = parseTimings(entry.data);
@@ -1117,6 +1135,7 @@ export function LogsPage({
                   <Box
                     key={cardKeyOf(entry)}
                     flexDirection="column"
+                    backgroundColor={isSelectedCard ? '#2b2d31' : undefined}
                     borderStyle={wastelandTheme.decorations.borderStyle}
                     borderLeft
                     borderBottom
