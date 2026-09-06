@@ -27,6 +27,7 @@ import {
   type FocusArea
 } from '../../context/AppContext.js';
 import { listSessions, loadSessionEntries, getCachedSessionEntries } from '@core/logger/file-log-loader.js';
+import { listAllSessions } from '@core/logger/data-store.js';
 import { createSessionIndex } from '@core/session/session-index.js';
 import type { SessionSummaryOnDisk } from '@core/logger/file-log-loader.js';
 import {
@@ -48,6 +49,12 @@ vi.mock('@core/logger/file-log-loader.js', () => ({
   getCachedSessionEntries: vi.fn(),
 }));
 
+// LogsPage 经 data-store.listAllSessions 聚合；测试中转接到被 mock 的 listSessions
+// 并打上固定项目标签，保持既有“mock listSessions 即控制左栏”的用例写法不变。
+vi.mock('@core/logger/data-store.js', () => ({
+  listAllSessions: vi.fn(),
+}));
+
 // transcript 加载走 session-index；默认无 transcript，单个测试可覆写。
 vi.mock('@core/session/session-index.js', () => ({
   createSessionIndex: vi.fn(),
@@ -60,6 +67,11 @@ beforeEach(() => {
   vi.mocked(listSessions).mockResolvedValue([]);
   vi.mocked(loadSessionEntries).mockResolvedValue([]);
   vi.mocked(getCachedSessionEntries).mockReturnValue(undefined);
+  vi.mocked(listAllSessions).mockReset();
+  vi.mocked(listAllSessions).mockImplementation(async () => {
+    const base = await vi.mocked(listSessions)({ dir: 'mocked' });
+    return base.map((s) => ({ ...s, projectId: 'test-pid', worktree: '/test' }));
+  });
   vi.mocked(createSessionIndex).mockReset();
   vi.mocked(createSessionIndex).mockReturnValue({
     getSession: vi.fn().mockResolvedValue(null),
@@ -340,6 +352,21 @@ describe('LogsPage keyboard integration（V 视图切换 vs App 全局 T 循环�
 // 集成：dispatchToolCall 真实流程 → buildToolTimeline 聚合
 // ============================================================
 
+
+
+const __p2 = (n: number): string => String(n).padStart(2, '0');
+/** fixture UTC 时戳 → 本地期望（formatTime* 已转本地时区，断言必须与 TZ 无关）。 */
+const localHM = (iso: string): string => {
+  const d = new Date(iso);
+  return `${__p2(d.getHours())}:${__p2(d.getMinutes())}`;
+};
+const localHMS = (iso: string): string => {
+  const d = new Date(iso);
+  return `${localHM(iso)}:${__p2(d.getSeconds())}`;
+};
+const RANGE_0100 = `${localHM('2026-08-10T01:00:00.000Z')}-${localHM('2026-08-10T01:00:59.000Z')}`;
+const HMS_010001 = localHMS('2026-08-10T01:00:01.000Z');
+const HMSMS_010001 = `${HMS_010001}.000`;
 
 function makeSessionSummary(sessionId: string, count: number): SessionSummaryOnDisk {
   return {
@@ -658,9 +685,9 @@ describe('LogsPage 卡片渲染可读性（T12）', () => {
     );
 
     // 紧凑时间戳出现（01:00:01）
-    expect(output).toContain('01:00:01');
+    expect(output).toContain(HMS_010001);
     // 毫秒精度不再出现在卡片主视图（01:00:01.000）
-    expect(output).not.toContain('01:00:01.000');
+    expect(output).not.toContain(HMSMS_010001);
   });
 
   it('长消息完整换行展示：消息全部内容出现，不截断', async () => {
@@ -1120,7 +1147,7 @@ describe('LogsPage 错误上下文展开（mock 磁盘加载）', () => {
 
     // offset 0 展开的是最新卡片（step-11，非错误）
     // 展开详情保留完整精度时间戳（HH:MM:SS.mmm）
-    expect(output).toContain('── detail @ 01:00:11.000 ──');
+    expect(output).toContain(`── detail @ ${localHMS('2026-08-10T01:00:11.000Z')}.000 ──`);
     expect(output).not.toContain('── context');
   });
 
@@ -1377,8 +1404,8 @@ describe('LogsPage 全局时间线（M 切换 / K 分布 / Enter 定位 session�
     expect(output).toContain('session: locate (2');
     expect(output).not.toContain('session: locate-abc (2');
     // 左侧列表选中行带 > 标记（精确选中 'locate'，而非前缀 'locate-abc'）
-    expect(output).toContain('> 01:00-01:00 | locate |');
-    expect(output).not.toContain('> 01:00-01:00 | locate-abc |');
+    expect(output).toContain(`> ${RANGE_0100} | locate |`);
+    expect(output).not.toContain(`> ${RANGE_0100} | locate-abc |`);
     expect(output).toContain('grep');
   });
 
@@ -1410,7 +1437,7 @@ describe('LogsPage 全局时间线（M 切换 / K 分布 / Enter 定位 session�
     expect(output).toContain('session: s-target (2');
     expect(output).not.toContain('session: s-other (');
     // 左侧列表选中行带 > 标记，且无越界（不再显示 none selected）
-    expect(output).toContain('> 01:00-01:00 | s-target |');
+    expect(output).toContain(`> ${RANGE_0100} | s-target |`);
     expect(output).toContain('grep');
   });
 });
@@ -1619,7 +1646,7 @@ describe('LogsPage 导航增强（Home/End 跳转最早/最晚）', () => {
     expect(output).toContain('entry-9');
     expect(output).not.toContain('entry-0');
     // 当前卡片指示（▶）落在顶部卡片 entry-9 上
-    expect(output).toContain('▶ 01:00:09');
+    expect(output).toContain(`▶ ${localHMS('2026-08-10T01:00:09.000Z')}`);
   });
 
   it('End 跳转到最早位置（cards 最新在上：底部）', async () => {
@@ -1633,7 +1660,7 @@ describe('LogsPage 导航增强（Home/End 跳转最早/最晚）', () => {
     expect(output).toContain('entry-0');
     expect(output).not.toContain('entry-9');
     // 当前卡片指示（▶）落在底部窗口顶部可见卡片上（offset=4 → entry-5）
-    expect(output).toContain('▶ 01:00:05');
+    expect(output).toContain(`▶ ${localHMS('2026-08-10T01:00:05.000Z')}`);
   });
 
   it('当前卡片指示 ▶ 唯一，且仅在顶部可见卡片上', async () => {
@@ -1672,9 +1699,9 @@ describe('LogsPage 导航增强（Tab/Shift+Tab 循环切换 session）', () => 
   it('Tab 循环下一个 session（尾部环绕回 0）', async () => {
     const output = await renderLogsWithSessionEntries(sessions, entriesBySession, ['\t', '\t', '\t']);
     // s1 → s2 → s3 → s1（环绕回头部）
-    expect(output).toContain('> 01:00-01:00 | s1 |');
-    expect(output).not.toContain('> 01:00-01:00 | s2 |');
-    expect(output).not.toContain('> 01:00-01:00 | s3 |');
+    expect(output).toContain(`> ${RANGE_0100} | s1 |`);
+    expect(output).not.toContain(`> ${RANGE_0100} | s2 |`);
+    expect(output).not.toContain(`> ${RANGE_0100} | s3 |`);
     // 右栏 header 同步显示选中 session
     expect(output).toContain('session: s1 (2');
   });
@@ -1682,8 +1709,8 @@ describe('LogsPage 导航增强（Tab/Shift+Tab 循环切换 session）', () => 
   it('Shift+Tab 循环上一个 session（头部环绕回尾部）', async () => {
     const output = await renderLogsWithSessionEntries(sessions, entriesBySession, ['\x1b[Z']);
     // s1 → s3（环绕到尾部）
-    expect(output).toContain('> 01:00-01:00 | s3 |');
-    expect(output).not.toContain('> 01:00-01:00 | s1 |');
+    expect(output).toContain(`> ${RANGE_0100} | s3 |`);
+    expect(output).not.toContain(`> ${RANGE_0100} | s1 |`);
   });
 
   it('Tab 切换后右栏回到顶部（滚动联动）', async () => {
@@ -1711,7 +1738,7 @@ describe('LogsPage 导航增强（Tab/Shift+Tab 循环切换 session）', () => 
     expect(output).toContain('big2-9');
     expect(output).not.toContain('big2-0');
     // 左栏选中行移到 big2
-    expect(output).toContain('> 01:00-01:00 | big2 |');
+    expect(output).toContain(`> ${RANGE_0100} | big2 |`);
   });
 
   it('循环切换后选中 session 在左栏保持可见（滚动联动）', async () => {
@@ -1725,7 +1752,7 @@ describe('LogsPage 导航增强（Tab/Shift+Tab 循环切换 session）', () => 
     // 从 idx0 循环 Tab 19 次 → 选中 s20（idx19），左栏须滚动使 s20 行可见
     const keys = Array.from({ length: 19 }, () => '\t');
     const output = await renderLogsWithSessionEntries(many, entriesByMany, keys);
-    expect(output).toContain('> 01:00-01:00 | s20 |');
+    expect(output).toContain(`> ${RANGE_0100} | s20 |`);
   });
 });
 

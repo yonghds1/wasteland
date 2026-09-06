@@ -27,6 +27,8 @@ import {
   initializeFileSinkFromEnv,
 } from '@core/runtime/debug-logger.js';
 import { createSessionIndex, type SessionDetail, type SessionSummary } from '@core/session/session-index.js';
+import { getTranscriptAcrossProjects } from '@core/session/session-locator.js';
+import { resolveDefaultDataDir } from '@config/paths.js';
 import { UserInputBridge } from '@core/engine/user-input-bridge.js';
 import { renderRuntimeEvents } from '@ui/terminal-renderer.js';
 import { CliInputAdapter } from '@ui/cli-input-adapter.js';
@@ -205,6 +207,12 @@ export function createResumeCommand(): Command {
 
       if (sessionId) {
         sessionToResume = await sessionIndex.getSession(sessionId);
+        // 本项目未命中 → 中央数据根跨项目定位
+        if (!sessionToResume) {
+          const dataRoot = resolveDefaultDataDir({ cwd });
+          const found = await getTranscriptAcrossProjects(dataRoot, sessionId);
+          sessionToResume = found?.detail ?? null;
+        }
         if (!sessionToResume) {
           console.error(`${t('commands.resume.notFound')} ${sessionId}`);
           process.exit(1);

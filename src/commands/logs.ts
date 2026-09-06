@@ -24,6 +24,10 @@ import { Command } from 'commander';
 
 import { FileSink } from '@core/logger/file-sink.js';
 import { LOG_LEVEL_RANK, type LogEntry, type LogLevel } from '@core/logger/types.js';
+import { listProjectIds } from '@core/logger/data-store.js';
+import { resolveProjectOption } from '@core/session/session-locator.js';
+import { resolveDefaultDataDir, resolveDefaultLogDir } from '@config/paths.js';
+import { getLoadedSettings } from '@config/loaded-settings.js';
 import { t } from '@locales/index.js';
 
 // ============================================================
@@ -31,13 +35,37 @@ import { t } from '@locales/index.js';
 // ============================================================
 
 /**
- * 默认日志主目录：`<cwd>/.wasteland/logs`。
- *
- * 与 `src/core/runtime/debug-logger.ts:resolveLogDir` 行为一致；不需要从 `paths.ts`
- * 引入是因为这里只读 dir，不写。
+ * 默认日志主目录：通过 paths.js 统一解析，保证与系统保持一致。
  */
 export function resolveDefaultLogsDir(cwd: string): string {
-  return join(resolvePath(cwd), '.wasteland', 'logs');
+  return resolveDefaultLogDir({
+    cwd,
+    projectConfigDir: getLoadedSettings()?.projectConfigDir ?? null,
+  });
+}
+
+/**
+ * 解析命令的目标日志目录（中央数据根聚合）。
+ *
+ * 优先级：显式 `--dir` > `--project` 收窄 > 默认聚合（全部项目；无项目时回退单目录，保证空库提示路径不变）。
+ *
+ * @param cwd - 当前工作目录
+ * @param options - 命令选项（含 dir / project）
+ */
+export async function resolveTargetLogDirs(
+  cwd: string,
+  options: { dir?: string; project?: string }
+): Promise<string[]> {
+  if (options.dir) return [resolvePath(options.dir)];
+  const dataRoot = resolveDefaultDataDir({ cwd });
+  if (options.project?.trim()) {
+    const resolved = await resolveProjectOption(dataRoot, options.project);
+    if (!resolved) return [];
+    return [join(dataRoot, 'logs', resolved)];
+  }
+  const ids = await listProjectIds(dataRoot);
+  if (ids.length === 0) return [resolveDefaultLogsDir(cwd)];
+  return ids.map((id) => join(dataRoot, 'logs', id));
 }
 
 // ============================================================
@@ -229,34 +257,35 @@ export function matchesSession(entry: LogEntry, sid: string | null): boolean {
 type ErrorsOptions = {
   tail?: string;
   dir?: string;
+  project?: string;
 };
 
 /**
- * wasteland logs errors [--tail N] [--dir <path>]
+ * wasteland logs errors [--tail N] [--project <id|path>]
  *
- * 从 `<dir>/error.jsonl` 读取最后 N 条 warn/error 条目（N 默认 20）。
+ * 默认聚合全部项目的 error.jsonl，按时间合并取最后 N 条。
  */
 export async function runLogsErrors(
   options: ErrorsOptions,
   opts: { stdout?: NodeJS.WritableStream } = {}
 ): Promise<number> {
   const stdout = opts.stdout ?? process.stdout;
-  const dir = options.dir ? resolvePath(options.dir) : resolveDefaultLogsDir(process.cwd());
+  const dirs = await resolveTargetLogDirs(process.cwd(), options);
   const tail = Math.max(1, Number.parseInt(options.tail ?? '20', 10) || 20);
 
-  const file = join(dir, ERROR_FILENAME);
-  if (!existsSync(file)) {
+  const allEntries: LogEntry[] = [];
+  for (const dir of dirs) {
+    const file = join(dir, ERROR_FILENAME);
+    if (!existsSync(file)) continue;
+    allEntries.push(...(await readLogEntries(file)));
+  }
+  if (allEntries.length === 0) {
     stdout.write(`No error entries.\n`);
     return 0;
   }
 
-  const entries = await readLogEntries(file);
-  if (entries.length === 0) {
-    stdout.write(`No error entries.\n`);
-    return 0;
-  }
-
-  const sliced = entries.slice(-tail);
+  allEntries.sort((a, b) => (a.timestamp < b.timestamp ? -1 : a.timestamp > b.timestamp ? 1 : 0));
+  const sliced = allEntries.slice(-tail);
   stdout.write(`${formatHeader()}\n`);
   for (const entry of sliced) {
     stdout.write(`${formatRow(entry)}\n`);
@@ -270,13 +299,14 @@ export async function runLogsErrors(
 
 type ShowOptions = {
   dir?: string;
+  project?: string;
   tail?: string;
 };
 
 /**
- * wasteland logs show <sid> [--dir <path>] [--tail N]
+ * wasteland logs show <sid> [--dir <path>] [--tail N] [--project <id|path>]
  *
- * 遍历 dir 下所有 runtime 日切 + error.jsonl，过滤 sessionId === sid，按 timestamp
+ * 默认遍历全部项目的 runtime 日切 + error.jsonl，过滤 sessionId === sid，按 timestamp
  * 升序输出。
  */
 export async function runLogsShow(
@@ -285,23 +315,27 @@ export async function runLogsShow(
   opts: { stdout?: NodeJS.WritableStream } = {}
 ): Promise<number> {
   const stdout = opts.stdout ?? process.stdout;
-  const dir = options.dir ? resolvePath(options.dir) : resolveDefaultLogsDir(process.cwd());
+  const dirs = await resolveTargetLogDirs(process.cwd(), options);
   const tail = Math.max(1, Number.parseInt(options.tail ?? '200', 10) || 200);
 
-  if (!existsSync(dir)) {
-    stdout.write(`No logs directory at ${dir}\n`);
-    return 0;
+  const allEntries: LogEntry[] = [];
+  let sawDir = false;
+  for (const dir of dirs) {
+    if (!existsSync(dir)) continue;
+    sawDir = true;
+    const { errorFile, runtimeFiles } = await listLogFiles(dir);
+    for (const file of [errorFile, ...runtimeFiles]) {
+      if (!file) continue;
+      const entries = await readLogEntries(file);
+      for (const entry of entries) {
+        if (matchesSession(entry, sid)) allEntries.push(entry);
+      }
+    }
   }
 
-  const { errorFile, runtimeFiles } = await listLogFiles(dir);
-
-  const allEntries: LogEntry[] = [];
-  for (const file of [errorFile, ...runtimeFiles]) {
-    if (!file) continue;
-    const entries = await readLogEntries(file);
-    for (const entry of entries) {
-      if (matchesSession(entry, sid)) allEntries.push(entry);
-    }
+  if (!sawDir) {
+    stdout.write(`No logs directory at ${dirs[0] ?? ''}\n`);
+    return 0;
   }
 
   if (allEntries.length === 0) {
@@ -326,6 +360,7 @@ export async function runLogsShow(
 
 type TailOptions = {
   dir?: string;
+  project?: string;
   level?: string;
   scope?: string;
   tail?: string;
@@ -353,30 +388,32 @@ export async function runLogsTail(
   } = {}
 ): Promise<number> {
   const stdout = opts.stdout ?? process.stdout;
-  const dir = options.dir ? resolvePath(options.dir) : resolveDefaultLogsDir(process.cwd());
+  const dirs = await resolveTargetLogDirs(process.cwd(), options);
   const tail = Math.max(1, Number.parseInt(options.tail ?? '50', 10) || 50);
   const level = options.level ? parseLevelOption(options.level) : null;
   const scopes = options.scope
     ? options.scope.split(',').map((s) => s.trim()).filter((s) => s.length > 0)
     : null;
 
-  const sessionsDir = resolveSessionsDir(dir);
+  const sessionsDirs = dirs.map((dir) => resolveSessionsDir(dir));
 
-  if (!existsSync(sessionsDir)) {
+  if (!sessionsDirs.some((d) => existsSync(d))) {
     if (options.follow) {
-      stdout.write(`Waiting for ${sessionsDir} ...\n`);
+      stdout.write(`Waiting for ${sessionsDirs[0] ?? ''} ...\n`);
     } else {
-      stdout.write(`No log files at ${sessionsDir}\n`);
+      stdout.write(`No log files at ${sessionsDirs[0] ?? ''}\n`);
       return 0;
     }
   }
 
-  // 1) 读取所有 session 文件
-  const { runtimeFiles } = await listLogFiles(dir);
+  // 1) 读取全部项目的 session 文件
   const allEntries: LogEntry[] = [];
-  for (const file of runtimeFiles) {
-    const entries = await readLogEntries(file);
-    allEntries.push(...entries);
+  for (const dir of dirs) {
+    const { runtimeFiles } = await listLogFiles(dir);
+    for (const file of runtimeFiles) {
+      const entries = await readLogEntries(file);
+      allEntries.push(...entries);
+    }
   }
 
   // 按 timestamp 排序，取最后 N 条
@@ -394,32 +431,42 @@ export async function runLogsTail(
     return 0;
   }
 
-  // 2) --follow 模式：监听 sessions/ 目录变化
+  // 2) --follow 模式：监听各项目的 sessions/ 目录变化（默认聚合全部项目）
   const fs = await import('node:fs');
   return new Promise<number>((resolve) => {
-    let watcher: import('node:fs').FSWatcher | null = null;
+    const watchers: import('node:fs').FSWatcher[] = [];
 
     try {
-      watcher = fs.watch(sessionsDir, { persistent: false }, async () => {
-        try {
-          // 重新读取所有 session 文件
-          const { runtimeFiles: updatedFiles } = await listLogFiles(dir);
-          const newEntries: LogEntry[] = [];
-          for (const file of updatedFiles) {
-            const entries = await readLogEntries(file);
-            newEntries.push(...entries);
+      for (const sessionsDir of sessionsDirs) {
+        if (!existsSync(sessionsDir)) continue;
+        const watcher = fs.watch(sessionsDir, { persistent: false }, async () => {
+          try {
+            // 重新读取全部项目的 session 文件
+            const newEntries: LogEntry[] = [];
+            for (const dir of dirs) {
+              const { runtimeFiles: updatedFiles } = await listLogFiles(dir);
+              for (const file of updatedFiles) {
+                const entries = await readLogEntries(file);
+                newEntries.push(...entries);
+              }
+            }
+            newEntries.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+            const newFiltered = newEntries.filter((e) => meetsLevel(e, level) && matchesScope(e, scopes));
+            // 输出新增的条目（简化实现：输出最后几条）
+            const newSliced = newFiltered.slice(-10);
+            for (const entry of newSliced) {
+              stdout.write(`${formatRow(entry)}\n`);
+            }
+          } catch {
+            // single read 失败不应终止 watch
           }
-          newEntries.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
-          const newFiltered = newEntries.filter((e) => meetsLevel(e, level) && matchesScope(e, scopes));
-          // 输出新增的条目（简化实现：输出最后几条）
-          const newSliced = newFiltered.slice(-10);
-          for (const entry of newSliced) {
-            stdout.write(`${formatRow(entry)}\n`);
-          }
-        } catch {
-          // single read 失败不应终止 watch
-        }
-      });
+        });
+        watchers.push(watcher);
+      }
+      if (watchers.length === 0) {
+        resolve(0);
+        return;
+      }
     } catch {
       // 某些 FS 不支持 watch；降级为 no-op
       resolve(0);
@@ -427,10 +474,10 @@ export async function runLogsTail(
     }
 
     const cleanup = (): void => {
-      if (watcher) {
+      for (const watcher of watchers) {
         watcher.close();
-        watcher = null;
       }
+      watchers.length = 0;
     };
 
     if (opts.signal) {
@@ -481,6 +528,7 @@ export function createLogsCommand(): Command {
     .description(t('commands.logs.errors.description'))
     .option('--tail <n>', t('commands.logs.errors.options.tail'), '20')
     .option('--dir <path>', t('commands.logs.options.dir'))
+    .option('--project <id|path>', t('commands.logs.options.project'))
     .action(async (options: ErrorsOptions) => {
       const code = await runLogsErrors(options);
       process.exitCode = code;
@@ -490,6 +538,7 @@ export function createLogsCommand(): Command {
     .command('show <sid>')
     .description(t('commands.logs.show.description'))
     .option('--dir <path>', t('commands.logs.options.dir'))
+    .option('--project <id|path>', t('commands.logs.options.project'))
     .option('--tail <n>', t('commands.logs.show.options.tail'), '200')
     .action(async (sid: string, options: ShowOptions) => {
       const code = await runLogsShow(sid, options);
@@ -500,6 +549,7 @@ export function createLogsCommand(): Command {
     .command('tail')
     .description(t('commands.logs.tail.description'))
     .option('--dir <path>', t('commands.logs.options.dir'))
+    .option('--project <id|path>', t('commands.logs.options.project'))
     .option('--level <level>', t('commands.logs.tail.options.level'))
     .option('--scope <scope>', t('commands.logs.tail.options.scope'))
     .option('--tail <n>', t('commands.logs.tail.options.tail'), '50')

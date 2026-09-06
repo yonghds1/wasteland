@@ -1,5 +1,8 @@
-import { resolveUserConfigDir } from "@config/paths.js";
-import { getLoadedSettings } from "@config/loaded-settings.js";
+import { getCurrentProjectId, resolveDefaultDataDir } from "@config/paths.js";
+import {
+  listAllSessions,
+  type ProjectSessionSummary,
+} from "@core/logger/data-store.js";
 /**
  * LogsPage - L2 Dedicated Logs Page (双栏 session 维度，磁盘分页)
  *
@@ -41,12 +44,10 @@ import { wastelandTheme } from '@theme/wasteland/index.js';
 import { t } from '@locales/index.js';
 import type { LogEntry, LogLevel } from '@core/logger/index.js';
 import {
-  listSessions,
   loadSessionEntries,
   getCachedSessionEntries,
 } from '@core/logger/file-log-loader.js';
 import { createSessionIndex } from '@core/session/session-index.js';
-import type { SessionSummaryOnDisk } from '@core/logger/file-log-loader.js';
 import { useAppContext } from '../context/AppContext.js';
 import { useLogsKeymap } from '../hooks/useLogsKeymap.js';
 import { useLogBus } from './LogBusProvider.js';
@@ -79,8 +80,17 @@ const GLOBAL_MAX_SESSIONS = 50;
 /** session 列表轮询间隔（毫秒）：新开对话自动出现在左栏。 */
 const SESSION_LIST_POLL_MS = 5000;
 
-/** 导出文件默认目录（相对项目根）。 */
-const DEFAULT_EXPORT_DIR = join(process.cwd(), '.wasteland', 'exports');
+/**
+ * 非本项目 session 的行尾标签（纯函数，可单测）。
+ *
+ * 本项目返回空串（无视觉噪音）；他项目返回 ` [basename]`（截断 12 列，保住单行虚拟化）。
+ */
+export function projectTag(worktree: string, projectId: string, currentProjectId: string | null): string {
+  if (currentProjectId !== null && projectId === currentProjectId) return '';
+  const base = worktree.split('/').filter(Boolean).pop() ?? worktree;
+  const short = base.length > 12 ? base.slice(0, 11) + '…' : base;
+  return ` [${short}]`;
+}
 
 /** 卡片高度（行数） */
 const CARD_HEIGHT = 4;
@@ -207,15 +217,19 @@ function JsonHighlighter({ data }: { data: unknown }) {
 export function LogsPage({
   initialView = 'list',
   contextRadius = DEFAULT_CONTEXT_RADIUS,
-  exportDir = DEFAULT_EXPORT_DIR,
+  exportDir: exportDirProp,
 }: {
   initialView?: LogsView;
   /** 错误卡片展开时显示的前后上下文条数（默认前后各 5 条）。 */
   contextRadius?: number;
-  /** 导出文件目录（默认 .wasteland/exports；测试可注入临时目录）。 */
+  /** 导出文件目录（默认跟选中 session 的项目走；测试可注入临时目录）。 */
   exportDir?: string;
 } = {}): React.ReactElement {
   const { state, setCurrentPage, setInputMode } = useAppContext();
+
+  // 中央数据根（读聚合唯一入口；单进程 cwd 固定，memo 一次）。
+  const dataRoot = useMemo(() => resolveDefaultDataDir({ cwd: process.cwd() }), []);
+  const currentProjectId = useMemo(() => getCurrentProjectId(), []);
 
   // UI-local filter：初始从 AppContext 取；后续 L/S/P/Enter 修改
   const [minLevel, setMinLevel] = useState<LogLevel>(state.logPageFilter.level ?? 'info');
@@ -248,20 +262,28 @@ export function LogsPage({
   // 底部快捷键提示条：? 键 toggle 显示/隐藏（默认显示，首次进入即给出按键说明）
   const [helpVisible, setHelpVisible] = useState<boolean>(true);
 
-  // 磁盘 session 列表（无限滚动，无分页）
-  const [diskSessions, setDiskSessions] = useState<SessionSummaryOnDisk[]>([]);
+  // 磁盘 session 列表（无限滚动，无分页；中央数据根全项目聚合，本项目置顶）。
+  const [diskSessions, setDiskSessions] = useState<ProjectSessionSummary[]>([]);
   const [diskSessionsLoaded, setDiskSessionsLoaded] = useState<boolean>(false);
 
-  // 从磁盘加载 session 列表（只加载摘要，不加载日志条目）。
+  // 从中央数据根聚合 session 摘要（只加载摘要，不加载日志条目）。
   // 5s 轮询一次：新 session 出现 / 已有 session 追加日志时自动刷新排序与计数。
-  // listSessions 内部有文件指纹缓存，无变化时返回同一数组引用，setState 自动 bail out，不触发重渲染。
+  // listAllSessions 底层 listSessions 有文件指纹缓存，无变化时引用稳定，setState 自动 bail out。
+  // 排序：本项目优先（保持单项目时的原有顺序），其余按 lastTime 倒序。
   useEffect(() => {
     let cancelled = false;
     const controller = new AbortController();
-    const logDir = getLoadedSettings()?.projectConfigDir ?? resolveUserConfigDir();
     const load = (): void => {
-      listSessions({ dir: logDir, signal: controller.signal })
-        .then((sessions) => {
+      listAllSessions(dataRoot, controller.signal)
+        .then((all) => {
+          if (cancelled) return;
+          const curPid = currentProjectId;
+          const sessions = [...all].sort((a, b) => {
+            const aCur = curPid !== null && a.projectId === curPid ? 0 : 1;
+            const bCur = curPid !== null && b.projectId === curPid ? 0 : 1;
+            if (aCur !== bCur) return aCur - bCur;
+            return b.lastTime.localeCompare(a.lastTime);
+          });
           if (cancelled) return;
           // 选中跟随：头部插入导致选中 session 下移时，按 id 找回并修正索引，
           // 同时标记 keep，抑制 [sessions.length] effect 的回顶（用户正在看别处）。
@@ -320,6 +342,18 @@ export function LogsPage({
   // Session 列表：无限滚动（ScrollableBox 虚拟化）
   const sessions = filteredSessions;
 
+  // 多项目标签开关：仅当列表含 ≥2 个项目时展示归属标签；
+  // 单项目时渲染与旧版逐像素一致（零回归噪音）。
+  const multiProject = useMemo(
+    () => new Set(sessions.map((s) => s.projectId)).size > 1,
+    [sessions]
+  );
+  const sessionTag = useCallback(
+    (s: ProjectSessionSummary): string =>
+      multiProject ? projectTag(s.worktree, s.projectId, currentProjectId) : '',
+    [multiProject, currentProjectId]
+  );
+
   // 选中的 session index
   const [selectedSessionIdx, setSelectedSessionIdx] = useState<number>(0);
   // 卡片展开状态
@@ -332,7 +366,11 @@ export function LogsPage({
   });
 
   // 选中的 session 摘要
-  const selectedSessionSummary: SessionSummaryOnDisk | undefined = sessions[selectedSessionIdx];
+  const selectedSessionSummary: ProjectSessionSummary | undefined = sessions[selectedSessionIdx];
+
+  // 导出目录：显式注入优先，否则跟选中 session 的项目走（跨项目导出落各自家）。
+  const effectiveExportDir =
+    exportDirProp ?? join(dataRoot, 'exports', selectedSessionSummary?.projectId ?? 'global');
 
   // 选中 session 的原始日志条目（从磁盘按需加载，不做 level 过滤；
   // level 过滤在 sessionCards memo 内做，时间线聚合用原始条目）
@@ -407,14 +445,14 @@ export function LogsPage({
   const [globalSessionEntries, setGlobalSessionEntries] = useState<SessionLogGroup[]>([]);
   const [globalTimelineLoading, setGlobalTimelineLoading] = useState<boolean>(false);
 
-  // 当选中 session 变化时，从磁盘加载其日志条目
+  // 当选中 session 变化时，从其归属项目的中央目录加载日志条目
   useEffect(() => {
     if (!selectedSessionSummary) {
       setSelectedSessionEntries([]);
       return;
     }
 
-    const logDir = getLoadedSettings()?.projectConfigDir ?? resolveUserConfigDir();
+    const logDir = join(dataRoot, 'logs', selectedSessionSummary.projectId);
     const sessionId = selectedSessionSummary.sessionId;
 
     // 缓存命中：同步渲染缓存条目（避免 loading 闪烁），但不早退——
@@ -467,8 +505,7 @@ export function LogsPage({
       return;
     }
     let cancelled = false;
-    const logDir = getLoadedSettings()?.projectConfigDir ?? resolveUserConfigDir();
-    createSessionIndex(join(logDir, 'sessions'))
+    createSessionIndex(join(dataRoot, 'sessions', selectedSessionSummary.projectId))
       .getSession(selectedSessionSummary.sessionId)
       .then((detail) => {
         if (!cancelled) {
@@ -500,7 +537,6 @@ export function LogsPage({
 
     let cancelled = false;
     const controller = new AbortController();
-    const logDir = getLoadedSettings()?.projectConfigDir ?? resolveUserConfigDir();
     const summaries = diskSessions.slice(0, GLOBAL_MAX_SESSIONS);
 
     setGlobalSessionEntries([]);
@@ -512,7 +548,7 @@ export function LogsPage({
         summaries.map(async (s) => {
           try {
             const entries = await loadSessionEntries({
-              dir: logDir,
+              dir: join(dataRoot, 'logs', s.projectId),
               sessionId: s.sessionId,
               signal: controller.signal,
             });
@@ -780,7 +816,7 @@ export function LogsPage({
       }
       try {
         const filePath = await exportLogEntries({
-          dir: exportDir,
+          dir: effectiveExportDir,
           sessionId: selectedSessionSummary.sessionId,
           entries: sessionCards,
           format,
@@ -790,7 +826,7 @@ export function LogsPage({
         setExportStatus(`✗ 导出失败: ${(err as Error).message}`);
       }
     },
-    [selectedSessionSummary, sessionCards, exportDir],
+    [selectedSessionSummary, sessionCards, effectiveExportDir],
   );
 
   const clampedSelectedIdx = (selectedCardIdx < cardScroll.offset || selectedCardIdx >= cardScroll.offset + cardWindowSize) ? cardScroll.offset : selectedCardIdx;
@@ -943,7 +979,7 @@ export function LogsPage({
             <Box marginTop={1}>
               <Text color={wastelandTheme.colors.muted}>
                 {diskSessionsLoaded
-                  ? '(no sessions — run a session to generate logs, logs saved to .wasteland/logs/sessions/)'
+                  ? '(no sessions — run a session to generate logs)'
                   : '(loading sessions...)'}
               </Text>
             </Box>
@@ -985,6 +1021,7 @@ export function LogsPage({
                     <Text color={statusColor}>{statusIcon}</Text>
                     {' '}
                     {truncate(session.lastMessage, 30)}
+                    {sessionTag(session)}
                   </Text>
                 </Box>
               );
@@ -999,7 +1036,7 @@ export function LogsPage({
             <Box flexDirection="row">
               <Text color={wastelandTheme.colors.muted}>
                 {selectedSessionSummary
-                  ? `session: ${selectedSessionSummary.sessionId} (${mergedSessionEntries.length} entries${liveBuffer.length > 0 ? ` +${liveBuffer.length} live` : ''})`
+                  ? `session: ${selectedSessionSummary.sessionId}${sessionTag(selectedSessionSummary)} (${mergedSessionEntries.length} entries${liveBuffer.length > 0 ? ` +${liveBuffer.length} live` : ''})`
                   : 'session: (none selected)'}
               </Text>
               {selectedSessionSummary && (

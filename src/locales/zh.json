@@ -108,17 +108,19 @@
     },
     "sessions": {
       "list": {
-        "description": "列出本地 session",
+        "description": "列出全部项目的 session",
         "options": {
           "limit": "最大返回数量",
           "search": "搜索关键词",
           "provider": "按 Provider 过滤",
           "mode": "按模式过滤",
           "sort": "排序方式",
-          "json": "输出 JSON 格式"
+          "json": "输出 JSON 格式",
+          "project": "只看指定项目（ID 或路径）"
         },
         "found": "找到 {{count}} 个 session:",
-        "error": "列出 session 失败: {{error}}"
+        "error": "列出 session 失败: {{error}}",
+        "unknownProject": "未知项目: {{id}}"
       },
       "show": {
         "description": "查看 session 详情",
@@ -130,6 +132,7 @@
         "title": "Session 详情: {{id}}",
         "time": "时间",
         "provider": "Provider",
+        "project": "项目",
         "mode": "模式",
         "cwd": "工作目录",
         "messages": "消息",
@@ -565,7 +568,8 @@
       "description": "查看 wasteland 运行时日志",
       "deprecated": "⚠ wasteland logs 已废弃：请用 TUI 日志页（wasteland /logs）查看，功能完整（搜索/过滤/对话合并/导出）",
       "options": {
-        "dir": "日志目录（默认 <cwd>/.wasteland/logs）"
+        "dir": "日志目录（显式覆盖；默认走中央数据根，--project 聚合多项目）",
+        "project": "只看指定项目（ID 或路径）"
       },
       "errors": {
         "description": "查看 error.jsonl 最近条目（warn/error）",

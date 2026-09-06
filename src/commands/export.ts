@@ -2,6 +2,8 @@ import { Command } from 'commander';
 
 import { t } from '@locales/index.js';
 import { createSessionIndex, type SessionDetail } from '@core/session/session-index.js';
+import { getTranscriptAcrossProjects } from '@core/session/session-locator.js';
+import { resolveDefaultDataDir } from '@config/paths.js';
 
 /**
  * 把 session.jsonl 转换为 markdown 格式。
@@ -60,6 +62,12 @@ export function createExportCommand(): Command {
       let session: SessionDetail | null;
       if (sessionId) {
         session = await sessionIndex.getSession(sessionId);
+        // 本项目未命中 → 中央数据根跨项目定位
+        if (!session) {
+          const dataRoot = resolveDefaultDataDir({ cwd: process.cwd() });
+          const found = await getTranscriptAcrossProjects(dataRoot, sessionId);
+          session = found?.detail ?? null;
+        }
         if (!session) {
           console.error(`${t('commands.export.notFound')} ${sessionId}`);
           process.exit(1);

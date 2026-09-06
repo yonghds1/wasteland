@@ -10,20 +10,37 @@
 
 ## 当前目录约定
 
-项目级目录统一使用 `.wasteland/`：
+项目级目录统一使用 `.wasteland/`（仅配置，不再存数据）：
 
 ```text
 .wasteland/
   settings.json
   auth.json
-  sessions/
 ```
 
 当前各文件/目录职责：
 
 - `.wasteland/settings.json`：结构化配置入口；适合 provider/model/role/runtime 等默认值
 - `.wasteland/auth.json`：本地 secrets；适合 API key、token 等敏感值
-- `.wasteland/sessions/`：本地 session transcript 输出目录
+
+## 中央数据根（09-06-central-log-store 起）
+
+日志 / transcript / 导出物不再写项目本地，统一收敛到中央数据根（OpenCode 模式：单根 + projectID 命名空间）：
+
+```text
+~/.wasteland/data/
+  migration                  # 数据版本（当前 1）
+  project/<projectId>.json   # { id, vcs, worktree, created }
+  logs/<projectId>/          # FileSink 日志（含 sessions/<sid>.jsonl + error.jsonl）
+  sessions/<projectId>/      # session transcript（*.jsonl）
+  exports/<projectId>/       # 日志导出物
+```
+
+- projectID：git 仓库取 root commit hash（目录改名稳定），非 git 目录回退 `local-<sha1(cwd)[:16]>`；
+- 数据根：`WASTELAND_DATA_DIR` 显式覆盖，否则 `WASTELAND_HOME/data`；
+  `WASTELAND_LOG_DIR` / `WASTELAND_SESSION_DIR` 保留为单目录调试覆盖；
+- 旧 `.wasteland/{logs,sessions}` 原地保留但不再读写（M2 清理另起任务）；
+- 读侧（TUI `/logs`、sessions/resume/export/logs 命令）默认跨项目聚合，本项目置顶，他项目带工作目录标签。
 
 用户级全局配置默认位于：
 

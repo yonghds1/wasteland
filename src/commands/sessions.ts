@@ -11,8 +11,16 @@
  * - 支持批量操作
  */
 
+import { join } from 'node:path';
 import { Command } from 'commander';
 import { createSessionIndex, type SessionDetail, type SessionSummary } from '@core/session/session-index.js';
+import {
+  getTranscriptAcrossProjects,
+  listTranscriptsAllProjects,
+  resolveProjectOption,
+  type ProjectSessionSummary,
+} from '@core/session/session-locator.js';
+import { resolveDefaultDataDir } from '@config/paths.js';
 import { t, getLanguage } from '@locales/index.js';
 
 // ============================================================
@@ -66,9 +74,9 @@ function truncate(text: string | undefined, maxLength: number): string {
 }
 
 /**
- * 格式化 session 列表
+ * 格式化 session 列表（聚合项带项目归属行）。
  */
-function formatSessionList(sessions: SessionSummary[]): string {
+function formatSessionList(sessions: SessionSummary[] | ProjectSessionSummary[]): string {
   if (sessions.length === 0) {
     return t('commands.sessions.list.empty', { count: '0' });
   }
@@ -76,23 +84,28 @@ function formatSessionList(sessions: SessionSummary[]): string {
   const lines: string[] = [];
 
   for (const session of sessions) {
-    const id = session.id;
-    const date = formatDateTime(session.createdAt);
-    const messages = `${session.messageCount} ${t('commands.sessions.show.messages')}`;
-    const provider = session.providerId || t('commands.sessions.unknown');
-    const preview = truncate(session.firstUserMessage, 50);
+    const wrapped = 'summary' in session ? session.summary : session;
+    const project = 'summary' in session ? session : null;
+    const id = wrapped.id;
+    const date = formatDateTime(wrapped.createdAt);
+    const messages = `${wrapped.messageCount} ${t('commands.sessions.show.messages')}`;
+    const provider = wrapped.providerId || t('commands.sessions.unknown');
+    const preview = truncate(wrapped.firstUserMessage, 50);
 
     lines.push(`  ${id}`);
     lines.push(`    ${t('commands.sessions.show.time')} ${date}`);
     lines.push(`    ${t('commands.sessions.show.messages')}: ${messages}`);
     lines.push(`    Provider: ${provider}`);
+    if (project) {
+      lines.push(`    ${t('commands.sessions.show.project')}: ${project.worktree}`);
+    }
 
     if (preview) {
       lines.push(`    ${t('commands.sessions.show.preview')}: ${preview}`);
     }
 
-    if (session.hasChildren) {
-      lines.push(`    ${t('commands.sessions.show.subAgent')}: ${session.childNames.join(', ')}`);
+    if (wrapped.hasChildren) {
+      lines.push(`    ${t('commands.sessions.show.subAgent')}: ${wrapped.childNames.join(', ')}`);
     }
 
     lines.push('');
@@ -174,11 +187,22 @@ export function createSessionsCommand(): Command {
       'newest'
     )
     .option('--json', t('commands.sessions.list.options.json'))
+    .option('--project <id|path>', t('commands.sessions.list.options.project'))
     .action(async (options) => {
       try {
-        const sessionIndex = createSessionIndex();
+        // 中央数据根聚合：默认全项目，--project 收窄（本项目置顶由 locator 负责）
+        const dataRoot = resolveDefaultDataDir({ cwd: process.cwd() });
+        let projectIds: string[] | undefined;
+        if (options.project?.trim()) {
+          const resolved = await resolveProjectOption(dataRoot, options.project);
+          if (!resolved) {
+            console.error(t('commands.sessions.list.unknownProject', { id: options.project }));
+            process.exit(1);
+          }
+          projectIds = [resolved];
+        }
 
-        const sessions = await sessionIndex.listSessions({
+        const sessions = await listTranscriptsAllProjects(dataRoot, projectIds, {
           limit: parseInt(options.limit, 10),
           search: options.search,
           provider: options.provider,
@@ -212,7 +236,14 @@ export function createSessionsCommand(): Command {
     .action(async (sessionId: string, options) => {
       try {
         const sessionIndex = createSessionIndex();
-        const session = await sessionIndex.getSession(sessionId);
+        let session = await sessionIndex.getSession(sessionId);
+
+        // 本项目未命中 → 跨项目定位（中央数据根）
+        if (!session) {
+          const dataRoot = resolveDefaultDataDir({ cwd: process.cwd() });
+          const found = await getTranscriptAcrossProjects(dataRoot, sessionId);
+          session = found?.detail ?? null;
+        }
 
         if (!session) {
           console.error(t('commands.sessions.show.notFound', { id: sessionId }));
@@ -247,7 +278,18 @@ export function createSessionsCommand(): Command {
         }
 
         const sessionIndex = createSessionIndex();
-        const success = await sessionIndex.deleteSession(sessionId);
+        let success = await sessionIndex.deleteSession(sessionId);
+
+        // 本项目未命中 → 跨项目定位后在归属目录删除
+        if (!success) {
+          const dataRoot = resolveDefaultDataDir({ cwd: process.cwd() });
+          const found = await getTranscriptAcrossProjects(dataRoot, sessionId);
+          if (found) {
+            success = await createSessionIndex(
+              join(dataRoot, 'sessions', found.projectId)
+            ).deleteSession(sessionId);
+          }
+        }
 
         if (success) {
           console.log(t('commands.sessions.delete.deleted', { id: sessionId }));
@@ -272,8 +314,15 @@ export function createSessionsCommand(): Command {
     .option('--json', t('commands.sessions.stats.options.json'))
     .action(async (options) => {
       try {
-        const sessionIndex = createSessionIndex();
-        const stats = await sessionIndex.getStats();
+        // 全项目聚合统计
+        const dataRoot = resolveDefaultDataDir({ cwd: process.cwd() });
+        const all = await listTranscriptsAllProjects(dataRoot, undefined, { limit: 100000 });
+        const times = all.map((s) => s.summary.createdAt).filter(Boolean).sort();
+        const stats = {
+          totalSessions: all.length,
+          oldestSession: times[0],
+          newestSession: times[times.length - 1],
+        };
 
         if (options.json) {
           console.log(JSON.stringify(stats, null, 2));

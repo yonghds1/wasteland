@@ -108,17 +108,19 @@
     },
     "sessions": {
       "list": {
-        "description": "List local sessions",
+        "description": "List sessions across all projects",
         "options": {
           "limit": "Max number of results",
           "search": "Search keyword",
           "provider": "Filter by Provider",
           "mode": "Filter by mode",
           "sort": "Sort order",
-          "json": "Output as JSON"
+          "json": "Output as JSON",
+          "project": "Only show the given project (ID or path)"
         },
         "found": "Found {{count}} sessions:",
-        "error": "Failed to list sessions: {{error}}"
+        "error": "Failed to list sessions: {{error}}",
+        "unknownProject": "Unknown project: {{id}}"
       },
       "show": {
         "description": "Show session details",
@@ -130,6 +132,7 @@
         "title": "Session details: {{id}}",
         "time": "Time",
         "provider": "Provider",
+        "project": "Project",
         "mode": "Mode",
         "cwd": "Working directory",
         "messages": "Messages",
@@ -565,7 +568,8 @@
       "description": "Read wasteland runtime logs",
       "deprecated": "⚠ wasteland logs is deprecated: use the TUI Logs page (wasteland /logs) instead, which is fully featured (search/filter/conversation merge/export)",
       "options": {
-        "dir": "Logs directory (default <cwd>/.wasteland/logs)"
+        "dir": "Logs directory (explicit override; default is the central data root, --project aggregates)",
+        "project": "Only show the given project (ID or path)"
       },
       "errors": {
         "description": "List recent entries from error.jsonl (warn/error)",
