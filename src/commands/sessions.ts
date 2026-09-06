@@ -12,7 +12,7 @@
  */
 
 import { Command } from 'commander';
-import { createSessionIndex, type SessionDetail, type SessionSummary } from '@core/runtime/session-index.js';
+import { createSessionIndex, type SessionDetail, type SessionSummary } from '@core/session/session-index.js';
 import { t, getLanguage } from '@locales/index.js';
 
 // ============================================================

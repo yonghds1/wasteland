@@ -14,8 +14,8 @@
  */
 
 import { composeAgentPrompt } from '@config/roles/index.js';
-import { runAgentLoop } from '@core/runtime/agent-loop.js';
-import type { UserInputBridge } from '@core/runtime/user-input-bridge.js';
+import { runAgentLoop } from '@core/engine/agent-loop.js';
+import type { UserInputBridge } from '@core/engine/user-input-bridge.js';
 import type { RuntimeEnvironment } from './initialize-runtime.js';
 
 type LoopParams = Parameters<typeof runAgentLoop>[0];

@@ -10,7 +10,7 @@
  * 等字段，结构与 SubAgentSettings 一致（见 settings-types.ts）。
  */
 
-import type { PermissionMode } from '@core/runtime/permission-gate.js';
+import type { PermissionMode } from '@core/engine/permission-gate.js';
 import type { PromptTemplateRef } from '../prompts/prompt-types.js';
 
 /**

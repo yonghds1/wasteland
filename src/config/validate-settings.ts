@@ -5,7 +5,7 @@
  * 无 IO，可独立单测；解析装配仍由 `load-settings.ts` 负责。
  */
 
-import type { PermissionMode } from '@core/runtime/permission-gate.js';
+import type { PermissionMode } from '@core/engine/permission-gate.js';
 import type {
   A2AAgentConfig,
   A2AAgentsConfig,

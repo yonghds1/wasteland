@@ -1,4 +1,4 @@
-import type { PermissionMode } from '@core/runtime/permission-gate.js';
+import type { PermissionMode } from '@core/engine/permission-gate.js';
 import type { PromptTemplateRef } from './prompts/prompt-types.js';
 import type { RoleDefinition } from './roles/types.js';
 import { DEFAULT_LANGUAGE } from '@locales/index.js';

@@ -13,9 +13,9 @@ import { reviewSkill } from '../review-skill.js';
 import { ToolRegistry } from '@tools/tool-registry.js';
 import { initI18n } from '@locales/i18n.js';
 import type { SkillArgs, SkillExecutionContext } from '../../skill-types.js';
-import type { SessionMetadata } from '@core/runtime/session-manager.js';
-import type { PermissionGate } from '@core/runtime/permission-gate.js';
-import type { SessionManager } from '@core/runtime/session-manager.js';
+import type { SessionMetadata } from '@core/session/session-manager.js';
+import type { PermissionGate } from '@core/engine/permission-gate.js';
+import type { SessionManager } from '@core/session/session-manager.js';
 import type { SessionMessageRecord } from '@core/runtime/event-types.js';
 import type { AgentProvider } from '@providers/provider-types.js';
 

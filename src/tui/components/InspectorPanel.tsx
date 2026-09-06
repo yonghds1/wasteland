@@ -13,7 +13,7 @@ import { useAppContext } from '../context/AppContext.js';
 import { t } from '@locales/index.js';
 import { wastelandTheme } from '@theme/wasteland/index.js';
 import { getAgentMode } from '@config/agent-mode-state.js';
-import { resolveContextWindow } from '@core/runtime/context-manager.js';
+import { resolveContextWindow } from '@core/memory/context-manager.js';
 import { statusIcon } from './AgentTabs.js';
 
 interface InspectorPanelProps {

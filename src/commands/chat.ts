@@ -9,7 +9,7 @@ import type { Observable } from 'rxjs';
 import { Command } from 'commander';
 
 import type { ChatInputTurn, RuntimeMode } from '@core/runtime/event-types.js';
-import { UserInputBridge } from '@core/runtime/user-input-bridge.js';
+import { UserInputBridge } from '@core/engine/user-input-bridge.js';
 import {
   initializeRuntime,
   resolveAgentMode,

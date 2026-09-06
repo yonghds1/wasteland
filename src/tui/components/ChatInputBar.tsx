@@ -15,7 +15,7 @@ import { Text, Box, useInput } from 'ink';
 import { useAppContext } from '../context/AppContext.js';
 import { t } from '@locales/index.js';
 import { wastelandTheme } from '@theme/wasteland/index.js';
-import { describeAllowPattern } from '@core/runtime/permission-gate.js';
+import { describeAllowPattern } from '@core/engine/permission-gate.js';
 import type { Skin } from '@skins/index.js';
 import type { TuiRuntimeContext } from '../types.js';
 

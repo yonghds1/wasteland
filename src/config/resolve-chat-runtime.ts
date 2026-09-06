@@ -1,4 +1,4 @@
-import type { PermissionMode } from '@core/runtime/permission-gate.js';
+import type { PermissionMode } from '@core/engine/permission-gate.js';
 import type {
   ModelSettings,
   ProviderSettings,

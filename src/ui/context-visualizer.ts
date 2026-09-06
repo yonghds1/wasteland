@@ -16,7 +16,7 @@ import type {
   UsageHistoryEntry,
   MessageDistribution,
   PerformanceMetrics,
-} from '@core/runtime/context-stats.js';
+} from '@core/memory/context-stats.js';
 
 import { ANSI } from './terminal-theme.js';
 

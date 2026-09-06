@@ -1,56 +1,40 @@
-# Wasteland 项目开发指南
+# Wasteland AI 导航与高频速查 (AI Router & Cheat Sheet)
 
-## 代码组织约定
+> **⚠️ 致所有 AI 编程助手 (Claude, Cursor, Gemini 等)**：
+> 本项目采用 Trellis 系统进行知识管理。请**不要**依赖你自身的预训练记忆来猜测项目的架构或业务逻辑。
 
-### 测试文件
-- **位置**：使用 Vitest（`.test.ts`），放在 `src/<module>/__tests__/` 目录
-- **导入规则**：从源码导入，不从 `dist/` 导入
-- **示例**：
-  ```
-  src/config/__tests__/load-settings.test.ts
-  src/commands/__tests__/skin.test.ts
-  ```
+## 🔍 核心知识库路由 (Single Source of Truth)
 
-### 目录结构
-- 新模块遵循 `index.ts` + `__tests__/` 结构
-- 现有模块保持原样，不强制重组
-- 公共 API 通过 `index.ts` 导出
-- 主要模块：`core`（核心运行时）、`providers`（LLM 提供者）、`tools`（工具实现）、`commands`（CLI 命令）、`tui`（TUI 界面）、`config`（配置系统）、`skins`（皮肤系统）、`theme`（主题视觉）、`skills`（技能系统）、`acp`（A2A 协议）、`locales`（国际化）、`ui`（CLI 适配器）
+你所需的真实、最新的项目规范全部存放在 `.trellis/` 目录中：
 
-### 文件大小
-- 建议单个文件不超过 500 行
-- 超标文件记录但不强制拆分
+- **开发流程与任务分配**：阅读 `.trellis/workflow.md`
+- **后端架构边界与记忆设计**：阅读 `.trellis/spec/backend/index.md` (重点关注 `architecture-rules.md`)
+- **前端渲染与皮肤主题系统**：阅读 `.trellis/spec/frontend/index.md`
+- **当前活跃任务状态**：查看 `.trellis/tasks/` 目录下的最新任务。
 
-### 导入约定
-- 使用相对路径导入
-- 类型导入使用 `import type`
-- 避免循环依赖
+---
 
-## 测试运行
+## ⚡ 绝对底线规范 (Non-negotiable Rules)
+
+在不查阅具体 Spec 的情况下进行简单修改时，必须遵守以下铁律：
+
+1. **测试文件**：使用 Vitest，必须放置在与被测试文件同级的 `__tests__/` 目录中（严禁在同级混杂外露的 `.test.ts`）。
+2. **代码体积**：单文件严格控制在 500 行以内。
+3. **导入语法**：
+   - 类型导入必须使用 `import type`。
+   - 内部模块使用相对路径导入，严禁从 `dist/` 导入。
+
+---
+
+## 🛠️ 高频开发指令 (Cheat Sheet)
 
 ```bash
+# 测试
 npm test                    # 运行所有测试
 npx vitest run <file>       # 运行单个测试文件
-```
 
-## 构建
-
-```bash
+# 构建与检查
 npm run build               # 构建 TypeScript
 npm run typecheck           # 类型检查
-npm run check:locale-parity # 检查 i18n 一致性
-npm run check:contrast      # 检查皮肤对比度
+npm run check:fast          # 快速类型与 Lint 检查
 ```
-
-## 皮肤系统
-
-- 皮肤定义：`src/skins/default-skins.json`
-- 项目配置：`.wasteland/skins.json`
-- 默认皮肤：`warlord-stern`（热沙总督）
-- 测试：`src/commands/__tests__/skin.test.ts`
-
-## 主题系统
-
-- 颜色：`src/theme/wasteland/colors.ts`
-- 装饰：`src/theme/wasteland/decorations.ts`
-- 皮肤对比度：`npm run check:contrast`

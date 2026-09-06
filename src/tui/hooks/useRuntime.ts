@@ -13,12 +13,12 @@ import {
   startAgentLoop,
 } from '@core/shared/run-agent-helpers.js';
 import { enableDebugLog, ensureFileSink } from '@core/runtime/debug-logger.js';
-import { UserInputBridge } from '@core/runtime/user-input-bridge.js';
+import { UserInputBridge } from '@core/engine/user-input-bridge.js';
 import { composeAgentPrompt } from '@config/roles/index.js';
 import { getAgentMode } from '@config/agent-mode-state.js';
 import { resolveChatRuntime } from '@config/resolve-chat-runtime.js';
 import { initI18n } from '@locales/index.js';
-import type { PermissionMode } from '@core/runtime/permission-gate.js';
+import type { PermissionMode } from '@core/engine/permission-gate.js';
 import type { TuiRuntimeContext, TuiConfig, TuiFullConfig } from '../types.js';
 import type { ChatInputTurn } from '@core/runtime/event-types.js';
 

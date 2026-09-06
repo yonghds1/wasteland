@@ -9,7 +9,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { restoreHistoryFromRecords, createResumedSessionMetadata } from '../resume.js';
-import type { SessionDetail } from '@core/runtime/session-index.js';
+import type { SessionDetail } from '@core/session/session-index.js';
 
 function record(type: string, extra: Record<string, unknown> = {}): any {
   return { type, ...extra };

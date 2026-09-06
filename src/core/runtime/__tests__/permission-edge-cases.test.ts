@@ -22,7 +22,7 @@ import {
   type PermissionMode,
   type PermissionRule,
   type PermissionDecision
-} from '../permission-gate.js';
+} from '../../engine/permission-gate.js';
 import type { ToolCall, ToolRiskLevel } from '../../../tools/tool-types.js';
 
 // ============================================================

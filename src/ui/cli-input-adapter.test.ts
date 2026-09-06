@@ -10,8 +10,8 @@ import { Readable, Writable } from 'node:stream';
 import type { EventEmitter } from 'node:events';
 
 import { CliInputAdapter } from './cli-input-adapter.js';
-import { UserInputBridge } from '@core/runtime/user-input-bridge.js';
-import { createPermissionGate } from '@core/runtime/permission-gate.js';
+import { UserInputBridge } from '@core/engine/user-input-bridge.js';
+import { createPermissionGate } from '@core/engine/permission-gate.js';
 
 class FakeStdin extends Readable {
   isTTY = true;

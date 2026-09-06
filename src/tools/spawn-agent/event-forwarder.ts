@@ -30,7 +30,7 @@ import type {
 } from '@core/runtime/event-types.js';
 
 import type { FinishStatus, SpawnAgentContext } from './types.js';
-import { summarizeRecords } from '@core/runtime/context-summarizer.js';
+import { summarizeRecords } from '@core/memory/context-summarizer.js';
 
 /**
  * 将子 agent 内部事件翻译为父侧可观察事件。

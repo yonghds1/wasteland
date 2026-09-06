@@ -26,8 +26,8 @@ import {
   enableDebugLog,
   initializeFileSinkFromEnv,
 } from '@core/runtime/debug-logger.js';
-import { createSessionIndex, type SessionDetail, type SessionSummary } from '@core/runtime/session-index.js';
-import { UserInputBridge } from '@core/runtime/user-input-bridge.js';
+import { createSessionIndex, type SessionDetail, type SessionSummary } from '@core/session/session-index.js';
+import { UserInputBridge } from '@core/engine/user-input-bridge.js';
 import { renderRuntimeEvents } from '@ui/terminal-renderer.js';
 import { CliInputAdapter } from '@ui/cli-input-adapter.js';
 import { createSingleTurnInput } from '@ui/readline-input.js';

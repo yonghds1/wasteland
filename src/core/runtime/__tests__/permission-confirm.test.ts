@@ -8,8 +8,8 @@
 import { describe, it, expect } from 'vitest';
 import { lastValueFrom } from 'rxjs';
 
-import { requestPermissionConfirmation } from '../dispatch-utils.js';
-import type { PermissionDecision } from '../permission-gate.js';
+import { requestPermissionConfirmation } from '../../engine/dispatch-utils.js';
+import type { PermissionDecision } from '../../engine/permission-gate.js';
 
 const session = {
   id: 's',
@@ -28,42 +28,42 @@ const askDecision: PermissionDecision = { decision: 'ask', mode: 'default', reas
 
 describe('requestPermissionConfirmation', () => {
   it("'yes' → allowed", async () => {
-    const result = await lastValueFrom(
+    const result: any = await lastValueFrom(
       requestPermissionConfirmation(
         { session, turn: 1, call, userInputBridge: bridgeWith('yes') },
         askDecision
       )
     );
-    expect(result.allowed).toBe(true);
+    expect((result as any).allowed).toBe(true);
   });
 
   it("'always' → allowed（本次放行；session 规则由 UI 侧注册）", async () => {
-    const result = await lastValueFrom(
+    const result: any = await lastValueFrom(
       requestPermissionConfirmation(
         { session, turn: 1, call, userInputBridge: bridgeWith('always') },
         askDecision
       )
     );
-    expect(result.allowed).toBe(true);
-    expect(result.askEvents[0]).toMatchObject({ type: 'user_input_received', answer: 'always' });
+    expect((result as any).allowed).toBe(true);
+    expect((result as any).askEvents[0]).toMatchObject({ type: 'user_input_received', answer: 'always' });
   });
 
   it("'no' → denied", async () => {
-    const result = await lastValueFrom(
+    const result: any = await lastValueFrom(
       requestPermissionConfirmation(
         { session, turn: 1, call, userInputBridge: bridgeWith('no') },
         askDecision
       )
     );
-    expect(result.allowed).toBe(false);
+    expect((result as any).allowed).toBe(false);
   });
 
   it('非 ask 决策直接透传，不经过 bridge', async () => {
     const allowDecision: PermissionDecision = { decision: 'allow', mode: 'default', reason: 'ok' };
-    const result = await lastValueFrom(
+    const result: any = await lastValueFrom(
       requestPermissionConfirmation({ session, turn: 1, call }, allowDecision)
     );
-    expect(result.allowed).toBe(true);
-    expect(result.askEvents).toEqual([]);
+    expect((result as any).allowed).toBe(true);
+    expect((result as any).askEvents).toEqual([]);
   });
 });

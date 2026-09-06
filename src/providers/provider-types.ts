@@ -1,7 +1,7 @@
 import type { Observable } from 'rxjs';
 
 import type { TurnContext } from '@core/runtime/turn-context.js';
-import type { TurnState } from '@core/runtime/turn-state.js';
+import type { TurnState } from '@core/engine/turn-state.js';
 import type { ToolCall } from '@tools/tool-types.js';
 
 /**

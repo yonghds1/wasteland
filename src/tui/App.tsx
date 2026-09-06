@@ -15,7 +15,7 @@ import { resolveUserConfigDir } from '@config/paths.js';
 import { getKeymapRegistry } from './keymap/index.js';
 import { updateRuntimeMode, updateRuntimePermissionMode } from '@config/config-writer.js';
 import { setAgentMode } from '@config/agent-mode-state.js';
-import type { PermissionMode } from '@core/runtime/permission-gate.js';
+import type { PermissionMode } from '@core/engine/permission-gate.js';
 import { t } from '@locales/index.js';
 import type { TuiRuntimeContext, TuiFullConfig } from './types.js';
 import { buildTabs, selectTabViewFilter, type AgentTab } from './components/AgentTabs.js';

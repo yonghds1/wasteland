@@ -14,7 +14,7 @@
 import { t } from '@locales/index.js';
 import type { Skill, SkillArgs, SkillExecutionContext, SkillResult } from '../skill-types.js';
 import { createTurnContext } from '@core/runtime/turn-context.js';
-import { createInitialTurnState } from '@core/runtime/turn-state.js';
+import { createInitialTurnState } from '@core/engine/turn-state.js';
 
 /** 审查发现项 */
 interface ReviewFinding {

@@ -16,7 +16,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Text, Box, useInput } from 'ink';
-import { createSessionIndex, type SessionSummary } from '@core/runtime/session-index.js';
+import { createSessionIndex, type SessionSummary } from '@core/session/session-index.js';
 import { wastelandTheme } from '@theme/wasteland/index.js';
 import { ScrollableBox, useScroll } from './ScrollableBox.js';
 

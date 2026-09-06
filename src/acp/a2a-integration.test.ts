@@ -16,7 +16,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { ClaudeCodeA2AServer } from './a2a-claude-code-adapter.js';
 import { A2AClient } from './a2a-client.js';
 import { createDefaultToolRegistry } from '../tools/default-registry.js';
-import { filterToolRegistry, MAIN_AGENT_TOOL_NAMES } from '../core/runtime/agent-loop.js';
+import { filterToolRegistry, MAIN_AGENT_TOOL_NAMES } from '../core/engine/agent-loop.js';
 import type { A2ASettings } from '../config/settings-types.js';
 
 // ============================================================

@@ -34,7 +34,9 @@ This repository now contains a small Node-based agent-CLI skeleton. In this proj
 
 | Guide | Description | Status |
 |-------|-------------|--------|
-| [Directory Structure](./directory-structure.md) | Module organization and file layout | Established baseline |
+| [Architecture Rules](./architecture-rules.md) | Agent Memory & Domain Boundary constraints | **New** (09-06) |
+| [Memory Contracts](./memory-contracts.md) | Interfaces for IAgentMemory & multi-tenant storage | **New** (09-06) |
+| [Directory Structure](./directory-structure.md) | Module organization and file layout | **DEPRECATED** |
 | [Database Guidelines](./database-guidelines.md) | ORM patterns, queries, migrations | Not established yet |
 | [Error Handling](./error-handling.md) | Error types, handling strategies | Not established yet |
 | [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | Established baseline |

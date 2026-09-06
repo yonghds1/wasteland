@@ -1,4 +1,4 @@
-import type { PermissionDecisionKind, PermissionMode } from './permission-gate.js';
+import type { PermissionDecisionKind, PermissionMode } from '../engine/permission-gate.js';
 import type { ToolInput, ToolRunStatus } from '@tools/tool-types.js';
 import type { SkillArgs, SkillResult } from '@core/skills/skill-types.js';
 

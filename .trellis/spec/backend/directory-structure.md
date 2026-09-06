@@ -1,5 +1,6 @@
-# Directory Structure
+# Directory Structure [DEPRECATED]
 
+> **⚠️ DEPRECATED (2026-09-06)**: 本文档已严重过时。项目现已进入领域化拆分阶段。关于最新的目录组织规则与领域边界，请**严格以 [Architecture Rules](./architecture-rules.md)** 为准！
 > Current status / 当前状态: a minimal Node CLI directory structure is now established in this workspace.
 
 ---

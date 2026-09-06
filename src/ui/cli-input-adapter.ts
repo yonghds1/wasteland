@@ -12,9 +12,9 @@ import type { Readable, Writable } from 'node:stream';
 import { filter, fromEvent, map, scan, takeUntil, tap, type Observable } from 'rxjs';
 
 import type { ChatInputTurn } from '@core/runtime/event-types.js';
-import type { PermissionGate } from '@core/runtime/permission-gate.js';
-import { describeAllowPattern } from '@core/runtime/permission-gate.js';
-import type { PendingInputContext } from '@core/runtime/user-input-bridge.js';
+import type { PermissionGate } from '@core/engine/permission-gate.js';
+import { describeAllowPattern } from '@core/engine/permission-gate.js';
+import type { PendingInputContext } from '@core/engine/user-input-bridge.js';
 import type { SkillExecutor } from '@core/skills/skill-executor.js';
 import {
   executeCommandSync,

@@ -27,7 +27,7 @@ import {
   type FocusArea
 } from '../../context/AppContext.js';
 import { listSessions, loadSessionEntries, getCachedSessionEntries } from '@core/logger/file-log-loader.js';
-import { createSessionIndex } from '@core/runtime/session-index.js';
+import { createSessionIndex } from '@core/session/session-index.js';
 import type { SessionSummaryOnDisk } from '@core/logger/file-log-loader.js';
 import {
   start,
@@ -49,7 +49,7 @@ vi.mock('@core/logger/file-log-loader.js', () => ({
 }));
 
 // transcript 加载走 session-index；默认无 transcript，单个测试可覆写。
-vi.mock('@core/runtime/session-index.js', () => ({
+vi.mock('@core/session/session-index.js', () => ({
   createSessionIndex: vi.fn(),
 }));
 

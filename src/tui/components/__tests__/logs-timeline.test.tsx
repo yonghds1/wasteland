@@ -14,11 +14,11 @@ import { firstValueFrom, take, toArray } from 'rxjs';
 import { renderToString } from 'ink';
 import { Logger, MemorySink, type LogSink } from '@core/logger/index.js';
 import { LogBus } from '@core/logger/log-bus.js';
-import { dispatchToolCall } from '../../../core/runtime/tool-dispatch.js';
-import { SessionManager, type SessionMetadata } from '../../../core/runtime/session-manager.js';
-import { createInitialTurnState, type TurnState } from '../../../core/runtime/turn-state.js';
+import { dispatchToolCall } from '../../../core/engine/tool-dispatch.js';
+import { SessionManager, type SessionMetadata } from '../../../core/session/session-manager.js';
+import { createInitialTurnState, type TurnState } from '../../../core/engine/turn-state.js';
 import { ToolRegistry } from '../../../tools/tool-registry.js';
-import { createPermissionGate } from '../../../core/runtime/permission-gate.js';
+import { createPermissionGate } from '../../../core/engine/permission-gate.js';
 import type { ToolCall, ToolExecutionResult } from '../../../tools/tool-types.js';
 import {
   buildToolTimeline,

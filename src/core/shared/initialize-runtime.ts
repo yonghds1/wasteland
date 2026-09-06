@@ -20,8 +20,8 @@ import {
   type ProviderRegistry,
 } from '@providers/provider-registry.js';
 import type { AgentProvider } from '@providers/provider-types.js';
-import { createPermissionGate, type PermissionGate, type PermissionMode } from '@core/runtime/permission-gate.js';
-import { SessionManager } from '@core/runtime/session-manager.js';
+import { createPermissionGate, type PermissionGate, type PermissionMode } from '@core/engine/permission-gate.js';
+import { SessionManager } from '@core/session/session-manager.js';
 import { createDefaultToolRegistry } from '@tools/default-registry.js';
 import { ToolRegistry } from '@tools/tool-registry.js';
 import { createSkillRegistry } from '@core/skills/skill-discovery.js';

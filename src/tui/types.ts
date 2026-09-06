@@ -7,7 +7,7 @@
 import type { Observable, Subject } from 'rxjs';
 import type { RuntimeEvent, InputSource, ChatInputTurn } from '@core/runtime/event-types.js';
 import type { DebugTraceEvent } from '@core/runtime/debug-events.js';
-import type { SessionManager, SessionMetadata } from '@core/runtime/session-manager.js';
+import type { SessionManager, SessionMetadata } from '@core/session/session-manager.js';
 import type {
   ProviderSettings,
   ModelSettings,
@@ -15,8 +15,8 @@ import type {
 } from '@config/settings-types.js';
 import type { Skin } from '@skins/index.js';
 
-import type { PermissionGate } from '@core/runtime/permission-gate.js';
-import type { UserInputBridge } from '@core/runtime/user-input-bridge.js';
+import type { PermissionGate } from '@core/engine/permission-gate.js';
+import type { UserInputBridge } from '@core/engine/user-input-bridge.js';
 
 /**
  * TUI 运行时上下文

@@ -6,7 +6,7 @@
  */
 
 import type { RuntimeEvent, InputSource, RuntimeMode } from './runtime/event-types.js';
-import type { PermissionDecisionKind, PermissionMode } from './runtime/permission-gate.js';
+import type { PermissionDecisionKind, PermissionMode } from './engine/permission-gate.js';
 import type { SkillArgs, SkillResult } from '../skills/skill-types.js';
 
 // ============================================================

@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Logger, LogBus, MemorySink } from '../../logger/index.js';
 import type { LogSink } from '../../logger/memory-sink.js';
 import { checkReadBeforeEdit } from '../file-audit.js';
-import type { TurnState } from '../turn-state.js';
+import type { TurnState } from '../../engine/turn-state.js';
 
 function makeTurnState(calls: Array<{ toolName: string; input: Record<string, unknown> }>): TurnState {
   return {

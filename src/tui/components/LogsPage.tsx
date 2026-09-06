@@ -45,7 +45,7 @@ import {
   loadSessionEntries,
   getCachedSessionEntries,
 } from '@core/logger/file-log-loader.js';
-import { createSessionIndex } from '@core/runtime/session-index.js';
+import { createSessionIndex } from '@core/session/session-index.js';
 import type { SessionSummaryOnDisk } from '@core/logger/file-log-loader.js';
 import { useAppContext } from '../context/AppContext.js';
 import { useLogsKeymap } from '../hooks/useLogsKeymap.js';

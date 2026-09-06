@@ -72,7 +72,7 @@ vi.mock('@core/shared/initialize-runtime.js', () => ({
   }),
 }));
 
-vi.mock('@core/runtime/agent-loop.js', () => ({
+vi.mock('@core/engine/agent-loop.js', () => ({
   runAgentLoop: vi.fn().mockReturnValue({
     events$: { subscribe: vi.fn() },
     debug$: { subscribe: vi.fn() },
@@ -112,7 +112,7 @@ describe('createTuiRuntime', () => {
   });
 
   it('应该把主角色英文 persona 注入 system prompt', async () => {
-    const { runAgentLoop } = await import('@core/runtime/agent-loop.js');
+    const { runAgentLoop } = await import('@core/engine/agent-loop.js');
 
     await createTuiRuntime('/test');
 

@@ -13,7 +13,7 @@
  */
 
 import { Command } from 'commander';
-import { createContextStatsCollector, type ContextStatsCollector } from '@core/runtime/context-stats.js';
+import { createContextStatsCollector, type ContextStatsCollector } from '@core/memory/context-stats.js';
 import { createContextVisualizer, type OutputFormat } from '@ui/context-visualizer.js';
 import { t } from '@locales/index.js';
 

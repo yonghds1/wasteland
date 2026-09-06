@@ -20,7 +20,7 @@ import type { ToolCall } from '@tools/tool-types.js';
 
 import { t } from '@locales/index.js';
 import { Logger } from '@core/logger/index.js';
-import type { TurnState } from './turn-state.js';
+import type { TurnState } from '../engine/turn-state.js';
 
 /**
  * 检查 read-before-edit 约束

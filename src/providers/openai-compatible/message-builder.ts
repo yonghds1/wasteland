@@ -13,7 +13,7 @@
  */
 
 import type { HistoryRecord } from '@core/runtime/event-types.js';
-import type { TurnToolResult } from '@core/runtime/turn-state.js';
+import type { TurnToolResult } from '@core/engine/turn-state.js';
 import { t } from '@locales/index.js';
 import type { OpenAIMessage, OpenAIToolMessage } from './types.js';
 

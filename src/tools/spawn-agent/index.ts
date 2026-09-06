@@ -30,7 +30,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve as resolvePath } from 'node:path';
 
 import { Logger } from '@core/logger/index.js';
-import { runAgentLoop } from '@core/runtime/agent-loop.js';
+import { runAgentLoop } from '@core/engine/agent-loop.js';
 import type { RuntimeEvent } from '@core/runtime/event-types.js';
 
 import { defaultSkin as defaultRoleSkin } from '@skins/index.js';

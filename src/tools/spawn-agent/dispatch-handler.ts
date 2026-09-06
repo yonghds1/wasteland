@@ -23,13 +23,13 @@ import { concat, concatMap, from, map, of, type Observable } from 'rxjs';
 import {
   type PreDispatchHook,
   registerPreDispatchHook,
-} from '@core/runtime/pre-dispatch-hook.js';
+} from '@core/engine/pre-dispatch-hook.js';
 import {
   createPermissionRecord,
   createTimestamp,
   createToolResultRecord,
   requestPermissionConfirmation,
-} from '@core/runtime/dispatch-utils.js';
+} from '@core/engine/dispatch-utils.js';
 
 import { SPAWN_AGENT_RISK_LEVEL, spawnChildAgentForwarding$, type SpawnAgentContext } from './index.js';
 import type { RuntimeEvent } from '@core/runtime/event-types.js';

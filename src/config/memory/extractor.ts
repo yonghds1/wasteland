@@ -14,7 +14,7 @@
 import type { AgentProvider } from '@providers/provider-types.js';
 import type { HistoryRecord } from '@core/runtime/event-types.js';
 import { createTurnContext } from '@core/runtime/turn-context.js';
-import { createInitialTurnState } from '@core/runtime/turn-state.js';
+import { createInitialTurnState } from '@core/engine/turn-state.js';
 import type { ChatInputTurn } from '@core/runtime/event-types.js';
 import { lastValueFrom, timeout, toArray } from 'rxjs';
 

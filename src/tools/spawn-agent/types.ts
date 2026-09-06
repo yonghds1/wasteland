@@ -6,7 +6,7 @@
  * 其它子模块需要的窄类型在此集中定义，避免 import 循环。
  */
 
-import type { SessionMetadata } from '@core/runtime/session-manager.js';
+import type { SessionMetadata } from '@core/session/session-manager.js';
 import type {
   HistoryRecord,
   SessionMessageRecord,
@@ -15,10 +15,10 @@ import type {
 } from '@core/runtime/event-types.js';
 import type { AgentTool, JsonSchema, ToolCall } from '../tool-types.js';
 import type { AgentProvider } from '@providers/provider-types.js';
-import type { SessionManager } from '@core/runtime/session-manager.js';
+import type { SessionManager } from '@core/session/session-manager.js';
 import { ToolRegistry } from '../tool-registry.js';
-import type { PermissionGate } from '@core/runtime/permission-gate.js';
-import type { UserInputBridge } from '@core/runtime/user-input-bridge.js';
+import type { PermissionGate } from '@core/engine/permission-gate.js';
+import type { UserInputBridge } from '@core/engine/user-input-bridge.js';
 import type {
   ProviderSettings,
   LoadedWastelandSettings,

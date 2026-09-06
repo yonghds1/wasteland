@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 
 import { t } from '@locales/index.js';
-import { createSessionIndex, type SessionDetail } from '@core/runtime/session-index.js';
+import { createSessionIndex, type SessionDetail } from '@core/session/session-index.js';
 
 /**
  * 把 session.jsonl 转换为 markdown 格式。

@@ -10,8 +10,8 @@
  */
 
 import type { ToolRegistry } from '@tools/tool-registry.js';
-import type { PermissionGate } from '@core/runtime/permission-gate.js';
-import type { SessionManager, SessionMetadata } from '@core/runtime/session-manager.js';
+import type { PermissionGate } from '@core/engine/permission-gate.js';
+import type { SessionManager, SessionMetadata } from '@core/session/session-manager.js';
 import type { AgentProvider } from '@providers/provider-types.js';
 import type { SessionMessageRecord } from '@core/runtime/event-types.js';
 

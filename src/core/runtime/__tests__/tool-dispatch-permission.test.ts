@@ -14,14 +14,14 @@
 import { firstValueFrom, toArray } from 'rxjs';
 import { describe, expect, it } from 'vitest';
 
-import { dispatchToolCall } from '../tool-dispatch.js';
-import { SessionManager, type SessionMetadata } from '../session-manager.js';
-import { createInitialTurnState, type TurnState } from '../turn-state.js';
+import { dispatchToolCall } from '../../engine/tool-dispatch.js';
+import { SessionManager, type SessionMetadata } from '../../session/session-manager.js';
+import { createInitialTurnState, type TurnState } from '../../engine/turn-state.js';
 import { ToolRegistry } from '../../../tools/tool-registry.js';
-import { createPermissionGate } from '../permission-gate.js';
+import { createPermissionGate } from '../../engine/permission-gate.js';
 import type { ToolCall, ToolExecutionResult } from '../../../tools/tool-types.js';
 import type { RuntimeEvent } from '../event-types.js';
-import { UserInputBridge } from '../user-input-bridge.js';
+import { UserInputBridge } from '../../engine/user-input-bridge.js';
 
 // ============================================================
 // Fixtures

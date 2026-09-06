@@ -11,7 +11,7 @@ import { describe, it, expect } from 'vitest';
 import {
   MAIN_AGENT_TOOL_NAMES,
   filterToolRegistry,
-} from '../agent-loop.js';
+} from '../../engine/agent-loop.js';
 import { ToolRegistry } from '../../../tools/tool-registry.js';
 import type { AgentTool } from '../../../tools/tool-types.js';
 
@@ -117,7 +117,7 @@ describe('filterToolRegistry — a2a_ 前缀放行', () => {
     const filtered = filterToolRegistry(registry, [...MAIN_AGENT_TOOL_NAMES, 'a2a_codex']);
 
     const names = filtered.list();
-    expect(names.filter((n) => n === 'a2a_codex')).toHaveLength(1);
+    expect(names.filter((n: any) => n === 'a2a_codex')).toHaveLength(1);
     expect(names).toContain('a2a_claude-code');
   });
 
