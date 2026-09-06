@@ -16,9 +16,13 @@ import type { ChatInputTurn } from '../types.js';
  */
 export function useUserInput(input$: Subject<ChatInputTurn> | null): {
   sendMessage: (content: string) => void;
+  /** 预览下一个 turn 编号（不推进计数器，供乐观回显拼消息 id 用） */
+  peekTurn: () => number;
 } {
   // Turn 计数器（从 1 开始）
   const turnRef = useRef(1);
+
+  const peekTurn = useCallback(() => turnRef.current, []);
 
   const sendMessage = useCallback(
     (content: string) => {
@@ -44,5 +48,5 @@ export function useUserInput(input$: Subject<ChatInputTurn> | null): {
     [input$]
   );
 
-  return { sendMessage };
+  return { sendMessage, peekTurn };
 }

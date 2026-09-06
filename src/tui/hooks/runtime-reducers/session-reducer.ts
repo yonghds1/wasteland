@@ -57,14 +57,18 @@ export function reduceSessionEvent(
     }
 
     case 'user_turn': {
-      // 添加用户消息
-      messages.push({
-        id: `msg-user-${event.turn}-${Date.now()}`,
-        timestamp: new Date().toISOString(),
-        agentId: event.sessionId,
-        type: 'user',
-        content: event.content,
-      });
+      // 乐观回显去重：App.sendMessage 已按 `msg-user-${turn}-` 前缀落本地消息，
+      // 此处不再重复 push（isThinking 与主 Agent 状态照常推进）。
+      const echoed = messages.some((m) => m.id.startsWith(`msg-user-${event.turn}-`));
+      if (!echoed) {
+        messages.push({
+          id: `msg-user-${event.turn}-${Date.now()}`,
+          timestamp: new Date().toISOString(),
+          agentId: event.sessionId,
+          type: 'user',
+          content: event.content,
+        });
+      }
       // 用户发了消息:开始等 agent 第一个 chunk
       flow.isThinking = true;
       if (agents[0] && agents[0].depth === 0) {

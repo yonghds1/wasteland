@@ -161,7 +161,7 @@ export function App({ runtime }: AppProps): React.ReactElement {
   useRuntimeEvents(runtime.events$, runtime.debug$, setState, runtime.fullConfig.multiAgent);
 
   // 用户输入处理（带本地命令拦截）
-  const { sendMessage: rawSendMessage } = useUserInput(runtime.input$);
+  const { sendMessage: rawSendMessage, peekTurn } = useUserInput(runtime.input$);
 
   const setCurrentPage = useCallback((page: PageName) => {
     setState((prev) => ({ ...prev, currentPage: page, focusArea: 'inputBar' }));
@@ -639,10 +639,32 @@ export function App({ runtime }: AppProps): React.ReactElement {
         return;
       }
 
-      // 非本地命令，发送到 agent loop
+      // 非本地命令，发送到 agent loop。
+      // 乐观回显：首个 chunk 到达前（模型 TTFT 常以秒计）界面会白屏，
+      // 这里先落本地用户消息 + isThinking，runtime 的 user_turn 到达时去重。
+      if (content.trim()) {
+        const turn = peekTurn();
+        setState((prev) => ({
+          ...prev,
+          session: {
+            ...prev.session,
+            isThinking: true,
+            messages: [
+              ...prev.session.messages,
+              {
+                id: `msg-user-${turn}-local`,
+                timestamp: new Date().toISOString(),
+                agentId: prev.sessionMetadata.id,
+                type: 'user' as const,
+                content: content.trim(),
+              },
+            ],
+          },
+        }));
+      }
       rawSendMessage(content);
     },
-    [rawSendMessage, setExitConfirmPending, setCurrentPage, dispatchLogsRoute, setShowHelp]
+    [rawSendMessage, peekTurn, setExitConfirmPending, setCurrentPage, dispatchLogsRoute, setShowHelp]
   );
 
   const setFilterMode = useCallback((mode: boolean) => {
