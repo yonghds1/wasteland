@@ -183,6 +183,19 @@ function readCachedTokens(
 // ============================================================
 
 /**
+ * OpenCode Go 要求的客户端标识（见 https://opencode.ai/docs/go/#where-can-i-use-it）。
+ *
+ * Go 网关按会话路由与缓存：调用方须自报 UA + 每个对话稳定的 session ID。
+ * 仅 opencode profile 发送，避免向任意第三方端点泄露会话标识。
+ */
+const OPENCODE_USER_AGENT = 'wasteland';
+const OPENCODE_SESSION_HEADER = 'x-opencode-session';
+
+// ============================================================
+// SSE Streaming 核心
+// ============================================================
+
+/**
  * 请求 OpenAI Chat Completion API（SSE 流式）
  *
  * 返回 Observable<ProviderStreamEvent>，逐 token 发出事件。
@@ -191,7 +204,8 @@ function requestOpenAIStreaming(
   config: OpenAIProviderConfig,
   messages: readonly OpenAIMessage[],
   tools: readonly OpenAIFunctionTool[] | undefined,
-  profile: ProviderProfile
+  profile: ProviderProfile,
+  opts?: { sessionId?: string }
 ): Observable<ProviderStreamEvent> {
   return new Observable<ProviderStreamEvent>((subscriber) => {
     const controller = new AbortController();
@@ -215,6 +229,15 @@ function requestOpenAIStreaming(
 
       if (config.apiKey) {
         headers['Authorization'] = `Bearer ${config.apiKey}`;
+      }
+
+      // OpenCode Go 网关要求自报身份 + 稳定会话 ID（否则拒绝路由）。
+      // 会话 ID 用 wasteland sessionId，一轮对话内稳定，天然满足“per conversation”语义。
+      if (profile.id === 'opencode') {
+        headers['User-Agent'] = OPENCODE_USER_AGENT;
+        if (opts?.sessionId) {
+          headers[OPENCODE_SESSION_HEADER] = opts.sessionId;
+        }
       }
 
       const response = await fetchWithRetry(`${config.baseUrl}/chat/completions`, {
@@ -465,7 +488,9 @@ export function createOpenAIProvider(settings?: ProviderSettings): AgentProvider
 
         const tools = context.toolRegistry ? buildOpenAITools(context.toolRegistry) : undefined;
 
-        return requestOpenAIStreaming(config, messages, tools, profile);
+        return requestOpenAIStreaming(config, messages, tools, profile, {
+          sessionId: context.sessionId,
+        });
       }).pipe(concatMap((obs) => obs));
     },
   };

@@ -691,4 +691,49 @@ describe('OpenAI Provider - SSE Streaming', () => {
       ]);
     });
   });
+
+  describe('OpenCode Go session headers', () => {
+    const goSettings = {
+      baseUrl: 'https://opencode.ai/zen/go/v1',
+      apiKey: 'go-test-key',
+      model: 'mimo-v2.5',
+    };
+
+    async function runOneStep(settings: typeof baseSettings, sessionId?: string): Promise<Record<string, string>> {
+      const sseChunks = [
+        'data: {"id":"chatcmpl-1","choices":[{"delta":{"content":"ok"},"index":0}]}\n\n',
+        'data: {"id":"chatcmpl-1","choices":[{"delta":{},"finish_reason":"stop","index":0}]}\n\n',
+        'data: [DONE]\n\n',
+      ];
+      mockFetch.mockResolvedValueOnce(createMockResponse(sseChunks));
+      const provider = createOpenAIProvider(settings);
+      await lastValueFrom(
+        provider.runStep({
+          context: {
+            sessionId,
+            history: [],
+            input: { content: 'Hi' },
+            prompt: 'You are a helpful assistant',
+            toolRegistry: undefined,
+          } as any,
+          state: { toolResults: [] } as any,
+        }).pipe(toArray())
+      );
+      const [, options] = mockFetch.mock.calls[0];
+      return (options as RequestInit).headers as Record<string, string>;
+    }
+
+    it('sends x-opencode-session and User-Agent to opencode endpoints', async () => {
+      const headers = await runOneStep(goSettings, 'sess-123');
+      expect(headers['x-opencode-session']).toBe('sess-123');
+      expect(headers['User-Agent']).toBe('wasteland');
+      expect(headers['Authorization']).toBe('Bearer go-test-key');
+    });
+
+    it('omits session header for non-opencode endpoints', async () => {
+      const headers = await runOneStep(baseSettings, 'sess-123');
+      expect(headers['x-opencode-session']).toBeUndefined();
+      expect(headers['User-Agent']).toBeUndefined();
+    });
+  });
 });
