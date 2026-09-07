@@ -1,8 +1,8 @@
 /**
  * sidecar.test.ts - 子 agent transcript sidecar + meta.json 测试
  *
- * 覆盖（PRD R17 / AC15）：
- * 1. spawn 边界后 .wasteland/logs/transcript/<parentSid>/subagents/ 目录存在
+ * 覆盖（PRD R17 / AC15，09-07 起走中央数据根）：
+ * 1. spawn 边界后 <dataRoot>/logs/<projectId>/transcript/<parentSid>/subagents/ 目录存在
  * 2. meta.json 含 agentType / description / toolUseId / spawnDepth / createdAt + childSessionId
  * 3. jsonl 含 isSidechain:true 标识
  * 4. writeSubagentSidecar 失败时 spawn 主流程不被阻塞
@@ -16,18 +16,34 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Logger, MemorySink, type LogSink } from '@core/logger/index.js';
 import { LogBus } from '@core/logger/log-bus.js';
+import {
+  deriveProjectId,
+  resetCurrentProjectId,
+  WASTELAND_DATA_DIR_ENV,
+} from '@config/paths.js';
 
 // ============================================================
 // 临时切换 cwd 到 mkdtemp（writeSubagentSidecar 用 process.cwd() 解析路径）
+// 中央数据根经 WASTELAND_DATA_DIR 隔离到 mkdtemp，不碰真实家目录
 // ============================================================
 
 let workDir: string;
 let origCwd: string;
+let origDataDir: string | undefined;
+
+function expectedSidecarDir(parentSid: string): string {
+  const dataRoot = join(workDir, 'data-test');
+  const pid = deriveProjectId({ cwd: workDir });
+  return join(dataRoot, 'logs', pid, 'transcript', parentSid, 'subagents');
+}
 
 beforeEach(async () => {
   origCwd = process.cwd();
   workDir = await mkdtemp(join(tmpdir(), 'wasteland-spawn-sidecar-'));
   process.chdir(workDir);
+  origDataDir = process.env[WASTELAND_DATA_DIR_ENV];
+  process.env[WASTELAND_DATA_DIR_ENV] = join(workDir, 'data-test');
+  resetCurrentProjectId();
   // 隔离 Logger 全局单例
   const bus = new LogBus();
   Logger.setBus(bus);
@@ -53,6 +69,12 @@ function makeSessionManagerStub() {
 
 afterEach(async () => {
   process.chdir(origCwd);
+  if (origDataDir === undefined) {
+    delete process.env[WASTELAND_DATA_DIR_ENV];
+  } else {
+    process.env[WASTELAND_DATA_DIR_ENV] = origDataDir;
+  }
+  resetCurrentProjectId();
   Logger.reset();
   if (workDir) await rm(workDir, { recursive: true, force: true });
 });
@@ -92,7 +114,7 @@ async function loadSidecarWriter(): Promise<{
 // ============================================================
 
 describe('spawn-agent subagent sidecar', () => {
-  it('spawn 后 .wasteland/logs/transcript/<parentSid>/subagents/ 下存在 meta.json 与 jsonl', async () => {
+  it('spawn 后中央数据根 transcript/<parentSid>/subagents/ 下存在 meta.json 与 jsonl', async () => {
     const bus = Logger.getBus();
     if (!bus) throw new Error('Logger.getBus() not set');
     const sink = new MemorySink();
@@ -145,8 +167,8 @@ describe('spawn-agent subagent sidecar', () => {
     await new Promise((r) => setTimeout(r, 100));
     sub.unsubscribe();
 
-    // 1. sidecar 目录 + 文件
-    const dir = join(workDir, '.wasteland', 'logs', 'transcript', 'parent-sid', 'subagents');
+    // 1. sidecar 目录 + 文件（中央数据根）
+    const dir = expectedSidecarDir('parent-sid');
     const metaPath = join(dir, 'agent-child-sid-abc.meta.json');
     const jsonlPath = join(dir, 'agent-child-sid-abc.jsonl');
 
@@ -173,16 +195,17 @@ describe('spawn-agent subagent sidecar', () => {
   it('writeSubagentSidecar 写盘失败时 spawn 主流程仍继续', async () => {
     // 让 mkdir 因路径已存在为文件而失败（mkdir 不能在 file 上 recursive 创建）
     const ro = workDir;
-    // 在预期路径先放一个文件，mkdir recursive 创建同名路径会失败
-    const blockerPath = join(
+    // 在预期中央路径先放一个文件，mkdir recursive 创建同名路径会失败
+    const centralTranscript = join(
       workDir,
-      '.wasteland',
+      'data-test',
       'logs',
-      'transcript',
-      'parent-sid'
+      deriveProjectId({ cwd: workDir }),
+      'transcript'
     );
+    const blockerPath = join(centralTranscript, 'parent-sid');
     const fsPromises = await import('node:fs/promises');
-    await fsPromises.mkdir(join(workDir, '.wasteland', 'logs', 'transcript'), {
+    await fsPromises.mkdir(centralTranscript, {
       recursive: true,
     });
     // 在 parent-sid 这一级放一个文件，mkdir('parent-sid/subagents', {recursive: true}) 会失败

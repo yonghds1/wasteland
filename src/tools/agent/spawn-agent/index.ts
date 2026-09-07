@@ -30,6 +30,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve as resolvePath } from 'node:path';
 
 import { Logger } from '@core/logger/index.js';
+import { resolveDataProjectId, resolveDefaultDataDir } from '@config/paths.js';
 import { runAgentLoop } from '@core/engine/agent-loop.js';
 import type { RuntimeEvent } from '@core/runtime/event-types.js';
 
@@ -159,7 +160,7 @@ export function spawnChildAgentForwarding$(params: {
     );
 
     // ---- Subagent transcript sidecar + meta.json（PRD R17）----
-    // 路径约定：.wasteland/logs/transcript/<parentSid>/subagents/agent-<childId>.{jsonl,meta.json}
+    // 路径约定：<dataRoot>/logs/<projectId>/transcript/<parentSid>/subagents/agent-<childId>.{jsonl,meta.json}
     // 仅写 meta 与空 skeleton jsonl；完整 transcript 复制留给 P2。
     // 失败静默：spawn 主流程不应被 sidecar 写盘失败阻塞。
     try {
@@ -340,7 +341,7 @@ export function spawnChildAgentForwarding$(params: {
 // ============================================================
 
 /**
- * 在 .wasteland/logs/transcript/<parentSid>/subagents/ 下写 meta.json + 空 jsonl。
+ * 在 <dataRoot>/logs/<projectId>/transcript/<parentSid>/subagents/ 下写 meta.json + 空 jsonl。
  *
  * 字段对齐 Claude Code `subagents/agent-<id>.meta.json`：
  * - agentType / description / toolUseId / spawnDepth / createdAt + 我们的 childSessionId
@@ -357,8 +358,9 @@ async function writeSubagentSidecar(params: {
   callId: string;
   depth: number;
 }): Promise<void> {
-  const logRoot = join(resolvePath(process.cwd()), '.wasteland', 'logs', 'transcript');
-  const dir = join(logRoot, params.parentSid, 'subagents');
+  const dataRoot = resolveDefaultDataDir({ cwd: resolvePath(process.cwd()) });
+  const projectId = resolveDataProjectId(resolvePath(process.cwd()), null);
+  const dir = join(dataRoot, 'logs', projectId, 'transcript', params.parentSid, 'subagents');
   await mkdir(dir, { recursive: true });
 
   const jsonlPath = join(dir, `agent-${params.childSid}.jsonl`);
