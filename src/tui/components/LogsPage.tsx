@@ -35,7 +35,7 @@ import {
  */
 
 import type { LogsView, TimelineMode, TimelineMetric, ErrorContextWindow } from './logs-page-utils.js';
-import { getShortcutHelp, formatTime, formatTimeFull, formatTimeShort, levelColor, pad, scopeColor, kindColor, truncate, formatDetail, filterLogEntries, isErrorEntry, countErrorEntries, scrollToReveal, DEFAULT_CONTEXT_RADIUS, getErrorContextWindowAt, cardKeyFor, transcriptToLogEntries, SESSION_VISIBLE_ESTIMATE, ctxLevelColor } from './logs-page-utils.js';
+import { getShortcutHelp, formatTime, formatTimeFull, formatTimeShort, levelColor, pad, scopeColor, kindColor, truncate, formatDetail, filterLogEntries, isErrorEntry, countErrorEntries, scrollToReveal, DEFAULT_CONTEXT_RADIUS, getErrorContextWindowAt, cardKeyFor, transcriptToLogEntries, ctxLevelColor } from './logs-page-utils.js';
 export * from './logs-page-utils.js';
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { join } from 'node:path';
@@ -92,17 +92,8 @@ export function projectTag(worktree: string, projectId: string, currentProjectId
   return ` [${short}]`;
 }
 
-/** 卡片高度（行数） */
+/** 卡片标称高度（行数，仅供滚动步长/钳制估算；渲染窗口按行预算精确切割，见 sliceWindowByLines） */
 const CARD_HEIGHT = 4;
-
-/**
- * 卡片渲染窗口的额外行数余量（行）。
- *
- * 大 session 虚拟化：只对可见窗口内的卡片做 map + parseTimings。窗口大小 =
- * 可见行数 + WINDOW_OVERSCAN，多渲染的几行会被 ScrollableBox 的 overflow hidden
- * 裁掉，保证终端高度计算有细微出入时底部不出现空白。
- */
-const WINDOW_OVERSCAN = 2;
 
 /** Session 行高度（行数） */
 const SESSION_ROW_HEIGHT = 1;
@@ -359,10 +350,21 @@ export function LogsPage({
   // 卡片展开状态
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
 
-  // 左侧 session 列表滚动
+  // ----- 高度账本（终端总行 − 固定铬），滚动数学与渲染裁剪必须用同一套 maxVisible -----
+  // toolbar 2（内容 1 + 底边框 1）+ 导出状态 0/1 + 底部区（搜索 3 / 帮助开 4 / 关 3）。
+  // 左栏每行恰 1 行，预算精确；右栏卡片高度可变，预算按标称卡高估算步长，
+  // 超高部分由 ScrollableBox 固定高度 overflow 裁掉（页面不撑屏、顶部恒可达）。
+  const { stdout: logsStdout } = useStdout();
+  const terminalRows = logsStdout?.rows ?? 24;
+  const bottomBarRows = isSearching ? 3 : helpVisible ? 4 : 3;
+  const chromeRows = 2 + (exportStatus ? 1 : 0) + bottomBarRows;
+  const leftListHeight = Math.max(3, terminalRows - chromeRows - 1);
+
+  // 左侧 session 列表滚动（高度与下方渲染盒一致，reveal 数学才对得上）
   const sessionScroll = useScroll({
     totalItems: sessions.length,
     itemHeight: SESSION_ROW_HEIGHT,
+    height: leftListHeight,
   });
 
   // 选中的 session 摘要
@@ -628,16 +630,22 @@ export function LogsPage({
     [globalTimelineRecords],
   );
 
-  // 右侧卡片滚动
+  // ----- 右栏高度账本（终端总行 − 固定铬，见上方 chromeRows） -----
+  // 右栏 header 1 + 加载行 0/2。预算外一律由 ScrollableBox overflow 裁掉，
+  // 页面总高度恒 ≤ 终端高度（修“内容撑开页面、顶部被顶走”）。
+  const rightListHeight = Math.max(3, terminalRows - chromeRows - 1 - (selectedSessionLoading ? 2 : 0));
+
+  // 右侧卡片滚动（offset 语义 = 起始卡下标；高度与下方渲染盒一致，reveal 数学才对得上）
   const cardScroll = useScroll({
     totalItems: sessionCards.length,
     itemHeight: CARD_HEIGHT,
+    height: rightListHeight,
   });
 
   // 大 session 虚拟化：只对可见窗口内的卡片创建 React 元素 / 计算 data。
   // 数千条 session 的卡片不预渲染（parseTimings 等耗时计算只对可见卡片执行），
-  // 滚动流畅不卡顿。窗口由 ScrollableBox 的 maxVisible 计算 + 少量余量构成，
-  // 窗口外的行由 ScrollableBox overflow:hidden 裁掉。
+  // 滚动流畅不卡顿。窗口按“右栏预算行/标称卡高 + 2 张余量”切分，
+  // 超高部分由 ScrollableBox 固定高度 overflow 裁掉（页面不撑屏、顶部恒可达）。
   // Right pane selected card index
   const [focusedPane, setFocusedPane] = useState<'left' | 'right'>('left');
   const [selectedCardIdx, setSelectedCardIdx] = useState<number>(0);
@@ -647,15 +655,19 @@ export function LogsPage({
     setSelectedCardIdx(0);
   }, [minLevel, keywordFilter, errorFocus, selectedSessionIdx, view, timelineMode]);
 
-  const { stdout: logsStdout } = useStdout();
-  const cardWindowSize = Math.max(
+  // 卡片窗口：按张数切分（全屏行/标称卡高 + 2 张余量，与旧行为一致），offset 越界钳制到末卡。
+  // 超高部分由下方 ScrollableBox 固定高度 overflow 裁掉（页面不撑屏、顶部恒可达）。
+  const cardWindowCount = Math.max(
     1,
-    Math.floor((logsStdout?.rows ?? 24) / CARD_HEIGHT) + WINDOW_OVERSCAN,
+    Math.floor((logsStdout?.rows ?? 24) / CARD_HEIGHT) + 2,
   );
+  const cardWindowStart = Math.max(0, Math.min(cardScroll.offset, Math.max(0, sessionCards.length - 1)));
   const cardWindow = useMemo(() => {
-    const start = cardScroll.offset;
-    return sessionCards.slice(start, start + cardWindowSize);
-  }, [sessionCards, cardScroll.offset, cardWindowSize]);
+    return sessionCards.slice(cardWindowStart, cardWindowStart + cardWindowCount);
+  }, [sessionCards, cardWindowStart, cardWindowCount]);
+
+  // 可见卡数（供 selectedCard 联动与键盘 reveal 数学；与旧行为一致取窗口张数）。
+  const cardWindowSize = cardWindowCount;
 
   // 时间线滚动（独立于卡片滚动，行高 2）
   const timelineScroll = useScroll({
@@ -692,7 +704,7 @@ export function LogsPage({
       const clamped = Math.max(0, Math.min(sessions.length - 1, target));
       setSelectedSessionIdx(clamped);
       sessionScroll.setOffset(
-        scrollToReveal(sessionScroll.offset, clamped, SESSION_VISIBLE_ESTIMATE, sessions.length),
+        scrollToReveal(sessionScroll.offset, clamped, sessionScroll.maxVisible, sessions.length),
       );
       resetRightPaneScroll();
     },
@@ -725,7 +737,7 @@ export function LogsPage({
     pollKeepRef.current = false;
     if (reveal != null) {
       sessionScroll.setOffset(
-        scrollToReveal(sessionScroll.offset, Math.min(reveal, sessions.length - 1), SESSION_VISIBLE_ESTIMATE, sessions.length),
+        scrollToReveal(sessionScroll.offset, Math.min(reveal, sessions.length - 1), sessionScroll.maxVisible, sessions.length),
       );
       resetRightPaneScroll();
     } else if (!keep) {
@@ -776,7 +788,7 @@ export function LogsPage({
       if (narrowed.length > 0) {
         setSelectedSessionIdx(target);
         sessionScroll.setOffset(
-          scrollToReveal(sessionScroll.offset, target, SESSION_VISIBLE_ESTIMATE, narrowed.length),
+          scrollToReveal(sessionScroll.offset, target, sessionScroll.maxVisible, narrowed.length),
         );
         // 若过滤改变了列表长度，[sessions.length] effect 会回顶部；
         // 用 ref 交接目标行，effect 内优先揭示（见上）。
@@ -985,12 +997,14 @@ export function LogsPage({
             </Box>
           )}
 
-          {/* 使用 ScrollableBox */}
+          {/* 使用 ScrollableBox（固定高度 + 按需滚动条；行高恒 1，窗口数学精确） */}
           <ScrollableBox
             offset={sessionScroll.offset}
             onOffsetChange={sessionScroll.setOffset}
             totalItems={sessions.length}
             itemHeight={SESSION_ROW_HEIGHT}
+            height={leftListHeight}
+            showScrollbar={false}
           >
             {sessions.map((session, idx) => {
               const isSelected = idx === selectedSessionIdx;
@@ -1029,8 +1043,13 @@ export function LogsPage({
           </ScrollableBox>
         </Box>
 
-        {/* 右栏：卡片流 */}
-        <Box flexDirection="column" width="60%" paddingX={1}>
+        {/* 右栏：卡片流（滚动条列从右 padding 借：内容宽恒等于基线，换行逐像素一致） */}
+        <Box
+          flexDirection="column"
+          width="60%"
+          paddingLeft={1}
+          paddingRight={cardScroll.canScrollUp || cardScroll.canScrollDown ? 0 : 1}
+        >
           {/* 右栏 header */}
           <Box flexDirection="row" justifyContent="space-between" flexShrink={0}>
             <Box flexDirection="row">
@@ -1055,7 +1074,7 @@ export function LogsPage({
                   : `${globalStats.length} tools`
                 : view === 'timeline'
                   ? `${timelineRecords.length} tool calls`
-                  : sessionCards.length > 0
+                    : sessionCards.length > 0
                     ? `${cardScroll.offset + 1}-${Math.min(cardScroll.offset + 5, sessionCards.length)} of ${sessionCards.length}`
                     : selectedSessionLoading ? 'loading...' : '0 of 0'}
             </Text>
@@ -1128,13 +1147,15 @@ export function LogsPage({
             </Box>
           )}
 
-          {/* 列表视图：卡片流（使用 ScrollableBox；windowed 预切片，只渲染可见窗口） */}
+          {/* 列表视图：卡片流（行预算虚拟化窗口 + 固定高度裁剪 + 右侧滚动条） */}
           {!selectedSessionLoading && view === 'list' && sessionCards.length > 0 && (
             <ScrollableBox
               offset={cardScroll.offset}
               onOffsetChange={cardScroll.setOffset}
               totalItems={sessionCards.length}
               itemHeight={CARD_HEIGHT}
+              height={rightListHeight}
+              showScrollbar={false}
               windowed
             >
               {cardWindow.map((entry, windowIdx) => {
@@ -1142,7 +1163,7 @@ export function LogsPage({
                 // 当前聚焦卡片：窗口顶部那张（= cardScroll.offset 指向的卡片，
                 // Enter 展开/错误跳转都以它为锚点），用 ▶ 标记聚焦位置
                 const isCurrentCard = windowIdx === 0;
-                const idx = cardScroll.offset + windowIdx;
+                const idx = cardWindowStart + windowIdx;
                 const isSelectedCard = idx === selectedCardIdx;
                 const entryKind = (entry.data as Record<string, unknown> | undefined)?.kind;
                 const kindStr = typeof entryKind === 'string' ? entryKind : '-';
@@ -1157,7 +1178,7 @@ export function LogsPage({
                 }
 
                 // 相对耗时计算（基于前一条日志，即时间上更早的一条）
-                const nextOlderEntry = sessionCards[cardScroll.offset + windowIdx + 1];
+                const nextOlderEntry = sessionCards[cardWindowStart + windowIdx + 1];
                 let relativeTimeStr = '';
                 if (nextOlderEntry) {
                   const t1 = new Date(nextOlderEntry.timestamp).getTime();

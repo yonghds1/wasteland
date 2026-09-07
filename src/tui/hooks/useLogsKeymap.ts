@@ -20,7 +20,6 @@ import {
   findNextErrorIndex,
   scrollToReveal,
   toggleTimelineMetric,
-  SESSION_VISIBLE_ESTIMATE,
   type LogsView,
   type TimelineMode,
   type TimelineMetric,
@@ -254,7 +253,7 @@ export function useLogsKeymap(api: LogsKeymapApi): void {
             setSelectedSessionIdx(exactIdx);
             // 无限滚动下直接揭示目标行
             sessionScroll.setOffset(
-              scrollToReveal(sessionScroll.offset, exactIdx, SESSION_VISIBLE_ESTIMATE, narrowed.length),
+              scrollToReveal(sessionScroll.offset, exactIdx, sessionScroll.maxVisible, narrowed.length),
             );
           }
           setSessionFilter(targetId);

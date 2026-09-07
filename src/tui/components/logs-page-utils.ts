@@ -409,7 +409,7 @@ export function transcriptToLogEntries(
   return entries;
 }
 
-/** 左侧 session 列表"可见行数"的保守估算（scrollToReveal 保证选中行可见用）。 */
+/** 历史硬编码可见行数（已被 useScroll.maxVisible 真值取代，仅保留作单测参照）。 */
 export const SESSION_VISIBLE_ESTIMATE = 18;
 
 /**

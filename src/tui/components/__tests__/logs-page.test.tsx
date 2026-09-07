@@ -1051,14 +1051,14 @@ describe('LogsPage 错误间快速跳转（]/[）', () => {
   });
 
   it('] 到底后不再越界（最多滚到最大可见偏移）', async () => {
-    // ] → idx1，] → idx9，] → idx17：offset 17 被夹到最大偏移 14
+    // ] → idx1，] → idx9，] → idx17：offset 17 被夹到最大偏移 16（右栏预算 17 行/卡高 4）
     const output = await renderLogsWithKeys(
       [makeSessionSummary('s1', 20)],
       makeErrorJumpEntries(),
       [']', ']', ']'],
     );
 
-    expect(output).toContain('15-19 of 20');
+    expect(output).toContain('17-20 of 20');
   });
 
   it('[ 向上跳回上一条错误', async () => {
@@ -1659,8 +1659,8 @@ describe('LogsPage 导航增强（Home/End 跳转最早/最晚）', () => {
     // 底部窗口：最早 entry-0 可见，最新 entry-9 被滚出视口
     expect(output).toContain('entry-0');
     expect(output).not.toContain('entry-9');
-    // 当前卡片指示（▶）落在底部窗口顶部可见卡片上（offset=4 → entry-5）
-    expect(output).toContain(`▶ ${localHMS('2026-08-10T01:00:05.000Z')}`);
+    // 当前卡片指示（▶）落在底部窗口顶部可见卡片上（右栏预算 17 行/卡高 4 → offset=6 → entry-3）
+    expect(output).toContain(`▶ ${localHMS('2026-08-10T01:00:03.000Z')}`);
   });
 
   it('当前卡片指示 ▶ 唯一，且仅在顶部可见卡片上', async () => {

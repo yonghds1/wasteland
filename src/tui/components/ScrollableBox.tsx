@@ -188,6 +188,8 @@ export interface UseScrollResult {
   canScrollUp: boolean;
   /** 是否可以向下滚动 */
   canScrollDown: boolean;
+  /** 单屏可见条目数（由 height/itemHeight 导出，供 reveal 联动精确对齐渲染窗口） */
+  maxVisible: number;
 }
 
 /**
@@ -236,16 +238,22 @@ export function useScroll({
     setOffset(Math.max(0, totalItems - maxVisible));
   }, [totalItems, maxVisible]);
 
-  // 当 totalItems 变化时，保持底部可见（跟随最新内容）
+  // Live tail 跟随：仅当“列表变长且之前已钉底”时跟到新底部。
+  // 程序化跳转（offset 单独变化，如 ] 错误跳转 / Enter 定位）不扰动；
+  // 历史区阅读中途来新数据也不抢夺视口（旧语义会在 offset 接近底部时无脑吸附）；
+  // 初次加载（0 → N）不跟随，停在顶部（旧语义此处恰好 no-op，保持一致）。
+  const followRef = React.useRef({ total: totalItems, offset });
   React.useEffect(() => {
-    if (canScrollDown) {
-      // 如果已经在底部附近，自动跟随
-      const bottomThreshold = totalItems - maxVisible;
-      if (offset >= bottomThreshold - 2) {
-        setOffset(bottomThreshold);
+    const prev = followRef.current;
+    const grew = totalItems > prev.total && prev.total > 0;
+    if (grew) {
+      const wasPinned = prev.offset >= prev.total - maxVisible - 2;
+      if (wasPinned) {
+        setOffset(Math.max(0, totalItems - maxVisible));
       }
     }
-  }, [totalItems, canScrollDown, offset, maxVisible]);
+    followRef.current = { total: totalItems, offset };
+  }, [totalItems, offset, maxVisible]);
 
   return {
     offset: clampedOffset,
@@ -256,5 +264,6 @@ export function useScroll({
     scrollToBottom,
     canScrollUp,
     canScrollDown,
+    maxVisible,
   };
 }
