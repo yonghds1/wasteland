@@ -100,13 +100,13 @@ export function formatTime(iso: string): string {
   return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
 }
 
-/** ISO 时间戳 → 本地时区 HH:MM:SS.mmm（完整精度，用于展开详情；无毫秒时回退紧凑格式）。 */
+/** ISO 时间戳 → 本地时区 HH:MM:SS.mmm（完整精度，用于展开详情；无毫秒位时回退紧凑格式）。 */
 export function formatTimeFull(iso: string): string {
   const d = parseLocalDate(iso);
   if (!d) return formatTime(iso);
-  const ms = d.getMilliseconds();
-  if (ms === 0) return formatTime(iso);
-  return `${formatTime(iso)}.${String(ms).padStart(3, '0')}`;
+  const frac = iso.match(/\.(\d{3})/);
+  if (!frac) return formatTime(iso);
+  return `${formatTime(iso)}.${frac[1]}`;
 }
 
 /** ISO 时间戳 → 本地时区 HH:MM（非法输入原样返回）。 */
