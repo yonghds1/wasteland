@@ -28,7 +28,7 @@
 - `src/skins/` 下的皮肤/主题系统
 - 位于 `bin/` 的轻量可执行包装层
 - 位于 `test/` 的 19 个测试文件（89 个测试用例）
-- 位于 `.wasteland/sessions/` 的 session 持久化（JSONL 格式）
+- 位于中央数据根（`~/.wasteland/data/sessions/<projectId>/`）的 session 持久化（JSONL 格式）
 - 位于 `.wasteland/settings.json` / `~/.wasteland/settings.json` 的统一配置入口
 - 跨进程 resume 能力（`sessions` / `resume` 命令）
 - MCP 集成层（`mcp-client.ts` + `mcp-registry.ts`）

@@ -2,7 +2,7 @@
  * file-log-loader.ts - 从磁盘 JSONL 文件加载历史日志
  *
  * LogsPage 需要显示历史日志（不仅是当前 session 的内存 buffer）。
- * 本模块扫描 `.wasteland/logs/*.jsonl` 文件，按 mtime 倒序读取，
+ * 本模块扫描中央数据根 data/logs/<projectId>/*.jsonl 文件，按 mtime 倒序读取，
  * 合并 + 按 timestamp 排序，取最近 N 条。
  *
  * 设计要点：
@@ -295,7 +295,7 @@ export async function loadRecentLogs(opts: {
  * 用于 LogsPage 的 session 列表分页显示。
  * 每个 session 只读取首尾条目来确定时间范围和最后消息。
  *
- * @param dir - 日志根目录（.wasteland/logs）
+ * @param dir - 日志根目录（中央数据根 data/logs/<projectId>）
  * @param signal - AbortSignal，用于取消
  * @returns SessionSummaryOnDisk[] 按 lastTime 倒序
  */
@@ -472,7 +472,7 @@ export const MAX_ROTATED_ARCHIVES = 4;
 /**
  * 从磁盘加载指定 session 的所有日志条目（含轮转归档）。
  *
- * @param dir - 日志根目录（.wasteland/logs）
+ * @param dir - 日志根目录（中央数据根 data/logs/<projectId>）
  * @param sessionId - 要加载的 sessionId
  * @param signal - AbortSignal，用于取消
  * @returns LogEntry[] 按 timestamp 正序

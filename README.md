@@ -239,9 +239,9 @@ spawn_agent({
 })
 ```
 
-**Session 文件**：
-- 主 Agent: `.wasteland/sessions/{sessionId}.jsonl`
-- 子 Agent: `.wasteland/sessions/{sessionId}-child-{name}.jsonl`
+**Session 文件**（中央数据根 `~/.wasteland/data/sessions/<projectId>/`）：
+- 主 Agent: `{sessionId}.jsonl`
+- 子 Agent: `{sessionId}-child-{name}.jsonl`
 
 **测试多 Agent（使用 Qwen）**：
 
@@ -288,7 +288,8 @@ npm run dev -- chat --permission-mode bypass_permissions --message "..."
 - `WASTELAND_MAX_STEPS_PER_TURN`：覆盖单轮最大 step 数
 - `WASTELAND_DEBUG`：默认打开调试追踪
 - `WASTELAND_LOG_LEVEL`：日志最低等级，支持 `debug` / `info` / `warn` / `error`，默认 `info`；`WASTELAND_DEBUG=1` 等价于设为 `debug`
-- `WASTELAND_LOG_DIR`：覆盖日志目录，默认 `.wasteland/logs/`
+- `WASTELAND_LOG_DIR`：覆盖日志目录，默认中央数据根 `~/.wasteland/data/logs/<projectId>/`
+- `WASTELAND_DATA_DIR`：覆盖中央数据根，默认 `~/.wasteland/data/`
 - `WASTELAND_LOG_REDACT`：日志脱敏策略开关，默认 `true`；8 类 baseline secret denylist 始终保留
 - `WASTELAND_LOG_TAIL_LINES`：日志查看默认尾部行数，默认 `50`
 - `WASTELAND_SESSION_DIR`：覆盖 session transcript 输出目录
@@ -351,11 +352,11 @@ npm run dev
 - `chat --role <name>`
 - `config current`
 
-session transcript 默认写入 `.wasteland/sessions/`。
+session transcript 默认写入中央数据根 `~/.wasteland/data/sessions/<projectId>/`。
 
 ### 日志与问题排查
 
-Runtime 日志默认写入 `.wasteland/logs/`。可以用内置命令或标准 `grep` / `jq` 按 session、level、scope 定位问题：
+Runtime 日志默认写入中央数据根 `~/.wasteland/data/logs/<projectId>/`（TUI `/logs` 默认跨项目聚合）。可以用内置命令或标准 `grep` / `jq` 按 session、level、scope 定位问题：
 
 ```bash
 # 最近的 warn/error
@@ -367,9 +368,9 @@ wasteland logs show <session-id>
 # 持续跟踪 tool / permission 事件
 wasteland logs tail --level warn --scope tool,permission --follow
 
-# 直接按 sessionId 或 error level 查询 JSONL
-grep '"sessionId":"<session-id>"' .wasteland/logs/runtime-*.jsonl .wasteland/logs/error.jsonl
-jq 'select(.level=="error")' .wasteland/logs/error.jsonl
+# 直接按 sessionId 或 error level 查询 JSONL（先 cd 到对应项目目录，或把路径换成 ~/.wasteland/data/logs/<projectId>/）
+grep '"sessionId":"<session-id>"' ~/.wasteland/data/logs/*/sessions/*.jsonl ~/.wasteland/data/logs/*/error.jsonl
+jq 'select(.level=="error")' ~/.wasteland/data/logs/*/error.jsonl
 ```
 
 完整字段、轮转与脱敏约定见 [日志系统架构](./docs/architecture/logging.md)。

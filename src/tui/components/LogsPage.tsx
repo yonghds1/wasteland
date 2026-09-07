@@ -28,7 +28,7 @@ import {
  * - V：切换 日志列表 / 工具调用时间线 视图
  * - M：切换时间线聚合模式（当前 session / 全局跨 session）
  * - K：全局模式下切换 调用时序 / 耗时分布（失败聚类）视图
- * - G：将当前过滤后的日志导出为 markdown（保存到 .wasteland/exports/，成功显示路径）
+ * - G：将当前过滤后的日志导出为 markdown（保存到中央数据根 exports/<projectId>/，成功显示路径）
  * - X：将当前过滤后的日志导出为 JSON（同上）
  * - /：进入 sessionId 文本输入
  * - Esc：返回 chat page

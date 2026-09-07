@@ -2,7 +2,7 @@
  * log-export.ts - LogsPage 导出纯函数模块
  *
  * 将当前选中 session 的日志（应用过滤后）导出为 markdown / JSON 文件，
- * 保存到 .wasteland/exports/。纯函数与文件写入分离，便于单测：
+ * 保存到中央数据根 data/exports/<projectId>/。纯函数与文件写入分离，便于单测：
  * - serializeLogEntriesToMarkdown / serializeLogEntriesToJson：纯序列化
  * - buildExportFileName：文件名生成
  * - writeExportFile：写盘（目录自动创建），返回完整路径
@@ -167,7 +167,7 @@ export function buildExportFileName(
 /**
  * 写导出文件到磁盘（目录不存在时递归创建），返回完整保存路径。
  *
- * @param opts.dir - 导出根目录（默认 `.wasteland/exports`）
+ * @param opts.dir - 导出根目录（中央数据根 data/exports/<projectId>）
  */
 export async function writeExportFile(opts: {
   dir: string;

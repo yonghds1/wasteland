@@ -7,7 +7,7 @@
 ## 存储位置
 
 ```
-~/.wasteland/sessions/
+~/.wasteland/data/sessions/<projectId>/
 ├── index.json                    # 会话索引文件
 ├── <session-id>/
 │   ├── metadata.json            # 会话元数据
@@ -493,7 +493,7 @@ interface CompactionOptions {
 ### 归档策略
 
 ```
-~/.wasteland/sessions/<session-id>/
+~/.wasteland/data/sessions/<projectId>/<session-id>/
 ├── history.json              # 当前历史（最近 N 条）
 ├── history-archive-1.json    # 归档文件 1
 ├── history-archive-2.json    # 归档文件 2

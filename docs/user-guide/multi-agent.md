@@ -370,10 +370,10 @@ wasteland 支持 [A2A（Agent-to-Agent）协议](https://github.com/a2aproject/A
 
 ## Session 管理
 
-每个子 Agent 都有独立的 Session：
+每个子 Agent 都有独立的 Session（中央数据根 `~/.wasteland/data/sessions/<projectId>/`）：
 
-- 主 Agent: `.wasteland/sessions/{sessionId}.jsonl`
-- 子 Agent: `.wasteland/sessions/{sessionId}-child-{name}.jsonl`
+- 主 Agent: `{sessionId}.jsonl`
+- 子 Agent: `{sessionId}-child-{name}.jsonl`
 
 ```bash
 # 查看所有 session（包括子 Agent）

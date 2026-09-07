@@ -20,7 +20,7 @@ wasteland 采用 **Agents-as-Tools** 模式实现多Agent协作，核心思想�
 │                           runAgentLoop (主循环)                              │
 │  ┌─────────────────────────────────────────────────────────────────────┐    │
 │  │                         SessionManager                               │    │
-│  │              创建/管理 Session (.wasteland/sessions/*.jsonl)               │    │
+│  │              创建/管理 Session (中央数据根 sessions/<projectId>/*.jsonl)               │    │
 │  └─────────────────────────────────────────────────────────────────────┘    │
 │                                      │                                       │
 │                                      ▼                                       │
@@ -49,7 +49,7 @@ wasteland 采用 **Agents-as-Tools** 模式实现多Agent协作，核心思想�
 │                      runAgentLoop (子Agent循环)                              │
 │  ┌─────────────────────────────────────────────────────────────────────┐    │
 │  │                    ChildSession (独立session)                         │    │
-│  │           .wasteland/sessions/{parentId}-child-{name}.jsonl                │    │
+│  │           data/sessions/<projectId>/{parentId}-child-{name}.jsonl                │    │
 │  └─────────────────────────────────────────────────────────────────────┘    │
 │                                      │                                       │
 │                                      ▼                                       │

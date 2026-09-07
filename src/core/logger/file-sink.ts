@@ -1,7 +1,7 @@
 /**
  * file-sink.ts - JSONL 文件落盘 LogSink
  *
- * 用途：把 LogEntry 落到 .wasteland/logs/ 目录下：
+ * 用途：把 LogEntry 落到中央数据根 data/logs/<projectId>/ 目录下：
  * - sessions/<sessionId>.jsonl（按 session 维度组织，每个 session 一个文件）
  * - error.jsonl（warn/error 必落盘，独立流，PR1 PRD R6）
  *
@@ -39,7 +39,7 @@ import type { LogEntry } from './types.js';
 /**
  * FileSink 构造选项。
  *
- * @property dir - 日志主目录（默认 <cwd>/.wasteland/logs，由 caller 注入实际值）
+ * @property dir - 日志主目录（中央数据根 data/logs/<projectId>，由 caller 注入实际值）
  * @property sessionDir - session 文件子目录名（默认 `sessions`）
  * @property errorFilename - error 独立文件名（默认 `error.jsonl`）
  * @property policy - 轮转策略（size cap + 保留档位 + age cap）
@@ -100,7 +100,7 @@ function orderKeys(entry: LogEntry): Record<string, unknown> {
  *
  * 用法：
  * ```ts
- * const sink = new FileSink({ dir: '<cwd>/.wasteland/logs', policy: { maxSizeBytes: 10*1024*1024, maxFiles: 5 } });
+ * const sink = new FileSink({ dir: '<dataRoot>/logs/<projectId>', policy: { maxSizeBytes: 10*1024*1024, maxFiles: 5 } });
  * bus.subscribe(sink);
  * // ...
  * await sink.flush();

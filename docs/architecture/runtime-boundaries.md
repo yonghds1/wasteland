@@ -192,7 +192,7 @@ Phase 2 还额外落下了一组独立工具运行时骨架：
 
 当前环境变量合同：
 
-- `WASTELAND_SESSION_DIR`：主推荐值；覆盖默认 `.wasteland/sessions/` 目录
+- `WASTELAND_SESSION_DIR`：主推荐值；覆盖默认中央 transcript 目录（`~/.wasteland/data/sessions/<projectId>/`）
 - `RX_CLI_SESSION_DIR`：旧兼容别名；仅用于过渡期覆盖 session 输出目录
 
 ---

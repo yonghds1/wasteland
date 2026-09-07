@@ -264,7 +264,8 @@ export type RawWastelandSettings = {
      * 日志系统配置（PR3 引入）。
      *
      * level 决定 Logger 的最低 entry 等级（debug < info < warn < error）。
-     * dir 覆盖 `.wasteland/logs` 路径，支持绝对路径或相对路径。
+     * dir：历史默认 `.wasteland/logs`（当前 FileSink 实际落盘走 WASTELAND_LOG_DIR / paths 解析，
+     * 本字段仅保留作配置面兼容，改它不影响落盘位置）。
      * redact 关闭敏感字段脱敏（默认 true，强烈建议保持）。
      * tailLines 控制 TUI 日志页与 `wasteland logs tail` 默认展示条数。
      */
@@ -395,6 +396,7 @@ export const DEFAULT_WASTELAND_SETTINGS: ResolvedWastelandSettings = {
     typewriterRateMs: wastelandTheme.animations.typewriterRateMs,
     log: {
       level: 'info',
+      // 历史默认值（当前落盘走 paths 解析，本字段仅配置面兼容，见上）。
       dir: '.wasteland/logs',
       redact: true,
       tailLines: 50,

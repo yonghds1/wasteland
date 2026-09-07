@@ -50,6 +50,6 @@
 - `runtime.debug`
 - provider/model/role 下的通用 `$auth` 引用
 
-当前不会自动迁移旧 `.wasteland/` 目录；如果本地已有历史 transcript，需要手动合并到 `.wasteland/sessions/`。
+当前不会自动迁移旧 `.wasteland/` 目录；历史 transcript 原地保留（新数据写入中央数据根，见 docs/architecture/configuration.md 存储节）。
 
 当前配置层只负责“加载和解析”，不直接创建 provider、也不直接运行 runtime。

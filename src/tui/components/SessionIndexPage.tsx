@@ -8,7 +8,8 @@
  * 渲染一次空列表就够，加载完直接覆盖为真实列表，避免视觉闪烁。
  * 仅在加载失败时显示错误信息。
  *
- * 数据来源：.wasteland/sessions/*.jsonl（自动落盘的会话文件）
+ * 数据来源：中央数据根 data/sessions/<projectId>/*.jsonl（自动落盘的会话文件，仅本项目；
+ * 跨项目聚合走 TUI /logs 页与 sessions 命令）
  *
  * OpenCode 风格：单列列表、focus 标记（▶）、简洁预览。
  * 使用 ScrollableBox 统一滚动管理。

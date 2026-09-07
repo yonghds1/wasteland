@@ -210,7 +210,7 @@ function streamGzip(src: string, dst: string): Promise<void> {
  * 目录级清理：当目录总大小或文件总数超过上限时，按 mtime 由旧到新删除文件，
  * 直到两个上限都满足。
  *
- * 用途：控制 `.wasteland/logs/sessions/` 的整体体积（单文件轮转只控制单个文件，
+ * 用途：控制中央数据根 data/logs/<projectId>/sessions/ 的整体体积（单文件轮转只控制单个文件，
  * 无法约束目录总量）。清理对象是「最旧的历史文件」，当前正在写入的 session 文件
  * mtime 最新，总是最后才被清理。
  *

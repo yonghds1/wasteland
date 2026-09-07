@@ -153,7 +153,7 @@ interface PerformanceMetrics {
 ### 文件结构
 
 ```
-~/.wasteland/sessions/<session-id>/
+~/.wasteland/data/sessions/<projectId>/<session-id>/
 ├── context-stats.json      # Context 统计数据
 └── ...
 ```

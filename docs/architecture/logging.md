@@ -25,9 +25,9 @@
              ├── runtime-YYYY-MM-DD.jsonl     all accepted levels
              └── error.jsonl                  warn + error duplicate
 
- ChatInputTurn ──► runAgentLoop ──► SessionManager
-                                      └── .wasteland/sessions/<sid>.jsonl
-                                          (independent resume transcript)
+  ChatInputTurn ──► runAgentLoop ──► SessionManager
+                                       └── data/sessions/<projectId>/<sid>.jsonl
+                                           (independent resume transcript)
 ```
 
 Core 只发布结构化事件，不直接写 `stdout` 或 `stderr`。每个 sink 可独立设置最低 level 与 scope 过滤；一个 sink 的失败不会阻断其它 sink 或 Agent 主流程。
@@ -65,7 +65,7 @@ Assistant token 用量写在 `data.usage`，字段为 `input_tokens`、`output_t
 |---|---|---|
 | `session` | `Logger.info({ scope: 'session', ... })` | session start/end、resume、子会话关联 |
 | `turn` | `Logger.debug({ scope: 'turn', ... })` | user turn、assistant 完成、step 上限 |
-| `provider` | `Logger.debug({ scope: 'provider', ... })` | 请求、响应、重试、模型错误 |
+| `provider` | `Logger.debug({ scope: 'provider', ... })` | 请求、响应、重试、模型错误、首 token 计时（`provider.first_chunk`，data.elapsedMs） |
 | `tool` | `Logger.info({ scope: 'tool', ... })` | tool requested/started/result/failed、五段耗时 |
 | `ui` | `Logger.debug({ scope: 'ui', ... })` | page 切换、输入路由、渲染诊断 |
 | `skill` | `Logger.info({ scope: 'skill', ... })` | 技能解析、执行、失败 |
@@ -74,29 +74,20 @@ Assistant token 用量写在 `data.usage`，字段为 `input_tokens`、`output_t
 | `a2a` | `Logger.info({ scope: 'a2a', ... })` | task request、SSE、webhook、adapter 状态 |
 | `file` | `Logger.warn({ scope: 'file', ... })` | read-before-edit 审计、路径拒绝、文件访问 |
 
-## 4. FileSink 文件布局
-
-默认 `<dir>` 是当前项目的 `.wasteland/logs/`：
+## 4. FileSink 文件布局（中央数据根 `~/.wasteland/data/logs/<projectId>/`）
 
 ```text
-.wasteland/
-├── logs/
-│   ├── runtime-2026-07-29.jsonl
-│   ├── runtime-2026-07-29.jsonl.1
-│   ├── runtime-2026-07-29.jsonl.2
-│   ├── ...
-│   ├── runtime-2026-07-29.jsonl.5
-│   ├── runtime-2026-07-22.jsonl.5.gz
-│   └── error.jsonl
-└── sessions/
-    └── <sessionId>.jsonl
+data/logs/<projectId>/
+├── sessions/
+│   └── <sessionId>.jsonl
+└── error.jsonl
 ```
 
-- `runtime-YYYY-MM-DD.jsonl` 按 entry 的 UTC 日期自然日切。
-- `warn` 与 `error` 同时写入 runtime 文件和独立的 `error.jsonl`，优先排查时无需扫描全部 runtime 文件。
+- 按 session 独立文件追加（`sessions/<sessionId>.jsonl`），同 session 事件天然聚合，无需再按日期切分扫描。
+- `warn` 与 `error` 同时写入 session 文件和独立的 `error.jsonl`，优先排查时无需扫描全部 session 文件。
 - 轮转档使用 `.1` 到 `.5`，数字越小越新；超过 age cap 的旧档使用 `.gz`。
 - 当前可写文件保持 JSONL，一行一条事件，可直接使用 `grep` 与 `jq`。
-- `.wasteland/sessions/` 与 FileSink 分流，`SessionRecord` 协议不变。
+- 中央 `data/sessions/<projectId>/` 的 transcript 与 FileSink 分流，`SessionRecord` 协议不变。
 
 ## 5. Rotation 策略
 
@@ -131,10 +122,10 @@ FileSink 写入前递归处理 `data` 中的字符串。下面 8 类 baseline de
 
 | 维度 | Claude Code | opencode | wasteland |
 |---|---|---|---|
-| 主目录 | `~/.claude/projects/<encoded-cwd>/` | `.opencode/` | `.wasteland/logs/` |
-| 主日志文件 | `<sid>.jsonl` append-only | `debug.log` 单文件 | `runtime-YYYY-MM-DD.jsonl` 日切 + size 轮转 |
-| Session transcript | 与主日志同一 JSONL | `messages/<sid[:8]>/` | 保留 `.wasteland/sessions/<sid>.jsonl`，与 runtime log 分流 |
-| Subagent | `subagents/agent-<id>.{jsonl,meta.json}` | 共享 slog | 设计约定为 `logs/transcript/<sid>/subagents/agent-<id>.{jsonl,meta.json}` |
+| 主目录 | `~/.claude/projects/<encoded-cwd>/` | `.opencode/` | `~/.wasteland/data/logs/<projectId>/` |
+| 主日志文件 | `<sid>.jsonl` append-only | `debug.log` 单文件 | `sessions/<sid>.jsonl` 按 session 独立文件 |
+| Session transcript | 与主日志同一 JSONL | `messages/<sid[:8]>/` | `data/sessions/<projectId>/<sid>.jsonl`，与 runtime log 分流 |
+| Subagent | `subagents/agent-<id>.{jsonl,meta.json}` | 共享 slog | `logs/<projectId>/transcript/<sid>/subagents/agent-<id>.{jsonl,meta.json}` |
 | 时间分解 | preHook/permission/tool/postHook/total | 简单 level | `data.timings` 的五段毫秒值 |
 | CLI 调试入口 | `--verbose` | `-d` + `OPENCODE_DEV_DEBUG` | `--debug`/`-d` 与 `WASTELAND_LOG_LEVEL` |
 | Schema 演进 | 未承诺稳定 | 内部结构稳定 | 固定字段顺序 + `version: 1` |
@@ -150,7 +141,7 @@ Subagent sidecar 的设计字段为 `agentType`、`description`、`toolUseId`、
 | 环境变量 | 默认值 | 行为与兼容关系 |
 |---|---|---|
 | `WASTELAND_LOG_LEVEL` | `info` | `debug/info/warn/error`；显式值优先于 debug alias |
-| `WASTELAND_LOG_DIR` | `.wasteland/logs` | 覆盖 FileSink 与 `wasteland logs` 的默认日志根目录 |
+| `WASTELAND_LOG_DIR` | 单目录覆盖（调试用） | 覆盖 FileSink 与 `wasteland logs` 的默认日志根目录 |
 | `WASTELAND_LOG_REDACT` | `true` | 配置 redaction 匹配策略；8 类 baseline denylist 始终保留 |
 | `WASTELAND_LOG_TAIL_LINES` | `50` | 默认读取/展示的最近行数，必须是正整数 |
 
@@ -174,17 +165,17 @@ WASTELAND_DEBUG=1 WASTELAND_LOG_LEVEL=warn wasteland
 
 ```bash
 wasteland logs errors
-wasteland logs errors --tail 100 --dir .wasteland/logs
+wasteland logs errors --tail 100 --project <id|path>
 ```
 
 按 `sessionId` 合并查看 runtime 与 error 事件，默认最多 200 条：
 
 ```bash
 wasteland logs show <session-id>
-wasteland logs show <session-id> --tail 500 --dir .wasteland/logs
+wasteland logs show <session-id> --tail 500 --project <id|path>
 ```
 
-查看当前 UTC 日的 runtime 文件；`--level` 是最低等级，`--scope` 接受逗号分隔值，`--follow` 持续跟踪：
+查看各项目最近日志；`--level` 是最低等级，`--scope` 接受逗号分隔值，`--follow` 持续跟踪：
 
 ```bash
 wasteland logs tail
@@ -195,8 +186,8 @@ wasteland logs tail --level debug --scope mcp,a2a --follow
 无需 CLI 也可以直接定位：
 
 ```bash
-grep '"sessionId":"<session-id>"' .wasteland/logs/runtime-*.jsonl .wasteland/logs/error.jsonl
-jq 'select(.level=="error")' .wasteland/logs/error.jsonl
+grep '"sessionId":"<session-id>"' ~/.wasteland/data/logs/*/sessions/*.jsonl ~/.wasteland/data/logs/*/error.jsonl
+jq 'select(.level=="error")' ~/.wasteland/data/logs/*/error.jsonl
 ```
 
 ## 10. TUI 快捷键

@@ -167,7 +167,7 @@ interface IndexStats {
       "status": "active",
       "preview": "用户: 帮我重构认证模块...",
       "tags": ["refactor", "auth"],
-      "path": "~/.wasteland/sessions/20260808-143052-a3b8c9d0",
+      "path": "~/.wasteland/data/sessions/<projectId>/20260808-143052-a3b8c9d0",
       "fileSize": 102400
     }
   ],
@@ -349,7 +349,7 @@ interface SessionQueryOptions {
 ### 索引文件
 
 ```
-~/.wasteland/sessions/
+~/.wasteland/data/sessions/<projectId>/
 ├── index.json              # 会话索引
 ├── index.json.backup       # 索引备份
 └── <session-id>/           # 会话目录
@@ -474,7 +474,7 @@ async function updateIndex(session: SessionMetadata): Promise<void> {
       status: session.status,
       preview: session.preview,
       tags: session.tags,
-      path: `~/.wasteland/sessions/${session.id}`,
+      path: `~/.wasteland/data/sessions/<projectId>/${session.id}`,
       fileSize: session.fileSize,
     };
     
