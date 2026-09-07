@@ -188,6 +188,11 @@ describe('Command Executor', () => {
       expect(isLocalCommand('/anything')).toBe(true);
     });
 
+    it('should return false for provider tool syntax (passed to provider)', () => {
+      expect(isLocalCommand('/spawn analyst do research')).toBe(false);
+      expect(isLocalCommand('/read package.json')).toBe(false);
+    });
+
     it('should return false for non-commands', () => {
       expect(isLocalCommand('hello')).toBe(false);
       expect(isLocalCommand('test')).toBe(false);

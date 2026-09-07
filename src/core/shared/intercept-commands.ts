@@ -14,13 +14,15 @@
  * |---------|------|
  * | 非 `/` 开头 | 透传到下游（agent 处理） |
  * | `/xxx` 已注册命令 | 执行命令 + 写入 writer + **消费**（不下传） |
+ * | `/xxx` provider 工具语法（local `/spawn` 等） | 透传到下游（provider 处理） |
  * | `/xxx` 未注册命令 | 写入错误 + **消费**（不下传，避免 agent 误解） |
  * | 空字符串 | 透传（避免误拦截） |
  *
  * ## 设计
  *
  * - pipeline：调用方一行 `.pipe(interceptCommands(writer))`，无 if-else
- * - 错误策略：未知命令也拦截（防止 `/halp` 变成 agent 对话）
+ * - 错误策略：未知命令也拦截（防止 `/halp` 变成 agent 对话）；
+ *   但 local provider 工具语法（`isLocalToolSyntax`）优先透传，注册命令仍优先于它
  * - 依赖注入：writer 由调用方提供，便于测试和复用
  */
 
@@ -32,6 +34,8 @@ import {
   type SyncCommandResult,
 } from './command-executor-sync.js';
 import type { CommandWriter } from './command-writer.js';
+import { getCommandManager } from './command-manager.js';
+import { isLocalToolSyntax } from '@providers/local.js';
 
 /**
  * RxJS 操作符：拦截本地命令，统一调用 writer 渲染结果。
@@ -64,6 +68,12 @@ function routeCommand(
 
   // 非 / 开头：透传（agent 处理普通对话）
   if (!input.startsWith('/')) {
+    return of(turn);
+  }
+
+  // provider 工具语法（local `/spawn` 等）：透传到下游 provider。
+  // 注册命令优先（先判注册），未知拼写（`/halp`）仍走错误消费。
+  if (!getCommandManager().isCommand(input) && isLocalToolSyntax(input)) {
     return of(turn);
   }
 

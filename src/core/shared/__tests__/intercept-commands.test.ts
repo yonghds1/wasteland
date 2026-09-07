@@ -107,6 +107,24 @@ describe('interceptCommands', () => {
     });
   });
 
+  describe('provider tool syntax', () => {
+    it('should pass through /spawn to the provider (not consume)', async () => {
+      const { writer, calls } = createTestWriter();
+      const source = of(makeTurn('/spawn analyst do research')).pipe(interceptCommands(writer));
+      const result = await firstValueFrom(source);
+      expect(result.content).toBe('/spawn analyst do research');
+      expect(calls).toHaveLength(0);
+    });
+
+    it('should pass through /read to the provider', async () => {
+      const { writer, calls } = createTestWriter();
+      const source = of(makeTurn('/read package.json')).pipe(interceptCommands(writer));
+      const result = await firstValueFrom(source);
+      expect(result.content).toBe('/read package.json');
+      expect(calls).toHaveLength(0);
+    });
+  });
+
   describe('edge cases', () => {
     it('should handle / in middle of text (not intercept)', async () => {
       const { writer, calls } = createTestWriter();

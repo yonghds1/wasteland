@@ -13,6 +13,7 @@
 
 import type { CommandExecutionContext } from './command-manager.js';
 import { getCommandManager } from './command-manager.js';
+import { isLocalToolSyntax } from '@providers/local.js';
 
 /**
  * 命令执行上下文（扩展版）
@@ -186,10 +187,15 @@ function convertToExtendedResult(
 /**
  * 检查输入是否为本地命令
  *
+ * provider 工具语法（local `/spawn` 等）不算本地命令，放行给 provider；
+ * 注册命令优先，未知拼写仍视为本地命令（由 executeCommand 报错消费）。
+ *
  * @param input - 用户输入
  * @returns 是否为本地命令
  */
 export function isLocalCommand(input: string): boolean {
   const manager = getCommandManager();
-  return manager.isCommand(input) || input.startsWith('/');
+  if (manager.isCommand(input)) return true;
+  if (isLocalToolSyntax(input)) return false;
+  return input.startsWith('/');
 }

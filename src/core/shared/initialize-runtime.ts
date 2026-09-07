@@ -15,7 +15,7 @@ import { resolveChatRuntime } from '@config/resolve-chat-runtime.js';
 import type { AgentMode, ResolvedChatRuntime } from '@config/resolve-chat-runtime.js';
 import { setAgentMode } from '@config/agent-mode-state.js';
 import type { LoadedWastelandSettings } from '@config/settings-types.js';
-import { t } from '@locales/index.js';
+import { t, initI18n } from '@locales/index.js';
 import {
   createDefaultProviderRegistry,
   type ProviderRegistry,
@@ -147,6 +147,11 @@ export async function initializeRuntime(
   const loadedSettings = preloadedSettings
     ? preloadedSettings
     : await loadWastelandSettings({ cwd, env });
+
+  // 1b. 初始化 i18n（幂等）：headless/直调 initializeRuntime 的调用方
+  // （测试脚本、单测外的运行时）此前拿不到翻译，全走 raw key + warning。
+  // TUI/CLI 入口会再次以同样语言初始化，无副作用。
+  await initI18n(loadedSettings.settings.runtime.language ?? 'en');
 
   // agentMode：--mode 启动参数 > settings.runtime.mode > 'single'
   // 注意区别于 RuntimeMode（'single'|'interactive'，由输入来源推导）

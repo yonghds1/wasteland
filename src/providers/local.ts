@@ -6,6 +6,33 @@ import type { TurnToolResult } from '@core/engine/turn-state.js';
 import { createAssistantTextEvents } from './assistant-events.js';
 import type { AgentProvider, ProviderStreamEvent } from './provider-types.js';
 
+/**
+ * local provider 工具语法前缀（单一来源）。
+ *
+ * 这些 `/xxx` 不是 CLI/TUI 本地命令，而是 provider 层的工具触发语法；
+ * 命令拦截层（interceptCommands / isLocalCommand）须放行，避免报 Unknown command。
+ * 新增 local 工具语法时只改这里。
+ */
+export const LOCAL_TOOL_SYNTAX_PREFIXES = [
+  '/spawn ',
+  '/read ',
+  '/bash ',
+  '/glob ',
+  '/grep ',
+  '/list-directory',
+  '/web-fetch ',
+] as const;
+
+/**
+ * 判断输入是否为 local provider 工具语法（大小写不敏感，前导空白容忍）。
+ *
+ * @param input - 用户输入原文
+ */
+export function isLocalToolSyntax(input: string): boolean {
+  const lowered = input.trimStart().toLowerCase();
+  return LOCAL_TOOL_SYNTAX_PREFIXES.some((prefix) => lowered.startsWith(prefix));
+}
+
 function createToolCallFromInput(input: string, turn: number): ProviderStreamEvent | null {
   const trimmed = input.trim();
 
