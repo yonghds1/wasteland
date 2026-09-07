@@ -544,14 +544,14 @@ describe('runAgentLoop', () => {
       expect(phases).toContain('turn.input');
     });
 
-    it('debug=true 时 Logger.debug 被调用', async () => {
+    it('trace 默认写入 Logger.info（落盘，/logs 开箱即用，不依赖 debug 开关）', async () => {
       const provider = createMockProvider([{ type: 'assistant_message', text: 'Hello' }]);
       const input$ = createInput$('Hi');
 
       // Mock Logger
       const loggerSpy = vi.spyOn(
         await import('../../logger/index.js').then((m) => m.Logger),
-        'debug'
+        'info'
       );
 
       const { events$ } = runAgentLoop({

@@ -11,7 +11,9 @@
  *   WASTELAND_LOG_TAIL_LINES / WASTELAND_DEBUG
  */
 
-import { join, resolve } from 'node:path';
+
+import { getLoadedSettings } from '@config/loaded-settings.js';
+import { resolveDefaultLogDir } from '@config/paths.js';
 
 import { Logger } from '@core/logger/index.js';
 import type { LogLevel } from '@core/logger/index.js';
@@ -142,16 +144,12 @@ function installSink(
   fileSinkInstalled = true;
 }
 
-/**
- * 解析 WASTELAND_LOG_DIR env；未设置时默认 `<cwd>/.wasteland/logs`。
- */
 function resolveLogDir(cwd: string, env: NodeJS.ProcessEnv): string {
-  const raw = env.WASTELAND_LOG_DIR;
-  if (typeof raw === 'string' && raw.trim().length > 0) {
-    // resolve 相对路径基于 cwd
-    return resolve(cwd, raw.trim());
-  }
-  return join(resolve(cwd), '.wasteland', 'logs');
+  return resolveDefaultLogDir({
+    cwd,
+    env,
+    projectConfigDir: getLoadedSettings()?.projectConfigDir ?? null,
+  });
 }
 
 /**

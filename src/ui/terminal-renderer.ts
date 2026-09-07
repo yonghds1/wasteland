@@ -554,12 +554,7 @@ export async function renderRuntimeEvents(
             break;
           }
           case 'session_started': {
-            if (style === 'interactive') {
-              stdout.write(
-                `${paint('●', ANSI.bold, ANSI.yellow)} ${paint(t('ui.terminal.thinking'), ANSI.yellow)}\n`
-              );
-              isShowingThinking = true;
-            }
+            // Do not print "thinking" here; the session just started and is waiting for user input.
             break;
           }
           case 'agent_spawned': {
@@ -607,6 +602,11 @@ export async function renderRuntimeEvents(
             if (style === 'interactive') {
               stdout.write(ANSI.reset);
               pendingTurnSpacing.add(event.turn);
+              // user_turn 意味着用户已经输入完毕，大模型开始思考
+              stdout.write(
+                `${paint('●', ANSI.bold, ANSI.yellow)} ${paint(t('ui.terminal.thinking'), ANSI.yellow)}\n`
+              );
+              isShowingThinking = true;
             }
 
             break;

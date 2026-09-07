@@ -90,6 +90,7 @@ vi.mock('../../config/roles/index.js', () => ({
 vi.mock('../../locales/index.js', () => ({
   initI18n: vi.fn().mockResolvedValue(undefined),
   t: vi.fn((key: string) => key),
+  DEFAULT_LANGUAGE: 'en',
 }));
 
 describe('createTuiRuntime', () => {

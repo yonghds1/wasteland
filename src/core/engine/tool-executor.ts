@@ -9,7 +9,7 @@ export class ToolExecutorPipeline {
   constructor(private registry: ToolRegistry) {}
 
   async executeTool(call: SessionToolCallRecord): Promise<SessionToolResultRecord> {
-    Logger.debug({
+    Logger.info({
       sessionId: call.sessionId,
       scope: 'tool',
       message: 'tool_execution_started',

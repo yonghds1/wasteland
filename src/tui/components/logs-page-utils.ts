@@ -64,7 +64,8 @@ export function getShortcutHelp(
   timelineMetric: TimelineMetric,
 ): ShortcutHelpItem[] {
   const items: ShortcutHelpItem[] = [
-    { keys: 'Tab/←→', description: '切换面板' },
+    { keys: 'Tab', description: '循环session' },
+    { keys: '←→', description: '切换面板' },
     { keys: '↑↓', description: '滚动/切换' },
     { keys: 'N/B', description: 'session翻页' },
     { keys: 'Home/End', description: '跳转最早/最晚' },

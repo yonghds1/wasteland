@@ -34,3 +34,7 @@
 统一遵循：**就近原则与 `__tests__` 目录结合**。
 - `Vitest` 测试文件存放在所在模块的 `__tests__/` 子目录中（如 `src/commands/__tests__/chat.test.ts`）。
 - 严禁出现同目录下既有 `__tests__` 又有外露 `*.test.ts` 文件的精神分裂情况。新加代码请参考 `CLAUDE.md` 中的测试约定。
+
+## 6. 配置与落盘目录约束 (Paths & Storage Constraints)
+- **统一路径解析 (SSOT)**：所有关于工作区存储（如 `.wasteland/logs`, `.wasteland/exports`, `.wasteland/sessions`, `.wasteland/traces`）的路径解析，必须且只能通过 `src/config/paths.ts` 中的 `resolveDefaultXxxDir` 函数进行，严禁在业务代码中硬编码 `process.cwd() + '/.wasteland/xxx'`。
+- **Fallback 机制与“不拉屎”原则**：在非正式 Wasteland 项目（即当前目录及其父级没有 `settings.json`）下运行命令时，系统**绝对禁止**在当前工作目录 `cwd` 私自创建 `.wasteland` 文件夹（污染用户目录）。所有存储动作（导出、日志、会话缓存）必须平滑降级（Fallback）到全局用户主目录（通常为 `~/.wasteland`）。`resolveDefaultXxxDir` 已内置该逻辑，调用方禁止破坏此约束。

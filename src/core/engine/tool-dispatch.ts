@@ -565,7 +565,7 @@ function emitToolTimings(
     totalMs: number;
   },
 ): void {
-  Logger.debug({
+  Logger.info({
     sessionId: params.session.id,
     turn: params.turn,
     scope: 'tool',

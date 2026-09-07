@@ -198,22 +198,20 @@ export function runAgentLoop(params: {
   // 使用 ReplaySubject 缓冲近期事件供迟到的订阅者接收（限 200 条避免长会话内存膨胀）
   const debugSubject = new ReplaySubject<DebugTraceEvent>(200);
   const baseTrace = createTraceEmitter(debugSubject);
-  // 统一 trace 入口：debug 开启时同时写入 .wasteland/debug.log，
-  // 方便 `tail -f` 实时观察流式、工具调用、错误等
+  // 统一 trace 入口：默认写入 Logger.info（FileSink 落盘），
+  // 以便 TUI 中的 /logs 命令开箱即用。
   const trace = (event: DebugTraceInput): void => {
     baseTrace(event);
-    if (params.debug) {
-      Logger.debug({
-        sessionId: event.sessionId,
-        turn: event.turn,
-        step: event.step,
-        scope: event.scope as Parameters<typeof Logger.debug>[0]['scope'],
-        message: event.phase
-          ? `${event.phase}${event.message ? `: ${event.message}` : ''}`
-          : (event.message ?? 'trace'),
-        data: event.data,
-      });
-    }
+    Logger.info({
+      sessionId: event.sessionId,
+      turn: event.turn,
+      step: event.step,
+      scope: event.scope as Parameters<typeof Logger.info>[0]['scope'],
+      message: event.phase
+        ? `${event.phase}${event.message ? `: ${event.message}` : ''}`
+        : (event.message ?? 'trace'),
+      data: event.data,
+    });
   };
   const maxStepsPerTurn = params.maxStepsPerTurn ?? 30;
 
