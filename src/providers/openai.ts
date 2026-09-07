@@ -210,6 +210,20 @@ function requestOpenAIStreaming(
   return new Observable<ProviderStreamEvent>((subscriber) => {
     const controller = new AbortController();
     let subscription: { unsubscribe: () => void } | undefined;
+    // 本轮已发出的 chunk 原文累积（与 subscriber 收到的逐字一致）；
+    // 流结束时作为定稿发出，保证 transcript 与界面显示同源。
+    let fullText = '';
+
+    /**
+     * 发出文本 chunk 并同步累积定稿。
+     */
+    function emitChunk(text: string): void {
+      fullText += text;
+      subscriber.next({
+        type: 'assistant_chunk',
+        text,
+      });
+    }
 
     async function execute() {
       const body: Record<string, unknown> = {
@@ -297,15 +311,9 @@ function requestOpenAIStreaming(
             if (reasoningDelta) {
               if (!isThinking) {
                 isThinking = true;
-                subscriber.next({
-                  type: 'assistant_chunk',
-                  text: `<think>${reasoningDelta}`,
-                });
+                emitChunk(`<think>${reasoningDelta}`);
               } else {
-                subscriber.next({
-                  type: 'assistant_chunk',
-                  text: reasoningDelta,
-                });
+                emitChunk(reasoningDelta);
               }
             }
 
@@ -313,15 +321,9 @@ function requestOpenAIStreaming(
             if (choice.delta?.content) {
               if (isThinking) {
                 isThinking = false;
-                subscriber.next({
-                  type: 'assistant_chunk',
-                  text: `</think>\n${choice.delta.content}`,
-                });
+                emitChunk(`</think>\n${choice.delta.content}`);
               } else {
-                subscriber.next({
-                  type: 'assistant_chunk',
-                  text: choice.delta.content,
-                });
+                emitChunk(choice.delta.content);
               }
             }
 
@@ -329,10 +331,7 @@ function requestOpenAIStreaming(
             if (choice.delta?.tool_calls) {
               if (isThinking) {
                 isThinking = false;
-                subscriber.next({
-                  type: 'assistant_chunk',
-                  text: '</think>\n',
-                });
+                emitChunk('</think>\n');
               }
               for (const tc of choice.delta.tool_calls) {
                 const idx = tc.index;
@@ -357,10 +356,7 @@ function requestOpenAIStreaming(
               finished = true;
               if (isThinking) {
                 isThinking = false;
-                subscriber.next({
-                  type: 'assistant_chunk',
-                  text: '</think>\n',
-                });
+                emitChunk('</think>\n');
               }
               // 发出累积的工具调用事件
               const toolCalls = Array.from(toolCallMap.values())
@@ -380,10 +376,7 @@ function requestOpenAIStreaming(
               finished = true;
               if (isThinking) {
                 isThinking = false;
-                subscriber.next({
-                  type: 'assistant_chunk',
-                  text: '</think>\n',
-                });
+                emitChunk('</think>\n');
               }
             }
           } catch {
@@ -396,10 +389,7 @@ function requestOpenAIStreaming(
         complete() {
           if (isThinking) {
             isThinking = false;
-            subscriber.next({
-              type: 'assistant_chunk',
-              text: '</think>\n',
-            });
+            emitChunk('</think>\n');
           }
           if (toolCallMap.size > 0 && !finished) {
             finished = true;
@@ -419,10 +409,8 @@ function requestOpenAIStreaming(
           // 流结束：发出最终的 assistant_message
           // 如果有工具调用，不需要 assistant_message
           if (toolCallMap.size === 0) {
-            // 没有工具调用时，需要从累积的 chunks 中构建完整消息
-            // 但 streaming 模式下 chunks 已经发出，这里发出一个空的 final message
-            // 实际的文本已通过 assistant_chunk 发出
-            subscriber.next({ type: 'assistant_message', text: '' });
+            // 定稿即本轮 chunk 原文之和（与界面累积器同源），保证 transcript 不丢文本。
+            subscriber.next({ type: 'assistant_message', text: fullText });
           }
 
           // 发出 usage 事件（如果有）

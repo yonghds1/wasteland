@@ -67,3 +67,23 @@ describe('user_turn 乐观回显去重', () => {
     expect(draft.messages.length).toBe(2);
   });
 });
+
+describe('assistant_message 定稿内容', () => {
+  it('累积器为空时采用事件正文（provider 定稿即存档）', () => {
+    const draft = makeDraft();
+    reduceSessionEvent(
+      draft,
+      makeShared(),
+      {
+        type: 'assistant_message',
+        sessionId: 'sess-1',
+        turn: 1,
+        content: 'Hello world',
+      } as const
+    );
+    expect(draft.messages.length).toBe(1);
+    expect(draft.messages[0]).toMatchObject({ type: 'assistant', content: 'Hello world' });
+    expect(draft.flow.isThinking).toBe(false);
+    expect(draft.flow.isStreaming).toBe(false);
+  });
+});

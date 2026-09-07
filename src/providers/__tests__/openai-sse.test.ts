@@ -736,4 +736,64 @@ describe('OpenAI Provider - SSE Streaming', () => {
       expect(headers['User-Agent']).toBeUndefined();
     });
   });
+
+  describe('streaming final message', () => {
+    async function runTextStream(): Promise<{ texts: string[]; finals: string[] }> {
+      const sseChunks = [
+        'data: {"id":"chatcmpl-1","choices":[{"delta":{"content":"Hello"},"index":0}]}\n\n',
+        'data: {"id":"chatcmpl-1","choices":[{"delta":{"content":" world"},"index":0}]}\n\n',
+        'data: {"id":"chatcmpl-1","choices":[{"delta":{},"finish_reason":"stop","index":0}]}\n\n',
+        'data: [DONE]\n\n',
+      ];
+      mockFetch.mockResolvedValueOnce(createMockResponse(sseChunks));
+      const provider = createOpenAIProvider(baseSettings);
+      const events = await lastValueFrom(
+        provider.runStep({
+          context: {
+            history: [],
+            input: { content: 'Hi' },
+            prompt: 'You are a helpful assistant',
+            toolRegistry: undefined,
+          } as any,
+          state: { toolResults: [] } as any,
+        }).pipe(toArray())
+      );
+      return {
+        texts: events.filter((e) => e.type === 'assistant_chunk').map((e) => (e as any).text),
+        finals: events.filter((e) => e.type === 'assistant_message').map((e) => (e as any).text),
+      };
+    }
+
+    it('final message carries the joined chunk text for transcript', async () => {
+      const { texts, finals } = await runTextStream();
+      expect(finals.length).toBe(1);
+      expect(finals[0]).toBe(texts.join(''));
+      expect(finals[0]).toBe('Hello world');
+    });
+
+    it('think-only stream finalizes with think tags preserved', async () => {
+      const sseChunks = [
+        'data: {"id":"chatcmpl-1","choices":[{"delta":{"reasoning_content":"hi"},"index":0}]}\n\n',
+        'data: {"id":"chatcmpl-1","choices":[{"delta":{},"finish_reason":"stop","index":0}]}\n\n',
+        'data: [DONE]\n\n',
+      ];
+      mockFetch.mockResolvedValueOnce(createMockResponse(sseChunks));
+      const provider = createOpenAIProvider(baseSettings);
+      const events = await lastValueFrom(
+        provider.runStep({
+          context: {
+            history: [],
+            input: { content: 'Hi' },
+            prompt: 'You are a helpful assistant',
+            toolRegistry: undefined,
+          } as any,
+          state: { toolResults: [] } as any,
+        }).pipe(toArray())
+      );
+      const finals = events.filter((e) => e.type === 'assistant_message').map((e) => (e as any).text);
+      expect(finals.length).toBe(1);
+      expect(finals[0]).toContain('<think>hi');
+      expect(finals[0]).toContain('</think>');
+    });
+  });
 });
