@@ -42,7 +42,7 @@ import {
   type TurnState} from './turn-state.js';
 import {
   buildProviderFallbackMessage,
-  
+  consumeFirstChunkTrace,
   type DebugTraceInput} from './turn-helpers.js';
 import {
   persistAssistantMessage,
@@ -91,6 +91,8 @@ export class TurnExecutor {
   private state: TurnState;
   private nextAction: 'complete' | 'tool' | 'none' = 'none';
   private streamIndex = 0;
+  /** 首 token 计时起点（仅 turn 内第一次 provider 调用有效，其余 null；见 execute） */
+  private firstChunkStartMs: number | null = null;
   private toolCallBuffer: Array<{
     event: { type: 'tool_call'; call: { id: string; toolName: string; input: Record<string, unknown> } };
     index: number;
@@ -151,6 +153,10 @@ export class TurnExecutor {
           history: this.state.history.length,
           toolResults: this.state.toolResults.length}});
 
+      // 首 token 计时起点：仅 turn 内第一次 provider 调用（step === 1）；
+      // 后续 step 各自 new TurnExecutor，不重复计时（多 step 只记首条）。
+      this.firstChunkStartMs = this.state.step === 1 ? Date.now() : null;
+
       const budgetWarning$ = checkBudgetAndPreCompact({
         contextManager: this.params.contextManager,
         history: this.params.history,
@@ -181,6 +187,7 @@ export class TurnExecutor {
           }),
           mergeMap((e) => this.processStreamedNonToolEvent(e)),
           catchError((err): Observable<RuntimeEvent> => {
+            this.toolCallBuffer = [];
             const errMsg = err instanceof Error ? err.message : String(err);
             const isAbort = errMsg === 'AbortError';
             
@@ -277,6 +284,22 @@ export class TurnExecutor {
   private processStreamedNonToolEvent(
     event: { type: string; text?: string; call?: unknown; usage?: { promptTokens: number; completionTokens: number; totalTokens: number; cachedTokens?: number } }
   ): Observable<RuntimeEvent> {
+    // 首 token 计时：首个带文本事件产生 provider.first_chunk trace（每 turn 一次）。
+    // turn 内 TTFT 可观测：/logs 或 logs show 可见 provider.start → first_chunk 间隔。
+    const measured = consumeFirstChunkTrace(
+      {
+        startMs: this.firstChunkStartMs,
+        sessionId: this.params.session.id,
+        turn: this.state.turn,
+        step: this.state.step,
+        providerId: this.params.provider.id,
+      },
+      event
+    );
+    this.firstChunkStartMs = measured.next.startMs;
+    if (measured.trace) {
+      this.params.trace(measured.trace);
+    }
     if (event.type === 'assistant_chunk' && event.text) {
       this.state = appendAssistantChunk(this.state, event.text);
       this.params.trace({

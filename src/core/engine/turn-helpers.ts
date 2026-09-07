@@ -109,3 +109,54 @@ export function buildProviderFallbackMessage(state: TurnState): string {
 export function buildMaxStepsMessage(_maxStepsPerTurn: number): string {
   return t('runtime.maxStepsReached');
 }
+
+/**
+ * 首 token 计时上下文（processStreamedNonToolEvent 透传）。
+ */
+export interface FirstChunkMeasure {
+  /** turn 内第一次 provider 调用的起点毫秒（Date.now），null 表示不计时 */
+  startMs: number | null;
+  sessionId: string;
+  turn: number;
+  step: number;
+  providerId: string;
+}
+
+/**
+ * 首 token 计时消费（纯函数，可单测）。
+ *
+ * - 仅 turn 内第一次 provider 调用（调用方在 step === 1 时设 startMs，其余 null）；
+ * - 仅首个带文本事件（assistant_chunk 含 text / assistant_message）产生一条
+ *   `provider.first_chunk` trace（含 elapsedMs），之后 startMs 归 null，不再重复；
+ * - tool_call / usage 等非文本事件原样透过，不消耗计时。
+ *
+ * @param measure - 当前计时状态
+ * @param event - 流经的 provider 事件（仅读 type/text）
+ * @returns trace（无则 null）与下一状态
+ */
+export function consumeFirstChunkTrace(
+  measure: FirstChunkMeasure,
+  event: { type: string; text?: string }
+): { trace: DebugTraceInput | null; next: FirstChunkMeasure } {
+  if (measure.startMs === null) {
+    return { trace: null, next: measure };
+  }
+  const isText =
+    (event.type === 'assistant_chunk' && !!event.text) || event.type === 'assistant_message';
+  if (!isText) {
+    return { trace: null, next: measure };
+  }
+  const elapsedMs = Date.now() - measure.startMs;
+  return {
+    trace: {
+      sessionId: measure.sessionId,
+      turn: measure.turn,
+      step: measure.step,
+      scope: 'provider',
+      phase: 'provider.first_chunk',
+      message: `first chunk after ${elapsedMs}ms`,
+      data: { elapsedMs, provider: measure.providerId },
+    },
+    next: { ...measure, startMs: null },
+  };
+}
