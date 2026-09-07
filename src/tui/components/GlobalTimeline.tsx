@@ -237,6 +237,8 @@ export function GlobalTimeline({
   itemHeight = TIMELINE_ROW_HEIGHT,
   highlightSessionId,
   slowThresholdMs = DEFAULT_SLOW_THRESHOLD_MS,
+  height,
+  showScrollbar = false,
 }: {
   records: ReadonlyArray<GlobalToolCallRecord>;
   /** 滚动偏移（提供后启用 ScrollableBox） */
@@ -249,6 +251,10 @@ export function GlobalTimeline({
   highlightSessionId?: string;
   /** 慢调用阈值（毫秒），可覆盖默认值 */
   slowThresholdMs?: number;
+  /** 列表区固定高度（行数；传入后溢出裁剪，页面不撑屏） */
+  height?: number;
+  /** 显示右侧滚动条（内容可能溢出时传 true） */
+  showScrollbar?: boolean;
 }): React.ReactElement {
   const scrollable = offset !== undefined && onOffsetChange !== undefined;
   const rowKey = (record: GlobalToolCallRecord, idx: number): string =>
@@ -266,6 +272,8 @@ export function GlobalTimeline({
           onOffsetChange={onOffsetChange}
           totalItems={records.length}
           itemHeight={itemHeight}
+          height={height}
+          showScrollbar={showScrollbar}
         >
           {records.map((record, idx) => (
             <GlobalTimelineRow
@@ -337,12 +345,18 @@ export function GlobalStatsTable({
   stats,
   offset,
   onOffsetChange,
+  height,
+  showScrollbar = false,
 }: {
   stats: ReadonlyArray<ToolCallStats>;
   /** 滚动偏移（提供后启用 ScrollableBox） */
   offset?: number;
   /** 滚动偏移变化回调（提供后启用 ScrollableBox） */
   onOffsetChange?: (offset: number) => void;
+  /** 列表区固定高度（行数；传入后溢出裁剪，页面不撑屏） */
+  height?: number;
+  /** 显示右侧滚动条（内容可能溢出时传 true） */
+  showScrollbar?: boolean;
 }): React.ReactElement {
   const scrollable = offset !== undefined && onOffsetChange !== undefined;
   return (
@@ -358,6 +372,8 @@ export function GlobalStatsTable({
           onOffsetChange={onOffsetChange}
           totalItems={stats.length}
           itemHeight={1}
+          height={height}
+          showScrollbar={showScrollbar}
         >
           {stats.map((stat) => (
             <GlobalStatsRow key={stat.toolName} stat={stat} />

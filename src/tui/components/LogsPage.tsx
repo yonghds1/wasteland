@@ -634,6 +634,8 @@ export function LogsPage({
   // 右栏 header 1 + 加载行 0/2。预算外一律由 ScrollableBox overflow 裁掉，
   // 页面总高度恒 ≤ 终端高度（修“内容撑开页面、顶部被顶走”）。
   const rightListHeight = Math.max(3, terminalRows - chromeRows - 1 - (selectedSessionLoading ? 2 : 0));
+  // 时间线视图与卡片流共用右栏槽位；内部自带 1 行表头，列表预算再扣 1。
+  const timelineListHeight = Math.max(3, rightListHeight - 1);
 
   // 右侧卡片滚动（offset 语义 = 起始卡下标；高度与下方渲染盒一致，reveal 数学才对得上）
   const cardScroll = useScroll({
@@ -669,20 +671,23 @@ export function LogsPage({
   // 可见卡数（供 selectedCard 联动与键盘 reveal 数学；与旧行为一致取窗口张数）。
   const cardWindowSize = cardWindowCount;
 
-  // 时间线滚动（独立于卡片滚动，行高 2）
+  // 时间线滚动（独立于卡片滚动，行高 2；高度与渲染盒一致）
   const timelineScroll = useScroll({
     totalItems: timelineRecords.length,
     itemHeight: TIMELINE_ROW_HEIGHT,
+    height: timelineListHeight,
   });
 
   // 全局时间线滚动（独立于 session 时间线滚动；统计视图行高 1）
   const globalTimelineScroll = useScroll({
     totalItems: globalTimelineRecords.length,
     itemHeight: TIMELINE_ROW_HEIGHT,
+    height: timelineListHeight,
   });
   const globalStatsScroll = useScroll({
     totalItems: globalStats.length,
     itemHeight: 1,
+    height: timelineListHeight,
   });
 
   // 滚动联动：切换 session / 视图后，右侧日志流回到顶部（保持一致的查看起点）。
@@ -1097,6 +1102,8 @@ export function LogsPage({
               records={timelineRecords}
               offset={timelineScroll.offset}
               onOffsetChange={timelineScroll.setOffset}
+              height={timelineListHeight}
+              showScrollbar={timelineScroll.canScrollUp || timelineScroll.canScrollDown}
             />
           )}
 
@@ -1119,12 +1126,16 @@ export function LogsPage({
                   offset={globalTimelineScroll.offset}
                   onOffsetChange={globalTimelineScroll.setOffset}
                   highlightSessionId={sessionFilter.trim() || undefined}
+                  height={timelineListHeight}
+                  showScrollbar={globalTimelineScroll.canScrollUp || globalTimelineScroll.canScrollDown}
                 />
               ) : (
                 <GlobalStatsTable
                   stats={globalStats}
                   offset={globalStatsScroll.offset}
                   onOffsetChange={globalStatsScroll.setOffset}
+                  height={timelineListHeight}
+                  showScrollbar={globalStatsScroll.canScrollUp || globalStatsScroll.canScrollDown}
                 />
               )}
             </>

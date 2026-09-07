@@ -301,6 +301,8 @@ export function ToolTimeline({
   onOffsetChange,
   itemHeight = TIMELINE_ROW_HEIGHT,
   slowThresholdMs = DEFAULT_SLOW_THRESHOLD_MS,
+  height,
+  showScrollbar = false,
 }: {
   records: ReadonlyArray<ToolCallRecord>;
   /** 滚动偏移（提供后启用 ScrollableBox） */
@@ -311,6 +313,10 @@ export function ToolTimeline({
   itemHeight?: number;
   /** 慢调用阈值（毫秒），可覆盖默认值 */
   slowThresholdMs?: number;
+  /** 列表区固定高度（行数；传入后溢出裁剪，页面不撑屏） */
+  height?: number;
+  /** 显示右侧滚动条（内容可能溢出时传 true） */
+  showScrollbar?: boolean;
 }): React.ReactElement {
   const scrollable = offset !== undefined && onOffsetChange !== undefined;
   return (
@@ -326,6 +332,8 @@ export function ToolTimeline({
           onOffsetChange={onOffsetChange}
           totalItems={records.length}
           itemHeight={itemHeight}
+          height={height}
+          showScrollbar={showScrollbar}
         >
           {records.map((record, idx) => (
             <ToolTimelineRow
