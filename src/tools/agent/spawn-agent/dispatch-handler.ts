@@ -25,6 +25,7 @@ import {
   registerPreDispatchHook,
 } from '@core/engine/pre-dispatch-hook.js';
 import {
+  agentScopePrefix,
   createPermissionRecord,
   createTimestamp,
   createToolResultRecord,
@@ -67,7 +68,7 @@ export const handleSpawnAgentDispatch: PreDispatchHook = (params) => {
           sessionId: params.session.id,
           turn: params.turn,
           callId: params.call.id,
-          question: `是否允许执行 spawn_agent (${childName})?`,
+          question: `${agentScopePrefix(params.session)}是否允许执行 spawn_agent (${childName})?`,
           options: ['yes', 'no'],
         })
       : of<RuntimeEvent>();

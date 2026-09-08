@@ -13,6 +13,7 @@ import { SessionManager, type SessionMetadata } from '../session/session-manager
 import type { TurnState } from './turn-state.js';
 import { getPreDispatchHook } from './pre-dispatch-hook.js';
 import {
+  agentScopePrefix,
   createPermissionRecord,
   createToolCallRecord,
   createToolResultRecord,
@@ -121,7 +122,7 @@ function handleAskUser(params: DispatchToolCallParams, requested$: Observable<Ru
     sessionId: params.session.id,
     turn: params.turn,
     callId: params.call.id,
-    question: input.question,
+    question: `${agentScopePrefix(params.session)}${input.question}`,
     options: input.options,
   };
   const askRequested$ = of(requestedEvent);
@@ -340,6 +341,8 @@ export function dispatchToolCall(params: {
   const permissionEndMs = Date.now();
 
   // 关键：若权限门决策为 ask 且有 userInputBridge，必须在等待前立即将 user_input_requested 事件发出到流中！
+  // question 带 agent 归属前缀（子 agent 要权限时 TUI 可分辨是谁在问）。
+  const scopePrefix = agentScopePrefix(params.session);
   const askRequested$ =
     rawDecision.decision === 'ask' && params.userInputBridge
       ? of<RuntimeEvent>({
@@ -348,12 +351,12 @@ export function dispatchToolCall(params: {
           turn: params.turn,
           callId: params.call.id,
           question: params.call.input?.command
-            ? `是否允许执行 ${params.call.toolName} (${params.call.input.command})?`
+            ? `${scopePrefix}是否允许执行 ${params.call.toolName} (${params.call.input.command})?`
             : params.call.input?.path
-              ? `是否允许执行 ${params.call.toolName} (${params.call.input.path})?`
+              ? `${scopePrefix}是否允许执行 ${params.call.toolName} (${params.call.input.path})?`
               : params.call.input?.subcommand
-                ? `是否允许执行 git ${params.call.input.subcommand}?`
-                : `是否允许执行 ${params.call.toolName}?`,
+                ? `${scopePrefix}是否允许执行 git ${params.call.input.subcommand}?`
+                : `${scopePrefix}是否允许执行 ${params.call.toolName}?`,
           options: ['yes', 'always', 'no'],
           // 结构化上下文：UI 推导 once/always 模式用，不再依赖 question 正则
           toolName: params.call.toolName,

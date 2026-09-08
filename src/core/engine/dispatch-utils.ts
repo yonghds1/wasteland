@@ -31,6 +31,16 @@ export function createTimestamp(): string {
   return new Date().toISOString();
 }
 
+/**
+ * Agent 归属前缀（权限确认框 / ask-user 提问用）。
+ *
+ * 子 agent 会话带 childName（如 researcher），问询时拼 `[researcher] ` 前缀，
+ * 让用户在 TUI 里分清是哪个 agent 在要权限；主会话返回空串，行为不变。
+ */
+export function agentScopePrefix(session: Pick<SessionMetadata, 'childName'>): string {
+  return session.childName ? `[${session.childName}] ` : '';
+}
+
 /** 构造 tool_call record（写 session） */
 export function createToolCallRecord(
   session: SessionMetadata,

@@ -9,7 +9,7 @@
  * 测试隔离：用 MemorySink 注入到 Logger 总线，避免落盘副作用。
  */
 
-import { firstValueFrom, of, take, toArray } from 'rxjs';
+import { firstValueFrom, filter, of, take, toArray } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { Logger, MemorySink, type LogEntry, type LogSink } from '../../logger/index.js';
@@ -22,6 +22,7 @@ import { SessionManager, type SessionMetadata } from '../../session/session-mana
 import { createInitialTurnState, type TurnState } from '../turn-state.js';
 import { ToolRegistry } from '@tools/core/tool-registry.js';
 import { createPermissionGate } from '../permission-gate.js';
+import type { UserInputBridge } from '../user-input-bridge.js';
 import type { ToolCall, ToolExecutionResult } from '@tools/core/tool-types.js';
 
 // ============================================================
@@ -201,6 +202,56 @@ describe('dispatchToolCall - 5 段时间分解 (AC16)', () => {
     expect(types).toContain('permission_decision');
     expect(types).toContain('tool_started');
     expect(types).toContain('tool_result');
+  });
+});
+
+describe('dispatchToolCall - 权限问询 agent 归属', () => {
+  function makeExecRegistry(): ToolRegistry {
+    const reg = new ToolRegistry();
+    reg.register({
+      name: 'bash',
+      riskLevel: 'execute',
+      async execute(): Promise<ToolExecutionResult> {
+        return { status: 'success', output: 'ok' };
+      },
+    });
+    return reg;
+  }
+
+  // 永不回答的 bridge：只取到 user_input_requested 即退订，不会挂起
+  function makeSilentBridge(): UserInputBridge {
+    return {
+      requestInput: () => new Promise<string>(() => undefined),
+    } as unknown as UserInputBridge;
+  }
+
+  async function askQuestion(session: SessionMetadata): Promise<string> {
+    const events$ = dispatchToolCall({
+      session,
+      sessionManager: makeSessionManagerStub(),
+      turn: 1,
+      call: makeCall('bash', 'c1', { command: 'rm -rf /tmp/x' }),
+      registry: makeExecRegistry(),
+      permissionGate: createPermissionGate({ mode: 'default' }),
+      cwd: '/tmp',
+      turnState: makeTurnState(),
+      userInputBridge: makeSilentBridge(),
+    });
+    const event = await firstValueFrom(
+      events$.pipe(filter((e) => e.type === 'user_input_requested'))
+    );
+    if (event.type !== 'user_input_requested') throw new Error('unreachable');
+    return event.question;
+  }
+
+  it('子 agent 问询带 [childName] 前缀', async () => {
+    const question = await askQuestion({ ...makeSession(), parentId: 'p', childName: 'researcher' });
+    expect(question.startsWith('[researcher] 是否允许执行')).toBe(true);
+  });
+
+  it('主会话问询无前缀（保持原行为）', async () => {
+    const question = await askQuestion(makeSession());
+    expect(question.startsWith('是否允许执行')).toBe(true);
   });
 });
 
