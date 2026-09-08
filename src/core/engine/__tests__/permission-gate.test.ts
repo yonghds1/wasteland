@@ -414,4 +414,57 @@ describe('describeAllowPattern', () => {
     expect(describeAllowPattern('bash', { command: '   ' })).toBeNull();
     expect(describeAllowPattern('bash', undefined)).toBeNull();
   });
+
+  it('web-fetch 取站点 origin（一次 always 管整站）', () => {
+    expect(
+      describeAllowPattern('web-fetch', { url: 'http://doc.zhoujusoft.com/docs/apaas/intro/' })
+    ).toEqual({
+      key: 'url',
+      prefix: 'http://doc.zhoujusoft.com/',
+      label: 'web-fetch http://doc.zhoujusoft.com/*',
+    });
+  });
+
+  it('web-fetch 非法 URL 回退完整值、空值返回 null', () => {
+    expect(describeAllowPattern('web-fetch', { url: 'not a url' })).toEqual({
+      key: 'url',
+      prefix: 'not a url',
+      label: 'web-fetch not a url*',
+    });
+    expect(describeAllowPattern('web-fetch', {})).toBeNull();
+    expect(describeAllowPattern('web-fetch', { url: '  ' })).toBeNull();
+  });
+
+  it('web-fetch session 规则：同站放行、异站仍问', () => {
+    const gate = createPermissionGate({ mode: 'default' });
+    const pattern = describeAllowPattern('web-fetch', {
+      url: 'http://doc.zhoujusoft.com/docs/apaas/intro/',
+    });
+    expect(pattern).not.toBeNull();
+    gate.addSessionRule?.({
+      toolName: 'web-fetch',
+      decision: 'allow',
+      inputPrefix: { key: pattern!.key, prefix: pattern!.prefix },
+      reason: 'test always',
+    });
+    const sameSite = gate.evaluate(
+      { id: 'c1', toolName: 'web-fetch', input: { url: 'http://doc.zhoujusoft.com/docs/ai/intro/' } },
+      'execute'
+    );
+    expect(sameSite.decision).toBe('allow');
+    const otherSite = gate.evaluate(
+      { id: 'c2', toolName: 'web-fetch', input: { url: 'http://bbs.zhoujusoft.com/x' } },
+      'execute'
+    );
+    expect(otherSite.decision).toBe('ask');
+    const spoofSite = gate.evaluate(
+      {
+        id: 'c3',
+        toolName: 'web-fetch',
+        input: { url: 'http://doc.zhoujusoft.com.evil.com/x' },
+      },
+      'execute'
+    );
+    expect(spoofSite.decision).toBe('ask');
+  });
 });

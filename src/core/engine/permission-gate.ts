@@ -67,6 +67,8 @@ const ALLOW_PATTERN_FIELDS: Readonly<Record<string, string>> = {
   'write-file': 'path',
   read_file: 'path',
   'read-file': 'path',
+  // 联网取数类：按站点 origin 记住（一次 always 管整站，避免逐 URL 确认）
+  'web-fetch': 'url',
 };
 
 /**
@@ -74,6 +76,8 @@ const ALLOW_PATTERN_FIELDS: Readonly<Record<string, string>> = {
  *
  * - bash 类：command 首 token（如 "git status"），展示为 `bash git status*`。
  * - 路径类（edit/write/read）：path 完整值，展示为 `edit-file /abs/path*`。
+ * - 联网类（web-fetch）：url 的站点 origin + '/'（如 `web-fetch https://host/*`），
+ *   一次 always 管整站；末尾 '/' 防 `host.evil.com` 前缀 spoof；非法 URL 回退完整值。
  * - 无映射或字段非字符串/空 → null（UI 只给 once，不提供 always）。
  */
 export function describeAllowPattern(
@@ -86,6 +90,18 @@ export function describeAllowPattern(
   if (typeof raw !== 'string') return null;
   const trimmed = raw.trim();
   if (trimmed.length === 0) return null;
+  // URL 取站点 origin + '/'：一次 always 记住整站，避免逐页确认；
+  // 末尾 '/' 防 `host.evil.com` 式前缀 spoof；非法 URL 回退完整值。
+  if (key === 'url') {
+    let prefix = trimmed;
+    try {
+      const origin = new URL(trimmed).origin;
+      if (origin && origin !== 'null') prefix = `${origin}/`;
+    } catch {
+      // 非法 URL：保留完整值（前缀匹配仍有效，只是不能跨页）
+    }
+    return { key, prefix, label: `${toolName} ${prefix}*` };
+  }
   // 命令取首 token（`git status --porcelain` → `git status`），路径取完整值
   const prefix = key === 'command' ? trimmed.split(/\s+/).slice(0, 2).join(' ') : trimmed;
   if (prefix.length === 0) return null;
