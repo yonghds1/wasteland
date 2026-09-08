@@ -11,6 +11,7 @@ import {
   merge,
   mergeMap,
   of,
+  takeUntil,
   tap} from 'rxjs';
 import { t } from '@locales/index.js';
 import { UserInputBridge } from './user-input-bridge.js';
@@ -167,16 +168,27 @@ export class TurnExecutor {
         trace: this.params.trace});
 
       const provider$: Observable<RuntimeEvent> = defer((): Observable<RuntimeEvent> => {
-        const abortError$ = this.params.abort$
-          ? this.params.abort$.pipe(map(() => { throw new Error('AbortError'); }))
-          : EMPTY;
+        const step$ = this.params.provider.runStep({
+          context: this.params.context,
+          state: this.state,
+        });
+        // 中断语义：abort$ 触发 → AbortError（下游 catchError 转中断消息）。
+        // 必须用 takeUntil 而不是 merge：abort$ 是常驻 Subject（TUI 创建后永不
+        // complete），merge 会永远等它导致 provider$ 无法 complete，
+        // processProviderTail / continuation 饿死（工具不派发、turn 不结束）。
+        const abortable$ = this.params.abort$
+          ? step$.pipe(
+              takeUntil(
+                this.params.abort$.pipe(
+                  map(() => {
+                    throw new Error('AbortError');
+                  })
+                )
+              )
+            )
+          : step$;
 
-        return merge(
-          this.params.provider.runStep({
-            context: this.params.context,
-            state: this.state}),
-          abortError$
-        ).pipe(
+        return abortable$.pipe(
           tap((e) => {
             if (e.type === 'tool_call' && e.call) {
               this.toolCallBuffer.push({

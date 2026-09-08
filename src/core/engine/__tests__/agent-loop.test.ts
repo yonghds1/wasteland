@@ -36,7 +36,7 @@ import type { PermissionGate } from '../permission-gate.js';
 // ============================================================
 
 /** 创建 mock AgentProvider */
-function createMockProvider(events: Array<{ type: string; text?: string; call?: unknown }>): AgentProvider {
+function createMockProvider(events: Array<{ type: string; text?: string; call?: unknown; usage?: unknown }>): AgentProvider {
   return {
     id: 'mock-provider',
     runStep: () => {
@@ -338,6 +338,62 @@ describe('runAgentLoop', () => {
       const toolResults = events.filter((e) => e.type === 'tool_result');
 
       expect(toolResults).toHaveLength(2);
+    });
+  });
+
+  describe('abort$ 常驻 Subject（TUI 场景回归）', () => {
+    // TUI 传入永不 complete 的 abort$ Subject。provider 流必须照常 complete，
+    // 否则 tail/continuation 饿死：工具不派发、turn 不结束（usage 后静默）。
+    it('abort$ pending 时文本 turn 照常结束', async () => {
+      const { Subject } = await import('rxjs');
+      const provider = createMockProvider([
+        { type: 'assistant_message', text: 'Hello' },
+        { type: 'usage', usage: { promptTokens: 10, completionTokens: 2, totalTokens: 12 } },
+      ]);
+      const input$ = createInput$('Hi');
+
+      const { events$ } = runAgentLoop({
+        provider,
+        input$,
+        sessionManager: mockSessionManager.manager,
+        cwd: '/tmp',
+        mode: 'interactive',
+        abort$: new Subject<void>(),
+      });
+
+      const events = await collectEvents(events$);
+      const types = events.map((e) => e.type);
+      expect(types).toContain('assistant_message');
+      expect(types).toContain('usage_update');
+      expect(types).toContain('session_ended');
+    });
+
+    it('abort$ pending 时 tool_call 照常派发执行', async () => {
+      const { Subject } = await import('rxjs');
+      const tool = createMockTool('read-file', 'file content');
+      const toolRegistry = new ToolRegistry([tool]);
+      const gate = {
+        evaluate: vi.fn().mockReturnValue({ decision: 'allow', mode: 'default' }),
+      } as unknown as PermissionGate;
+      const provider = createMockProvider([
+        { type: 'tool_call', call: { id: 'call-1', toolName: 'read-file', input: { path: '/tmp/test' } } },
+      ]);
+      const input$ = createInput$('Read the file');
+
+      const { events$ } = runAgentLoop({
+        provider,
+        input$,
+        sessionManager: mockSessionManager.manager,
+        cwd: '/tmp',
+        mode: 'interactive',
+        toolRegistry,
+        permissionGate: gate,
+        abort$: new Subject<void>(),
+      });
+
+      const events = await collectEvents(events$);
+      expect(events.find((e) => e.type === 'tool_call_requested')).toBeDefined();
+      expect(events.find((e) => e.type === 'tool_result')).toBeDefined();
     });
   });
 
