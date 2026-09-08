@@ -219,6 +219,9 @@ export function spawnChildAgentForwarding$(params: {
       providerSettings: setup.childProviderSettings,
       childAgentTimeout: context.childAgentTimeout,
       userInputBridge: context.userInputBridge,
+      // 继承父循环的交互性：父有桥接（TUI/交互 CLI）则子可问人；
+      // 父无桥接（--message/管道）则子也不建桥，ask 直接拒绝不挂起。
+      interactive: context.userInputBridge !== undefined,
       spawnDepth: resolved.depth,
       // 子 agent 的 system prompt（来自 multiAgent.promptTemplate）
       // minimax 收到后会按角色约束行为（不再"角色扮演"）

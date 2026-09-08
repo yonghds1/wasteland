@@ -570,6 +570,45 @@ describe('runAgentLoop', () => {
     });
   });
 
+  describe('非交互模式 ask 直接拒绝（不挂起）', () => {
+    const askGate = {
+      evaluate: vi.fn().mockReturnValue({ decision: 'ask', mode: 'default', reason: 'need confirm' }),
+    } as unknown as PermissionGate;
+
+    it('interactive:false + 无 bridge → tool_failed 且流正常结束', async () => {
+      const tool = createMockTool('bash', 'never runs');
+      const toolRegistry = new ToolRegistry([tool]);
+      const provider = createMockProvider([
+        { type: 'tool_call', call: { id: 'call-1', toolName: 'bash', input: {} } },
+      ]);
+      const input$ = createInput$('Run it');
+
+      const { events$ } = runAgentLoop({
+        provider,
+        input$,
+        sessionManager: mockSessionManager.manager,
+        cwd: '/tmp',
+        mode: 'single',
+        toolRegistry,
+        permissionGate: askGate,
+        interactive: false,
+      });
+
+      // 5 秒内必须结束：挂起即失败（旧行为会永远等待 bridge）
+      const events = await Promise.race([
+        collectEvents(events$),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('timed out waiting for events (hang!)')), 5000)
+        ),
+      ]);
+      const failed = events.find((e) => e.type === 'tool_failed') as any;
+      expect(failed).toBeDefined();
+      expect(failed.toolName).toBe('bash');
+      // 未发出询问事件（无人可问，直接拒绝）
+      expect(events.some((e) => e.type === 'user_input_requested')).toBe(false);
+    });
+  });
+
   describe('取消订阅', () => {
     it('取消 events$ 停止处理', async () => {
       const provider = createMockProvider([

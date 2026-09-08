@@ -269,6 +269,8 @@ export function createResumeCommand(): Command {
             debug,
             existingSession: resumedSession,
             initialHistory: history,
+            // 单次消息无 TTY 可应答：ask 直接拒绝，不挂起
+            interactive: false,
           });
 
           const work: Promise<void>[] = [renderRuntimeEvents(run.events$, { style: renderStyle })];
@@ -297,6 +299,7 @@ export function createResumeCommand(): Command {
             userInputBridge,
             existingSession: resumedSession,
             initialHistory: history,
+            interactive: true,
           });
 
           const inputAdapter = new CliInputAdapter({

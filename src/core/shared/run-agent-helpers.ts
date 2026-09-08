@@ -35,6 +35,13 @@ export type BaseLoopArgs = {
   /** CLI --debug 或 settings.runtime.debug（任一即开 runAgentLoop 落盘） */
   debug: boolean;
   userInputBridge?: UserInputBridge;
+  /**
+   * 可选：是否为交互模式（默认 true，即保持旧行为）。
+   *
+   * 非交互调用方（chat/resume 的 `--message` / 管道路径）传 false，
+   * 避免 runAgentLoop 自建无人应答的桥接器导致 ask 无限挂起。
+   */
+  interactive?: boolean;
   abort$?: LoopParams['abort$'];
   existingSession?: LoopParams['existingSession'];
   initialHistory?: LoopParams['initialHistory'];
@@ -67,6 +74,7 @@ export function startAgentLoop(
     skillExecutor: runtime.skillExecutor,
     childAgentTimeout: runtime.loadedSettings.settings.runtime.childAgentTimeout,
     userInputBridge: args.userInputBridge,
+    interactive: args.interactive,
     // debug 开启条件：settings.runtime.debug 或 CLI --debug flag
     debug: Boolean(args.debug || runtime.loadedSettings.settings.runtime.debug),
     // 透传给 dispatchToolCall → spawn-agent（读 multiAgent 配置 + 重试参数）

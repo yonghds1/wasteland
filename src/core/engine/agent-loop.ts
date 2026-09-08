@@ -77,8 +77,8 @@ type AgentRun = {
   events$: Observable<RuntimeEvent>;
   /** 调试追踪流：用于调试的详细事件流 */
   debug$: Observable<DebugTraceEvent>;
-  /** 用户输入桥接器（用于 ask-user 工具） */
-  userInputBridge: UserInputBridge;
+  /** 用户输入桥接器（非交互模式为 undefined：无人应答） */
+  userInputBridge: UserInputBridge | undefined;
 };
 
 // ============================================================
@@ -183,6 +183,13 @@ export function runAgentLoop(params: {
   childAgentTimeout?: number;
   /** 可选：用户输入桥接器（用于 ask-user 工具） */
   userInputBridge?: UserInputBridge;
+  /**
+   * 可选：是否为交互模式（默认 true）。
+   *
+   * 为 false 时不自动创建 userInputBridge：非交互场景（`--message` / 管道）
+   * 无人能应答，权限 ask 直接拒绝、ask-user 工具直接失败，避免无限挂起。
+   */
+  interactive?: boolean;
   /** 可选：当前 spawn 嵌套深度（用于限制递归 spawn） */
   spawnDepth?: number;
   /** 可选：是否启用 debug 日志落盘（写入 .wasteland/debug.log） */
@@ -215,11 +222,14 @@ export function runAgentLoop(params: {
   };
   const maxStepsPerTurn = params.maxStepsPerTurn ?? 30;
 
-  // 用户输入桥接器（用于 ask-user 工具）
-  // 如果未提供，创建新的实例。仅内部创建的实例在会话结束时由本循环销毁；
+  // 用户输入桥接器（用于 ask-user 工具与权限确认）。
+  // 未提供时仅交互模式自动创建：非交互（`--message` / 管道）无人应答，
+  // 传 undefined 让 ask 直接拒绝、ask-user 直接失败，而不是无限挂起。
+  // 仅内部创建的实例在会话结束时由本循环销毁；
   // 复用外部传入的（如子 Agent 复用父 Agent 的 bridge）生命周期由所有者管理。
-  const ownsUserInputBridge = !params.userInputBridge;
-  const userInputBridge = params.userInputBridge ?? new UserInputBridge();
+  const userInputBridge =
+    params.userInputBridge ?? (params.interactive === false ? undefined : new UserInputBridge());
+  const ownsUserInputBridge = userInputBridge !== undefined && !params.userInputBridge;
 
   // ---- 主事件流 ----
   // 使用 defer 延迟执行异步的会话创建

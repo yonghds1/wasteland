@@ -101,6 +101,9 @@ async function runChatSession(params: {
       prompt: params.prompt,
       debug: params.debug,
       userInputBridge: params.userInputBridge,
+      // mode === 'interactive'（readline）才有人能应答；--message / 管道传 false，
+      // ask 直接拒绝而不是无限挂起
+      interactive: params.mode === 'interactive',
     });
 
     // 使用 CliOutputAdapter 处理事件
