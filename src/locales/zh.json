@@ -567,6 +567,7 @@
     "logs": {
       "description": "查看 wasteland 运行时日志",
       "deprecated": "⚠ wasteland logs 已废弃：请用 TUI 日志页（wasteland /logs）查看，功能完整（搜索/过滤/对话合并/导出）",
+      "unknownProject": "未知项目: {{id}}",
       "options": {
         "dir": "日志目录（显式覆盖；默认走中央数据根，--project 聚合多项目）",
         "project": "只看指定项目（ID 或路径）"

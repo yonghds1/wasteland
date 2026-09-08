@@ -45,6 +45,17 @@ export function resolveDefaultLogsDir(cwd: string): string {
 }
 
 /**
+ * 上报未知项目并返回成功退出码（纯展示，无错误语义）。
+ *
+ * @param stdout - 输出流
+ * @param project - 用户输入的 project 选项原文
+ */
+function reportUnknownProject(stdout: NodeJS.WritableStream, project: string): number {
+  stdout.write(`${t('commands.logs.unknownProject', { id: project })}\n`);
+  return 0;
+}
+
+/**
  * 解析命令的目标日志目录（中央数据根聚合）。
  *
  * 优先级：显式 `--dir` > `--project` 收窄 > 默认聚合（全部项目；无项目时回退单目录，保证空库提示路径不变）。
@@ -271,6 +282,9 @@ export async function runLogsErrors(
 ): Promise<number> {
   const stdout = opts.stdout ?? process.stdout;
   const dirs = await resolveTargetLogDirs(process.cwd(), options);
+  if (dirs.length === 0) {
+    return reportUnknownProject(stdout, options.project ?? '');
+  }
   const tail = Math.max(1, Number.parseInt(options.tail ?? '20', 10) || 20);
 
   const allEntries: LogEntry[] = [];
@@ -316,6 +330,9 @@ export async function runLogsShow(
 ): Promise<number> {
   const stdout = opts.stdout ?? process.stdout;
   const dirs = await resolveTargetLogDirs(process.cwd(), options);
+  if (dirs.length === 0) {
+    return reportUnknownProject(stdout, options.project ?? '');
+  }
   const tail = Math.max(1, Number.parseInt(options.tail ?? '200', 10) || 200);
 
   const allEntries: LogEntry[] = [];
@@ -389,6 +406,9 @@ export async function runLogsTail(
 ): Promise<number> {
   const stdout = opts.stdout ?? process.stdout;
   const dirs = await resolveTargetLogDirs(process.cwd(), options);
+  if (dirs.length === 0) {
+    return reportUnknownProject(stdout, options.project ?? '');
+  }
   const tail = Math.max(1, Number.parseInt(options.tail ?? '50', 10) || 50);
   const level = options.level ? parseLevelOption(options.level) : null;
   const scopes = options.scope

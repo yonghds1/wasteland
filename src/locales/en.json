@@ -567,6 +567,7 @@
     "logs": {
       "description": "Read wasteland runtime logs",
       "deprecated": "⚠ wasteland logs is deprecated: use the TUI Logs page (wasteland /logs) instead, which is fully featured (search/filter/conversation merge/export)",
+      "unknownProject": "Unknown project: {{id}}",
       "options": {
         "dir": "Logs directory (explicit override; default is the central data root, --project aggregates)",
         "project": "Only show the given project (ID or path)"

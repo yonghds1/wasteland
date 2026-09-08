@@ -20,9 +20,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Writable } from 'node:stream';
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { LogEntry } from '@core/logger/types.js';
+import { initI18n } from '@locales/index.js';
+
+// 未知项目提示走 t()，先初始化英文翻译（与其他用字面量断言的测试互不干扰）。
+beforeAll(async () => {
+  await initI18n('en');
+});
 import {
   createLogsCommand,
   formatRow,
@@ -304,6 +309,13 @@ describe('listLogFiles', () => {
 // ============================================================
 
 describe('runLogsErrors', () => {
+  it('未知 --project 输出未知项目并返回 0', async () => {
+    const out = new CollectingWritable();
+    const code = await runLogsErrors({ project: 'definitely-not-a-project-xyz' }, { stdout: out });
+    expect(code).toBe(0);
+    expect(out.text()).toContain('definitely-not-a-project-xyz');
+  });
+
   it('dir 不存在输出 No error entries. 并返回 0', async () => {
     const out = new CollectingWritable();
     const code = await runLogsErrors({ dir: '/nonexistent/' + Date.now() }, { stdout: out });
@@ -386,6 +398,13 @@ describe('runLogsErrors', () => {
 // ============================================================
 
 describe('runLogsShow', () => {
+  it('未知 --project 输出未知项目并返回 0', async () => {
+    const out = new CollectingWritable();
+    const code = await runLogsShow('sid-x', { project: 'definitely-not-a-project-xyz' }, { stdout: out });
+    expect(code).toBe(0);
+    expect(out.text()).toContain('definitely-not-a-project-xyz');
+  });
+
   it('dir 不存在 → No logs directory', async () => {
     const out = new CollectingWritable();
     const code = await runLogsShow('sid-x', { dir: '/nonexistent/' + Date.now() }, { stdout: out });
@@ -477,6 +496,13 @@ describe('runLogsShow', () => {
 // ============================================================
 
 describe('runLogsTail', () => {
+  it('未知 --project 输出未知项目并返回 0', async () => {
+    const out = new CollectingWritable();
+    const code = await runLogsTail({ project: 'definitely-not-a-project-xyz', follow: false }, { stdout: out });
+    expect(code).toBe(0);
+    expect(out.text()).toContain('definitely-not-a-project-xyz');
+  });
+
   it('无文件 → 输出 No log file', async () => {
     const out = new CollectingWritable();
     const code = await runLogsTail({ dir, follow: false }, { stdout: out });
