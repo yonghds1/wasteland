@@ -1,6 +1,6 @@
 {
   "name": "wasteland",
-  "version": "0.2.18",
+  "version": "0.2.19",
   "description": "Wasteland CLI - A post-apocalyptic themed multi-agent CLI system",
   "type": "module",
   "main": "./dist/cli.js",
