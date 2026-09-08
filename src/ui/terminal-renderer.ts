@@ -316,6 +316,8 @@ export async function renderRuntimeEvents(
   const chunkedTurns = new Set<number>();
   const pendingTurnSpacing = new Set<number>();
   const chunkWriter = createChunkWriter(stdout, panelWidth);
+  // 子 Agent 思考累积（按 childId；thinking 按 chunk 到达，攒完在完成时一次展示，避免刷屏）
+  const childThinking = new Map<string, string>();
 
   // 追踪当前 Agent 上下文
   let currentDepth = 0;
@@ -595,6 +597,15 @@ export async function renderRuntimeEvents(
               if (event.error) {
                 stdout.write(`${indentBlock(paint(event.error, ANSI.red), PANEL_GUTTER)}\n`);
               }
+
+              // 子 Agent 思考汇总（累积的 thinking 一次展示，避免按 chunk 刷屏）
+              const thinking = childThinking.get(event.childId);
+              childThinking.delete(event.childId);
+              if (thinking && thinking.trim().length > 0) {
+                const preview =
+                  thinking.length > 200 ? `${thinking.slice(0, 200)}...` : thinking;
+                stdout.write(`${indentBlock(paint(`💭 ${preview}`, ANSI.dim), PANEL_GUTTER)}\n`);
+              }
             }
             break;
           }
@@ -636,6 +647,78 @@ export async function renderRuntimeEvents(
               stdout.write(`${paint(event.answer, ANSI.green)}\n\n`);
             } else {
               stdout.write(`${event.answer}\n`);
+            }
+            break;
+          }
+          case 'agent_thinking': {
+            // 按 chunk 到达，只累积不输出（完成时随 agent_completed 一次展示）
+            const prev = childThinking.get(event.childId) ?? '';
+            childThinking.set(event.childId, prev + event.content);
+            break;
+          }
+          case 'agent_progress': {
+            if (style === 'interactive') {
+              const childDepth = inferDepthFromSessionId(event.childId);
+              const childName = event.childName || extractAgentName(event.childId);
+              const color = getDepthColor(childDepth);
+              const prefix = getDepthPrefix(childDepth, childName);
+              const detail = event.message ? ` ${event.message}` : '';
+              stdout.write(
+                `${paint(prefix, ANSI.bold, color)} ${paint(event.status, ANSI.dim)}${paint(detail, ANSI.dim)}\n`
+              );
+            }
+            break;
+          }
+          case 'agent_tool_use': {
+            if (style === 'interactive') {
+              const childDepth = inferDepthFromSessionId(event.childId);
+              const childName = event.childName || extractAgentName(event.childId);
+              const color = getDepthColor(childDepth);
+              const prefix = getDepthPrefix(childDepth, childName);
+              stdout.write(
+                `${paint(prefix, ANSI.bold, color)} ${paint(`⚡ ${event.toolName}`, ANSI.dim)}\n`
+              );
+            }
+            break;
+          }
+          case 'skill_started': {
+            if (style === 'interactive') {
+              stdout.write(`${paint(`◈ skill ${event.skillName}`, ANSI.dim)}\n`);
+            }
+            break;
+          }
+          case 'skill_result': {
+            if (style === 'interactive') {
+              stdout.write(`${paint(`◈ skill ${event.skillName} done`, ANSI.dim)}\n`);
+            }
+            break;
+          }
+          case 'usage_update': {
+            if (style === 'interactive') {
+              const usage = event.usage;
+              stdout.write(
+                `${paint(`Tokens ↑${usage.promptTokens} ↓${usage.completionTokens} = ${usage.totalTokens}`, ANSI.dim)}\n`
+              );
+            }
+            break;
+          }
+          case 'context_compacted': {
+            if (style === 'interactive') {
+              stdout.write(
+                `${paint(`context compacted: -${event.removedCount} msgs, saved ${event.tokensSaved} tokens`, ANSI.dim)}\n`
+              );
+            }
+            break;
+          }
+          case 'context_budget_warning': {
+            if (style === 'interactive') {
+              stdout.write(
+                `${paint(`context budget: ${event.promptTokens}+${event.historyTokens} / ${event.contextWindow} tokens`, ANSI.yellow)}\n`
+              );
+            } else {
+              stderr.write(
+                `context budget: ${event.promptTokens}+${event.historyTokens} / ${event.contextWindow} tokens\n`
+              );
             }
             break;
           }
