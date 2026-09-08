@@ -45,7 +45,7 @@ function makeState(): AppState {
     filterMode: false,
     editMode: false,
     permissionSelection: 0,
-    permission: { pending: null, history: [] },
+    permission: { pending: null, queue: [], history: [] },
     logPageFilter: {},
     session: {
       agents: [
@@ -67,7 +67,7 @@ function makeState(): AppState {
       isStreaming: false,
       streamingContent: '',
       streamingMessageId: null,
-      permission: { pending: null, history: [] },
+      permission: { pending: null, queue: [], history: [] },
       usage: { promptTokens: 8000, completionTokens: 4400, totalTokens: 12400, cachedTokens: 0 },
       context: { isCompacting: false },
     },

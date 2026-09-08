@@ -49,7 +49,7 @@ const createInitialState = (
   filterMode: false,
   editMode: false,
   permissionSelection: 0,
-  permission: { pending: null, history: [] },
+  permission: { pending: null, queue: [], history: [] },
 
   logPageFilter: {},
 
@@ -61,7 +61,7 @@ const createInitialState = (
     isStreaming: false,
     streamingContent: '',
     streamingMessageId: null,
-    permission: { pending: null, history: [] },
+    permission: { pending: null, queue: [], history: [] },
     usage: {
       promptTokens: 0,
       completionTokens: 0,

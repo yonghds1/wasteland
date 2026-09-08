@@ -33,7 +33,7 @@ export type EventDraft = {
     streamingContent: string;
     streamingMessageId: string | null;
   };
-  permission: { pending: PermissionCard | null; history: PermissionCard[] };
+  permission: { pending: PermissionCard | null; queue: PermissionCard[]; history: PermissionCard[] };
   usage: {
     promptTokens: number;
     completionTokens: number;

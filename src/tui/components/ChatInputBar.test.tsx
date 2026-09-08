@@ -66,7 +66,7 @@ function renderBar(pending: ReturnType<typeof makePending> | null) {
     filterMode: false,
     editMode: false,
     permissionSelection: 0,
-    permission: { pending, history: [] },
+    permission: { pending, queue: [], history: [] },
     logPageFilter: {},
     session: {
       agents: [],
@@ -76,7 +76,7 @@ function renderBar(pending: ReturnType<typeof makePending> | null) {
       isStreaming: false,
       streamingContent: '',
       streamingMessageId: null,
-      permission: { pending, history: [] },
+      permission: { pending, queue: [], history: [] },
       usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0, cachedTokens: 0 },
       context: { isCompacting: false },
     },

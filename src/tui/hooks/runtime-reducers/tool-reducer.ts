@@ -146,7 +146,7 @@ export function reduceToolEvent(
       // toolName/input 优先取事件结构化字段（dispatch 侧填写），回退 question 正则。
       const q = event.question;
       const m = q.match(/是否允许执行\s*([^\s(?]+)(?:\s*\(([^)]+)\))?/);
-      permission.pending = {
+      const card: PermissionCard = {
         callId: event.callId,
         toolName: event.toolName ?? m?.[1] ?? 'ask-user',
         command: m?.[2],
@@ -155,6 +155,12 @@ export function reduceToolEvent(
         status: 'pending',
         timestamp: new Date().toISOString(),
       };
+      // FIFO：无队头直接上位；否则排队等待，回答时按 callId 对号。
+      if (!permission.pending) {
+        permission.pending = card;
+      } else {
+        permission.queue.push(card);
+      }
       break;
     }
 
@@ -179,7 +185,8 @@ export function reduceToolEvent(
           ...permission.history,
           { ...permission.pending, status: 'resolved', decision, timestamp: new Date().toISOString() },
         ];
-        permission.pending = null;
+        // 队头出队：后续等待上位（bridge 侧同 tick 已把答案路由给正确的等待者）。
+        permission.pending = permission.queue.shift() ?? null;
       }
       break;
     }

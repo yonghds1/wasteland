@@ -34,7 +34,7 @@ type EventProcessResult = {
   isStreaming: boolean;
   streamingContent: string;
   streamingMessageId: string | null;
-  permission: { pending: PermissionCard | null; history: PermissionCard[] };
+  permission: { pending: PermissionCard | null; queue: PermissionCard[]; history: PermissionCard[] };
   usage: {
     promptTokens: number;
     completionTokens: number;
@@ -64,7 +64,7 @@ function processRuntimeEvent(
     isStreaming: boolean;
     streamingContent: string;
     streamingMessageId: string | null;
-    permission: { pending: PermissionCard | null; history: PermissionCard[] };
+    permission: { pending: PermissionCard | null; queue: PermissionCard[]; history: PermissionCard[] };
     usage: {
       promptTokens: number;
       completionTokens: number;
@@ -96,7 +96,7 @@ function processRuntimeEvent(
       streamingContent: currentState.streamingContent,
       streamingMessageId: currentState.streamingMessageId,
     },
-    permission: { pending: currentState.permission.pending, history: [...currentState.permission.history] },
+    permission: { pending: currentState.permission.pending, queue: [...currentState.permission.queue], history: [...currentState.permission.history] },
     usage: { ...currentState.usage },
     context: currentState.context,
   };
@@ -225,13 +225,18 @@ export function useRuntimeEvents(
               const hadPending = !!prev.session.permission?.pending;
               const hasPending = !!nextSession.permission?.pending;
               const shouldForceInput = !hadPending && hasPending;
+              // 队头变化（新问询上位 / 答完推进到下一个）→ 选项索引归零，
+              // 避免上一张的光标位置被带到下一张造成误选。
+              const prevHead = prev.session.permission?.pending?.callId ?? null;
+              const nextHead = nextSession.permission?.pending?.callId ?? null;
 
               return {
                 ...prev,
                 session: nextSession,
                 // 同步顶层 permission 保持兼容
                 permission: nextSession.permission ?? prev.permission,
-                ...(shouldForceInput ? { inputMode: true, focusArea: 'inputBar' as const, permissionSelection: 0 } : {}),
+                ...(shouldForceInput ? { inputMode: true, focusArea: 'inputBar' as const } : {}),
+                ...(prevHead !== nextHead ? { permissionSelection: 0 } : {}),
               };
             });
           }, 50);

@@ -87,7 +87,7 @@ function createTestState(): AppState {
     filterMode: false,
     editMode: false,
     permissionSelection: 0,
-    permission: { pending: null, history: [] },
+    permission: { pending: null, queue: [], history: [] },
     logPageFilter: {},
     session: {
       agents: [],
@@ -97,7 +97,7 @@ function createTestState(): AppState {
       isStreaming: false,
       streamingContent: '',
       streamingMessageId: null,
-      permission: { pending: null, history: [] },
+      permission: { pending: null, queue: [], history: [] },
       usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0, cachedTokens: 0 },
       context: { isCompacting: false },
     },

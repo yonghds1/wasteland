@@ -9,7 +9,7 @@ function makeDraft(messages: EventDraft['messages'] = []): EventDraft {
     messages: [...messages],
     tools: [],
     flow: { isThinking: false, isStreaming: false, streamingContent: '', streamingMessageId: null },
-    permission: { pending: null, history: [] },
+    permission: { pending: null, queue: [], history: [] },
     usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0, cachedTokens: 0 },
     context: { isCompacting: false },
   };

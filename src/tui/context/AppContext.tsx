@@ -125,9 +125,10 @@ export interface AppState {
   /** 权限卡片当前选中的选项索引（0: 允许本次, 1: 永久允许, 2: 拒绝） */
   permissionSelection: number;
 
-  /** 统一权限模型：pending 单例 + 历史，解决多卡同高亮与已决态误交互 */
+  /** 统一权限模型：pending 为队头（当前展示/回答的那一张），queue 为后续等待，history 为已决 */
   permission: {
     pending: PermissionCard | null;
+    queue: PermissionCard[];
     history: PermissionCard[];
   };
 
@@ -153,7 +154,7 @@ export interface AppState {
     streamingContent: string; // 流式输出的累积内容
     streamingMessageId: string | null; // 当前流式消息 ID
     /** 统一权限卡片状态（pending 单例 + 历史） */
-    permission: { pending: PermissionCard | null; history: PermissionCard[] };
+    permission: { pending: PermissionCard | null; queue: PermissionCard[]; history: PermissionCard[] };
     /** Token 使用量统计 */
     usage: {
       promptTokens: number;
