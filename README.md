@@ -259,14 +259,14 @@ npm run dev -- chat --provider local --message "/spawn analyst 分析 package.js
 # 3. 使用 Qwen provider 测试（Qwen 会自动决定是否调用 spawn_agent）
 npm run dev -- chat --message "分析这个项目的架构，并给出重构建议"
 
-# 4. 使用 bypass_permissions 模式允许 spawn_agent 执行
+# 4. 使用 bypass_permissions 模式让子 agent 的工具调用也免确认、全自动跑完
 npm run dev -- chat --permission-mode bypass_permissions --message "..."
 ```
 
 **注意**：
 - `local` provider 通过 `/spawn <name> <task>` 语法触发 spawn_agent
 - `qwen` provider 会根据任务自动决定是否调用 spawn_agent（需要模型支持 tool calling）
-- spawn_agent 是高风险工具，默认权限模式会要求确认
+- spawn_agent 本体免确认（只读级，只创建子会话）；子 agent 的工具调用（bash/edit 等）照常走权限门确认（同 Claude Code 的 Agent 工具语义）
 
 ## 配置与数据目录
 

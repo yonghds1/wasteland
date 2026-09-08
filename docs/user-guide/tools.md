@@ -355,9 +355,11 @@ wasteland 的主 Agent 会自动组合多个工具完成复杂任务。在 TUI �
 
 | 风险等级 | 工具 | `default` 模式 | `accept_edits` 模式 |
 |----------|------|----------------|---------------------|
-| read | read-file, list-directory, glob, grep, web-search, ask-user | 自动允许 | 自动允许 |
+| read | read-file, list-directory, glob, grep, web-search, ask-user, spawn_agent | 自动允许 | 自动允许 |
 | write | write-file, edit-file | 需要确认 | 自动允许 |
-| execute | bash, web-fetch, http-request, git, spawn_agent | 需要确认 | 需要确认 |
+| execute | bash, web-fetch, http-request, git | 需要确认 | 需要确认 |
+
+> 说明：`spawn_agent` 本体免确认（只创建子会话）；子 agent 后续的工具调用各自走权限门（同 Claude Code 的 Agent 工具语义）。
 
 第三种模式 `bypass_permissions` 会跳过所有权限检查，全部自动允许（仅限受信任的自动化场景）。
 
