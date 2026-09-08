@@ -208,13 +208,15 @@ describe('dispatchToolCall - 5 段时间分解 (AC16)', () => {
 describe('dispatchToolCall - 权限问询 agent 归属', () => {
   function makeExecRegistry(): ToolRegistry {
     const reg = new ToolRegistry();
-    reg.register({
-      name: 'bash',
-      riskLevel: 'execute',
-      async execute(): Promise<ToolExecutionResult> {
-        return { status: 'success', output: 'ok' };
-      },
-    });
+    for (const name of ['bash', 'web-fetch', 'mcp__srv__tool']) {
+      reg.register({
+        name,
+        riskLevel: 'execute',
+        async execute(): Promise<ToolExecutionResult> {
+          return { status: 'success', output: 'ok' };
+        },
+      });
+    }
     return reg;
   }
 
@@ -252,6 +254,51 @@ describe('dispatchToolCall - 权限问询 agent 归属', () => {
   it('主会话问询无前缀（保持原行为）', async () => {
     const question = await askQuestion(makeSession());
     expect(question.startsWith('是否允许执行')).toBe(true);
+  });
+
+  it('web-fetch 问询带 URL 明细', async () => {
+    const events$ = dispatchToolCall({
+      session: makeSession(),
+      sessionManager: makeSessionManagerStub(),
+      turn: 1,
+      call: makeCall('web-fetch', 'c2', { url: 'http://doc.zhoujusoft.com/docs/x' }),
+      registry: makeExecRegistry(),
+      permissionGate: createPermissionGate({ mode: 'default' }),
+      cwd: '/tmp',
+      turnState: makeTurnState(),
+      userInputBridge: makeSilentBridge(),
+    });
+    const event = await firstValueFrom(
+      events$.pipe(filter((e) => e.type === 'user_input_requested'))
+    );
+    if (event.type !== 'user_input_requested') throw new Error('unreachable');
+    expect(event.question).toBe('是否允许执行 web-fetch (http://doc.zhoujusoft.com/docs/x)?');
+  });
+
+  it('无明细字段的工具问询带 JSON 摘要，空输入保持光秃', async () => {
+    async function questionFor(input: Record<string, unknown>): Promise<string> {
+      const events$ = dispatchToolCall({
+        session: makeSession(),
+        sessionManager: makeSessionManagerStub(),
+        turn: 1,
+        call: makeCall('mcp__srv__tool', 'c3', input),
+        registry: makeExecRegistry(),
+        permissionGate: createPermissionGate({ mode: 'default' }),
+        cwd: '/tmp',
+        turnState: makeTurnState(),
+        userInputBridge: makeSilentBridge(),
+      });
+      const event = await firstValueFrom(
+        events$.pipe(filter((e) => e.type === 'user_input_requested'))
+      );
+      if (event.type !== 'user_input_requested') throw new Error('unreachable');
+      return event.question;
+    }
+    // 注册表里已有 mcp__srv__tool（见 makeExecRegistry），问询可达
+    expect(await questionFor({})).toBe('是否允许执行 mcp__srv__tool?');
+    expect(await questionFor({ id: 7, verbose: true })).toBe(
+      '是否允许执行 mcp__srv__tool ({"id":7,"verbose":true})?'
+    );
   });
 });
 

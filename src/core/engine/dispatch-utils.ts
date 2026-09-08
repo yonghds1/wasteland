@@ -15,7 +15,7 @@
 import { defer, of, type Observable } from 'rxjs';
 
 import { t } from '@locales/index.js';
-import type { ToolCall, ToolRunStatus } from '@tools/core/tool-types.js';
+import type { ToolCall, ToolInput, ToolRunStatus } from '@tools/core/tool-types.js';
 import {
   type RuntimeEvent,
   type SessionPermissionRecord,
@@ -39,6 +39,23 @@ export function createTimestamp(): string {
  */
 export function agentScopePrefix(session: Pick<SessionMetadata, 'childName'>): string {
   return session.childName ? `[${session.childName}] ` : '';
+}
+
+/**
+ * 权限问询的输入摘要（问句括号里的具体内容）。
+ *
+ * 无合适字段的工具退回单行 JSON（截断 160 字符），保证任何工具被问时
+ * 用户都能看到它想拿什么，而不是光秃秃的工具名。
+ */
+export function summarizeInputDetail(input: ToolInput | undefined): string {
+  if (!input || typeof input !== 'object') return '';
+  if (Object.keys(input).length === 0) return '';
+  try {
+    const single = JSON.stringify(input).replace(/\s+/g, ' ');
+    return ` (${single.length > 160 ? `${single.slice(0, 157)}...` : single})`;
+  } catch {
+    return '';
+  }
 }
 
 /** 构造 tool_call record（写 session） */

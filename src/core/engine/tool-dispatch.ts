@@ -18,6 +18,7 @@ import {
   createToolCallRecord,
   createToolResultRecord,
   requestPermissionConfirmation,
+  summarizeInputDetail,
 } from './dispatch-utils.js';
 import type { AgentProvider } from '@providers/provider-types.js';
 import type { ProviderSettings, LoadedWastelandSettings } from '@config/settings-types.js';
@@ -356,7 +357,9 @@ export function dispatchToolCall(params: {
               ? `${scopePrefix}是否允许执行 ${params.call.toolName} (${params.call.input.path})?`
               : params.call.input?.subcommand
                 ? `${scopePrefix}是否允许执行 git ${params.call.input.subcommand}?`
-                : `${scopePrefix}是否允许执行 ${params.call.toolName}?`,
+                : params.call.input?.url
+                  ? `${scopePrefix}是否允许执行 ${params.call.toolName} (${params.call.input.url})?`
+                  : `${scopePrefix}是否允许执行 ${params.call.toolName}${summarizeInputDetail(params.call.input)}?`,
           options: ['yes', 'always', 'no'],
           // 结构化上下文：UI 推导 once/always 模式用，不再依赖 question 正则
           toolName: params.call.toolName,
