@@ -410,9 +410,38 @@ describe('describeAllowPattern', () => {
 
   it('无映射工具/空值/非字符串返回 null（UI 只给 once）', () => {
     expect(describeAllowPattern('spawn_agent', { task: 'x' })).toBeNull();
+    expect(describeAllowPattern('ask-user', { question: 'x' })).toBeNull();
     expect(describeAllowPattern('bash', {})).toBeNull();
     expect(describeAllowPattern('bash', { command: '   ' })).toBeNull();
     expect(describeAllowPattern('bash', undefined)).toBeNull();
+  });
+
+  it('git 按 subcommand 记忆', () => {
+    expect(describeAllowPattern('git', { subcommand: 'commit' })).toEqual({
+      key: 'subcommand',
+      prefix: 'commit',
+      label: 'git commit*',
+    });
+    expect(describeAllowPattern('git', {})).toBeNull();
+  });
+
+  it('未知工具退回工具名级记忆（MCP 按服，其余按整工具名）', () => {
+    expect(describeAllowPattern('myserver/mytool', { any: 1 })).toEqual({
+      key: '__toolName',
+      prefix: 'myserver/',
+      label: 'myserver/*',
+    });
+    expect(describeAllowPattern('terminal', { action: 'send' })).toEqual({
+      key: '__toolName',
+      prefix: 'terminal',
+      label: 'terminal*',
+    });
+    // 输入缺失也不影响工具名级推导
+    expect(describeAllowPattern('terminal', undefined)).toEqual({
+      key: '__toolName',
+      prefix: 'terminal',
+      label: 'terminal*',
+    });
   });
 
   it('web-fetch 取站点 origin（一次 always 管整站）', () => {
@@ -435,8 +464,7 @@ describe('describeAllowPattern', () => {
     expect(describeAllowPattern('web-fetch', { url: '  ' })).toBeNull();
   });
 
-  it('web-fetch session 规则：同站放行、异站仍问', () => {
-    const gate = createPermissionGate({ mode: 'default' });
+  it('web-fetch session 规则：同站放行、异站仍问', () => {    const gate = createPermissionGate({ mode: 'default' });
     const pattern = describeAllowPattern('web-fetch', {
       url: 'http://doc.zhoujusoft.com/docs/apaas/intro/',
     });
@@ -466,5 +494,79 @@ describe('describeAllowPattern', () => {
       'execute'
     );
     expect(spoofSite.decision).toBe('ask');
+  });
+});
+
+describe('always 规则匹配 hardening', () => {
+  function bashGate(prefix: string) {
+    const gate = createPermissionGate({ mode: 'default' });
+    gate.addSessionRule?.({
+      toolName: 'bash',
+      decision: 'allow',
+      inputPrefix: { key: 'command', prefix },
+      reason: 'test always',
+    });
+    return gate;
+  }
+
+  function bashCall(command: string): ToolCall {
+    return { id: 'c1', toolName: 'bash', input: { command } };
+  }
+
+  it('干净余部命中（精确/加参数）', () => {
+    const gate = bashGate('git status');
+    expect(gate.evaluate(bashCall('git status'), 'execute').decision).toBe('allow');
+    expect(gate.evaluate(bashCall('git status --porcelain'), 'execute').decision).toBe('allow');
+  });
+
+  it('链式/替换/重定向/换行余部回落到问', () => {
+    const gate = bashGate('git status');
+    for (const cmd of [
+      'git status && rm -rf ~',
+      'git status; rm -rf ~',
+      'git status || true',
+      'git status | tee /tmp/x',
+      'git status `id`',
+      'git status $(id)',
+      'git status > /tmp/x',
+      'git status\nrm -rf ~',
+      'git statuses',
+    ]) {
+      expect(gate.evaluate(bashCall(cmd), 'execute').decision, cmd).toBe('ask');
+    }
+  });
+
+  it('git 规则按 subcommand 命中', () => {
+    const gate = createPermissionGate({ mode: 'default' });
+    gate.addSessionRule?.({
+      toolName: 'git',
+      decision: 'allow',
+      inputPrefix: { key: 'subcommand', prefix: 'commit' },
+      reason: 'test always',
+    });
+    expect(
+      gate.evaluate({ id: 'c1', toolName: 'git', input: { subcommand: 'commit' } }, 'execute')
+        .decision
+    ).toBe('allow');
+    expect(
+      gate.evaluate({ id: 'c2', toolName: 'git', input: { subcommand: 'push' } }, 'execute')
+        .decision
+    ).toBe('ask');
+  });
+
+  it('工具名级规则：MCP 整服放行、异服仍问', () => {
+    const gate = createPermissionGate({ mode: 'default' });
+    gate.addSessionRule?.({
+      toolName: 'myserver/mytool',
+      decision: 'allow',
+      inputPrefix: { key: '__toolName', prefix: 'myserver/' },
+      reason: 'test always',
+    });
+    expect(
+      gate.evaluate({ id: 'c1', toolName: 'myserver/other', input: {} }, 'execute').decision
+    ).toBe('allow');
+    expect(
+      gate.evaluate({ id: 'c2', toolName: 'otherserver/mytool', input: {} }, 'execute').decision
+    ).toBe('ask');
   });
 });

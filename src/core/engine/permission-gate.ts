@@ -45,7 +45,10 @@ export interface PermissionGate {
  * always 可记住的模式描述。
  */
 export type AllowPattern = {
-  /** 匹配的输入字段（如 bash 的 command、edit 系的 path）。 */
+  /**
+   * 匹配的输入字段（bash 的 command、edit 系的 path、git 的 subcommand）；
+   * 取 TOOL_NAME_SCOPE_KEY 时表示按工具名前缀匹配（无合适输入字段的工具用）。
+   */
   key: string;
   /** 前缀（-packed 命令取首 token，如 "git status"）。 */
   prefix: string;
@@ -54,10 +57,16 @@ export type AllowPattern = {
 };
 
 /**
+ * inputPrefix.key 取此值时，匹配语义切换为"工具名前缀"（-call.toolName.startsWith(prefix)），
+ * 而不是输入字段前缀。用于无合适输入字段的工具（MCP 按 `server/` 记整服，其余记整工具）。
+ */
+export const TOOL_NAME_SCOPE_KEY = '__toolName';
+
+/**
  * 工具输入字段映射：哪些工具的 always 可归纳为"字段前缀"模式。
  *
- * 保守正确：不在表里的工具返回 null（UI 不提供 always，只给 once），
- * 漏了再补，不提前放宽。
+ * 无映射的工具退回工具名级记忆（见 describeAllowPattern），
+ * spawn_agent / ask-user 例外（口子太大 / 从不询问），保持仅 once。
  */
 const ALLOW_PATTERN_FIELDS: Readonly<Record<string, string>> = {
   bash: 'command',
@@ -67,6 +76,8 @@ const ALLOW_PATTERN_FIELDS: Readonly<Record<string, string>> = {
   'write-file': 'path',
   read_file: 'path',
   'read-file': 'path',
+  // 版本控制写操作按子命令记（如 `git commit*`）
+  git: 'subcommand',
   // 联网取数类：按站点 origin 记住（一次 always 管整站，避免逐 URL 确认）
   'web-fetch': 'url',
 };
@@ -76,16 +87,27 @@ const ALLOW_PATTERN_FIELDS: Readonly<Record<string, string>> = {
  *
  * - bash 类：command 首 token（如 "git status"），展示为 `bash git status*`。
  * - 路径类（edit/write/read）：path 完整值，展示为 `edit-file /abs/path*`。
+ * - git：subcommand 完整值（如 `git commit*`）。
  * - 联网类（web-fetch）：url 的站点 origin + '/'（如 `web-fetch https://host/*`），
  *   一次 always 管整站；末尾 '/' 防 `host.evil.com` 前缀 spoof；非法 URL 回退完整值。
- * - 无映射或字段非字符串/空 → null（UI 只给 once，不提供 always）。
+ * - 其他工具：工具名级记忆（MCP `server/tool` 按 `server/` 记整服，其余记整工具名）；
+ *   spawn_agent / ask-user 返回 null（UI 只给 once）。
+ * - 字段非字符串/空 → null（UI 只给 once，不提供 always）。
  */
 export function describeAllowPattern(
   toolName: string,
   input: ToolInput | undefined
 ): AllowPattern | null {
   const key = ALLOW_PATTERN_FIELDS[toolName];
-  if (!key) return null;
+  // 无字段映射的工具退回工具名级记忆（MCP 按 `server/` 记整服，其余记整工具名）；
+  // 输入内容不参与推导（整工具/整服放行由用户显式确认）。
+  // spawn_agent 例外：整工具免问口子太大，保持仅 once；ask-user 从不询问，无需记忆。
+  if (!key) {
+    if (toolName === 'spawn_agent' || toolName === 'ask-user') return null;
+    const slash = toolName.indexOf('/');
+    const prefix = slash > 0 ? toolName.slice(0, slash + 1) : toolName;
+    return { key: TOOL_NAME_SCOPE_KEY, prefix, label: `${prefix}*` };
+  }
   const raw = input?.[key];
   if (typeof raw !== 'string') return null;
   const trimmed = raw.trim();
@@ -109,7 +131,10 @@ export function describeAllowPattern(
 }
 
 function matchesRule(rule: PermissionRule, call: ToolCall, riskLevel: ToolRiskLevel): boolean {
-  if (rule.toolName && rule.toolName !== call.toolName) {
+  // 工具名级规则（MCP 整服 / 小众工具整工具）跳过 toolName 精确匹配，
+  // 由下面的前缀检查兜底——否则 `server/` 前缀永远只能命中当初注册的那一个工具。
+  const isNameScope = rule.inputPrefix?.key === TOOL_NAME_SCOPE_KEY;
+  if (!isNameScope && rule.toolName && rule.toolName !== call.toolName) {
     return false;
   }
 
@@ -118,13 +143,38 @@ function matchesRule(rule: PermissionRule, call: ToolCall, riskLevel: ToolRiskLe
   }
 
   if (rule.inputPrefix) {
-    const value = call.input?.[rule.inputPrefix.key];
-    if (typeof value !== 'string' || !value.startsWith(rule.inputPrefix.prefix)) {
-      return false;
+    // 工具名级规则：按工具名前缀匹配（MCP 整服 / 小众工具整工具）
+    if (rule.inputPrefix.key === TOOL_NAME_SCOPE_KEY) {
+      if (!call.toolName.startsWith(rule.inputPrefix.prefix)) return false;
+    } else {
+      const value = call.input?.[rule.inputPrefix.key];
+      if (typeof value !== 'string' || !value.startsWith(rule.inputPrefix.prefix)) {
+        return false;
+      }
+      // bash 命令规则：前缀之后须是"干净余部"，否则拒绝命中回落到问——
+      // 防 `git status && evil` 蹭已记住的 `git status*`（链式/替换/重定向/换行）。
+      if (rule.inputPrefix.key === 'command' && !isSafeCommandRemainder(value, rule.inputPrefix.prefix)) {
+        return false;
+      }
     }
   }
 
   return true;
+}
+
+/**
+ * 命令余部安全检查（bash always 规则用）。
+ *
+ * - 余部为空（精确命中）→ 安全。
+ * - 余部必须以空白开头（token 边界：`git statuses` ≠ `git status`）。
+ * - 余部不得含 shell 元字符（`; & | 反引号 $ < > ( )` 与换行），防链式绕过。
+ * 不安全一律回落到问（fail-closed）；以前记住的带管道命令会重新开始问一次。
+ */
+function isSafeCommandRemainder(value: string, prefix: string): boolean {
+  if (value.length === prefix.length) return true;
+  const rest = value.slice(prefix.length);
+  if (!/^\s/.test(rest)) return false;
+  return !/[;&|`$<>()\n\r]/.test(rest);
 }
 
 function decideByMode(mode: PermissionMode, riskLevel: ToolRiskLevel): PermissionDecision {
