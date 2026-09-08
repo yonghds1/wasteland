@@ -25,6 +25,7 @@ import { Box, Text } from 'ink';
 import { wastelandTheme } from '@theme/wasteland/index.js';
 import type { LogEntry } from '@core/logger/index.js';
 import { ScrollableBox } from './ScrollableBox.js';
+import { truncateToWidth } from './card-window.js';
 import { pad2, parseLocalDate } from './chat-message-utils.js';
 
 // ============================================================
@@ -243,10 +244,16 @@ export function ToolTimelineHeader(): React.ReactElement {
 export function ToolTimelineRow({
   record,
   slowThresholdMs = DEFAULT_SLOW_THRESHOLD_MS,
+  contentWidth,
 }: {
   record: ToolCallRecord;
   /** 慢调用阈值（毫秒），可覆盖默认值 */
   slowThresholdMs?: number;
+  /**
+   * 行内容宽度（列数；传入后错误子行按显示宽度截到单行，保证 TIMELINE_ROW_HEIGHT 精确。
+   * 不传保持旧行为：错误信息截断 60 字符）。
+   */
+  contentWidth?: number;
 }): React.ReactElement {
   const meta = STATUS_META[record.status];
   const timeStr = formatToolTime(record.startTime ?? record.endTime);
@@ -272,8 +279,9 @@ export function ToolTimelineRow({
       {record.status === 'error' && record.errorMessage && (
         <Box flexDirection="row" marginLeft={2}>
           <Text color={wastelandTheme.colors.error}>
-            {'✗ '}
-            {truncate(record.errorMessage, 60)}
+            {contentWidth === undefined
+              ? `✗ ${truncate(record.errorMessage, 60)}`
+              : truncateToWidth(`✗ ${record.errorMessage}`, contentWidth - 2)}
           </Text>
         </Box>
       )}
@@ -303,6 +311,7 @@ export function ToolTimeline({
   slowThresholdMs = DEFAULT_SLOW_THRESHOLD_MS,
   height,
   showScrollbar = false,
+  contentWidth,
 }: {
   records: ReadonlyArray<ToolCallRecord>;
   /** 滚动偏移（提供后启用 ScrollableBox） */
@@ -317,6 +326,8 @@ export function ToolTimeline({
   height?: number;
   /** 显示右侧滚动条（内容可能溢出时传 true） */
   showScrollbar?: boolean;
+  /** 行内容宽度（透传给 Row 做错误行单行截断；不传保持旧行为） */
+  contentWidth?: number;
 }): React.ReactElement {
   const scrollable = offset !== undefined && onOffsetChange !== undefined;
   return (
@@ -340,6 +351,7 @@ export function ToolTimeline({
               key={`${record.toolName}-${record.startTime ?? record.endTime}-${idx}`}
               record={record}
               slowThresholdMs={slowThresholdMs}
+              contentWidth={contentWidth}
             />
           ))}
         </ScrollableBox>
@@ -349,6 +361,7 @@ export function ToolTimeline({
             key={`${record.toolName}-${record.startTime ?? record.endTime}-${idx}`}
             record={record}
             slowThresholdMs={slowThresholdMs}
+            contentWidth={contentWidth}
           />
         ))
       )}

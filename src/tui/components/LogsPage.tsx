@@ -35,7 +35,7 @@ import {
  */
 
 import type { LogsView, TimelineMode, TimelineMetric, ErrorContextWindow } from './logs-page-utils.js';
-import { getShortcutHelp, formatTime, formatTimeFull, formatTimeShort, levelColor, pad, scopeColor, kindColor, truncate, formatDetail, filterLogEntries, isErrorEntry, countErrorEntries, scrollToReveal, DEFAULT_CONTEXT_RADIUS, getErrorContextWindowAt, cardKeyFor, transcriptToLogEntries, ctxLevelColor } from './logs-page-utils.js';
+import { getShortcutHelp, formatTime, formatTimeShort, levelColor, pad, scopeColor, kindColor, truncate, filterLogEntries, countErrorEntries, scrollToReveal, DEFAULT_CONTEXT_RADIUS, getErrorContextWindowAt, cardKeyFor, transcriptToLogEntries, ctxLevelColor } from './logs-page-utils.js';
 export * from './logs-page-utils.js';
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { join } from 'node:path';
@@ -53,6 +53,7 @@ import { useLogsKeymap } from '../hooks/useLogsKeymap.js';
 import { useLogBus } from './LogBusProvider.js';
 import { TimingsBar, parseTimings } from './TimingsBar.js';
 import { ScrollableBox, useScroll } from './ScrollableBox.js';
+import { sliceCardWindow, truncateToWidth, displayWidth } from './card-window.js';
 import { ToolTimeline, TIMELINE_ROW_HEIGHT, buildToolTimeline } from './ToolTimeline.js';
 import {
   GlobalTimeline,
@@ -92,11 +93,31 @@ export function projectTag(worktree: string, projectId: string, currentProjectId
   return ` [${short}]`;
 }
 
-/** 卡片标称高度（行数，仅供滚动步长/钳制估算；渲染窗口按行预算精确切割，见 sliceWindowByLines） */
+/** 卡片标称高度（行数，仅供滚动步长/名义 maxVisible 估算；渲染窗口按行预算精确切割，见 card-window.ts） */
 const CARD_HEIGHT = 4;
 
-/** Session 行高度（行数） */
+/** Session 行高度（行数；行经 truncateToWidth 保证恰 1 行） */
 const SESSION_ROW_HEIGHT = 1;
+
+/** 搜索框提示串（单例，宽度计算与渲染共用，保证搜索行恒单行） */
+const SEARCH_HINT = '  (语法: level:error sid:1a2b keyword)';
+
+/**
+ * 相对耗时串（基于后一条日志，即时间上更早的一条；只显示 0.1s 以上、1 小时以内）。
+ * 测量（card-window）与渲染共用，保证行预算与实际同源。
+ */
+function relativeTimeStrFor(cards: LogEntry[], index: number): string {
+  const entry = cards[index];
+  const nextOlderEntry = cards[index + 1];
+  if (!entry || !nextOlderEntry) return '';
+  const t1 = new Date(nextOlderEntry.timestamp).getTime();
+  const t2 = new Date(entry.timestamp).getTime();
+  const diff = (t2 - t1) / 1000;
+  if (diff >= 0.1 && diff < 3600) {
+    return `<+${diff.toFixed(1)}s>`;
+  }
+  return '';
+}
 
 
 function ContextLine({ entry }: { entry: LogEntry }): React.ReactElement {
@@ -115,34 +136,16 @@ function ContextLine({ entry }: { entry: LogEntry }): React.ReactElement {
 }
 
 /**
- * 错误上下文展开区块：错误卡片展开时，按 前因 → 错误 → 后果 顺序
- * 显示其前后 N 条原始日志，与错误卡片本体形成视觉区分。
+ * 错误上下文定位行：标出错误在调用链中的位置（错误色高亮）。
+ * 行预算测量见 card-window.locatorText（逐字对应）。
  */
-function ErrorContextSection({
-  window,
-}: {
-  window: ErrorContextWindow | null;
-}): React.ReactElement | null {
-  if (!window) return null;
-  const { before, after, error } = window;
+function ErrorContextLocator({ entry }: { entry: LogEntry }): React.ReactElement {
   return (
-    <Box flexDirection="column" marginTop={1}>
-      <Text color={wastelandTheme.colors.muted}>
-        {`── context ↑${before.length} ↓${after.length} ──`}
+    <Box flexDirection="row" paddingLeft={2}>
+      <Text color={wastelandTheme.colors.error}>▼ </Text>
+      <Text color={wastelandTheme.colors.error}>
+        {`${formatTime(entry.timestamp)} | ${entry.level} | ${entry.scope} | ${truncate(entry.message, 64)}`}
       </Text>
-      {before.map((ctx, i) => (
-        <ContextLine key={`ctx-before-${i}`} entry={ctx} />
-      ))}
-      {/* 错误定位行：标出错误在调用链中的位置（错误色高亮） */}
-      <Box flexDirection="row" paddingLeft={2}>
-        <Text color={wastelandTheme.colors.error}>▼ </Text>
-        <Text color={wastelandTheme.colors.error}>
-          {`${formatTime(error.timestamp)} | ${error.level} | ${error.scope} | ${truncate(error.message, 64)}`}
-        </Text>
-      </Box>
-      {after.map((ctx, i) => (
-        <ContextLine key={`ctx-after-${i}`} entry={ctx} />
-      ))}
     </Box>
   );
 }
@@ -350,22 +353,10 @@ export function LogsPage({
   // 卡片展开状态
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
 
-  // ----- 高度账本（终端总行 − 固定铬），滚动数学与渲染裁剪必须用同一套 maxVisible -----
-  // toolbar 2（内容 1 + 底边框 1）+ 导出状态 0/1 + 底部区（搜索 3 / 帮助开 4 / 关 3）。
-  // 左栏每行恰 1 行，预算精确；右栏卡片高度可变，预算按标称卡高估算步长，
-  // 超高部分由 ScrollableBox 固定高度 overflow 裁掉（页面不撑屏、顶部恒可达）。
-  const { stdout: logsStdout } = useStdout();
-  const terminalRows = logsStdout?.rows ?? 24;
-  const bottomBarRows = isSearching ? 3 : helpVisible ? 4 : 3;
-  const chromeRows = 2 + (exportStatus ? 1 : 0) + bottomBarRows;
-  const leftListHeight = Math.max(3, terminalRows - chromeRows - 1);
-
-  // 左侧 session 列表滚动（高度与下方渲染盒一致，reveal 数学才对得上）
-  const sessionScroll = useScroll({
-    totalItems: sessions.length,
-    itemHeight: SESSION_ROW_HEIGHT,
-    height: leftListHeight,
-  });
+  // 选中 session 的原始日志条目（从磁盘按需加载，不做 level 过滤；
+  // level 过滤在 sessionCards memo 内做，时间线聚合用原始条目）
+  const [selectedSessionEntries, setSelectedSessionEntries] = useState<LogEntry[]>([]);
+  const [selectedSessionLoading, setSelectedSessionLoading] = useState<boolean>(false);
 
   // 选中的 session 摘要
   const selectedSessionSummary: ProjectSessionSummary | undefined = sessions[selectedSessionIdx];
@@ -374,10 +365,33 @@ export function LogsPage({
   const effectiveExportDir =
     exportDirProp ?? join(dataRoot, 'exports', selectedSessionSummary?.projectId ?? 'global');
 
-  // 选中 session 的原始日志条目（从磁盘按需加载，不做 level 过滤；
-  // level 过滤在 sessionCards memo 内做，时间线聚合用原始条目）
-  const [selectedSessionEntries, setSelectedSessionEntries] = useState<LogEntry[]>([]);
-  const [selectedSessionLoading, setSelectedSessionLoading] = useState<boolean>(false);
+  // ----- 高度账本（终端总行 − 固定铬），滚动数学与渲染裁剪必须用同一套 maxVisible -----
+  // toolbar 2（内容 1 + 底边框 1）+ 导出状态 0/1 + 底部区（搜索 3 / 帮助开 4 / 关 3）。
+  // 左右两栏共用同一列表高度（含加载态扣除，保证加载中也不撑屏）。
+  const { stdout: logsStdout } = useStdout();
+  const terminalRows = logsStdout?.rows ?? 24;
+  const terminalCols = logsStdout?.columns ?? 80;
+  const bottomBarRows = isSearching ? 3 : helpVisible ? 4 : 3;
+  const chromeRows = 2 + (exportStatus ? 1 : 0) + bottomBarRows;
+  const listHeight = Math.max(3, terminalRows - chromeRows - 1 - (selectedSessionLoading ? 2 : 0));
+
+  // ----- 列宽账本（yoga 百分比向下取整再减 1 做 guard，宁可少排不许多占） -----
+  // 左栏：40% − 右框线 1 − paddingX 2；行首 indent 含在行串里，内容宽即行宽上限。
+  // 右栏：60% − 外层 padL 1 − padR/滚动条 1 − 卡片 borderL 1 − 卡片 padL 1。
+  // 时间线行：无卡片铬，外层 padL 1 + padR/滚动条 1。
+  const leftColWidth = Math.max(10, Math.floor(terminalCols * 0.4) - 1);
+  const rightColWidth = Math.max(10, Math.floor(terminalCols * 0.6) - 1);
+  const leftContentWidth = Math.max(8, leftColWidth - 1 - 2);
+  const cardContentWidth = Math.max(8, rightColWidth - 4);
+  const timelineContentWidth = Math.max(8, rightColWidth - 2);
+
+  // 左侧 session 列表滚动（高度与下方渲染盒一致，reveal 数学才对得上；
+  // 行经 truncateToWidth 保证恰 1 行，计数切片精确）。
+  const sessionScroll = useScroll({
+    totalItems: sessions.length,
+    itemHeight: SESSION_ROW_HEIGHT,
+    height: listHeight,
+  });
 
   // Live tail：订阅 LogBus 实时流，对当前选中 session 做增量合并（解决 /logs 非实时痛点）
   const bus = useLogBus();
@@ -630,24 +644,25 @@ export function LogsPage({
     [globalTimelineRecords],
   );
 
-  // ----- 右栏高度账本（终端总行 − 固定铬，见上方 chromeRows） -----
-  // 右栏 header 1 + 加载行 0/2。预算外一律由 ScrollableBox overflow 裁掉，
-  // 页面总高度恒 ≤ 终端高度（修“内容撑开页面、顶部被顶走”）。
-  const rightListHeight = Math.max(3, terminalRows - chromeRows - 1 - (selectedSessionLoading ? 2 : 0));
+  // ----- 右栏高度账本（与左栏共用 listHeight；header 1 + 加载行 0/2 已在上式扣除） -----
+  // 右栏 header 1 行；卡片流按行预算精确切片（见 sliceCardWindow），渲染总行恒 ≤ 预算。
+  const rightListHeight = listHeight;
   // 时间线视图与卡片流共用右栏槽位；内部自带 1 行表头，列表预算再扣 1。
   const timelineListHeight = Math.max(3, rightListHeight - 1);
 
-  // 右侧卡片滚动（offset 语义 = 起始卡下标；高度与下方渲染盒一致，reveal 数学才对得上）
+  // 右侧卡片滚动（offset 语义 = 起始卡下标；窗口按行预算精确切片，见 cardWindow；
+  // clampToLastItem：末卡钳制，标称 maxVisible 会误判行预算窗口的尾部可达性）
   const cardScroll = useScroll({
     totalItems: sessionCards.length,
     itemHeight: CARD_HEIGHT,
     height: rightListHeight,
+    clampToLastItem: true,
   });
 
   // 大 session 虚拟化：只对可见窗口内的卡片创建 React 元素 / 计算 data。
   // 数千条 session 的卡片不预渲染（parseTimings 等耗时计算只对可见卡片执行），
-  // 滚动流畅不卡顿。窗口按“右栏预算行/标称卡高 + 2 张余量”切分，
-  // 超高部分由 ScrollableBox 固定高度 overflow 裁掉（页面不撑屏、顶部恒可达）。
+  // 滚动流畅不卡顿。窗口按行预算精确切片（sliceCardWindow），渲染总行恒 ≤ 预算，
+  // 页面不撑屏、顶部恒可达；单张超大卡截断可展开区域并打标（见 card-window.ts）。
   // Right pane selected card index
   const [focusedPane, setFocusedPane] = useState<'left' | 'right'>('left');
   const [selectedCardIdx, setSelectedCardIdx] = useState<number>(0);
@@ -657,19 +672,29 @@ export function LogsPage({
     setSelectedCardIdx(0);
   }, [minLevel, keywordFilter, errorFocus, selectedSessionIdx, view, timelineMode]);
 
-  // 卡片窗口：按张数切分（全屏行/标称卡高 + 2 张余量，与旧行为一致），offset 越界钳制到末卡。
-  // 超高部分由下方 ScrollableBox 固定高度 overflow 裁掉（页面不撑屏、顶部恒可达）。
-  const cardWindowCount = Math.max(
-    1,
-    Math.floor((logsStdout?.rows ?? 24) / CARD_HEIGHT) + 2,
-  );
+  // 卡片窗口：按行预算切片（替代按张数）；offset 越界钳制到末卡。
+  // 相对耗时/展开态/上下文与下方渲染共用同一计算（relativeTimeStrFor），测量与渲染同源。
   const cardWindowStart = Math.max(0, Math.min(cardScroll.offset, Math.max(0, sessionCards.length - 1)));
   const cardWindow = useMemo(() => {
-    return sessionCards.slice(cardWindowStart, cardWindowStart + cardWindowCount);
-  }, [sessionCards, cardWindowStart, cardWindowCount]);
+    return sliceCardWindow(sessionCards, cardWindowStart, {
+      contentWidth: cardContentWidth,
+      budgetRows: rightListHeight,
+      isExpanded: (i) => {
+        const e = sessionCards[i];
+        return e !== undefined && expandedCards.has(cardKeyOf(e));
+      },
+      contextWindowOf: (i) => {
+        const e = sessionCards[i];
+        if (!e) return null;
+        return contextWindows.get(cardKeyOf(e)) ?? null;
+      },
+      relativeTimeOf: (i) => relativeTimeStrFor(sessionCards, i),
+      isCurrentCard: (i) => i === cardWindowStart,
+    });
+  }, [sessionCards, cardWindowStart, cardContentWidth, rightListHeight, expandedCards, contextWindows]);
 
-  // 可见卡数（供 selectedCard 联动与键盘 reveal 数学；与旧行为一致取窗口张数）。
-  const cardWindowSize = cardWindowCount;
+  // 可见卡数（供 selectedCard 联动与键盘 reveal 数学；取窗口实际张数）。
+  const cardWindowSize = cardWindow.length;
 
   // 时间线滚动（独立于卡片滚动，行高 2；高度与渲染盒一致）
   const timelineScroll = useScroll({
@@ -970,25 +995,26 @@ export function LogsPage({
 
       {/* 主体：左 session 列表 + 右 卡片流 */}
       <Box flexGrow={1} flexDirection="row" width="100%">
-        {/* 左栏：Session 列表 */}
+        {/* 左栏：Session 列表（Ink 语义：borderStyle 存在即默认四边全画，
+            只保留右边框线，其余三边必须显式关闭，否则多出上下各 1 行撑开页面） */}
         <Box
           flexDirection="column"
           width="40%"
           borderStyle={wastelandTheme.decorations.borderStyle}
+          borderTop={false}
+          borderBottom={false}
+          borderLeft={false}
           borderRight
           borderColor={wastelandTheme.colors.borderDim}
           paddingX={1}
         >
-          {/* header */}
+          {/* header（单行：超出左栏宽截断，保证不换行撑屏） */}
           <Box flexDirection="row" flexShrink={0}>
             <Text color={wastelandTheme.colors.muted}>
-              {truncate('time range', 20)}
-              {' | '}
-              {truncate('sessionId', 16)}
-              {' | '}
-              {truncate('cnt', 4)}
-              {' | '}
-              summary
+              {truncateToWidth(
+                `${truncate('time range', 20)} | ${truncate('sessionId', 16)} | ${truncate('cnt', 4)} | summary`,
+                leftContentWidth
+              )}
             </Text>
           </Box>
 
@@ -1008,7 +1034,7 @@ export function LogsPage({
             onOffsetChange={sessionScroll.setOffset}
             totalItems={sessions.length}
             itemHeight={SESSION_ROW_HEIGHT}
-            height={leftListHeight}
+            height={listHeight}
             showScrollbar={false}
           >
             {sessions.map((session, idx) => {
@@ -1026,6 +1052,14 @@ export function LogsPage({
               const statusColor = session.hasError
                 ? wastelandTheme.colors.error
                 : wastelandTheme.colors.success;
+              // 单行保证：固定段 53 列（indent 2 + time 20 + 分隔 9 + sid 16 + cnt 4 + icon 1 + 空格 1），
+              // 消息与项目标签按显示宽度分配剩余列，超出截断（Ink 会换行，单 Text 行必须事先截到宽度内）。
+              const tailBudget = Math.max(0, leftContentWidth - 53);
+              const fittedMessage = truncateToWidth(session.lastMessage, Math.min(30, tailBudget));
+              const fittedTag = truncateToWidth(
+                sessionTag(session),
+                Math.max(0, tailBudget - displayWidth(fittedMessage))
+              );
 
               return (
                 <Box key={session.sessionId} flexDirection="row">
@@ -1039,8 +1073,8 @@ export function LogsPage({
                     {' | '}
                     <Text color={statusColor}>{statusIcon}</Text>
                     {' '}
-                    {truncate(session.lastMessage, 30)}
-                    {sessionTag(session)}
+                    {fittedMessage}
+                    {fittedTag}
                   </Text>
                 </Box>
               );
@@ -1080,7 +1114,7 @@ export function LogsPage({
                 : view === 'timeline'
                   ? `${timelineRecords.length} tool calls`
                     : sessionCards.length > 0
-                    ? `${cardScroll.offset + 1}-${Math.min(cardScroll.offset + 5, sessionCards.length)} of ${sessionCards.length}`
+                    ? `${cardScroll.offset + 1}-${cardScroll.offset + cardWindow.length} of ${sessionCards.length}`
                     : selectedSessionLoading ? 'loading...' : '0 of 0'}
             </Text>
           </Box>
@@ -1104,6 +1138,7 @@ export function LogsPage({
               onOffsetChange={timelineScroll.setOffset}
               height={timelineListHeight}
               showScrollbar={timelineScroll.canScrollUp || timelineScroll.canScrollDown}
+              contentWidth={timelineContentWidth}
             />
           )}
 
@@ -1128,6 +1163,7 @@ export function LogsPage({
                   highlightSessionId={sessionFilter.trim() || undefined}
                   height={timelineListHeight}
                   showScrollbar={globalTimelineScroll.canScrollUp || globalTimelineScroll.canScrollDown}
+                  contentWidth={timelineContentWidth}
                 />
               ) : (
                 <GlobalStatsTable
@@ -1158,7 +1194,8 @@ export function LogsPage({
             </Box>
           )}
 
-          {/* 列表视图：卡片流（行预算虚拟化窗口 + 固定高度裁剪 + 右侧滚动条） */}
+          {/* 列表视图：卡片流（行预算虚拟化窗口 + 右侧滚动条；指示器关闭，
+              位置计数由右栏 header 的 `x-y of N` 承担，避免指示器行挤占预算） */}
           {!selectedSessionLoading && view === 'list' && sessionCards.length > 0 && (
             <ScrollableBox
               offset={cardScroll.offset}
@@ -1166,15 +1203,16 @@ export function LogsPage({
               totalItems={sessionCards.length}
               itemHeight={CARD_HEIGHT}
               height={rightListHeight}
-              showScrollbar={false}
+              showScrollbar={cardScroll.canScrollUp || cardScroll.canScrollDown}
+              showIndicators={false}
               windowed
             >
-              {cardWindow.map((entry, windowIdx) => {
-                const isExpanded = expandedCards.has(cardKeyOf(entry));
+              {cardWindow.map(({ index: idx, plan }, windowIdx) => {
+                const entry = sessionCards[idx];
+                if (!entry) return null;
                 // 当前聚焦卡片：窗口顶部那张（= cardScroll.offset 指向的卡片，
                 // Enter 展开/错误跳转都以它为锚点），用 ▶ 标记聚焦位置
                 const isCurrentCard = windowIdx === 0;
-                const idx = cardWindowStart + windowIdx;
                 const isSelectedCard = idx === selectedCardIdx;
                 const entryKind = (entry.data as Record<string, unknown> | undefined)?.kind;
                 const kindStr = typeof entryKind === 'string' ? entryKind : '-';
@@ -1188,17 +1226,8 @@ export function LogsPage({
                   cardBorderColor = wastelandTheme.colors.warning;
                 }
 
-                // 相对耗时计算（基于前一条日志，即时间上更早的一条）
-                const nextOlderEntry = sessionCards[cardWindowStart + windowIdx + 1];
-                let relativeTimeStr = '';
-                if (nextOlderEntry) {
-                  const t1 = new Date(nextOlderEntry.timestamp).getTime();
-                  const t2 = new Date(entry.timestamp).getTime();
-                  const diff = (t2 - t1) / 1000;
-                  if (diff >= 0.1 && diff < 3600) { // 只显示 0.1s 以上，1小时以内的差异
-                    relativeTimeStr = `<+${diff.toFixed(1)}s>`;
-                  }
-                }
+                // 相对耗时（与行预算测量同一计算，见 relativeTimeStrFor）
+                const relativeTimeStr = relativeTimeStrFor(sessionCards, idx);
 
                 return (
                   <Box
@@ -1242,56 +1271,71 @@ export function LogsPage({
                       <Text color={kindColor(kindStr)}>{kindStr}</Text>
                     </Box>
 
-                    {/* 卡片消息：智能截断 */}
+                    {/* 卡片消息：行计划已切好（折叠 5 行/more 提示/预算截断），直接渲染 */}
                     <Box flexDirection="row" marginTop={0} paddingLeft={entry.turn !== undefined ? (entry.step === 0 ? 0 : 3) : 0}>
-                      {(() => {
-                        const lines = entry.message.split('\n');
-                        const isLong = lines.length > 5;
-                        const displayMsg = (!isExpanded && isLong) ? lines.slice(0, 5).join('\n') : entry.message;
-                        return (
-                          <Box flexDirection="column">
-                            <HighlightedText text={displayMsg} keyword={keywordFilter} />
-                            {!isExpanded && isLong && (
-                              <Text color={wastelandTheme.colors.muted}>
-                                ... ({lines.length - 5} more lines, press Enter to expand)
-                              </Text>
-                            )}
-                          </Box>
-                        );
-                      })()}
+                      <Box flexDirection="column">
+                        <HighlightedText text={plan.messageLines.join('\n')} keyword={keywordFilter} />
+                        {plan.messageMore && (
+                          <Text color={wastelandTheme.colors.muted}>
+                            {plan.messageMore}
+                          </Text>
+                        )}
+                      </Box>
                     </Box>
 
-                    {/* Timings 进度条 */}
-                    {timings && <TimingsBar timings={timings} />}
+                    {/* Timings 进度条（行计划原子 inclusion） */}
+                    {timings && plan.timingsRows > 0 && <TimingsBar timings={timings} />}
 
-                    {/* 错误信息 */}
-                    {entry.error && (
+                    {/* 错误信息（行计划已换行+切片） */}
+                    {plan.errorLines.length > 0 && (
                       <Box flexDirection="row" marginTop={0} paddingLeft={entry.turn !== undefined ? (entry.step === 0 ? 0 : 3) : 0}>
                         <Text color={wastelandTheme.colors.error}>
-                          ✗ {entry.error.name}: {entry.error.message}
+                          {plan.errorLines.join('\n')}
                         </Text>
                       </Box>
                     )}
 
-                    {/* 展开的 JSON 详情（头部保留完整精度时间戳） */}
-                    {isExpanded && (
+                    {/* 展开的 JSON 详情（行计划：头原子 + JSON 切片；JsonHighlighter 接受预切片串） */}
+                    {(plan.detailHeaderLines.length > 0 || plan.detailLines.length > 0) && (
                       <Box flexDirection="column" marginTop={1} paddingLeft={entry.turn !== undefined ? (entry.step === 0 ? 0 : 3) : 0}>
-                        <Text color={wastelandTheme.colors.muted}>
-                          {`── detail @ ${formatTimeFull(entry.timestamp)} ──`}
-                        </Text>
-                        <Box flexDirection="row">
-                          <JsonHighlighter data={formatDetail(entry)} />
-                        </Box>
+                        {plan.detailHeaderLines.length > 0 && (
+                          <Text color={wastelandTheme.colors.muted}>
+                            {plan.detailHeaderLines.join('\n')}
+                          </Text>
+                        )}
+                        {plan.detailLines.length > 0 && (
+                          <Box flexDirection="row">
+                            <JsonHighlighter data={plan.detailLines.join('\n')} />
+                          </Box>
+                        )}
+                        {plan.detailMore && (
+                          <Text color={wastelandTheme.colors.muted}>
+                            {plan.detailMore}
+                          </Text>
+                        )}
                       </Box>
                     )}
 
-                    {/* 错误上下文：展开错误卡片时显示其前后 N 条原始日志
-                        （聚焦/非聚焦模式均生效，呈现调用链与前因后果） */}
-                      {isExpanded && isErrorEntry(entry) && (
-                        <ErrorContextSection
-                          window={contextWindows.get(cardKeyOf(entry)) ?? null}
-                        />
-                      )}
+                    {/* 错误上下文：行计划已按 cap 切分条目（计数与测量同源） */}
+                    {plan.contextChromeRows > 0 && (
+                      <Box flexDirection="column" marginTop={1}>
+                        <Text color={wastelandTheme.colors.muted}>
+                          {`── context ↑${plan.contextBefore.length} ↓${plan.contextAfter.length} ──`}
+                        </Text>
+                        {plan.contextBefore.map((ctx, i) => (
+                          <ContextLine key={`ctx-before-${i}`} entry={ctx} />
+                        ))}
+                        <ErrorContextLocator entry={entry} />
+                        {plan.contextAfter.map((ctx, i) => (
+                          <ContextLine key={`ctx-after-${i}`} entry={ctx} />
+                        ))}
+                        {plan.contextMore && (
+                          <Text color={wastelandTheme.colors.muted}>
+                            {plan.contextMore}
+                          </Text>
+                        )}
+                      </Box>
+                    )}
                   </Box>
                 );
               })}
@@ -1307,15 +1351,17 @@ export function LogsPage({
           borderStyle={wastelandTheme.decorations.borderStyle}
           borderBottom
           borderTop
+          borderLeft={false}
+          borderRight={false}
           borderColor={wastelandTheme.colors.borderFocused}
           backgroundColor={wastelandTheme.colors.borderFocused}
           paddingX={1}
           flexDirection="row"
         >
           <Text color={wastelandTheme.colors.text} bold>
-            /search {searchDraft}_
+            {truncateToWidth(`/search ${searchDraft}_`, terminalCols - 2 - displayWidth(SEARCH_HINT))}
           </Text>
-          <Text color={wastelandTheme.colors.muted}>  (语法: level:error sid:1a2b keyword)</Text>
+          <Text color={wastelandTheme.colors.muted}>{SEARCH_HINT}</Text>
         </Box>
       ) : (
         <Box
@@ -1323,6 +1369,8 @@ export function LogsPage({
           borderStyle={wastelandTheme.decorations.borderStyle}
           borderBottom
           borderTop
+          borderLeft={false}
+          borderRight={false}
           borderColor={wastelandTheme.colors.borderDim}
           paddingX={1}
           flexDirection="column"

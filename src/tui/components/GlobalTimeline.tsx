@@ -31,6 +31,7 @@ import {
   type ToolCallStatus,
 } from './ToolTimeline.js';
 import { ScrollableBox } from './ScrollableBox.js';
+import { truncateToWidth } from './card-window.js';
 
 // ============================================================
 // 类型
@@ -169,12 +170,18 @@ export function GlobalTimelineRow({
   record,
   highlightSessionId,
   slowThresholdMs = DEFAULT_SLOW_THRESHOLD_MS,
+  contentWidth,
 }: {
   record: GlobalToolCallRecord;
   /** 高亮显示的 sessionId（当前 session filter 匹配的 session） */
   highlightSessionId?: string;
   /** 慢调用阈值（毫秒），可覆盖默认值 */
   slowThresholdMs?: number;
+  /**
+   * 行内容宽度（列数；传入后错误子行按显示宽度截到单行，保证行高精确。
+   * 不传保持旧行为：错误信息截断 60 字符）。
+   */
+  contentWidth?: number;
 }): React.ReactElement {
   const meta = STATUS_META[record.status];
   const timeStr = formatToolTime(record.startTime ?? record.endTime);
@@ -207,8 +214,9 @@ export function GlobalTimelineRow({
       {record.status === 'error' && record.errorMessage && (
         <Box flexDirection="row" marginLeft={2}>
           <Text color={wastelandTheme.colors.error}>
-            {'✗ '}
-            {truncate(record.errorMessage, 60)}
+            {contentWidth === undefined
+              ? `✗ ${truncate(record.errorMessage, 60)}`
+              : truncateToWidth(`✗ ${record.errorMessage}`, contentWidth - 2)}
           </Text>
         </Box>
       )}
@@ -239,6 +247,7 @@ export function GlobalTimeline({
   slowThresholdMs = DEFAULT_SLOW_THRESHOLD_MS,
   height,
   showScrollbar = false,
+  contentWidth,
 }: {
   records: ReadonlyArray<GlobalToolCallRecord>;
   /** 滚动偏移（提供后启用 ScrollableBox） */
@@ -255,6 +264,8 @@ export function GlobalTimeline({
   height?: number;
   /** 显示右侧滚动条（内容可能溢出时传 true） */
   showScrollbar?: boolean;
+  /** 行内容宽度（透传给 Row 做错误行单行截断；不传保持旧行为） */
+  contentWidth?: number;
 }): React.ReactElement {
   const scrollable = offset !== undefined && onOffsetChange !== undefined;
   const rowKey = (record: GlobalToolCallRecord, idx: number): string =>
@@ -281,6 +292,7 @@ export function GlobalTimeline({
               record={record}
               highlightSessionId={highlightSessionId}
               slowThresholdMs={slowThresholdMs}
+              contentWidth={contentWidth}
             />
           ))}
         </ScrollableBox>
@@ -291,6 +303,7 @@ export function GlobalTimeline({
             record={record}
             highlightSessionId={highlightSessionId}
             slowThresholdMs={slowThresholdMs}
+            contentWidth={contentWidth}
           />
         ))
       )}

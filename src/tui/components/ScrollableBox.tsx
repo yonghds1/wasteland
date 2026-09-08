@@ -91,8 +91,15 @@ export function ScrollableBox({
   // 计算实际可用高度
   const availableHeight = propHeight ?? terminalRows;
 
-  // 计算可见项目数
-  const maxVisible = Math.max(1, Math.floor((availableHeight - paddingY * 2) / itemHeight));
+  // 指示器占行预留：先按无指示器算初版，再按实际显示的指示器扣行重算一次。
+  // 收缩窗口不会消除 hasMore（below 只增不减，above 与 offset 无关），一次迭代即收敛。
+  // 不预留的话，指示器行会让渲染超出预算（Ink 不裁剪溢出），把页面撑开。
+  const rawVisible = Math.max(1, Math.floor((availableHeight - paddingY * 2) / itemHeight));
+  const rawClamped = Math.max(0, Math.min(offset, Math.max(0, totalItems - rawVisible)));
+  const reservedRows =
+    (showIndicators && rawClamped > 0 ? 1 : 0) +
+    (showIndicators && rawClamped + rawVisible < totalItems ? 1 : 0);
+  const maxVisible = Math.max(1, Math.floor((availableHeight - paddingY * 2 - reservedRows) / itemHeight));
 
   // 边界检查
   const clampedOffset = Math.max(0, Math.min(offset, Math.max(0, totalItems - maxVisible)));
@@ -117,7 +124,9 @@ export function ScrollableBox({
   }, [clampedOffset, offset, onOffsetChange]);
 
   const body = (
-    <Box flexDirection="column" flexGrow={1}>
+    // 传了 height 即硬上限：外层固定高度（无滚动条路径以前无约束，内容超高直接撑开页面）。
+    // 内容侧由调用方按 maxVisible/行预算切片保证装得下，这里是第二道防线。
+    <Box flexDirection="column" flexGrow={1} height={propHeight}>
       {/* 向上滚动指示器 */}
       {showIndicators && hasMoreAbove && (
         <Box flexDirection="row" flexShrink={0}>
@@ -169,6 +178,12 @@ export interface UseScrollOptions {
   height?: number;
   /** 初始偏移量 */
   initialOffset?: number;
+  /**
+   * 钳制到末项（offset 上限取 totalItems - 1 而不是 totalItems - maxVisible）。
+   * 行预算窗口场景用：窗口按行装、末卡可能很矮，标称 maxVisible 会误判，
+   * 导致末尾几张卡永远滚不到。用本项后 scrollToBottom 停在末卡。
+   */
+  clampToLastItem?: boolean;
 }
 
 export interface UseScrollResult {
@@ -202,16 +217,19 @@ export function useScroll({
   itemHeight = 1,
   height,
   initialOffset = 0,
+  clampToLastItem = false,
 }: UseScrollOptions): UseScrollResult {
   const { stdout } = useStdout();
   const terminalRows = stdout?.rows ?? 24;
   const availableHeight = height ?? terminalRows;
   const maxVisible = Math.max(1, Math.floor(availableHeight / itemHeight));
+  // offset 上限：默认按屏装（total - maxVisible）；行预算窗口按末卡钳制
+  const maxOffset = clampToLastItem ? Math.max(0, totalItems - 1) : Math.max(0, totalItems - maxVisible);
 
   const [offset, setOffset] = React.useState(initialOffset);
 
   // 边界检查后的偏移量
-  const clampedOffset = Math.max(0, Math.min(offset, Math.max(0, totalItems - maxVisible)));
+  const clampedOffset = Math.max(0, Math.min(offset, maxOffset));
 
   const canScrollUp = clampedOffset > 0;
   const canScrollDown = clampedOffset + maxVisible < totalItems;
@@ -225,9 +243,9 @@ export function useScroll({
 
   const scrollDown = React.useCallback(
     (delta: number = maxVisible) => {
-      setOffset((prev) => Math.min(Math.max(0, totalItems - maxVisible), prev + delta));
+      setOffset((prev) => Math.min(maxOffset, prev + delta));
     },
-    [totalItems, maxVisible],
+    [totalItems, maxVisible, maxOffset],
   );
 
   const scrollToTop = React.useCallback(() => {
@@ -235,8 +253,8 @@ export function useScroll({
   }, []);
 
   const scrollToBottom = React.useCallback(() => {
-    setOffset(Math.max(0, totalItems - maxVisible));
-  }, [totalItems, maxVisible]);
+    setOffset(maxOffset);
+  }, [maxOffset]);
 
   // Live tail 跟随：仅当“列表变长且之前已钉底”时跟到新底部。
   // 程序化跳转（offset 单独变化，如 ] 错误跳转 / Enter 定位）不扰动；
@@ -249,11 +267,11 @@ export function useScroll({
     if (grew) {
       const wasPinned = prev.offset >= prev.total - maxVisible - 2;
       if (wasPinned) {
-        setOffset(Math.max(0, totalItems - maxVisible));
+        setOffset(maxOffset);
       }
     }
     followRef.current = { total: totalItems, offset };
-  }, [totalItems, offset, maxVisible]);
+  }, [totalItems, offset, maxVisible, maxOffset]);
 
   return {
     offset: clampedOffset,
