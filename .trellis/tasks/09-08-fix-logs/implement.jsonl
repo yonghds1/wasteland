@@ -1,0 +1,3 @@
+{"file": "docs/logs-overflow-fix-plan.md", "reason": "本任务全部根因(R1-R7)、设计决策、预算铁律与验收标准的权威来源"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "五门禁清单与纯函数抽取规则,端到端测试须遵循"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "组件模式与 i18n self-check,改 LogsPage 渲染前刷新"}

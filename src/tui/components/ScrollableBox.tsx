@@ -101,8 +101,13 @@ export function ScrollableBox({
     (showIndicators && rawClamped + rawVisible < totalItems ? 1 : 0);
   const maxVisible = Math.max(1, Math.floor((availableHeight - paddingY * 2 - reservedRows) / itemHeight));
 
-  // 边界检查
-  const clampedOffset = Math.max(0, Math.min(offset, Math.max(0, totalItems - maxVisible)));
+  // 边界检查。windowed 模式下调用方已按行预算自切自钳（如 LogsPage 的
+  // cardWindowStart + clampToLastItem），这里"总条数-可见条数"的等高清目钳制
+  // 模型不成立（卡片变高，行预算窗口 ≠ maxVisible 条），会把调用方的合法 offset
+  // 往回拽（错误跳到 idx5 → 被夹到 3），故 windowed 时信任调用方传入的 offset。
+  const clampedOffset = windowed
+    ? Math.max(0, Math.min(offset, Math.max(0, totalItems - 1)))
+    : Math.max(0, Math.min(offset, Math.max(0, totalItems - maxVisible)));
 
   // 滚动指示器状态
   const hasMoreAbove = clampedOffset > 0;
@@ -116,12 +121,12 @@ export function ScrollableBox({
     ? childArray
     : childArray.slice(clampedOffset, clampedOffset + maxVisible);
 
-  // 如果 offset 与 clampedOffset 不同步，触发修正
+  // 如果 offset 与 clampedOffset 不同步，触发修正（windowed 由调用方掌管，不回拽）。
   React.useEffect(() => {
-    if (clampedOffset !== offset) {
+    if (!windowed && clampedOffset !== offset) {
       onOffsetChange(clampedOffset);
     }
-  }, [clampedOffset, offset, onOffsetChange]);
+  }, [windowed, clampedOffset, offset, onOffsetChange]);
 
   const body = (
     // 传了 height 即硬上限：外层固定高度（无滚动条路径以前无约束，内容超高直接撑开页面）。
@@ -222,7 +227,13 @@ export function useScroll({
   const { stdout } = useStdout();
   const terminalRows = stdout?.rows ?? 24;
   const availableHeight = height ?? terminalRows;
-  const maxVisible = Math.max(1, Math.floor(availableHeight / itemHeight));
+  // 与 ScrollableBox 组件同一套窗口数学（含指示器占行预留）：
+  // 组件会把 ▲/▼ 各占 1 行从 height 里扣掉，hook 若按裸 height 算 maxVisible，
+  // reveal/滚动数学用的窗口就比实际渲染窗口大 → 选中行被算成"已可见"却画不出。
+  const rawVisible = Math.max(1, Math.floor(availableHeight / itemHeight));
+  const rawClamped = Math.max(0, Math.min(initialOffset, Math.max(0, totalItems - rawVisible)));
+  const reservedRows = (rawClamped > 0 ? 1 : 0) + (rawClamped + rawVisible < totalItems ? 1 : 0);
+  const maxVisible = Math.max(1, rawVisible - reservedRows);
   // offset 上限：默认按屏装（total - maxVisible）；行预算窗口按末卡钳制
   const maxOffset = clampToLastItem ? Math.max(0, totalItems - 1) : Math.max(0, totalItems - maxVisible);
 
@@ -258,20 +269,26 @@ export function useScroll({
 
   // Live tail 跟随：仅当“列表变长且之前已钉底”时跟到新底部。
   // 程序化跳转（offset 单独变化，如 ] 错误跳转 / Enter 定位）不扰动；
-  // 历史区阅读中途来新数据也不抢夺视口（旧语义会在 offset 接近底部时无脑吸附）；
-  // 初次加载（0 → N）不跟随，停在顶部（旧语义此处恰好 no-op，保持一致）。
+  // 历史区阅读中途来新数据也不抢夺视口。
+  // 钉底 = offset 已达上一帧的 maxOffset（clampToLastItem 时即末条 total-1；等高
+  // 模型时即 total-maxVisible）。旧式的 `>= total - maxVisible - 2` 放 2 行余量在
+  // 名义 maxVisible 上：行预算卡片流里名义值远小于真实窗口，列表一短就恒判钉底，
+  // transcript 加入等"数据变长"会把阅读位置错误拽到尾部（offset=0 也命中）。
   const followRef = React.useRef({ total: totalItems, offset });
   React.useEffect(() => {
     const prev = followRef.current;
     const grew = totalItems > prev.total && prev.total > 0;
     if (grew) {
-      const wasPinned = prev.offset >= prev.total - maxVisible - 2;
+      const prevMax = clampToLastItem
+        ? Math.max(0, prev.total - 1)
+        : Math.max(0, prev.total - maxVisible);
+      const wasPinned = prev.offset >= prevMax;
       if (wasPinned) {
         setOffset(maxOffset);
       }
     }
     followRef.current = { total: totalItems, offset };
-  }, [totalItems, offset, maxVisible, maxOffset]);
+  }, [totalItems, offset, maxVisible, maxOffset, clampToLastItem]);
 
   return {
     offset: clampedOffset,

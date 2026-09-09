@@ -289,6 +289,9 @@ export function useLogsKeymap(api: LogsKeymapApi): void {
     if (inputChar === ']') {
       const next = findNextErrorIndex(sessionCards, cardScroll.offset, 1);
       if (next >= 0) {
+        // 同时移动选中标记：Enter 展开以 selectedCardIdx 为锚（见下方 Enter 分支
+        // 与箭头键处理），只改 offset 会让跳转后可见但 Enter 展开到旧选中卡。
+        setSelectedCardIdx(next);
         cardScroll.setOffset(next);
       }
       return;
@@ -296,6 +299,7 @@ export function useLogsKeymap(api: LogsKeymapApi): void {
     if (inputChar === '[') {
       const prev = findNextErrorIndex(sessionCards, cardScroll.offset, -1);
       if (prev >= 0) {
+        setSelectedCardIdx(prev);
         cardScroll.setOffset(prev);
       }
       return;

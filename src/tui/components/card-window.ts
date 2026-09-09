@@ -94,6 +94,8 @@ export type CardLinePlan = {
   timingsRows: number;
   /** 错误行（已换行+切片） */
   errorLines: string[];
+  /** 详情区铬行数（marginTop 1；0 = 详情区未渲染） */
+  detailChromeRows: number;
   /** 详情头行（`── detail @ … ──`，换行后行数组，原子 inclusion） */
   detailHeaderLines: string[];
   /** 详情 JSON 行（已换行+切片，仅展开态） */
@@ -211,7 +213,9 @@ export function measureCard(entry: LogEntry, opts: MeasureCardOpts): CardLinePla
   // ---- 展开详情 JSON（头原子 + JSON 行） ----
   const detailHeaderLines: string[] = [];
   const detailLines: string[] = [];
+  let detailChromeRows = 0;
   if (opts.isExpanded) {
+    detailChromeRows = 1; // 渲染包在 <Box marginTop={1}> 里
     detailHeaderLines.push(...wrapLines(`── detail @ ${formatTimeFull(entry.timestamp)} ──`, textW));
     for (const ln of formatDetail(entry).split('\n')) {
       detailLines.push(...wrapLines(ln, textW));
@@ -238,6 +242,7 @@ export function measureCard(entry: LogEntry, opts: MeasureCardOpts): CardLinePla
     messageHiddenRaw: collapsed ? rawLines.length - 5 : 0,
     timingsRows,
     errorLines,
+    detailChromeRows,
     detailHeaderLines,
     detailLines,
     detailMore: null,
@@ -268,6 +273,7 @@ export function planRows(plan: CardLinePlan, contentWidth: number): number {
     (plan.messageMore ? 1 : 0) +
     plan.timingsRows +
     plan.errorLines.length +
+    plan.detailChromeRows +
     plan.detailHeaderLines.length +
     plan.detailLines.length +
     (plan.detailMore ? 1 : 0) +
@@ -365,6 +371,7 @@ function capPlanToBudget(
     messageHiddenRaw: 0,
     timingsRows: 0,
     errorLines: [],
+    detailChromeRows: 0,
     detailHeaderLines: [],
     detailLines: [],
     detailMore: null,
@@ -417,21 +424,22 @@ function capPlanToBudget(
     remaining -= plan.timingsRows;
   }
 
-  // 详情（头原子 + JSON 切片；头装不下则整个区丢弃，行数不够打标时静默）
+  // 详情（marginTop 铬 + 头原子 + JSON 切片；铬+头装不下则整个区丢弃，行数不够打标时静默）
   if (plan.detailHeaderLines.length > 0 || plan.detailLines.length > 0) {
-    if (plan.detailHeaderLines.length <= remaining) {
+    const chrome = plan.detailChromeRows; // 1
+    const headerRows = plan.detailHeaderLines.length;
+    if (chrome + headerRows <= remaining) {
+      next.detailChromeRows = chrome;
+      remaining -= chrome + headerRows;
       next.detailHeaderLines = plan.detailHeaderLines;
-      remaining -= plan.detailHeaderLines.length;
       const det = takeLines(plan.detailLines, 0, null);
       next.detailLines = det.kept;
       next.detailMore = det.more;
-    } else if (remaining > 0) {
-      const hidden =
-        plan.detailHeaderLines.length +
-        plan.detailLines.length +
-        (plan.detailMore ? 1 : 0);
+    } else if (chrome + 1 <= remaining) {
+      next.detailChromeRows = chrome;
+      const hidden = headerRows + plan.detailLines.length + (plan.detailMore ? 1 : 0);
       next.detailMore = `… (${hidden} more lines)`;
-      remaining -= 1;
+      remaining -= chrome + 1;
     }
   }
 

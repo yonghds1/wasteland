@@ -1,0 +1,2 @@
+{"file": "docs/logs-overflow-fix-plan.md", "reason": "验收标准(§6)与根因(R1-R7)对照,检查修复是否覆盖全部断点"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "五门禁清单,quality check 依据"}

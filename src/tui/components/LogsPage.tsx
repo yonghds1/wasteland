@@ -53,7 +53,7 @@ import { useLogsKeymap } from '../hooks/useLogsKeymap.js';
 import { useLogBus } from './LogBusProvider.js';
 import { TimingsBar, parseTimings } from './TimingsBar.js';
 import { ScrollableBox, useScroll } from './ScrollableBox.js';
-import { sliceCardWindow, truncateToWidth, displayWidth } from './card-window.js';
+import { sliceCardWindow, truncateToWidth, displayWidth, wrapRowCount } from './card-window.js';
 import { ToolTimeline, TIMELINE_ROW_HEIGHT, buildToolTimeline } from './ToolTimeline.js';
 import {
   GlobalTimeline,
@@ -371,7 +371,17 @@ export function LogsPage({
   const { stdout: logsStdout } = useStdout();
   const terminalRows = logsStdout?.rows ?? 24;
   const terminalCols = logsStdout?.columns ?? 80;
-  const bottomBarRows = isSearching ? 3 : helpVisible ? 4 : 3;
+  // 底栏真实行数（R2：写死 4 会让 ~150 列帮助文本在窄终端换行吃掉未预算的行）
+  // 结构与渲染侧同源：paddingX=1 → 内容宽 terminalCols-2；上下边框各 1。
+  const helpOnText = getShortcutHelp(view, timelineMode, timelineMetric)
+    .map((h) => `${h.keys} ${h.description}`)
+    .join(' · ');
+  const helpOffText = '[help off] · ? 显示快捷键 · / 搜索 · Esc 返回';
+  const helpBodyRows = Math.max(1, wrapRowCount(helpVisible ? helpOnText : helpOffText, Math.max(1, terminalCols - 2)));
+  const helpStatusRows = helpVisible
+    ? Math.max(1, wrapRowCount('[help on] · ? 隐藏 · / 搜索', Math.max(1, terminalCols - 2)))
+    : 0;
+  const bottomBarRows = isSearching ? 3 : 2 + helpBodyRows + helpStatusRows;
   const chromeRows = 2 + (exportStatus ? 1 : 0) + bottomBarRows;
   const listHeight = Math.max(3, terminalRows - chromeRows - 1 - (selectedSessionLoading ? 2 : 0));
 
@@ -988,7 +998,7 @@ export function LogsPage({
                 : wastelandTheme.colors.error
             }
           >
-            {exportStatus}
+            {truncateToWidth(exportStatus, Math.max(1, terminalCols - 2))}
           </Text>
         </Box>
       )}
@@ -1018,17 +1028,9 @@ export function LogsPage({
             </Text>
           </Box>
 
-          {sessions.length === 0 && (
-            <Box marginTop={1}>
-              <Text color={wastelandTheme.colors.muted}>
-                {diskSessionsLoaded
-                  ? '(no sessions — run a session to generate logs)'
-                  : '(loading sessions...)'}
-              </Text>
-            </Box>
-          )}
-
-          {/* 使用 ScrollableBox（固定高度 + 按需滚动条；行高恒 1，窗口数学精确） */}
+          {/* 使用 ScrollableBox（固定高度 + 按需滚动条；行高恒 1，窗口数学精确）。
+              空态文案渲染进本槽（与列表互斥，槽位本就空闲）：Ink 不裁剪纵向溢出，
+              独立 marginTop 块会在 listHeight 之外再加行 → 撑屏，故作为 children 渲染。 */}
           <ScrollableBox
             offset={sessionScroll.offset}
             onOffsetChange={sessionScroll.setOffset}
@@ -1037,7 +1039,19 @@ export function LogsPage({
             height={listHeight}
             showScrollbar={false}
           >
-            {sessions.map((session, idx) => {
+            {sessions.length === 0 ? (
+              <Box flexDirection="row">
+                <Text color={wastelandTheme.colors.muted}>
+                  {truncateToWidth(
+                    diskSessionsLoaded
+                      ? '(no sessions — run a session to generate logs)'
+                      : '(loading sessions...)',
+                    leftContentWidth
+                  )}
+                </Text>
+              </Box>
+            ) : (
+              sessions.map((session, idx) => {
               const isSelected = idx === selectedSessionIdx;
               // 选中行：高亮背景带 + 最亮文本色 + bold + > 前缀（聚焦位置清晰可辨）
               const lineColor = isSelected
@@ -1078,7 +1092,8 @@ export function LogsPage({
                   </Text>
                 </Box>
               );
-            })}
+              })
+            )}
           </ScrollableBox>
         </Box>
 
@@ -1119,9 +1134,9 @@ export function LogsPage({
             </Text>
           </Box>
 
-          {/* 加载中 */}
+          {/* 加载中：文案渲染进卡片流槽位（与卡片互斥，槽位本就空闲），不占额外行 */}
           {selectedSessionLoading && (
-            <Box marginTop={1}>
+            <Box>
               <Text color={wastelandTheme.colors.muted}>
                 {`Loading session entries... (${selectedSessionSummary?.count ?? 0} ${
                   selectedSessionSummary?.count === 1 ? 'entry' : 'entries'
@@ -1177,9 +1192,9 @@ export function LogsPage({
             </>
           )}
 
-          {/* 列表视图：空态 */}
+          {/* 列表视图：空态（渲染进卡片流槽位，与卡片互斥，槽位本就空闲，不占额外行） */}
           {!selectedSessionLoading && view === 'list' && sessionCards.length === 0 && (
-            <Box marginTop={1}>
+            <Box>
               <Text color={wastelandTheme.colors.muted}>
                 {selectedSessionSummary
                   ? errorFocus
@@ -1237,6 +1252,8 @@ export function LogsPage({
                     borderStyle={wastelandTheme.decorations.borderStyle}
                     borderLeft
                     borderBottom
+                    borderTop={false}
+                    borderRight={false}
                     borderColor={cardBorderColor}
                     paddingLeft={1}
                     marginBottom={1}
@@ -1295,8 +1312,10 @@ export function LogsPage({
                       </Box>
                     )}
 
-                    {/* 展开的 JSON 详情（行计划：头原子 + JSON 切片；JsonHighlighter 接受预切片串） */}
-                    {(plan.detailHeaderLines.length > 0 || plan.detailLines.length > 0) && (
+                    {/* 展开的 JSON 详情：外框 marginTop 由 detailChromeRows 计入预算，
+                        渲染 gate 用**内容驱动**（header/lines/marker 任一非空）——与 chrome
+                        解耦，测量若漏计 chrome 则真实帧多 1 行，被 R-5 帧测试抓到（防合谋）。 */}
+                    {(plan.detailHeaderLines.length > 0 || plan.detailLines.length > 0 || plan.detailMore) && (
                       <Box flexDirection="column" marginTop={1} paddingLeft={entry.turn !== undefined ? (entry.step === 0 ? 0 : 3) : 0}>
                         {plan.detailHeaderLines.length > 0 && (
                           <Text color={wastelandTheme.colors.muted}>

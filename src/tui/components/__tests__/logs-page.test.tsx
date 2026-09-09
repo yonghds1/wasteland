@@ -244,6 +244,15 @@ class FakeStdin extends Readable {
 
 class FakeStdout extends Writable {
   output = '';
+  // 默认无尺寸 → 组件回退 80×24（既有跳转/滚动测试据此写死可见性，需要小屏把内容滚出）。
+  // 需要宽松屏的测试（展开多卡/上下文/长导出状态行）显式传 size，避免被行预算截断。
+  columns?: number;
+  rows?: number;
+  constructor(size?: { columns?: number; rows?: number }) {
+    super();
+    if (size?.columns !== undefined) this.columns = size.columns;
+    if (size?.rows !== undefined) this.rows = size.rows;
+  }
   _write(chunk: Buffer | string, _enc: string, cb: () => void): void {
     this.output += chunk.toString();
     cb();
@@ -424,13 +433,13 @@ async function renderLogsWithKeys(
   sessions: SessionSummaryOnDisk[],
   entries: LogEntry[],
   keys: string[],
-  opts: { contextRadius?: number; exportDir?: string; keySettleMs?: number } = {},
+  opts: { contextRadius?: number; exportDir?: string; keySettleMs?: number; size?: { columns?: number; rows?: number } } = {},
 ): Promise<string> {
   vi.mocked(listSessions).mockResolvedValue(sessions);
   vi.mocked(loadSessionEntries).mockResolvedValue(entries);
 
   const stdin = new FakeStdin();
-  const stdout = new FakeStdout();
+  const stdout = new FakeStdout(opts.size);
   const instance = render(
     <LogsOnlyHarness
       contextRadius={opts.contextRadius}
@@ -1027,49 +1036,64 @@ describe('LogsPage 错误间快速跳转（]/[）', () => {
     return entries;
   }
 
+  /**
+   * 读取标题栏计数 `A-B of N` 的首数字 A（= 滚动 offset+1）。
+   *
+   * 跳转/导航的可观测契约是 offset（A），B 是窗口基数、随终端行预算变化，
+   * 不是行为断言的一部分（撑屏防线另有 R-5 端到端帧测试专门覆盖）。
+   */
+  function firstCount(output: string): number | null {
+    const m = output.match(/(\d+)-\d+ of \d+/);
+    return m ? Number(m[1]) : null;
+  }
+
   it('] 从顶部跳到下一条错误（非聚焦模式也生效）', async () => {
-    // 初始 offset=0（20 条时不会触发底部自动跟随），按 ] 跳到 idx1
+    // 初始 offset=0（20 条时不会触发底部自动跟随），按 ] 跳到 idx1 → offset+1=2
     const output = await renderLogsWithKeys(
       [makeSessionSummary('s1', 20)],
       makeErrorJumpEntries(),
       [']'],
     );
 
-    // offset 0 → 1：计数条 "1-5 of 20" → "2-6 of 20"
-    expect(output).toContain('2-6 of 20');
+    expect(firstCount(output)).toBe(2);
+    expect(output).toContain('boom-19');
   });
 
   it('连续按 ] 在错误间向下跳转（跳过中间的 info 条目）', async () => {
-    // ] → idx1，] → idx9：offset 1 → 9
+    // ] → idx1，] → idx9：offset 1 → 9 → offset+1=10
     const output = await renderLogsWithKeys(
       [makeSessionSummary('s1', 20)],
       makeErrorJumpEntries(),
       [']', ']'],
     );
 
-    expect(output).toContain('10-14 of 20');
+    expect(firstCount(output)).toBe(10);
+    expect(output).toContain('boom-11');
   });
 
   it('] 到底后不再越界（最多滚到最大可见偏移）', async () => {
-    // ] → idx1，] → idx9，] → idx17：offset 17 被夹到最大偏移 16（右栏预算 17 行/卡高 4）
+    // ] → idx1，] → idx9，] → idx17：末错误被夹到最大可见偏移，窗口底贴住列表末端
     const output = await renderLogsWithKeys(
       [makeSessionSummary('s1', 20)],
       makeErrorJumpEntries(),
       [']', ']', ']'],
     );
 
-    expect(output).toContain('17-20 of 20');
+    // 末错误可见（跳到了最后一条 error）；且列表绝对末条 info-1 也在窗口内（贴底，未越界）。
+    expect(output).toContain('boom-3');
+    expect(output).toContain('info-1');
   });
 
   it('[ 向上跳回上一条错误', async () => {
-    // ] → idx1，] → idx9，[ → idx1：offset 9 → 1
+    // ] → idx1，] → idx9，[ → idx1：offset 9 → 1 → offset+1=2
     const output = await renderLogsWithKeys(
       [makeSessionSummary('s1', 20)],
       makeErrorJumpEntries(),
       [']', ']', '['],
     );
 
-    expect(output).toContain('2-6 of 20');
+    expect(firstCount(output)).toBe(2);
+    expect(output).toContain('boom-19');
   });
 });
 
@@ -1117,10 +1141,12 @@ describe('LogsPage 错误上下文展开（mock 磁盘加载）', () => {
   const entries = makeChronoEntries({ count: 11, errorAt: 6 });
 
   it('非聚焦模式：展开错误卡片显示前后各 5 条上下文', async () => {
+    // 宽松终端：本用例契约是"展开露出前后文"，非"80×24 装得下全部"（撑屏由 R-5 帧测试守）。
     const output = await renderLogsWithKeys(
       [makeSessionSummary('s1', entries.length)],
       entries,
       [']', '\r'],
+      { size: { columns: 140, rows: 40 } },
     );
 
     // 上下文区块 header：前后各 5 条（默认 radius）
@@ -1156,6 +1182,7 @@ describe('LogsPage 错误上下文展开（mock 磁盘加载）', () => {
       [makeSessionSummary('s1', entries.length)],
       entries,
       ['/', 'f', 'o', 'c', 'u', 's', ':', 'o', 'n', '\r', '\r'],
+      { size: { columns: 140, rows: 40 } },
     );
 
     expect(output).toContain('ErrorOnly');
@@ -1173,7 +1200,7 @@ describe('LogsPage 错误上下文展开（mock 磁盘加载）', () => {
       [makeSessionSummary('s1', entries.length)],
       entries,
       [']', '\r'],
-      { contextRadius: 1 },
+      { contextRadius: 1, size: { columns: 140, rows: 40 } },
     );
 
     expect(output).toContain('── context ↑1 ↓1 ──');
@@ -1225,7 +1252,7 @@ describe('LogsPage 导出快捷键（G markdown / X JSON，mock 磁盘加载）'
       [makeSessionSummary('s1', entries.length)],
       entries,
       ['g'],
-      { exportDir: dir, keySettleMs: 300 },
+      { exportDir: dir, keySettleMs: 300, size: { columns: 140, rows: 40 } },
     );
 
     expect(output).toContain('✓ 已导出 2 条 markdown');
@@ -1244,7 +1271,7 @@ describe('LogsPage 导出快捷键（G markdown / X JSON，mock 磁盘加载）'
       [makeSessionSummary('s1', entries.length)],
       entries,
       ['x'],
-      { exportDir: dir, keySettleMs: 300 },
+      { exportDir: dir, keySettleMs: 300, size: { columns: 140, rows: 40 } },
     );
 
     expect(output).toContain('✓ 已导出 1 条 JSON');
@@ -1291,6 +1318,7 @@ async function renderLogsWithSessionEntries(
   sessions: SessionSummaryOnDisk[],
   entriesBySession: Record<string, LogEntry[]>,
   keys: string[],
+  size?: { columns?: number; rows?: number },
 ): Promise<string> {
   vi.mocked(listSessions).mockResolvedValue(sessions);
   vi.mocked(loadSessionEntries).mockImplementation(async ({ sessionId }) => {
@@ -1298,7 +1326,7 @@ async function renderLogsWithSessionEntries(
   });
 
   const stdin = new FakeStdin();
-  const stdout = new FakeStdout();
+  const stdout = new FakeStdout(size);
   const instance = render(<LogsOnlyHarness />, {
     stdin: stdin as never,
     stdout: stdout as never,
@@ -1659,8 +1687,9 @@ describe('LogsPage 导航增强（Home/End 跳转最早/最晚）', () => {
     // 底部窗口：最早 entry-0 可见，最新 entry-9 被滚出视口
     expect(output).toContain('entry-0');
     expect(output).not.toContain('entry-9');
-    // 当前卡片指示（▶）落在底部窗口顶部可见卡片上（右栏预算 17 行/卡高 4 → offset=6 → entry-3）
-    expect(output).toContain(`▶ ${localHMS('2026-08-10T01:00:03.000Z')}`);
+    // clampToLastItem 语义：End 把末卡（最早 entry-0）钉到窗口顶部并聚焦，
+    // ▶ 落在 entry-0（旧"等高清目 offset=total-maxVisible → entry-3"模型已被行预算末卡钳制取代）
+    expect(output).toContain(`▶ ${localHMS('2026-08-10T01:00:00.000Z')}`);
   });
 
   it('当前卡片指示 ▶ 唯一，且仅在顶部可见卡片上', async () => {
@@ -1789,7 +1818,7 @@ describe('LogsPage 对话合并视图（T 切换）', () => {
   });
 
   it('按 T 开启：徽标与 transcript 行出现', async () => {
-    const output = await renderLogsWithSessionEntries(sessions, { s1: entries }, ['t']);
+    const output = await renderLogsWithSessionEntries(sessions, { s1: entries }, ['t'], { columns: 140, rows: 40 });
     const flat = output.replace(/\s+/g, '');
     expect(flat).toContain('tui.conversationBad');
     expect(output).toContain('[user] transcript-hello-marker');
@@ -1822,8 +1851,9 @@ describe('LogsPage 同毫秒卡片独立展开', () => {
       [makeSessionSummary('s1', 2)],
       { s1: [mk('aaa-first-row'), mk('bbb-second-row')] },
       ['\r'],
+      { columns: 140, rows: 40 },
     );
-    // 两行都渲染，但只有首卡展开
+    // 两行都渲染，但只有首卡展开（宽松终端排除预算截断，专测 seq 独立展开）
     expect(output).toContain('aaa-first-row');
     expect(output).toContain('bbb-second-row');
     expect(output.split('── detail @').length - 1).toBe(1);

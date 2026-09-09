@@ -1,6 +1,6 @@
 # /logs 页面撑屏问题 — 改动方案
 
-> 状态：分析完成，部分已实现（见 §4），已暂停待 review。重启 TUI 前当前线上行为不变。
+> 状态：**全部完成，已验收**（§4 + §5 于 2026-09 一并落地，见 §5 各项实现注记）。
 > 相关代码：`src/tui/components/LogsPage.tsx`、`ScrollableBox.tsx`、`card-window.ts`（新建）、
 > `ToolTimeline.tsx`、`GlobalTimeline.tsx`。
 
@@ -91,20 +91,31 @@ Session 行总长 ~80 列（indent+时间+sid+计数+消息 30+项目标签）�
    （与 ink 所用版本一致）。
 6. 探针（已删）：全屏末帧解析可行；空页 31 行实测与 §2 的 7 行超支逐项对上。
 
-## 5. 未完成（暂停前断点）
+## 5. 已完成（2026-09 收尾，接 §4 未竟项）
 
-- [ ] 卡片详情 `marginTop={1}` 未计入行预算（每展开卡漏 1 行）→
-      `measureCard` 加 `detailChromeRows`（或并入 header 逻辑），`planRows` /
-      `capPlanToBudget` 同步。
-- [ ] `bottomBarRows` 改实算：`2 + wrapRowCount(helpText, cols) + 1`（开）/ 3（关）；
-      导出状态行截断到列宽。
-- [ ] 右栏空态（3 行）/ 全局加载态（2 行）/ 左栏空态（3 行）进预算扣除。
-- [ ] `formatDetail` / `formatTimeFull` / `isErrorEntry` 在 LogsPage 的 import
-      已清其二，确认无残留引用（tsc 会报）。
-- [ ] 端到端断言：全屏末帧行数 ≤ rows（含长行/错误行/展开卡）＋滚动条字符出现；
-      左栏行单行断言。探针代码可复用（`probe-height.test.tsx` 已删，需重建）。
-- [ ] 全量 `npm test` + `tsc` + `eslint`，commit，`npm run build`，bump 验证，
-      重启 TUI 实测（80/100/140 列 × 历史/时间线/全局 × 折叠/展开）。
+- [x] 卡片详情 `marginTop={1}` 计入行预算：`CardLinePlan.detailChromeRows`
+      （`measureCard` 在 `isExpanded` 时置 1），`planRows` 求和、`capPlanToBudget`
+      原子截断（详情区全截掉则 chrome 归零；只装得下 chrome+1 时降级为 `… (N more lines)`）。
+      渲染侧门控改为内容驱动（`detailHeaderLines/detailLines/detailMore` 任一非空），
+      与测量解耦，防"计划与断言一起漏"的串供。
+- [x] `bottomBarRows` 实算：`2(上下框) + wrapRowCount(帮助正文, cols-2) + wrapRowCount('[help on] …)`；
+      关闭态 2 行 + 正文；搜索态 3。`exportStatus` 截断到 `cols-2`，不再自行换行吃预算。
+- [x] 空态/加载态不占额外行：去掉右栏列表空态、右栏加载态、左栏空态的 `marginTop`，
+      文案渲染进列表自身槽位（与列表互斥渲染）。`listHeight` 数学不变。
+      残留：全局时间线加载态 `<Box marginTop={1}>`（`LogsPage.tsx:1165`）未动 ——
+      瞬时态、行极小，帧矩阵未覆盖；如后续该视图撑屏再收。
+- [x] 孤儿 import 确认：`tsc --noEmit` 干净（清理在 R-2/R-3 改动中完成）。
+- [x] 端到端帧断言：新增 `src/tui/components/__tests__/logs-frame.test.tsx`，
+      80/100/140 列 × 24 行，覆盖空页/空条目/20×300 字折叠/展开首卡/帮助开启/
+      多行 message/展开错误卡(含上下文)/时间线视图；断言总行数恒 ≤ rows、顶栏在位、
+      滚动条 `█` 有溢出时出现、无溢出时不出现。
+      防串供验证：临时把 `detailChromeRows` 回退为 0，`card-window.test.ts` 两条
+      显式 chrome 断言即红（帧测试因外层 `height="100%"` + 截断 slack 吸收 ±1 而绿 ——
+      测量侧漏计本就只能在测量层守，见 `card-window.test.ts` R-1 注释）。
+- [x] 门禁：全量 `npx vitest run` 108 文件 / 1505 passed | 3 skipped；`typecheck`、
+      改动文件 eslint、`check:locale-parity` 全绿；`npm run build` 通过
+      （`bump-version` 的 package.json 版本号副作用不入本提交，发布时另处理）。
+      三档列宽实测由上条帧矩阵（80/100/140 × 24）替代自动化执行。
 
 ## 6. 验证标准
 

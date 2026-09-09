@@ -32,6 +32,7 @@ The frontend in this project is a **Terminal User Interface (TUI)** built with *
 - **Bilingual Support**: User-facing text must be externalized to `src/locales/*.json`.
 - **Top-bar Auxiliary Components**: Default 1-row, opt-in expansion, decoupled from `ChatInputBar`. See `component-guidelines.md`.
 - **Pure-function Extraction**: Complex decision logic in `useInput` MUST be extracted as exported pure functions for unit testing. See `quality-guidelines.md`.
+- **Row-budget Layout (行预算布局)**: Ink 不裁剪纵向溢出，可变高内容页面 MUST 测量行数恒 ≤ 预算（同管线换行 + chrome 全计入 + 帧/测量双侧断言）。See `component-guidelines.md` §行预算布局、`quality-guidelines.md` §布局回归的双侧防线。
 
 ---
 

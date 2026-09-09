@@ -1,6 +1,6 @@
 # Component Guidelines
 
-> Status: Established (AgentTabs pattern added 07-30; baseline patterns from 06-xx onward).
+> Status: Established (AgentTabs pattern added 07-30; 行预算布局 pattern added 09-08; baseline patterns from 06-xx onward).
 
 ## Observed Patterns / 已建立模式
 
@@ -128,6 +128,25 @@ useInput((input, key) => {
 - 纯函数必须 export（即使只在组件内使用）
 - 纯函数必须无副作用（不调 React hooks、不读 context）
 - 测试文件与组件同名 `.test.ts`（不需 `.tsx`，纯函数无 JSX）
+
+---
+
+## Pattern: 行预算布局（Ink 纵向不裁剪，09-08 /logs 撑屏修复）
+
+**When**: 页面内容行数可变（日志卡片流、长文本换行）且必须在固定终端高度内不撑屏。
+
+**Ink 7 机制前提**（实测结论，勿重新推导）：
+- Ink **不做纵向裁剪**，`overflow="hidden"` 对输出是 no-op。唯一防线是"测量行数恒 ≤ 预算"（预算铁律：宁可截断打标，不多占 1 行）。
+- `borderStyle` 存在即四边全画；多余边必须显式 `borderTop/Right/Bottom/Left={false}`。
+- 行数测量必须与 Ink 同管线：`wrapAnsi(text, w, {trim:false, hard:true})` 数 `\n` + `string-width` 计宽。参考实现：`src/tui/components/card-window.ts`。
+
+**Rules**:
+- **一切占行元素计入预算**：`marginTop` / `marginBottom` / 边框 / 指示器 ▲▼ / 帮助条换行，全部要 `wrapRowCount` 实算，不写死标称值（`bottomBarRows` 写死 4 是本次事故根因之一）。
+- **空态/加载态渲染进列表自身槽位**（去掉 `marginTop`、作为 children 传入），不另起块——互斥渲染时槽位本就空闲，且不动列表高度数学。
+- **窗口切"行"不切"张"**：变高内容用行预算切片（`sliceCardWindow`），单张超大卡截断可展开区并打标；`ScrollableBox` 的 `windowed` 模式信任调用方 offset，组件侧等高清目钳制会往回拽合法偏移。
+- 帧级验证见 `quality-guidelines.md` §「测量与渲染两侧的串供防线」。
+
+**Source**: `.trellis/tasks/09-08-fix-logs`（`docs/logs-overflow-fix-plan.md` 全文方案）。
 
 ---
 

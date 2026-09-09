@@ -89,6 +89,46 @@ describe('measureCard', () => {
     expect(plan.detailLines.length).toBeGreaterThan(5);
     expect(plan.messageMore).toBeNull();
   });
+
+  // R-1 防回归（测量侧显式断言）：详情区 <Box marginTop={1}> 必须计入预算。
+  // 渲染侧帧在常规终端被 slack 吸收抓不到这 ±1（见 logs-frame.test.tsx 注记），
+  // 故在唯一能确定观测处（measure/plan）钉死 chrome 语义。
+  it('展开卡计入详情区 chrome=1，折叠卡为 0', () => {
+    const entry = makeEntry({ message: 'hi' });
+    const expanded = measureCard(entry, {
+      contentWidth: 56,
+      isExpanded: true,
+      contextWindow: null,
+      relativeTimeStr: '',
+      isCurrentCard: false,
+    });
+    expect(expanded.detailChromeRows).toBe(1);
+
+    const collapsed = measureCard(entry, {
+      contentWidth: 56,
+      isExpanded: false,
+      contextWindow: null,
+      relativeTimeStr: '',
+      isCurrentCard: false,
+    });
+    expect(collapsed.detailChromeRows).toBe(0);
+  });
+
+  it('planRows 含详情 chrome：展开卡比折叠多算这一行', () => {
+    // 构造"展开与折叠渲染行内容相同、仅 chrome 差异"会牵动 detail 内容变化，
+    // 这里直接验证 chrome 进入 planRows 求和：给同一 plan 手动改 chrome，行数须 +1。
+    const entry = makeEntry({ message: 'hi' });
+    const base = measureCard(entry, {
+      contentWidth: 56,
+      isExpanded: true,
+      contextWindow: null,
+      relativeTimeStr: '',
+      isCurrentCard: false,
+    });
+    const withChrome = planRows(base, 56);
+    const noChrome = planRows({ ...base, detailChromeRows: 0 }, 56);
+    expect(withChrome - noChrome).toBe(1);
+  });
 });
 
 describe('sliceCardWindow', () => {
