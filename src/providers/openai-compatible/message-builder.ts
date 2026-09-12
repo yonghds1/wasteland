@@ -15,11 +15,43 @@
 import type { HistoryRecord } from '@core/runtime/event-types.js';
 import type { TurnToolResult } from '@core/engine/turn-state.js';
 import { t } from '@locales/index.js';
-import type { OpenAIMessage, OpenAIToolMessage } from './types.js';
+import type {
+  OpenAIAssistantMessage,
+  OpenAIMessage,
+  OpenAIToolMessage,
+} from './types.js';
 
 // ============================================================
 // 消息构建
 // ============================================================
+
+/**
+ * R-3 回传用：把上游"实际发过的 reasoning 字段"附加到 assistant 消息上。
+ *
+ * `extraFields` 的 key 是源字段名（reasoning_content / reasoning / thought…），
+ * 值原样带回。联合类型 OpenAIMessage 不声明动态 key，故这里只对**额外字段**做断言；
+ * assistant 的 role/content/tool_calls 全部交给类型系统静态检查
+ * ——避免整对象 `as OpenAIMessage` 把 shape 错误一起盖掉。
+ */
+function withAssistantExtras(
+  base: OpenAIAssistantMessage,
+  extraFields: Record<string, string>
+): OpenAIMessage {
+  return { ...base, ...(extraFields as Partial<OpenAIAssistantMessage>) };
+}
+
+/**
+ * R-3：把额外 reasoning 字段并入已存在的 assistant 消息（同 step 合并 tool_calls 时用）。
+ *
+ * 就地写入是刻意的：messages 数组持有该对象引用，合并多条 tool_call 记录时必须
+ * 累加到同一条 assistant 消息上；调用方已按字段名判重，保证每个 key 只挂一次。
+ */
+function attachAssistantExtras(
+  target: OpenAIAssistantMessage,
+  extraFields: Record<string, string>
+): void {
+  Object.assign(target, extraFields as Partial<OpenAIAssistantMessage>);
+}
 
 /**
  * 构建 OpenAI API 消息数组
@@ -72,11 +104,23 @@ export function buildMessages(params: {
   // 1. 添加历史消息（包含 tool_call 和 tool_result）
   for (const record of params.history) {
     if (record.type === 'message') {
-      // 对话消息
-      messages.push({
-        role: record.role,
-        content: record.content,
-      });
+      // 对话消息。R-3：assistant 带 reasoning 时按**源字段名、原值**放回；
+      // 无 reasoning（普通消息 / 旧记录 / user 角色）→ 逐字节与改前一致。
+      // content 为空时同样不回传：那是上游从未发过的字段（R-1 只累积非空增量），
+      // 凭空造 `reasoning_content: ""` 反而可能被 strict 网关判为非法。
+      if (record.role === 'assistant' && record.reasoning?.content) {
+        messages.push(
+          withAssistantExtras(
+            { role: 'assistant', content: record.content },
+            { [record.reasoning.field]: record.reasoning.content }
+          )
+        );
+      } else {
+        messages.push({
+          role: record.role,
+          content: record.content,
+        });
+      }
     } else if (record.type === 'summary') {
       // 压缩摘要：作为 system 元上下文，让模型了解被压缩掉的早期对话
       messages.push({
@@ -86,7 +130,17 @@ export function buildMessages(params: {
     } else if (record.type === 'tool_call') {
       // 工具调用记录 → assistant message with tool_calls
       // 查找上一条 assistant 消息，追加 tool_calls
+      // R-3（范围扩展）：发起 tool_calls 的 assistant 消息也带过 reasoning，
+      // strict 网关要求原字段回传。一条 assistant 消息可能对应多个 tool_call 记录，
+      // 取第一个带 reasoning 的挂到该 assistant 消息上（同批次 reasoning 同一份）。
       const lastMsg = messages[messages.length - 1];
+      // 源字段名与值一起取出，避免非空断言（lint 铁律）。
+      // 与 message 分支同规则：content 为空时不造字段（上游从未发过空 reasoning）。
+      const reasoningField = record.reasoning?.content ? record.reasoning.field : undefined;
+      const reasoning =
+        reasoningField !== undefined
+          ? { [reasoningField]: record.reasoning?.content ?? '' }
+          : undefined;
       if (lastMsg?.role === 'assistant' && 'tool_calls' in lastMsg && lastMsg.tool_calls) {
         lastMsg.tool_calls.push({
           id: record.callId,
@@ -96,9 +150,13 @@ export function buildMessages(params: {
             arguments: JSON.stringify(record.input ?? {}),
           },
         });
+        // 同一步多个 tool_call 合并进一条 assistant 消息：按字段名判重，只挂一次。
+        if (reasoning && reasoningField && !(reasoningField in lastMsg)) {
+          attachAssistantExtras(lastMsg, reasoning);
+        }
       } else {
         // 新建 assistant message with tool_calls
-        messages.push({
+        const base: OpenAIAssistantMessage = {
           role: 'assistant',
           content: null,
           tool_calls: [
@@ -111,7 +169,8 @@ export function buildMessages(params: {
               },
             },
           ],
-        });
+        };
+        messages.push(withAssistantExtras(base, reasoning ?? {}));
       }
     } else if (record.type === 'tool_result') {
       // 工具结果记录 → tool message
@@ -145,11 +204,22 @@ export function buildMessages(params: {
       },
     }));
 
-    messages.push({
+    // R-3（intra-turn 路径）：同 step 的多个 toolResults 共享同一 assistant 消息的
+    // reasoning，按字段名去重后挂到重建的 assistant tool_calls 消息上。
+    const stepReasoning = new Map<string, string>();
+    for (const result of params.toolResults) {
+      if (result.reasoning?.content && !stepReasoning.has(result.reasoning.field)) {
+        stepReasoning.set(result.reasoning.field, result.reasoning.content);
+      }
+    }
+
+    const base: OpenAIAssistantMessage = {
       role: 'assistant',
       content: null,
       tool_calls: toolCalls,
-    });
+    };
+    // Object.fromEntries 保留插入顺序：第一个命中字段先写，与原实现逐字节一致。
+    messages.push(withAssistantExtras(base, Object.fromEntries(stepReasoning)));
 
     // 3.2 添加 tool 消息（批量返回）
     for (const result of params.toolResults) {

@@ -1,5 +1,5 @@
 import type { ToolCall, ToolInput, ToolRunStatus } from '@tools/core/tool-types.js';
-import type { ChatInputTurn, HistoryRecord } from '../runtime/event-types.js';
+import type { ChatInputTurn, HistoryRecord, ReasoningPayload } from '../runtime/event-types.js';
 
 export type TurnStatus = 'running' | 'completed' | 'failed';
 
@@ -10,6 +10,12 @@ export type TurnToolResult = {
   status: ToolRunStatus;
   output?: string;
   error?: string;
+  /**
+   * 可选：发起本次 tool_call 的 assistant 消息携带的 reasoning 原文。
+   * 同一 step 内多个 tool 共享同一条 assistant 消息的 reasoning，round-trip 回传用
+   * （见 09-13 PRD R-3 intra-turn section-3 路径）。缺失时不写该 key。
+   */
+  reasoning?: ReasoningPayload;
 };
 
 export type TurnState = {

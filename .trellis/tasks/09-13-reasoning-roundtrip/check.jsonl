@@ -1,0 +1,2 @@
+{"file": ".trellis/tasks/09-13-reasoning-roundtrip/prd.md", "reason": "Acceptance Criteria 逐项对照,重点:零回归(无 reasoning 报文逐字节一致)与 R-4 防递归"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "门禁清单与 Definition of Done"}

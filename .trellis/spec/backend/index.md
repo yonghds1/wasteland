@@ -40,7 +40,7 @@ This repository now contains a small Node-based agent-CLI skeleton. In this proj
 | [Database Guidelines](./database-guidelines.md) | ORM patterns, queries, migrations | Not established yet |
 | [Error Handling](./error-handling.md) | Error types, handling strategies | Not established yet |
 | [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | Established baseline |
-| [Runtime Contracts](./runtime-contracts.md) | Cross-layer contracts for chat/runtime/provider/session flow | Established baseline |
+| [Runtime Contracts](./runtime-contracts.md) | Cross-layer contracts for chat/runtime/provider/session flow; OpenAI-compatible reasoning round-trip | Established baseline (reasoning round-trip added 09-13) |
 | [Tool Runtime Contracts](./tool-runtime-contracts.md) | Contracts for tools, permission gate, and tool lifecycle events | Established baseline |
 | [CLI/TUI Contracts](./cli-tui-contracts.md) | Contracts for CLI/TUI unification (InputAdapter, OutputAdapter, RuntimeContext) | Established baseline |
 | [Logging Guidelines](./logging-guidelines.md) | Structured logging, log levels | Not established yet |

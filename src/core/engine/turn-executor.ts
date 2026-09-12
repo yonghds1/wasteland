@@ -18,11 +18,9 @@ import { UserInputBridge } from './user-input-bridge.js';
 import type { AgentProvider } from '@providers/provider-types.js';
 import { ToolRegistry } from '@tools/core/tool-registry.js';
 import type {
-  
   HistoryRecord,
+  ReasoningPayload,
   RuntimeEvent,
-  
-  
   SessionToolCallRecord,
   SessionToolResultRecord} from '../runtime/event-types.js';
 import type { PermissionGate } from './permission-gate.js';
@@ -95,7 +93,7 @@ export class TurnExecutor {
   /** 首 token 计时起点（仅 turn 内第一次 provider 调用有效，其余 null；见 execute） */
   private firstChunkStartMs: number | null = null;
   private toolCallBuffer: Array<{
-    event: { type: 'tool_call'; call: { id: string; toolName: string; input: Record<string, unknown> } };
+    event: { type: 'tool_call'; call: { id: string; toolName: string; input: Record<string, unknown> }; reasoning?: ReasoningPayload };
     index: number;
   }> = [];
 
@@ -294,7 +292,7 @@ export class TurnExecutor {
   }
 
   private processStreamedNonToolEvent(
-    event: { type: string; text?: string; call?: unknown; usage?: { promptTokens: number; completionTokens: number; totalTokens: number; cachedTokens?: number } }
+    event: { type: string; text?: string; call?: unknown; reasoning?: ReasoningPayload; usage?: { promptTokens: number; completionTokens: number; totalTokens: number; cachedTokens?: number } }
   ): Observable<RuntimeEvent> {
     // 首 token 计时：首个带文本事件产生 provider.first_chunk trace（每 turn 一次）。
     // turn 内 TTFT 可观测：/logs 或 logs show 可见 provider.start → first_chunk 间隔。
@@ -340,7 +338,7 @@ export class TurnExecutor {
         phase: 'turn.complete',
         message: 'turn completed',
         data: { contentLength: content.length }});
-      const assistantRecord = createAssistantRecord(this.state.turn, content);
+      const assistantRecord = createAssistantRecord(this.state.turn, content, event.reasoning);
       return from(
         this.params.sessionManager.appendRecord(this.params.session, assistantRecord)
       ).pipe(
@@ -427,29 +425,32 @@ export class TurnExecutor {
         call: { id: string; toolName: string; input: Record<string, unknown> };
         event: RuntimeEvent & { type: 'tool_result' | 'tool_failed' };
         originalIndex: number;
+        /** 发起本 tool_call 的 assistant 消息的 reasoning 原文（round-trip 回传用） */
+        reasoning?: ReasoningPayload;
       };
       const collected: Collected[] = [];
 
       const wrap = (
         call: { id: string; toolName: string; input: Record<string, unknown> },
-        idx: number
+        idx: number,
+        reasoning?: ReasoningPayload
       ): Observable<RuntimeEvent> =>
         this.dispatchSingleToolCall(call, this.state, idx).pipe(
           tap((ev) => {
             if (ev.type === 'tool_result' || ev.type === 'tool_failed') {
-              collected.push({ call, event: ev as Collected['event'], originalIndex: idx });
+              collected.push({ call, event: ev as Collected['event'], originalIndex: idx, reasoning });
             }
           })
         );
 
       const spawnStreams$: Observable<RuntimeEvent> =
         spawnEvents.length > 0
-          ? merge(...spawnEvents.map(({ event, index }) => wrap(event.call, index)))
+          ? merge(...spawnEvents.map(({ event, index }) => wrap(event.call, index, event.reasoning)))
           : EMPTY;
 
       const otherStreams$: Observable<RuntimeEvent> =
         otherEvents.length > 0
-          ? concat(...otherEvents.map(({ event, index }) => wrap(event.call, index)))
+          ? concat(...otherEvents.map(({ event, index }) => wrap(event.call, index, event.reasoning)))
           : EMPTY;
 
       const streaming$: Observable<RuntimeEvent> =
@@ -463,11 +464,12 @@ export class TurnExecutor {
         if (collected.length === 0) return EMPTY;
         collected.sort((a, b) => a.originalIndex - b.originalIndex);
         const compactionEvents: RuntimeEvent[] = [];
-        for (const { call, event } of collected) {
+        for (const { call, event, reasoning } of collected) {
           const toolCallRecord: SessionToolCallRecord = createToolCallRecord(
             this.params.session,
             this.state.turn,
-            call
+            call,
+            reasoning
           );
           this.params.history.push(toolCallRecord);
           this.params.contextManager.trackRecord(toolCallRecord);
@@ -486,7 +488,8 @@ export class TurnExecutor {
               toolName: event.toolName,
               input: call.input,
               status: event.status,
-              output: event.output});
+              output: event.output,
+              reasoning});
           } else {
             const rec: SessionToolResultRecord = createToolResultRecord({
               session: this.params.session,
@@ -501,7 +504,8 @@ export class TurnExecutor {
               toolName: event.toolName,
               input: call.input,
               status: event.status,
-              error: event.error});
+              error: event.error,
+              reasoning});
           }
 
           const compaction = maybeCompactContext({

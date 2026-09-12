@@ -2,6 +2,7 @@ import type { Observable } from 'rxjs';
 
 import type { TurnContext } from '@core/runtime/turn-context.js';
 import type { TurnState } from '@core/engine/turn-state.js';
+import type { ReasoningPayload } from '@core/runtime/event-types.js';
 import type { ToolCall } from '@tools/core/tool-types.js';
 
 /**
@@ -46,12 +47,19 @@ export type ProviderStreamEvent =
       type: 'tool_call';
       /** 工具调用请求详情 */
       call: ToolCall;
+      /**
+       * 可选：本条 assistant 消息携带的 reasoning 原文（round-trip 字面回传用）。
+       * 工具循环中间步同样带过 reasoning，strict 网关要求回传，故随 tool_call 一起透传。
+       */
+      reasoning?: ReasoningPayload;
     }
   | {
       /** 事件类型：AI 完成的完整消息 */
       type: 'assistant_message';
       /** 完整消息内容 */
       text: string;
+      /** 可选：本条 assistant 消息携带的 reasoning 原文（round-trip 字面回传用） */
+      reasoning?: ReasoningPayload;
     }
   | {
       /** 事件类型：Token 使用量统计 */

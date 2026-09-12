@@ -12,6 +12,7 @@ import type { SessionManager, SessionMetadata } from './session-manager.js';
 import type {
   ChatInputTurn,
   HistoryRecord,
+  ReasoningPayload,
   RuntimeEvent,
   SessionMessageRecord,
   SessionRecord,
@@ -41,13 +42,19 @@ export function createUserRecord(turn: ChatInputTurn): SessionMessageRecord {
 }
 
 /** 创建助手消息记录 */
-export function createAssistantRecord(turn: number, content: string): SessionMessageRecord {
+export function createAssistantRecord(
+  turn: number,
+  content: string,
+  reasoning?: ReasoningPayload
+): SessionMessageRecord {
   return {
     type: 'message',
     role: 'assistant',
     turn,
     content,
     timestamp: createTimestamp(),
+    // reasoning 缺失时不写该 key（旧记录逐字节一致）；有则原样透传（R-2）。
+    ...(reasoning ? { reasoning } : {}),
   };
 }
 

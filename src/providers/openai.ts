@@ -44,6 +44,17 @@ import {
 } from './openai-compatible/index.js';
 import { parseSSEStream } from './sse-parser.js';
 import { fetchWithRetry, parseToolArguments } from './shared/retry.js';
+import {
+  detectReasoningField,
+  hasReasoningFields,
+  isReasoningRoundTripError,
+  stripReasoningFields,
+} from './shared/reasoning-roundtrip.js';
+import {
+  type OpenAIStreamChunk,
+  type ToolCallAccumulator,
+} from './openai-compatible/stream-types.js';
+import { readCachedTokens } from './openai-compatible/usage-normalization.js';
 import { resolveProviderProfile, type ProviderProfile } from './profiles.js';
 
 // ============================================================
@@ -55,50 +66,6 @@ type OpenAIProviderConfig = {
   baseUrl: string;
   apiKey?: string;
   model: string;
-};
-
-/** OpenAI SSE 流式响应 chunk */
-type OpenAIStreamChunk = {
-  choices: Array<{
-    delta: {
-      content?: string | null;
-      reasoning_content?: string | null;
-      reasoning?: string | null;
-      thought?: string | null;
-      tool_calls?: Array<{
-        index: number;
-        id?: string;
-        type?: 'function';
-        function?: {
-          name?: string;
-          arguments?: string;
-        };
-      }>;
-    };
-    finish_reason?: 'stop' | 'tool_calls' | null;
-  }>;
-  usage?: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-    prompt_tokens_details?: {
-      cached_tokens?: number;
-    };
-    /** DeepSeek：缓存命中 token（供应商原始字段，经 profile.usageFields 归一化读取） */
-    prompt_cache_hit_tokens?: number;
-    /** DeepSeek：缓存未命中 token（保留供后续使用，不向上泄漏） */
-    prompt_cache_miss_tokens?: number;
-  };
-  error?: {
-    message?: string;
-  };
-};
-
-/** 工具调用累积器 */
-type ToolCallAccumulator = {
-  id: string;
-  name: string;
-  arguments: string;
 };
 
 // ============================================================
@@ -137,49 +104,7 @@ function resolveOpenAIConfig(settings?: ProviderSettings): OpenAIProviderConfig 
 }
 
 // ============================================================
-// usage 归一化
-// ============================================================
-
-/**
- * 按点号路径读取嵌套字段
- *
- * 供应商缓存字段可能是嵌套路径（"prompt_tokens_details.cached_tokens"）
- * 或扁平路径（"prompt_cache_hit_tokens"），统一用点号路径读取。
- */
-function readNestedPath(obj: unknown, path: string): unknown {
-  return path.split('.').reduce<unknown>((current, key) => {
-    if (current === undefined || current === null) return undefined;
-    if (typeof current !== 'object') return undefined;
-    return (current as Record<string, unknown>)[key];
-  }, obj);
-}
-
-/**
- * 从 usage 中读取缓存 token 数
- *
- * 按 profile.usageFields 候选顺序，取第一个非空值归一化。
- * 供应商原始字段名不向上泄漏，只产出统一的 cachedTokens。
- *
- * @param usage - provider 返回的原始 usage
- * @param profile - 命中的供应商 profile
- * @returns 归一化后的缓存 token 数；所有字段缺失时为 undefined
- */
-function readCachedTokens(
-  usage: OpenAIStreamChunk['usage'] | undefined,
-  profile: ProviderProfile
-): number | undefined {
-  if (!usage) return undefined;
-  for (const field of profile.usageFields) {
-    const value = readNestedPath(usage, field);
-    if (typeof value === 'number' && value >= 0) {
-      return value;
-    }
-  }
-  return undefined;
-}
-
-// ============================================================
-// SSE Streaming 核心
+// OpenCode Go 客户端标识 + R-4 自愈回调
 // ============================================================
 
 /**
@@ -190,6 +115,19 @@ function readCachedTokens(
  */
 const OPENCODE_USER_AGENT = 'wasteland';
 const OPENCODE_SESSION_HEADER = 'x-opencode-session';
+
+/**
+ * R-4 自愈回调：进程内（per provider 实例）记忆"该端点拒收回传，停回传"。
+ *
+ * 状态放在 `createOpenAIProvider` 闭包里，此处只传读写回调，
+ * 避免 `requestOpenAIStreaming` 顶层持有可变状态（利于测试与多实例隔离）。
+ */
+type ReasoningRoundTripHooks = {
+  /** 该 provider 实例是否已确认端点拒收 reasoning 回传 */
+  isSuppressed(): boolean;
+  /** 标记端点拒收，后续请求不再回传 reasoning */
+  setSuppressed(): void;
+};
 
 // ============================================================
 // SSE Streaming 核心
@@ -205,7 +143,7 @@ function requestOpenAIStreaming(
   messages: readonly OpenAIMessage[],
   tools: readonly OpenAIFunctionTool[] | undefined,
   profile: ProviderProfile,
-  opts?: { sessionId?: string }
+  opts?: { sessionId?: string; roundTrip?: ReasoningRoundTripHooks }
 ): Observable<ProviderStreamEvent> {
   return new Observable<ProviderStreamEvent>((subscriber) => {
     const controller = new AbortController();
@@ -225,10 +163,18 @@ function requestOpenAIStreaming(
       });
     }
 
+    // R-4：一次事件流最多自愈一次，防递归。
+    let roundTripRetried = false;
+    // 实际发送的历史；若 provider 实例已确认端点拒收回传，起手即剥离。
+    let effectiveMessages = opts?.roundTrip?.isSuppressed()
+      ? stripReasoningFields(messages)
+      : messages;
+
     async function execute() {
+      const roundTrip = opts?.roundTrip;
       const body: Record<string, unknown> = {
         model: config.model,
-        messages,
+        messages: effectiveMessages,
         stream: true,
         stream_options: { include_usage: true },
       };
@@ -271,8 +217,27 @@ function requestOpenAIStreaming(
         } catch {
           // ignore parse error
         }
+        // R-4 自愈：仅当"我们确实回了传" + 错误是"字段被拒收"（非"要求多带"）时，
+        // 去字段重试一次。retry 标记保证不递归；"停回传"的记忆等重试请求
+        // 真的被接受（response.ok）再落下，避免误判错误文案就把 R-3 能力永久关掉。
+        if (
+          roundTrip &&
+          !roundTripRetried &&
+          !roundTrip.isSuppressed() &&
+          isReasoningRoundTripError(errorMessage) &&
+          hasReasoningFields(effectiveMessages)
+        ) {
+          roundTripRetried = true;
+          effectiveMessages = stripReasoningFields(effectiveMessages);
+          return execute();
+        }
         subscriber.error(new Error(`${t('providers.openai.requestFailed')}${errorMessage}`));
         return;
+      }
+
+      // 走到这里说明本次请求被端点接受：若它是自愈重试，正式记住"该端点停回传"。
+      if (roundTrip && roundTripRetried) {
+        roundTrip.setSuppressed();
       }
 
       if (!response.body) {
@@ -288,6 +253,10 @@ function requestOpenAIStreaming(
       let finished = false;
       let isThinking = false;
       let lastUsage: OpenAIStreamChunk['usage'] | undefined;
+      // R-1：按**实际命中的源字段名**累积 reasoning 原文（round-trip 字面回传用）。
+      // 与 <think>/emitChunk 显示链完全独立，UI 渲染零改动。
+      let reasoningField: string | undefined;
+      let reasoningText = '';
 
       subscription = sse$.subscribe({
         next(data) {
@@ -303,12 +272,19 @@ function requestOpenAIStreaming(
             if (!choice) return;
 
             // 处理独立思考字段（reasoning_content / reasoning / thought）
-            const reasoningDelta =
-              choice.delta?.reasoning_content ??
-              choice.delta?.reasoning ??
-              choice.delta?.thought;
+            // R-1：探测**实际命中的字段名**，按源字段名累积增量原文（供 R-3 字面回传）。
+            const sourceDelta = choice.delta ?? {};
+            const hitField = detectReasoningField(sourceDelta);
+            const reasoningDelta = hitField ? sourceDelta[hitField] : undefined;
 
             if (reasoningDelta) {
+              // 首个非空增量锁定字段名；后续增量按同名累积（不跨字段混装）。
+              if (reasoningField === undefined) {
+                reasoningField = hitField;
+              }
+              if (reasoningField === hitField) {
+                reasoningText += reasoningDelta;
+              }
               if (!isThinking) {
                 isThinking = true;
                 emitChunk(`<think>${reasoningDelta}`);
@@ -368,7 +344,14 @@ function requestOpenAIStreaming(
                 }));
 
               for (const call of toolCalls) {
-                subscriber.next({ type: 'tool_call', call });
+                subscriber.next({
+                  type: 'tool_call',
+                  call,
+                  // reasoningText 非空 ⇒ reasoningField 必已锁定（R-1 首个非空增量时设置）。
+                  ...(reasoningText && reasoningField
+                    ? { reasoning: { field: reasoningField, content: reasoningText } }
+                    : {}),
+                });
               }
             }
 
@@ -402,7 +385,13 @@ function requestOpenAIStreaming(
               }));
 
             for (const call of toolCalls) {
-              subscriber.next({ type: 'tool_call', call });
+              subscriber.next({
+                type: 'tool_call',
+                call,
+                ...(reasoningText && reasoningField
+                  ? { reasoning: { field: reasoningField, content: reasoningText } }
+                  : {}),
+              });
             }
           }
 
@@ -410,7 +399,14 @@ function requestOpenAIStreaming(
           // 如果有工具调用，不需要 assistant_message
           if (toolCallMap.size === 0) {
             // 定稿即本轮 chunk 原文之和（与界面累积器同源），保证 transcript 不丢文本。
-            subscriber.next({ type: 'assistant_message', text: fullText });
+            subscriber.next({
+              type: 'assistant_message',
+              text: fullText,
+              // R-2：reasoning 随定稿透传，字段名+原值不解释（供 R-3 回传）。
+              ...(reasoningText && reasoningField
+                ? { reasoning: { field: reasoningField, content: reasoningText } }
+                : {}),
+            });
           }
 
           // 发出 usage 事件（如果有）
@@ -462,6 +458,16 @@ export function createOpenAIProvider(settings?: ProviderSettings): AgentProvider
     usageFields: settings?.usageFields,
   });
 
+  // R-4：自愈状态按 provider 实例记忆（一个实例锁定一个 baseUrl+model+profile）。
+  // 放在工厂闭包而非 requestOpenAIStreaming，避免模块级全局态污染其它端点。
+  let roundTripSuppressed = false;
+  const roundTrip: ReasoningRoundTripHooks = {
+    isSuppressed: () => roundTripSuppressed,
+    setSuppressed: () => {
+      roundTripSuppressed = true;
+    },
+  };
+
   return {
     id: 'openai-compatible',
 
@@ -478,6 +484,7 @@ export function createOpenAIProvider(settings?: ProviderSettings): AgentProvider
 
         return requestOpenAIStreaming(config, messages, tools, profile, {
           sessionId: context.sessionId,
+          roundTrip,
         });
       }).pipe(concatMap((obs) => obs));
     },

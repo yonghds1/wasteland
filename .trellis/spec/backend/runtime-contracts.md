@@ -623,3 +623,108 @@ Why correct:
 - 保留窗口以 token 成本为目标，压缩后稳定不超预算
 - 短记录保留更多条、长记录保留更少条，token 效率一致
 - `tool_call`/`tool_result` 安全边界保证 provider 请求合法
+
+---
+
+## Scenario: OpenAI-compatible reasoning 字面回传（round-trip）
+
+> 来源：`.trellis/tasks/09-13-reasoning-roundtrip`（opencode-go + deepseek 思考模型多步工具循环被上游拒证实测）。
+
+### 1. Scope / Trigger
+
+- Trigger: 任何 OpenAI 兼容线（`openai.ts` / `openai-compatible/`）触碰 assistant 消息的历史重建、流解析或错误处理。
+- Trigger: 接入新的思考模型厂商/网关前，想确认"要不要为它写适配代码"——答案是不写，本契约就是适配层。
+- 范围外：Anthropic 原生 thinking block + signature（`claude.ts`，二期）；`<think>` 显示层；transcript 存储格式。
+
+### 2. Signatures
+
+```ts
+// src/core/runtime/event-types.ts —— 载荷定义在 core（provider → core 分层方向）
+export type ReasoningPayload = { field: string; content: string };
+
+// 三个携带点，全部可选、缺失时序列化与旧格式逐字节一致：
+SessionMessageRecord.reasoning?: ReasoningPayload;   // 历史最终消息路径
+SessionToolCallRecord.reasoning?: ReasoningPayload;  // 历史 tool_call 路径
+TurnToolResult.reasoning?: ReasoningPayload;         // intra-turn toolResults 路径
+
+// ProviderStreamEvent（provider-types.ts）：tool_call 与 assistant_message 各带 reasoning?
+
+// src/providers/shared/reasoning-roundtrip.ts —— 纯函数，可独立单测
+export function detectReasoningField(delta): 'reasoning_content' | 'reasoning' | 'thought' | undefined;
+export function isReasoningRoundTripError(message: string): boolean;
+export function hasReasoningFields(messages: readonly OpenAIMessage[]): boolean;
+export function stripReasoningFields(messages): readonly OpenAIMessage[];
+```
+
+### 3. Contracts
+
+- **字面回传铁律**：上游在这条 assistant 消息上发过什么 reasoning 字段，续传历史时就用**同名原字段、原值**带回；**没发的绝不凭空造**（含空串——空 `content` 一律视为无）。
+- 接收侧（R-1）：`detectReasoningField` 按 `reasoning_content` > `reasoning` > `thought` 严格序探测**实际命中的字段名**；首个非空增量锁定字段名，后续跨字段增量丢弃；`<think>` 显示链与 emitChunk 行为不变。
+- 回传侧（R-3）：**三条 assistant 路径都要带回传**——历史 message、历史 tool_call（同 step 多 tool_call 合并进一条 assistant 消息时按字段名判重只挂一次）、intra-turn toolResults section-3。只修 message 路径不够：strict 网关对工具循环中间步同样校验。
+- 类型表达：动态 key 无法写进 `OpenAIMessage` 联合类型，统一经 `withAssistantExtras` / `attachAssistantExtras` 附加，断言范围收窄到"动态额外字段"，role/content/tool_calls 仍由类型系统校验。
+- 自愈（R-4）：`isReasoningRoundTripError` 判"字段被**拒收**"（unrecognized/not supported/invalid_request 等），且**显式排除** "must be passed back / required / missing / needs to be passed back / please provide" 这类"**要求多带**"措辞——后者归 R-3 解决，去字段只会更糟。
+- 记忆粒度：provider 实例闭包（`roundTripSuppressed`）；重试严格一次（`roundTripRetried` + `!isSuppressed()` 双闸）；**记忆只在去字段重试真的拿到 ok 响应后才落下**（判错代价不对称：文案误判不能永久关掉回传能力）。
+
+### 4. Validation & Error Matrix
+
+| 场景 | 行为 |
+|---|---|
+| 上游发 `reasoning_content`，续传请求 | 同 key 原值带回 |
+| 旧 session 记录无 `reasoning` 字段 | 序列化逐字节同改前；不造字段 |
+| 上游报"必须回传"而本地数据已丢（旧会话续聊） | 不假重试，错误文案原样透传 |
+| 上游 400 "unrecognized field reasoning_content" | 去字段重试一次；成功则实例内记住停回传 |
+| 上游 400 "reasoning_content must be passed back" | **不**触发自愈（属"要求多带"，交 R-3） |
+| 重试仍失败 | 不再自愈，`subscriber.error` 抛错 |
+| provider 实例已 suppressed | 起手即 `stripReasoningFields`，后续请求不带 |
+| `reasoning.content` 为空串 | 视同无，不回传（防造非法空字段） |
+
+### 5. Good / Base / Bad Cases
+
+#### Good
+- deepseek/qwen 思考模型经任意 OpenAI 兼容网关跑多步工具循环（turn≥3 step），全程零厂商定制适配。
+
+#### Base
+- 非思考模型：流里无 reasoning delta → 记录无字段 → 请求体与改前逐字节一致。
+
+#### Bad
+- 把三个源字段归一化成固定 key 再回传（上游按原字段校验，直接拒）。
+- 用"去字段"自愈"must be passed back"错误（越自愈越糟）。
+- 见到 reasoning 类 `invalid_request` 文案就永久关闭回传（判错代价不对称）。
+
+### 6. Tests Required
+
+- `src/providers/__tests__/openai-reasoning-stream.test.ts`：三字段变体各自 `{field,content}` 正确；首非空锁字段、跨字段丢弃；无 reasoning 流事件不含 key；UI chunk 序列与改前逐字一致。
+- `src/providers/openai-compatible/__tests__/message-builder-reasoning.test.ts`：三条 assistant 路径挂载；旧记录逐字节零回归；user 不造字段；空串不回传；同 step 多 tool_call 只挂一次；混合 field 并存。
+- `src/providers/__tests__/openai-self-heal.test.ts`：拒收→去字段重试一次且第二次 body 无三字段；成功后才记忆；must-pass-back / 非 reasoning 错误不 retry；已 suppressed 不再自愈；措辞变体（requires/needs to be passed back/please provide）不误判。
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```ts
+// 归一化固定 key —— DashScope 系按原字段校验，拒收
+messages.push({ role: 'assistant', content, reasoning: reasoningText });
+
+// 见 reasoning 字样就 strip 重试 —— "must be passed back" 会被越修越没
+if (lower.includes('reasoning')) { stripAndRetry(); }
+```
+
+#### Correct
+
+```ts
+// 原字段名动态放回；断言收窄到 extras
+withAssistantExtras({ role, content }, { [reasoning.field]: reasoning.content });
+
+// 排除"要求多带"措辞 + 成功才记忆
+if (isReasoningRoundTripError(msg) && !roundTripRetried && hasReasoningFields(msgs)) {
+  roundTripRetried = true;
+  effectiveMessages = stripReasoningFields(effectiveMessages);
+  return execute(); // ok 后：roundTrip.setSuppressed()
+}
+```
+
+### 已知限制
+
+- **`/resume` 缺口（待后续任务）**：session JSONL 落盘的 `tool_call` 记录来自 `tool-dispatch.ts` 的 `createToolCallRecord`（不感知 reasoning）；带 reasoning 的 record 在 `turn-executor.ts` appendRecord 之后被 push 进 history，`session-manager.appendRecord` 的 map 又剥掉该字段。**同一会话的后续 turn 正常**，但跨进程 `/resume` 重建的 tool_call 历史缺中间步 reasoning，strict 网关会再次报错。修法：appendRecord 持久化 + history 加载（`agent-loop.ts:274`）两处透传 `reasoning`。
+- transcript 存双份思考文本（`content` 内 `<think>` + `reasoning.content`）：PRD 已接受；若二期瘦身，合并处理。
+- `estimateMessageTokens` 不计 `reasoning.content`：token 估算偏乐观，压缩阈值稍松（PRD 接受"回传全文"风险的一部分）。

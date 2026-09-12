@@ -17,6 +17,7 @@ import { defer, of, type Observable } from 'rxjs';
 import { t } from '@locales/index.js';
 import type { ToolCall, ToolInput, ToolRunStatus } from '@tools/core/tool-types.js';
 import {
+  type ReasoningPayload,
   type RuntimeEvent,
   type SessionPermissionRecord,
   type SessionToolCallRecord,
@@ -62,7 +63,8 @@ export function summarizeInputDetail(input: ToolInput | undefined): string {
 export function createToolCallRecord(
   session: SessionMetadata,
   turn: number,
-  call: ToolCall
+  call: ToolCall,
+  reasoning?: ReasoningPayload
 ): SessionToolCallRecord {
   return {
     type: 'tool_call',
@@ -72,6 +74,8 @@ export function createToolCallRecord(
     toolName: call.toolName,
     input: call.input,
     timestamp: createTimestamp(),
+    // reasoning 缺失时不写该 key（旧记录逐字节一致）；有则原样透传（R-3 范围扩展）。
+    ...(reasoning ? { reasoning } : {}),
   };
 }
 

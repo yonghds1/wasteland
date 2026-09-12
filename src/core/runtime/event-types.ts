@@ -13,6 +13,23 @@ import type { SkillArgs, SkillResult } from '@core/skills/skill-types.js';
 export type InputSource = 'message' | 'stdin' | 'interactive';
 
 /**
+ * Reasoning 字面回传载荷（round-trip）
+ *
+ * 上游（OpenAI 兼容厂商）在这条 assistant 消息上发过哪个 reasoning 字段、原值是什么，
+ * 续传历史时就用**同名原字段、原值**带回。`field` 是实际命中的源字段名
+ * （`reasoning_content` / `reasoning` / `thought`），不解释、不归一化。
+ *
+ * 定义在 core 层，供 record 类型与 provider 事件类型共用（分层方向：provider → core）。
+ * 见 `.trellis/tasks/09-13-reasoning-roundtrip/prd.md`。
+ */
+export type ReasoningPayload = {
+  /** 上游实际使用的字段名（字面回传时作为 key 放回） */
+  field: string;
+  /** 该字段累积的原文（不截断，字面回传） */
+  content: string;
+};
+
+/**
  * 运行时模式
  *
  * - "single": 单次执行模式，处理一条消息后退出
@@ -54,6 +71,11 @@ export type SessionMessageRecord = {
   content: string;
   timestamp: string;
   source?: InputSource;
+  /**
+   * 可选：assistant 消息携带的 reasoning 原文（round-trip 字面回传用）。
+   * 缺失（旧会话 / 非思考模型）时序列化结果与今天逐字节一致。
+   */
+  reasoning?: ReasoningPayload;
 };
 
 /**
@@ -77,6 +99,12 @@ export type SessionToolCallRecord = {
   toolName: string;
   input: ToolInput;
   timestamp: string;
+  /**
+   * 可选：发起本 tool_call 的 assistant 消息携带的 reasoning 原文（round-trip 字面回传用）。
+   * 工具循环中间步同样带过 reasoning，strict 网关要求回传（见 09-13 PRD R-3 范围扩展）。
+   * 缺失时序列化结果与今天逐字节一致。
+   */
+  reasoning?: ReasoningPayload;
 };
 
 /**

@@ -1,0 +1,3 @@
+{"file": ".trellis/tasks/09-13-reasoning-roundtrip/prd.md", "reason": "根因实测记录、R-1~R-6 需求与验收标准、执行顺序的唯一权威来源"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "五门禁与纯函数提取测试规则,新增 provider 单测须遵循"}
+{"file": "src/providers/README.md", "reason": "provider 层架构与既有 openai-compatible 模块边界(若存在)"}
