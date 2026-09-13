@@ -23,15 +23,15 @@
 - [x] 2.1 `load-settings.ts` 迁移检测：`warnA2ALegacyOnce` + 纯函数 `buildA2AMigrationNotice`（可粘贴 acp 示例，进程内一次）；`config-writer.ts` 支持写 `acp` 块（`buildAcpBlock`/`WizardACPSelection`）。
 - [x] 2.2 TUI 向导：`A2AStep` → `AcpStep`（ACP_PRESETS 勾选，展示 command）；types 步骤 `'acp'`；logs 页 scope 增 `acp`；locale zh/en 增 acp key（parity 过）。旧 a2a locale key 暂留（P3 删）。→ commit `a175be1`
 - [x] 2.3 `initialize-runtime.ts` 删 a2a servers 托管段（createClaudeCodeA2AServer import、起进程循环、`a2aManager`/`stopA2AServers` 与 useRuntime/run-agent-helpers 调用链）；3 个测试 mock 同步。全量 1565 绿 → commit `10d7a11`
-- [ ] 2.4 迁移 `~/.wasteland/settings.json`（经用户确认后：a2a 块 → acp 等价块，保留文件备份）；用户实测 R-6：TUI 里 `acp_claude_code` 下发任务，流式渲染 + 正常返回。**← 当前卡点：待用户点头改配置 + 实测**
-- [ ] 2.5 P2 收口：全量门禁 + 用户实测通过。
+- [x] 2.4 迁移完成：用户级 + 项目级 settings.json 均已改 acp 块（.bak-a2a 备份留档）；build:no-bump 刷新 dist；R-6 改由 AI 端到端自测达成（用户免测指令）：dist 链路加载配置 → 注册 `acp_claude_code` → 真实任务 `1+1` 返回 success/end_turn（20.8s 含 npx），无 a2a 工具、无进程泄漏。自测中揪出 **npx 孙进程组泄漏** 并已修复（detached+killGroup+单测）。
+- [x] 2.5 P2 收口：全量门禁 + 端到端自测通过（见 2.4）。
 
-## P3 清理：删净 A2A
+## P3 清理：删净 A2A ✅ 已完成 2026-09-13（commit c65f96c）
 
-- [ ] 3.1 删文件：`src/acp/a2a-{client,types,webhook,registry,claude-code-adapter}.ts` 及其 4 个同级 `.test.ts`；`a2a-integration.test.ts`/`a2a-collaboration.test.ts`；`src/tools/agent/a2a-agent-tool.ts` + `src/tools/__tests__/a2a-agent-tool.test.ts`；`src/tools/agent/spawn-agent/__tests__/a2a-inheritance.test.ts` 改写为 acp 继承测试；`examples/a2a-test-server.ts` 删除。
-- [ ] 3.2 删配置面：`settings-types` a2a 块、merge/validate/env-auth/config-writer 的 a2a 分支、locale a2a key；**保留** load-settings 里读取旧块的迁移检测（改为"检测到已废弃 a2a 块"文案）。
-- [ ] 3.3 文档：README.md「A2A 协作」→「ACP 协作」（含配置示例、npx 首拉提示、第三方适配器链接）；`docs/` 涉 a2a 段落、`src/tools/README.md`、CHANGELOG 新条目。
-- [ ] 3.4 终检：`grep -ri a2a src/ examples/ docs/ README.md` 仅剩 load-settings 迁移检测与 CHANGELOG 历史；全量门禁（typecheck/lint/test/validate:i18n/check:locale-parity）→ commit ④`refactor(acp)!: 移除 A2A 协议栈,协作统一为 ACP`。
+- [x] 3.1 删文件：`src/acp/a2a-{client,types,webhook,registry,claude-code-adapter}.ts` 及其 4 个同级 `.test.ts`；`a2a-integration.test.ts`/`a2a-collaboration.test.ts`；`src/tools/agent/a2a-agent-tool.ts` + `src/tools/__tests__/a2a-agent-tool.test.ts`；`src/tools/agent/spawn-agent/__tests__/a2a-inheritance.test.ts` 改写为 acp 继承测试；`examples/a2a-test-server.ts` 删除。
+- [x] 3.2 删配置面：`settings-types` a2a 块、merge/validate/env-auth/config-writer 的 a2a 分支、locale a2a key；**保留** load-settings 里读取旧块的迁移检测（改为"检测到已废弃 a2a 块"文案）。
+- [x] 3.3 文档：README.md「A2A 协作」→「ACP 协作」（含配置示例、npx 首拉提示、第三方适配器链接）；`docs/` 涉 a2a 段落、`src/tools/README.md`、CHANGELOG 新条目。
+- [x] 3.4 终检：`grep -ri a2a src/ examples/ docs/ README.md` 仅剩 load-settings 迁移检测与 CHANGELOG 历史；全量门禁（typecheck/lint/test/validate:i18n/check:locale-parity）→ commit ④`refactor(acp)!: 移除 A2A 协议栈,协作统一为 ACP`。
 
 ## Validation（每阶段末必跑）
 
