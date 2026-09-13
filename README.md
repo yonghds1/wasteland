@@ -9,8 +9,8 @@ Wasteland - 一个基于 TypeScript、RxJS 和 Ink/React 的多智能体系统,�
 - **并行 Agent 执行**：多个 spawn_agent 调用可并行执行，提升多 Agent 系统效率
 - 完整的工具系统和权限控制
 - **MCP 协议支持**：支持 stdio 和 SSE 传输，Resources 和 Prompts 功能
-- **A2A 协作**：支持 SSE 流式响应和 Webhook 推送通知
-- **代码助手集成**：支持 Claude Code、Codex 等代码助手的 A2A 协议调用
+- **ACP 协作**：基于 Agent Client Protocol（stdio JSON-RPC），流式 session/update，子进程按调用起停
+- **代码助手集成**：支持 Claude Code、Codex 等代码助手的 ACP 协议调用（官方适配器）
 - **web-search 增强**：使用 cheerio 进行 HTML 解析，支持 LRU 缓存
 - Session 持久化和追踪
 
@@ -505,7 +505,7 @@ src/ui/         CLI 终端 UI 层（CliInputAdapter / CliOutputAdapter，readlin
 src/tui/        TUI 界面（基于 Ink/React；hooks/ 下有 runtime-reducers 与 useLogsKeymap，wizard/ 下是 InitWizard 拆分模块）
 src/skins/      皮肤加载（角色人设与皮肤解耦）
 src/theme/      TUI 视觉主题与 palette 对比度
-src/acp/        A2A 协作（Agent-to-Agent 适配、注册、Webhook）
+src/acp/        ACP 协作（Agent Client Protocol 客户端，stdio JSON-RPC）
 src/locales/    i18n 翻译（zh / en）
 dist/           构建产物（gitignored）
 ```

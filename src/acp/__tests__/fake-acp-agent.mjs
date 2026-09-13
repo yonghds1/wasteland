@@ -15,8 +15,14 @@
  */
 
 import readline from 'node:readline';
+import { writeFileSync } from 'node:fs';
 
 const mode = process.argv[2] ?? 'happy';
+
+// 进程组回收测试：把自身 PID 写到 env 指定文件，供测试断言 dispose 后已死
+if (process.env.ACP_PID_FILE) {
+  writeFileSync(process.env.ACP_PID_FILE, String(process.pid));
+}
 const out = (obj) => process.stdout.write(JSON.stringify(obj) + '\n');
 const sendNotify = (method, params) => out({ jsonrpc: '2.0', method, params });
 

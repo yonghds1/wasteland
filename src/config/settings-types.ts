@@ -70,60 +70,6 @@ export type MCPServerConfig = {
  */
 export type MCPServersConfig = Record<string, MCPServerConfig>;
 
-/**
- * A2A Agent 配置（出站调用的远程 agent）
- *
- * 每个配置的远程 agent 会成为一个直接工具 `a2a_<name>`，
- * 供主 agent 与子 agent 调用。`description` 用于 LLM 发现工具用途。
- */
-export type A2AAgentConfig = {
-  /** Agent 名称（工具名后缀：a2a_<name>） */
-  name: string;
-  /** Agent 端点 URL */
-  url: string;
-  /** 描述（供 LLM 发现工具用途） */
-  description?: string;
-  /** 可选：认证 token（明文字符串，或 settings.json 中的 { $auth: KEY } 引用，由 resolveSettingsAuthRefs 解析） */
-  token?: string | AuthRef;
-};
-
-/**
- * A2A Agent 配置列表
- */
-export type A2AAgentsConfig = A2AAgentConfig[];
-
-/**
- * A2A Server 配置（内置启动的 A2A 服务器）
- */
-export type A2AServerConfig = {
-  /** 是否启用 */
-  enabled: boolean;
-  /** 监听端口 */
-  port: number;
-  /** 命令路径 */
-  command: string;
-  /** 描述 */
-  description?: string;
-};
-
-/**
- * A2A Server 配置列表（按名称索引）
- */
-export type A2AServersConfig = Record<string, A2AServerConfig>;
-
-/**
- * A2A 顶层配置块（与 multiAgent 同级）
- *
- * - `agents`：出站调用的远程 agent，每个成为工具 `a2a_<name>`。
- * - `servers`：本机启动托管的 A2A server（createClaudeCodeA2AServer），与工具无关。
- */
-export type A2ASettings = {
-  /** 出站调用的远程 agent 列表 */
-  agents: A2AAgentsConfig;
-  /** 本机托管的 A2A server 映射（按名称索引） */
-  servers: A2AServersConfig;
-};
-
 // ============================================================
 // ACP（Agent Client Protocol）配置块
 // ============================================================
@@ -131,8 +77,7 @@ export type A2ASettings = {
 /**
  * ACP Agent 配置（stdio JSON-RPC 子进程形态的远程 agent）
  *
- * 每个配置的 agent 成为一个直接工具 `acp_<name>`。与 A2A 的
- * `{url, token}` 不同：ACP 无端口/URL/Bearer，agent 以子进程启动，
+ * 每个配置的 agent 成为一个直接工具 `acp_<name>`。agent 以子进程启动，
  * 本地信任模型，`command/args/env/cwd` 即全部连接参数。
  */
 export type AcpAgentConfig = {
@@ -153,7 +98,7 @@ export type AcpAgentConfig = {
 };
 
 /**
- * ACP 顶层配置块（与 a2a 并存过渡期共存；P3 后 a2a 移除）
+ * ACP 顶层配置块
  *
  * - `agents`：出站调用的 agent 列表，每个成为工具 `acp_<name>`。
  * - `defaults`：全局超时等默认值。
@@ -320,9 +265,12 @@ export type RawWastelandSettings = {
   };
   /** MCP 服务器配置 */
   mcpServers?: MCPServersConfig;
-  /** A2A 配置块（agents 出站调用 + servers 本机托管）*/
-  a2a?: A2ASettings;
-  /** ACP 配置块（stdio 子进程 agent 出站调用；替代 A2A 的方向） */
+  /**
+   * 已废弃的 A2A 配置块（原样透传，不校验、不进 resolved）。
+   * 仅供 load-settings 检测后打印一次性迁移提示。
+   */
+  a2a?: unknown;
+  /** ACP 配置块（stdio 子进程 agent 出站调用；A2A 的替代） */
   acp?: ACPSettings;
   /** 并行执行配置 */
   parallel?: {
@@ -394,8 +342,6 @@ export type ResolvedWastelandSettings = {
     };
   };
   mcpServers: MCPServersConfig;
-  /** A2A 配置块（agents 出站调用 + servers 本机托管），默认 { agents: [], servers: {} } */
-  a2a: A2ASettings;
   /** ACP 配置块（stdio 子进程 agent），默认 { agents: [] } */
   acp: ACPSettings;
   parallel: {
@@ -449,10 +395,6 @@ export const DEFAULT_WASTELAND_SETTINGS: ResolvedWastelandSettings = {
     },
   },
   mcpServers: {},
-  a2a: {
-    agents: [],
-    servers: {},
-  },
   acp: {
     agents: [],
   },

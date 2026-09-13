@@ -246,7 +246,7 @@ export class Logger {
    * 暴露 LogScope 列表（便于调用方传 scope 时不写死字符串）。
    *
    * 与 types.ts 的 LogScope 同步：session/turn/provider/tool/ui/skill/
-   * permission/mcp/a2a/file。
+   * permission/mcp/acp/file。
    */
   static readonly scopes: readonly LogScope[] = [
     'session',
@@ -257,7 +257,7 @@ export class Logger {
     'skill',
     'permission',
     'mcp',
-    'a2a',
+    'acp',
     'file',
   ];
 

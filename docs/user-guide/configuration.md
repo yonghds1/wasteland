@@ -238,39 +238,44 @@ wasteland 支持将**项目级 + 用户级持久记忆**注入 system prompt 最
 
 > 记忆文件是纯文本 markdown，写入靠人工维护（agent 只读不写）。
 
-### a2a 配置
+### acp 配置
 
-顶层 `a2a` 块（与 `multiAgent` 同级）声明 A2A（Agent-to-Agent）集成，single / multi 模式机制统一：
+顶层 `acp` 块（与 `multiAgent` 同级）声明 ACP（Agent Client Protocol）集成，single / multi 模式机制统一。ACP 是 [agentclientprotocol.com](https://agentclientprotocol.com) 定义的开放标准：agent 以**子进程**启动，经 stdio 上的 newline-delimited JSON-RPC 通信，**无端口 / URL / token**。
 
 ```json
 {
-  "a2a": {
+  "acp": {
     "agents": [
       {
-        "name": "claude-code",
-        "url": "http://localhost:9200",
-        "description": "Claude Code - AI coding assistant",
-        "token": { "$auth": "claude_code_token" }
+        "name": "claude_code",
+        "command": "npx",
+        "args": ["-y", "@agentclientprotocol/claude-agent-acp"],
+        "description": "调用本地 Claude Code 智能体执行全工程检索、重构与跨文件编码任务",
+        "cwd": "~/code/my-project",
+        "timeoutMs": 300000
       }
     ],
-    "servers": {
-      "claude-code": {
-        "enabled": true,
-        "port": 9200,
-        "command": "claude",
-        "description": "Claude Code - AI coding assistant"
-      }
+    "defaults": {
+      "timeoutMs": 300000
     }
   }
 }
 ```
 
-| 子块 | 说明 |
+| 字段 | 说明 |
 |------|------|
-| `a2a.agents` | 出站调用的远程 Agent。每个条目注册为一个直接工具 `a2a_<name>`，`description` 供 LLM 发现用途，`token` 支持 `$auth` 引用。主 Agent 与子 Agent 均可调用。 |
-| `a2a.servers` | 本机启动托管的 A2A server（按名称索引）。`enabled: true` 时 wasteland 启动会拉起 `command` 进程并监听 `port`，与工具无关。 |
+| `acp.agents[].name` | Agent 名称（工具名后缀 `acp_<name>`），仅允许字母、数字、下划线、连字符，全表唯一。 |
+| `acp.agents[].command` | 子进程启动命令（如 `npx`）。 |
+| `acp.agents[].args` | 命令参数数组。 |
+| `acp.agents[].env` | 追加到子进程的环境变量；值支持 `$auth` 引用（如 `{ "$auth": "my_key" }`）。 |
+| `acp.agents[].cwd` | 子进程工作目录，默认取运行时 context.cwd。 |
+| `acp.agents[].timeoutMs` | 单次任务超时（毫秒），覆盖 `acp.defaults.timeoutMs`。 |
 
-> 旧的嵌套写法 `multiAgent[x].mode: 'a2a'` / `multiAgent[x].a2aServer` 已移除，A2A 配置统一迁移到顶层 `a2a` 块。
+> 首次 `npx -y` 拉取适配器可达十余秒，可预先 `npm i -g @agentclientprotocol/claude-agent-acp` 预热。
+> 官方适配器：Claude Code → `@agentclientprotocol/claude-agent-acp`；Codex → `@zed-industries/codex-acp`。
+> wasteland 从 Claude Code 终端里启动时，会自动剔除子进程的 `CLAUDECODE` / `CLAUDE_CODE_*` 环境变量，避免被适配器判定为嵌套会话而拒启。
+
+> 已废弃：顶层 `a2a` 块（HTTP+SSE 协议栈与本机 HTTP 托管服务）已整体移除。若配置中仍残留 `a2a`，启动时会打印一次迁移提示并忽略该块（URL 无法自动转换为 ACP 的 command，需手动改为上面的 `acp.agents` 写法）。更早的嵌套写法 `multiAgent[x].mode: 'a2a'` / `multiAgent[x].a2aServer` 亦已移除。
 
 ## 环境变量
 

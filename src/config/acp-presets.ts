@@ -2,8 +2,8 @@
  * acp-presets.ts - ACP 官方协同智能体预设
  *
  * 预置主流 AI Coding 助手的 ACP（stdio JSON-RPC）适配配置。
- * 与旧 a2a-presets 的区别：无端口概念，agent 以子进程启动。
- * 包名与可用性经 2026-09-13 P0 冒烟/registry 查证
+ * agent 以子进程启动，无端口概念。
+ * 包名与可用性经 P0 冒烟/registry 查证
  * （见 .trellis/tasks/09-13-a2a-to-acp/research/）：
  * - claude_code: @agentclientprotocol/claude-agent-acp（旧 zed 包已 deprecated）
  * - codex: @zed-industries/codex-acp

@@ -4,11 +4,8 @@
  * 每个配置的 ACP agent（`settings.acp.agents`）成为一个直接工具
  * `acp_<name>`，供主 agent 与子 agent 调用（single / multi 模式统一机制）。
  *
- * ## 与旧 a2a-agent-tool 的区别
- *
- * A2A 经 HTTP `sendTaskAsync` + 轮询 `waitForTask` 取终态；ACP 一次
- * `prompt()` 即完整生命周期，`stopReason` 即终态，无轮询。子进程按调用
- * 起停（spawn → prompt → dispose），无常驻。
+ * 一次 `prompt()` 即完整生命周期，`stopReason` 即终态，无轮询。
+ * 子进程按调用起停（spawn → prompt → dispose），无常驻。
  *
  * ## 执行流程
  *

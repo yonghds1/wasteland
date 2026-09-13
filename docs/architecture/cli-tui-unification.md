@@ -70,7 +70,7 @@
 
 TUI 与 CLI 不是两套独立运行时,而是同一 core 的两个 UI 前端:
 
-- 共用 `initializeRuntime()` 完成会话、技能、工具、MCP、A2A、Provider、权限的初始化。
+- 共用 `initializeRuntime()` 完成会话、技能、工具、MCP、ACP、Provider、权限的初始化。
 - 共用 `runAgentLoop()` 驱动 Agent 循环。
 - 共用 `executeLocalCommand()` 处理本地命令。
 
@@ -89,9 +89,9 @@ export async function initializeRuntime(
 ): Promise<RuntimeEnvironment> {
   // 加载配置 -> 解析运行时(provider/model/role)
   // -> 创建 Provider -> SessionManager -> PermissionGate
-  // -> ToolRegistry(含 MCP/A2A) -> SkillExecutor
+  // -> ToolRegistry(含 MCP/ACP) -> SkillExecutor
   return { sessionManager, skillExecutor, provider, toolRegistry,
-           permissionGate, resolvedRuntime, mcpManager, a2aManager,
+           permissionGate, resolvedRuntime, mcpManager,
            loadedSettings, ... };
 }
 ```

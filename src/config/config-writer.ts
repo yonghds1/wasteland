@@ -13,16 +13,13 @@ import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 
 import type {
-  AuthRef,
   AuthSettings,
   RawWastelandSettings,
   ResolvedWastelandSettings,
-  A2AServerConfig,
 } from './settings-types.js';
 import { resolveModelContextWindow } from '@providers/profiles.js';
 import type { SkinsFile } from '@skins/loader.js';
 import type { RolesFile } from './roles/types.js';
-import { A2A_PRESETS } from './a2a-presets.js';
 import { ACP_PRESETS } from './acp-presets.js';
 import {
   findProjectConfigDir,
@@ -53,34 +50,9 @@ export type WizardRoleBinding = {
 };
 
 /**
- * A2A 协同生态输入
- */
-export type WizardA2ASelection = {
-  /** 启用的预设 ID 列表 (如 ['claude_code', 'codex', 'antigravity']) */
-  enabledPresetIds?: string[];
-  /** 自定义外部 A2A Agents */
-  customAgents?: Array<{
-    name: string;
-    url: string;
-    description?: string;
-    token?: string;
-  }>;
-  /** 自定义本机 A2A Servers */
-  customServers?: Record<
-    string,
-    {
-      enabled: boolean;
-      port: number;
-      command: string;
-      description?: string;
-    }
-  >;
-};
-
-/**
- * ACP 协同生态输入（stdio JSON-RPC 子进程 agent；A2A 的迁移目标）
+ * ACP 协同生态输入（stdio JSON-RPC 子进程 agent）
  *
- * 与 A2A 不同：无 server/port/token 概念，agent 以子进程 command 启动。
+ * 无 server/port/token 概念，agent 以子进程 command 启动，用完即回收。
  */
 export type WizardACPSelection = {
   /** 启用的预设 ID 列表（如 ['claude_code', 'codex']） */
@@ -115,9 +87,7 @@ export type InitWizardInput = {
     tester?: WizardRoleBinding;
     analyst?: WizardRoleBinding;
   };
-  /** A2A 智能体协同配置（已废弃，仅为旧测试/调用兼容保留；新配置请用 acp） */
-  a2a?: WizardA2ASelection;
-  /** ACP 智能体协同配置（迁移目标） */
+  /** ACP 智能体协同配置 */
   acp?: WizardACPSelection;
   /** 战甲皮肤 ID（默认 'warlord-immortal'） */
   skinId?: string;
@@ -145,67 +115,6 @@ export function deriveAuthKey(providerName: string): string {
   return `${providerName}_api_key`;
 }
 
-/**
- * 由 A2A Agent 名称派生 auth key
- */
-export function deriveA2AAuthKey(agentName: string): string {
-  return `a2a_${agentName}_token`;
-}
-
-function buildA2ABlock(a2aInput?: WizardA2ASelection): RawWastelandSettings['a2a'] {
-  if (!a2aInput) return undefined;
-
-  const a2aServers: Record<string, A2AServerConfig> = {};
-  const a2aAgents: Array<{ name: string; url: string; description?: string; token?: string | AuthRef }> = [];
-
-  if (a2aInput.enabledPresetIds && a2aInput.enabledPresetIds.length > 0) {
-    for (const presetId of a2aInput.enabledPresetIds) {
-      const preset = A2A_PRESETS.find((p) => p.id === presetId);
-      if (preset) {
-        a2aServers[preset.serverName] = {
-          enabled: true,
-          port: preset.defaultPort,
-          command: preset.command,
-          description: `${preset.label} A2A 本地适配服务`,
-        };
-        a2aAgents.push({
-          name: preset.name,
-          url: `http://localhost:${preset.defaultPort}`,
-          description: preset.description,
-        });
-      }
-    }
-  }
-
-  if (a2aInput.customServers) {
-    for (const [k, v] of Object.entries(a2aInput.customServers)) {
-      a2aServers[k] = v;
-    }
-  }
-
-  if (a2aInput.customAgents) {
-    for (const agent of a2aInput.customAgents) {
-      a2aAgents.push({
-        name: agent.name,
-        url: agent.url,
-        description: agent.description,
-        token:
-          agent.token && agent.token.trim().length > 0
-            ? { $auth: deriveA2AAuthKey(agent.name) }
-            : undefined,
-      });
-    }
-  }
-
-  if (Object.keys(a2aServers).length === 0 && a2aAgents.length === 0) {
-    return undefined;
-  }
-
-  return {
-    servers: a2aServers,
-    agents: a2aAgents,
-  };
-}
 
 /**
  * 由 ACP 选择构造 settings.acp 块（preset 展开为 command/args，合并自定义 agents）
@@ -243,7 +152,6 @@ function buildAcpBlock(acpInput?: WizardACPSelection): RawWastelandSettings['acp
 export function buildInitialSettings(input: InitWizardInput): RawWastelandSettings {
   const skinId = input.skinId ?? 'warlord-immortal';
   const isSingle = input.mode === 'single' || input.subAgentStrategy === 'single';
-  const a2a = buildA2ABlock(input.a2a);
   const acp = buildAcpBlock(input.acp);
 
   // 多 Provider 输入分支
@@ -327,7 +235,6 @@ export function buildInitialSettings(input: InitWizardInput): RawWastelandSettin
         analyst: { role: 'analyst', model: anaModelKey },
         tester: { role: 'tester', model: testModelKey },
       },
-      a2a,
       acp,
     };
   }
@@ -382,7 +289,6 @@ export function buildInitialSettings(input: InitWizardInput): RawWastelandSettin
       analyst: { role: 'analyst', model: subModelKey },
       tester: { role: 'tester', model: subModelKey },
     },
-    a2a,
     acp,
   };
 }
@@ -459,14 +365,6 @@ export function buildInitialAuth(input: InitWizardInput): AuthSettings {
     const providerName = input.providerName ?? 'default';
     if (input.apiKey && input.apiKey.trim().length > 0) {
       auth[deriveAuthKey(providerName)] = input.apiKey.trim();
-    }
-  }
-
-  if (input.a2a?.customAgents) {
-    for (const agent of input.a2a.customAgents) {
-      if (agent.token && agent.token.trim().length > 0) {
-        auth[deriveA2AAuthKey(agent.name)] = agent.token.trim();
-      }
     }
   }
 

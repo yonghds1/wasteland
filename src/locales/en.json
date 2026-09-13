@@ -417,11 +417,6 @@
           "hint": "Defines TUI palette and status catchphrases",
           "previewLabel": "Skin Traits"
         },
-        "a2a": {
-          "title": "Configure A2A Agent-to-Agent Ecosystem (Optional)",
-          "hint": "Enables Wasteland orchestrator & workers to collaborate with external AI coding assistants",
-          "controls": "Press [Space] to toggle · Press [↑/↓] to move · Press [Enter] to confirm (skip if none selected) · Press [Esc] to go back"
-        },
         "confirm": {
           "title": "Confirm Initial Configuration",
           "language": "Language",
@@ -429,8 +424,6 @@
           "providersCount": "Configured Providers Pool",
           "mainAgent": "Main Agent (Orchestrator)",
           "subAgent": "Sub-Agent Matrix",
-          "a2a": "A2A Collaboration Ecosystem",
-          "a2aNone": "No external A2A agents enabled (skipped)",
           "personas": "Default Enabled Personas & Skins",
           "personasHint": "Official default personas enabled (customizable in ~/.wasteland/skins.json)",
           "mainPersona": "Main Orchestrator: Immortan Jiao (warlord-immortal)",

@@ -5,6 +5,23 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [Unreleased]
+
+### 变更（破坏性）
+
+- **A2A → ACP 迁移**：远程 Agent 协作协议从 Google A2A（HTTP + SSE + Webhook + 轮询）
+  整体替换为 [ACP（Agent Client Protocol）](https://agentclientprotocol.com)（stdio 上的
+  newline-delimited JSON-RPC，官方 TS SDK `@zed-industries/agent-client-protocol`）。
+  - 配置：顶层 `a2a` 块 → `acp` 块（`agents[].command/args/env/cwd`，无 url/token/端口）；
+    残留 `a2a` 块启动时打印一次迁移提示后被忽略。
+  - 工具：`a2a_<name>` → `acp_<name>`（权限闸门、子 agent 继承语义不变）。
+  - 移除：`A2AClient`/Agent Card 发现/`a2a-webhook`/本机 `a2a.servers` HTTP 托管
+    （`createClaudeCodeA2AServer`、`a2aManager` 停止钩子）全部下线；ACP agent 子进程
+    随工具调用起停（spawn → prompt → dispose），无常驻服务。
+  - presets：Claude Code → `@agentclientprotocol/claude-agent-acp`、
+    Codex → `@zed-industries/codex-acp`；Antigravity 无 ACP 适配器，移出 presets。
+  - 新增日志 scope `acp`（`a2a` scope 移除）。
+
 ## [0.6.0] - 2026-06-21
 
 ### 新增

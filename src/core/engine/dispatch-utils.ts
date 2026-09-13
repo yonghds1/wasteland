@@ -23,7 +23,7 @@ import {
   type SessionToolCallRecord,
   type SessionToolResultRecord,
 } from '../runtime/event-types.js';
-import type { PermissionGate } from './permission-gate.js';
+import type { PermissionDecision, PermissionGate } from './permission-gate.js';
 import type { SessionMetadata } from '../session/session-manager.js';
 import type { PendingInputContext } from './user-input-bridge.js';
 
@@ -119,6 +119,42 @@ export function createToolResultRecord(params: {
     error: params.error,
     timestamp: createTimestamp(),
   };
+}
+
+/**
+ * 把「用户是否放行」落成最终权限决策。
+ *
+ * 关键点：授权门返回 'ask' 时，用户答 yes/always **必须**转成 'allow'。
+ * 下游统一用 `decision.decision !== 'allow'` 判定是否执行，若把 'ask' 原样透传，
+ * 用户明明同意了工具却仍被拦下（历史 bug：ask → 确认通过 → blocked）。
+ *
+ * 非 ask 决策原样返回，保留规则命中的 reason（如 permissionRuleHit），
+ * 避免覆盖掉「为什么直接放行」的解释。
+ */
+export function resolveConfirmedDecision(
+  rawDecision: PermissionDecision,
+  allowed: boolean
+): PermissionDecision {
+  if (!allowed) {
+    return {
+      ...rawDecision,
+      decision: 'deny',
+      // 仅当原始决策是 ask 时才标注用户拒绝；规则本就 deny 的保持原文，
+      // 避免出现「规则拒绝（用户拒绝）」这种双重归因。
+      reason:
+        rawDecision.decision === 'ask'
+          ? `${rawDecision.reason}（用户拒绝）`
+          : rawDecision.reason,
+    };
+  }
+  if (rawDecision.decision === 'ask') {
+    return {
+      ...rawDecision,
+      decision: 'allow',
+      reason: '用户已确认允许本次工具调用。',
+    };
+  }
+  return rawDecision;
 }
 
 /**

@@ -171,7 +171,7 @@ describe('加载管线 合并优先级', () => {
     expect(settings.runtime.debug).toBe(false);
     expect(settings.parallel.maxConcurrency).toBe(-1);
     expect(settings.mcpServers).toEqual({});
-    expect(settings.a2a).toEqual({ agents: [], servers: {} });
+    expect(settings.acp).toEqual({ agents: [] });
   });
 
   it('用户文件覆盖默认值，其余字段保留默认', async () => {

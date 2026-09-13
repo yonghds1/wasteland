@@ -21,7 +21,6 @@ import { loadMemoryWithPriority } from './memory/loader.js';
 import { DEFAULT_LANGUAGE } from '@locales/index.js';
 import {
   isRecord,
-  validateA2ASettings,
   validateACPSettings,
   validateMCPServers,
   validateModelSettings,
@@ -374,12 +373,13 @@ export async function parseSettings(raw: unknown, sourcePath: string): Promise<R
     settings.mcpServers = validateMCPServers(raw.mcpServers, sourcePath);
   }
 
-  // 解析 a2a 配置块（agents 出站调用 + servers 本机托管）
+  // 已废弃的 a2a 块：原样保留（不校验），仅供 warnA2ALegacyOnce 检测并打印迁移提示；
+  // 不会进入 resolved settings，也不产生任何运行效果。
   if ('a2a' in raw && raw.a2a !== undefined) {
-    settings.a2a = validateA2ASettings(raw.a2a, sourcePath);
+    settings.a2a = raw.a2a;
   }
 
-  // 解析 acp 配置块（stdio 子进程 agent，A2A 的迁移目标）
+  // 解析 acp 配置块（stdio 子进程 agent，A2A 的替代）
   if ('acp' in raw && raw.acp !== undefined) {
     settings.acp = validateACPSettings(raw.acp, sourcePath);
   }

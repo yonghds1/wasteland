@@ -113,7 +113,7 @@ OpenCode (开源终端 AI 编码助手) 内置工具：
 | **git** | `git.ts` | Git 版本控制操作 | subcommand, args, message | execute |
 | **ask-user** | `ask-user.ts` | 向用户提问 | question, options, default | read |
 | **spawn_agent** | `spawn-agent/` | 创建子 Agent 执行任务 | task, name, model, tools | execute |
-| **a2a_<name>** | `a2a-agent-tool.ts` | A2A 远程 Agent 调用 | task | execute |
+| **acp_<name>** | `acp-agent-tool.ts` | ACP 远程 Agent 调用（stdio JSON-RPC） | task | execute |
 | **report_result** | `report-result.ts` | 子 Agent 结果报告 | status, summary, details | read |
 
 ### 辅助模块（非工具）
@@ -150,7 +150,7 @@ OpenCode (开源终端 AI 编码助手) 内置工具：
 | **网络搜索** | WebSearch | — | web-search | **已有** |
 | **Git 操作** | — (通过 Bash) | — (通过 Bash) | git | **Wasteland 独有** |
 | **用户交互** | — (平台内置) | — | ask-user | **Wasteland 独有** |
-| **多 Agent** | Agent + SendMessage + TaskStop | — | spawn_agent + a2a_* + report_result | **功能对等** |
+| **多 Agent** | Agent + SendMessage + TaskStop | — | spawn_agent + acp_* + report_result | **功能对等** |
 | **Worktree 隔离** | EnterWorktree/ExitWorktree | — | — | **缺失（Claude CLI 独有）** |
 | **技能系统** | Skill | — | — | **缺失（Claude CLI 独有）** |
 | **Notebook 编辑** | NotebookEdit | — | — | **缺失** |
@@ -164,7 +164,7 @@ OpenCode (开源终端 AI 编码助手) 内置工具：
 | **子 Agent 创建** | Agent（支持 worktree/remote 隔离） | spawn_agent（支持嵌套/重试/事件转发） | Wasteland 更强调嵌套深度控制和事件转发 |
 | **Agent 间通信** | SendMessage | — (通过事件流) | Claude CLI 有显式消息通道 |
 | **后台任务管理** | TaskStop | — (通过 RxJS 取消) | Claude CLI 有显式停止接口 |
-| **远程 Agent** | Agent (isolation: "remote") | a2a_* (A2A 协议) | Wasteland 用标准 A2A 协议 |
+| **远程 Agent** | Agent (isolation: "remote") | acp_* (ACP 协议) | Wasteland 用标准 ACP 协议（Zed 主导，编辑器/agent 互操作） |
 | **结果报告** | — (文本返回) | report_result（结构化） | Wasteland 有结构化结果 |
 | **Worktree 隔离** | EnterWorktree/ExitWorktree | — | Claude CLI 独有 |
 
@@ -174,7 +174,7 @@ OpenCode (开源终端 AI 编码助手) 内置工具：
 2. **git** — 专用 Git 工具，支持安全限制（禁 force push、禁 --output）
 3. **ask-user** — 交互式用户提问，支持选项列表
 4. **spawn_agent** — 多 Agent 编排，支持嵌套深度控制、重试、事件转发
-5. **a2a_<name>** — A2A 协议远程 Agent 调用（标准协议）
+5. **acp_<name>** — ACP 协议远程 Agent 调用（stdio JSON-RPC 子进程，标准协议）
 6. **report_result** — 子 Agent 结构化结果报告
 7. **MCP 集成** — 完整的 MCP 客户端/注册表/传输层
 8. **code-assistant-adapter** — 外部代码助手适配器（Claude Code, Codex）
@@ -201,7 +201,7 @@ OpenCode (开源终端 AI 编码助手) 内置工具：
 
 ### P1 — Wasteland 特色（已有，持续优化）
 - list-directory, git, web-fetch, web-search
-- ask-user, spawn_agent, a2a_*, report_result
+- ask-user, spawn_agent, acp_*, report_result
 - MCP 集成, code-assistant-adapter
 
 ### P2 — 建议新增
@@ -268,7 +268,7 @@ edits: z.array(z.object({
 | **网络能力** | WebFetch + WebSearch | — | web-fetch + web-search | **优于 OpenCode** |
 | **版本控制** | — (通过 Bash) | — (通过 Bash) | git（专用工具） | **优于竞品** |
 | **目录浏览** | — (通过 Bash) | — (通过 Bash) | list-directory | **独有优势** |
-| **多 Agent** | Agent + SendMessage + TaskStop | — | spawn_agent + a2a_* + report_result | **功能对等** |
+| **多 Agent** | Agent + SendMessage + TaskStop | — | spawn_agent + acp_* + report_result | **功能对等** |
 | **MCP 集成** | 支持 MCP 工具 | — | 完整 MCP 客户端/注册表 | **独有优势** |
 | **Worktree 隔离** | EnterWorktree/ExitWorktree | — | — | **缺失** |
 | **技能系统** | Skill | — | — | **缺失（可被命令系统替代）** |
@@ -285,7 +285,7 @@ edits: z.array(z.object({
 
 Wasteland 的工具集在以下方面已达到或超越 Claude CLI / OpenCode：
 - **核心文件操作**: 完备（bash, read, write, edit, glob, grep）
-- **多 Agent 编排**: 功能对等，且有 A2A 标准协议支持
+- **多 Agent 编排**: 功能对等，且有 ACP 标准协议支持
 - **MCP 集成**: 独有优势（完整客户端实现）
 - **版本控制**: 优于竞品（专用 git 工具 + 安全限制）
 - **目录浏览**: 独有优势（结构化输出）

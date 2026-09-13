@@ -242,55 +242,48 @@ wasteland resume --mode multi
 否则写用户级 `~/.wasteland/settings.json`），并提示「重启后生效」。模式在运行时启动时固化，
 因此**不支持** turn 中途热切换，需要重启 wasteland 才能应用新配置。
 
-## A2A 集成
+## ACP 集成
 
-wasteland 支持 [A2A（Agent-to-Agent）协议](https://github.com/a2aproject/A2A)，通过顶层 `a2a`
-配置块（与 `multiAgent` 同级）声明。A2A 在 single / multi 模式下**机制统一**：远程 agent 被注册为
-直接工具，主 Agent 与子 Agent（经继承）都能调用。
+wasteland 支持 [ACP（Agent Client Protocol）](https://agentclientprotocol.com)，通过顶层 `acp`
+配置块（与 `multiAgent` 同级）声明。远程 agent 以**子进程**启动、经 stdio 上的 JSON-RPC 通信；
+在 single / multi 模式下**机制统一**：每个 agent 注册为直接工具，主 Agent 与子 Agent（经继承）都能调用。
 
 ```json
 {
-  "a2a": {
+  "acp": {
     "agents": [
       {
-        "name": "claude-code",
-        "url": "http://localhost:9200",
-        "description": "Claude Code - AI coding assistant（远程 A2A agent）",
-        "token": { "$auth": "claude_code_token" }
+        "name": "claude_code",
+        "command": "npx",
+        "args": ["-y", "@agentclientprotocol/claude-agent-acp"],
+        "description": "调用本地 Claude Code 智能体执行全工程检索、重构与跨文件编码任务"
       }
-    ],
-    "servers": {
-      "claude-code": {
-        "enabled": true,
-        "port": 9200,
-        "command": "claude",
-        "description": "Claude Code - AI coding assistant"
-      }
-    }
+    ]
   }
 }
 ```
 
-### `a2a.agents`：出站调用的远程 Agent
+### `acp.agents`：出站调用的远程 Agent
 
-每个 `agents` 条目成为一个直接工具 `a2a_<name>`（如 `a2a_claude-code`）：
+每个 `agents` 条目成为一个直接工具 `acp_<name>`（如 `acp_claude_code`）：
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `name` | string | Agent 名称，工具名后缀（`a2a_<name>`） |
-| `url` | string | Agent 端点 URL |
+| `name` | string | Agent 名称，工具名后缀（`acp_<name>`），字母/数字/`_`/`-`，全表唯一 |
+| `command` | string | 子进程启动命令（如 `npx`） |
+| `args` | string[] | 命令参数 |
+| `env` | object | 追加环境变量，值支持 `$auth` ref |
+| `cwd` | string | 子进程工作目录（默认运行时 cwd） |
 | `description` | string | 描述，供 LLM 发现工具用途 |
-| `token` | string / `$auth` ref | 可选认证 token |
+| `timeoutMs` | number | 单次任务超时（覆盖 `acp.defaults.timeoutMs`） |
 
-主 Agent 调用 `a2a_<name>` 工具即可向远程 Agent 派发任务；子 Agent 通过工具集继承同样可以调用。
+主 Agent 调用 `acp_<name>` 工具即可向远程 Agent 派发任务；子 Agent 通过工具集继承同样可以调用。
+工具执行时 spawn 子进程 → initialize 握手 → session/prompt 流式收 `session/update` →
+拿到 `stopReason` 终态 → 回收子进程，**无常驻服务、无端口、无轮询**。
 
-### `a2a.servers`：本机托管的 A2A Server
-
-`servers` 块声明本机启动托管的 A2A server（如把本机 `claude` CLI 暴露为 A2A 端点），
-与工具无关。`enabled: true` 时 wasteland 启动时会拉起对应进程，监听 `port`。
-
-> A2A 配置此前从未真正生效（旧版 `parseSettings` 会静默丢弃），现已修复为顶层 `a2a` 块统一解析。
-> 旧的嵌套写法 `multiAgent[x].mode: 'a2a'` / `multiAgent[x].a2aServer` 已移除，请迁移到顶层 `a2a` 块。
+> 历史说明：此前版本使用顶层 `a2a` 块（HTTP+SSE 协议 + 本机 HTTP 托管 server），已整体移除；
+> 残留 `a2a` 配置块会在启动时打印一次迁移提示并被忽略。更早的嵌套写法
+> `multiAgent[x].mode: 'a2a'` / `multiAgent[x].a2aServer` 亦已移除。
 
 ## 工作流程
 

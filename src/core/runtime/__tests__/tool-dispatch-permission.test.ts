@@ -212,17 +212,10 @@ describe('dispatchToolCall - 权限系统集成测试 (T7)', () => {
   // --------------------------------------------------------
   // 权限询问 + 用户确认 yes
   // --------------------------------------------------------
-  it('ask 权限 + 用户确认 yes → 暂停等待输入后恢复', async () => {
-    // When permission decision is 'ask' and user confirms 'yes', the dispatch flow:
-    // 1. Emits user_input_requested (pauses agent loop for user input)
-    // 2. Receives user answer via UserInputBridge
-    // 3. Emits user_input_received (resumes agent loop)
-    // 4. Emits permission_decision (decision='ask' from raw decision)
-    // 5. Since rawDecision.decision is 'ask' (not 'allow'), emits tool_failed with status='blocked'
-    //
-    // NOTE: The current dispatch implementation does NOT override 'ask' to 'allow'
-    // when user confirms. The 'ask' decision remains, and the tool is blocked.
-    // This is the actual code behavior - the allowed flag only prevents override to 'deny'.
+  it('ask 权限 + 用户确认 yes → 决策转 allow 并执行工具', async () => {
+    // 回归：曾经 'allowed' 分支原样透传 rawDecision，其 decision 仍是 'ask'，
+    // 于是下游 `decision !== 'allow'` 把用户已同意的调用当成 blocked 拦掉。
+    // 现在 resolveConfirmedDecision 必须把 ask+允许 转成 allow。
     const bridge = makeUserInputBridge('yes');
     const events = await collectEvents(
       dispatchToolCall({
@@ -239,29 +232,53 @@ describe('dispatchToolCall - 权限系统集成测试 (T7)', () => {
     );
     const types = events.map((e) => e.type);
 
-    // Verify the pause/resume flow via user input events
+    // 暂停/恢复流程照旧
     expect(types).toContain('tool_call_requested');
     expect(types).toContain('user_input_requested');
     expect(types).toContain('user_input_received');
-    expect(types).toContain('permission_decision');
-    expect(types).toContain('tool_failed');
 
-    // Verify order: pause (requested) before resume (received)
     const requestedIdx = types.indexOf('user_input_requested');
     const receivedIdx = types.indexOf('user_input_received');
     expect(receivedIdx).toBeGreaterThan(requestedIdx);
 
-    // permission_decision after user_input_received
-    const permIdx = types.indexOf('permission_decision');
-    expect(permIdx).toBeGreaterThan(receivedIdx);
-
-    // Permission decision remains 'ask' (not overridden to 'allow')
     const permEvent = findEvent(events, 'permission_decision');
-    expect(permEvent.decision).toBe('ask');
+    expect(permEvent.decision).toBe('allow');
 
-    // Tool is blocked because decision.decision !== 'allow'
-    const failedEvent = findEvent(events, 'tool_failed');
-    expect(failedEvent.status).toBe('blocked');
+    // 关键：同意后必须真的执行
+    expect(types).toContain('tool_started');
+    expect(types).toContain('tool_result');
+    expect(types).not.toContain('tool_failed');
+
+    const resultEvent = findEvent(events, 'tool_result');
+    expect(resultEvent.status).toBe('success');
+  });
+
+  it('ask 权限 + 用户确认 always → 同样转 allow 并执行工具', async () => {
+    const bridge = makeUserInputBridge('always');
+    const events = await collectEvents(
+      dispatchToolCall({
+        session: makeSession(),
+        sessionManager: makeSessionManagerStub(),
+        turn: 1,
+        call: makeCall('write-file', 'c3b', { path: '/tmp/out.txt' }),
+        registry: makeWriteToolRegistry(),
+        permissionGate: createPermissionGate({ mode: 'default' }),
+        cwd: '/tmp',
+        turnState: makeTurnState([makeCall('read-file', 'c0', { path: '/tmp/out.txt' })]),
+        userInputBridge: bridge,
+      })
+    );
+    const types = events.map((e) => e.type);
+
+    const permEvent = findEvent(events, 'permission_decision');
+    expect(permEvent.decision).toBe('allow');
+
+    expect(types).toContain('tool_started');
+    expect(types).toContain('tool_result');
+    expect(types).not.toContain('tool_failed');
+
+    const resultEvent = findEvent(events, 'tool_result');
+    expect(resultEvent.status).toBe('success');
   });
 
   // --------------------------------------------------------

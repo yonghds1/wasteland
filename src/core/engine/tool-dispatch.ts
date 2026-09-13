@@ -18,6 +18,7 @@ import {
   createToolCallRecord,
   createToolResultRecord,
   requestPermissionConfirmation,
+  resolveConfirmedDecision,
   summarizeInputDetail,
 } from './dispatch-utils.js';
 import type { AgentProvider } from '@providers/provider-types.js';
@@ -374,16 +375,7 @@ export function dispatchToolCall(params: {
     askRequested$,
     confirmation$.pipe(
       concatMap(({ allowed, askEvents }) => {
-        const decision: typeof rawDecision = allowed
-          ? rawDecision
-          : {
-              ...rawDecision,
-              decision: 'deny' as const,
-              reason:
-                rawDecision.decision === 'ask'
-                  ? `${rawDecision.reason}（用户拒绝）`
-                  : rawDecision.reason,
-            };
+        const decision = resolveConfirmedDecision(rawDecision, allowed);
 
         const permission$ = from(
           params.sessionManager.appendRecord(

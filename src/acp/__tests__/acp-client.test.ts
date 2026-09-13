@@ -8,6 +8,9 @@
 
 import { describe, it, expect } from 'vitest';
 import { fileURLToPath } from 'node:url';
+import { readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { AcpClient, sanitizeChildEnv, type AcpAgentLaunchConfig, type AcpStreamEvent } from '../acp-client.js';
 
 // ============================================================
@@ -110,5 +113,38 @@ describe('AcpClient', () => {
     const client = await AcpClient.spawn(fakeConfig('crash'));
     await expect(client.prompt('die')).rejects.toThrow(/exited|PROCESS/i);
     await client.dispose();
+  });
+
+  it('dispose 回收整个进程组（wrapper 派生的孙进程不泄漏）', async () => {
+    // 模拟 `npx → node fake-agent` 两级结构：/bin/sh 是直接子进程（wrapper），
+    // node fake-agent 是孙进程；fake agent 启动时把自身 PID 写入 pidFile。
+    const pidFile = join(tmpdir(), `acp-pgtest-${Date.now()}.pid`);
+    const client = await AcpClient.spawn(
+      fakeConfig('pidfile', {
+        command: '/bin/sh',
+        args: ['-c', `${process.execPath} ${FAKE_AGENT} pidfile`],
+        env: { ACP_PID_FILE: pidFile },
+      })
+    );
+    const result = await client.prompt('hello');
+    expect(result.stopReason).toBe('end_turn');
+
+    const grandchildPid = parseInt(await readFile(pidFile, 'utf8'), 10);
+    expect(Number.isFinite(grandchildPid)).toBe(true);
+    // 生前可探测
+    expect(() => process.kill(grandchildPid, 0)).not.toThrow();
+
+    await client.dispose();
+    await new Promise((r) => setTimeout(r, 400)); // 组信号传播
+
+    // 孙进程必须随进程组一起被回收（ESRCH）
+    let alive = true;
+    try {
+      process.kill(grandchildPid, 0);
+    } catch {
+      alive = false;
+    }
+    expect(alive).toBe(false);
+    await rm(pidFile, { force: true });
   });
 });

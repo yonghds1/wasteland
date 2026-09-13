@@ -30,6 +30,7 @@ import {
   createTimestamp,
   createToolResultRecord,
   requestPermissionConfirmation,
+  resolveConfirmedDecision,
 } from '@core/engine/dispatch-utils.js';
 
 import { SPAWN_AGENT_RISK_LEVEL, spawnChildAgentForwarding$, type SpawnAgentContext } from './index.js';
@@ -80,16 +81,7 @@ export const handleSpawnAgentDispatch: PreDispatchHook = (params) => {
     askRequested$,
     confirmation$.pipe(
       concatMap(({ allowed, askEvents }) => {
-        const decision: typeof rawDecision = allowed
-          ? rawDecision
-          : {
-              ...rawDecision,
-              decision: 'deny' as const,
-              reason:
-                rawDecision.decision === 'ask'
-                  ? `${rawDecision.reason}（用户拒绝）`
-                  : rawDecision.reason,
-            };
+        const decision = resolveConfirmedDecision(rawDecision, allowed);
 
         const permission$ = from(
           params.sessionManager.appendRecord(

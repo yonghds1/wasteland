@@ -11,7 +11,6 @@ import { t } from '@locales/index.js';
 
 import type { AgentTool } from '@tools/core/tool-types.js';
 import { ToolRegistry } from '@tools/core/tool-registry.js';
-import { A2A_TOOL_PREFIX } from '@tools/agent/a2a-agent-tool.js';
 import { ACP_TOOL_PREFIX } from '@tools/agent/acp-agent-tool.js';
 import { createDebugTraceEvent, type DebugTraceEvent } from '../runtime/debug-events.js';
 import type { TurnState } from './turn-state.js';
@@ -39,12 +38,12 @@ export const MAIN_AGENT_TOOL_NAMES = [
  *
  * 放行规则：
  * 1. 白名单 `allowedNames` 中存在的工具
- * 2. 所有 `a2a_` 前缀工具（A2A 远程 agent 直接工具，用户显式配置，
+ * 2. 所有 `acp_` 前缀工具（ACP 远程 agent 直接工具，用户显式配置，
  *    主 agent 与子 agent 经继承都应能调用）
  *
  * @param registry - 完整工具注册表
  * @param allowedNames - 允许的工具名数组
- * @returns 新的 ToolRegistry（白名单 + a2a_ 前缀工具，去重）
+ * @returns 新的 ToolRegistry（白名单 + acp_ 前缀工具，去重）
  */
 export function filterToolRegistry(
   registry: ToolRegistry,
@@ -63,9 +62,9 @@ export function filterToolRegistry(
     }
   }
 
-  // 2. a2a_ / acp_ 前缀工具默认放行（远程 agent 直接工具，用户显式配置）
+  // 2. acp_ 前缀工具默认放行（远程 agent 直接工具，用户显式配置）
   for (const name of registry.list()) {
-    if (!name.startsWith(A2A_TOOL_PREFIX) && !name.startsWith(ACP_TOOL_PREFIX)) continue;
+    if (!name.startsWith(ACP_TOOL_PREFIX)) continue;
     if (included.has(name)) continue;
     const tool = registry.get(name);
     if (tool) {

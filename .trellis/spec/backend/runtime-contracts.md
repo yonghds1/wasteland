@@ -466,15 +466,15 @@ attachDebugTrace(
 ): void;
 // debug 关闭时 no-op；jsonl 才落盘 traceDir。
 
-stopRuntimeAgents(runtime: Pick<RuntimeEnvironment, 'mcpManager' | 'a2aManager'>): Promise<void>;
-// 停止 MCP + 本机 A2A 服务器进程（避免进程泄漏）。
+stopRuntimeAgents(runtime: Pick<RuntimeEnvironment, 'mcpManager'>): Promise<void>;
+// 停止 MCP 服务器（避免进程泄漏）。ACP agent 子进程随工具调用起停，无需运行时级清理。
 ```
 
 ### 3. Contracts
 
 - chat / resume / TUI 启动 loop 只许调 `startAgentLoop`，不许直调 `runAgentLoop` 手写 13 参数。
 - debug 追踪块只许调 `attachDebugTrace`，不许复制 `if (debug) { traceDir ... renderDebugTrace }`。
-- 退出清理只许调 `stopRuntimeAgents`，不许只停 MCP 漏停 A2A。
+- 退出清理只许调 `stopRuntimeAgents`。
 - `resume` 交互模式必须带 `UserInputBridge`（与 chat 交互模式一致，支持 ask-user）。
 
 ### 4. Tests Required

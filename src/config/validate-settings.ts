@@ -7,11 +7,6 @@
 
 import type { PermissionMode } from '@core/engine/permission-gate.js';
 import type {
-  A2AAgentConfig,
-  A2AAgentsConfig,
-  A2AServerConfig,
-  A2AServersConfig,
-  A2ASettings,
   ACPSettings,
   AcpAgentConfig,
   MCPServersConfig,
@@ -114,8 +109,8 @@ export function validateRoleSettings(
       throw new Error(`配置文件 ${sourcePath} 中 multiAgent.${roleId} 必须是对象。`);
     }
 
-    // model 现为可选：A2A 已改为直接工具（a2a_<name>），子角色不再区分 llm/a2a 模式，
-    // 旧的 mode/a2aServer 字段不再校验（如仍存在于旧配置中会被静默忽略）。
+    // model 为可选：远程 agent 统一为 acp_<name> 直接工具，子角色不再区分模式，
+    // 旧的 mode/a2aServer 字段不再校验（如仍存在于旧配置中会被静默剔除）。
     const model = typeof roleSettings.model === 'string' ? roleSettings.model.trim() : undefined;
 
     if (
@@ -270,132 +265,6 @@ export function validateMCPServers(value: unknown, sourcePath: string): MCPServe
   }
 
   return servers;
-}
-
-/**
- * 校验 a2a 配置块
- *
- * - agents：数组，每项需有非空 name 与 url；description/token 可选。
- * - servers：对象，每项需有 boolean enabled、正整数 port、非空 command；description 可选。
- */
-export function validateA2ASettings(value: unknown, sourcePath: string): A2ASettings {
-  if (!isRecord(value)) {
-    throw new Error(`配置文件 ${sourcePath} 中 a2a 必须是对象。`);
-  }
-
-  // agents
-  const agents: A2AAgentsConfig = [];
-  if ('agents' in value && value.agents !== undefined) {
-    if (!Array.isArray(value.agents)) {
-      throw new Error(`配置文件 ${sourcePath} 中 a2a.agents 必须是数组。`);
-    }
-
-    for (let i = 0; i < value.agents.length; i += 1) {
-      const agent = value.agents[i];
-      if (!isRecord(agent)) {
-        throw new Error(`配置文件 ${sourcePath} 中 a2a.agents[${i}] 必须是对象。`);
-      }
-
-      if (typeof agent.name !== 'string' || agent.name.trim().length === 0) {
-        throw new Error(`配置文件 ${sourcePath} 中 a2a.agents[${i}].name 必须是非空字符串。`);
-      }
-
-      if (typeof agent.url !== 'string' || agent.url.trim().length === 0) {
-        throw new Error(`配置文件 ${sourcePath} 中 a2a.agents[${i}].url 必须是非空字符串。`);
-      }
-
-      if (
-        'description' in agent &&
-        agent.description !== undefined &&
-        typeof agent.description !== 'string'
-      ) {
-        throw new Error(`配置文件 ${sourcePath} 中 a2a.agents[${i}].description 必须是字符串。`);
-      }
-
-      if (
-        'token' in agent &&
-        agent.token !== undefined &&
-        typeof agent.token !== 'string' &&
-        !isRecord(agent.token)
-      ) {
-        throw new Error(
-          `配置文件 ${sourcePath} 中 a2a.agents[${i}].token 必须是字符串或 $auth 引用对象。`
-        );
-      }
-
-      const parsedAgent: A2AAgentConfig = {
-        name: agent.name.trim(),
-        url: agent.url.trim(),
-      };
-      if (typeof agent.description === 'string') {
-        parsedAgent.description = agent.description;
-      }
-      if (typeof agent.token === 'string' || isRecord(agent.token)) {
-        // token 可为明文字符串或 { $auth: KEY } 引用对象；引用对象在此暂存，
-        // 由 resolveSettingsAuthRefs 统一解析为明文字符串（与 providers.apiKey 同机制）。
-        parsedAgent.token = agent.token as A2AAgentConfig['token'];
-      }
-      agents.push(parsedAgent);
-    }
-  }
-
-  // servers
-  const servers: A2AServersConfig = {};
-  if ('servers' in value && value.servers !== undefined) {
-    if (!isRecord(value.servers)) {
-      throw new Error(`配置文件 ${sourcePath} 中 a2a.servers 必须是对象。`);
-    }
-
-    for (const [serverName, serverConfig] of Object.entries(value.servers)) {
-      if (!isRecord(serverConfig)) {
-        throw new Error(`配置文件 ${sourcePath} 中 a2a.servers.${serverName} 必须是对象。`);
-      }
-
-      if (typeof serverConfig.enabled !== 'boolean') {
-        throw new Error(
-          `配置文件 ${sourcePath} 中 a2a.servers.${serverName}.enabled 必须是布尔值。`
-        );
-      }
-
-      if (
-        typeof serverConfig.port !== 'number' ||
-        !Number.isInteger(serverConfig.port) ||
-        serverConfig.port <= 0
-      ) {
-        throw new Error(
-          `配置文件 ${sourcePath} 中 a2a.servers.${serverName}.port 必须是正整数。`
-        );
-      }
-
-      if (typeof serverConfig.command !== 'string' || serverConfig.command.trim().length === 0) {
-        throw new Error(
-          `配置文件 ${sourcePath} 中 a2a.servers.${serverName}.command 必须是非空字符串。`
-        );
-      }
-
-      if (
-        'description' in serverConfig &&
-        serverConfig.description !== undefined &&
-        typeof serverConfig.description !== 'string'
-      ) {
-        throw new Error(
-          `配置文件 ${sourcePath} 中 a2a.servers.${serverName}.description 必须是字符串。`
-        );
-      }
-
-      const parsedServer: A2AServerConfig = {
-        enabled: serverConfig.enabled,
-        port: serverConfig.port,
-        command: serverConfig.command.trim(),
-      };
-      if (typeof serverConfig.description === 'string') {
-        parsedServer.description = serverConfig.description;
-      }
-      servers[serverName] = parsedServer;
-    }
-  }
-
-  return { agents, servers };
 }
 
 /**

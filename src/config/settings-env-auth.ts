@@ -8,7 +8,6 @@
 
 import { isRecord, validatePermissionMode } from './validate-settings.js';
 import type {
-  A2AAgentsConfig,
   AuthRef,
   AuthSettings,
   MCPServerConfig,
@@ -147,15 +146,6 @@ export function resolveSettingsAuthRefs(
       ...settings.runtime,
     },
     mcpServers: resolvedMCPServers,
-    // a2a.agents 的 token 支持 $auth ref；servers 无敏感字段，原样透传
-    a2a: {
-      agents: resolveAuthRefsInValue({
-        value: settings.a2a.agents,
-        auth,
-        env,
-      }) as A2AAgentsConfig,
-      servers: { ...settings.a2a.servers },
-    },
     // acp.agents[].env 支持 $auth ref（如远程 agent 的 API key），与 mcpServers.env 同语义
     acp: {
       ...settings.acp,
@@ -217,10 +207,6 @@ export function applyEnvironmentOverrides(
       },
     },
     mcpServers: { ...settings.mcpServers },
-    a2a: {
-      agents: [...settings.a2a.agents],
-      servers: { ...settings.a2a.servers },
-    },
     acp: {
       agents: settings.acp.agents.map((agent) => ({ ...agent })),
       ...(settings.acp.defaults ? { defaults: { ...settings.acp.defaults } } : {}),

@@ -5,7 +5,7 @@
 ## 1. 总体架构
 
 ```text
- Runtime / Provider / Tool / Permission / MCP / A2A / File audit
+ Runtime / Provider / Tool / Permission / MCP / ACP / File audit
                               │
                               │ Logger.debug|info|warn|error
                               ▼
@@ -71,7 +71,7 @@ Assistant token 用量写在 `data.usage`，字段为 `input_tokens`、`output_t
 | `skill` | `Logger.info({ scope: 'skill', ... })` | 技能解析、执行、失败 |
 | `permission` | `Logger.info({ scope: 'permission', ... })` | allow/ask/deny 决策与模式 |
 | `mcp` | `Logger.info({ scope: 'mcp', ... })` | transport 连接、RPC、registry 错误 |
-| `a2a` | `Logger.info({ scope: 'a2a', ... })` | task request、SSE、webhook、adapter 状态 |
+| `acp` | `Logger.info({ scope: 'acp', ... })` | agent 子进程 spawn、prompt 终态（stopReason）、流式 update |
 | `file` | `Logger.warn({ scope: 'file', ... })` | read-before-edit 审计、路径拒绝、文件访问 |
 
 ## 4. FileSink 文件布局（中央数据根 `~/.wasteland/data/logs/<projectId>/`）
@@ -180,7 +180,7 @@ wasteland logs show <session-id> --tail 500 --project <id|path>
 ```bash
 wasteland logs tail
 wasteland logs tail --level warn --scope tool,permission --tail 50
-wasteland logs tail --level debug --scope mcp,a2a --follow
+wasteland logs tail --level debug --scope mcp,acp --follow
 ```
 
 无需 CLI 也可以直接定位：

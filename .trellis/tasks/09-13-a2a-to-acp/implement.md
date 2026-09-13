@@ -9,22 +9,22 @@
 - [x] 0.2 真实 spawn 冒烟：claude-code-acp **SMOKE PASS**（initialize→newSession→prompt end_turn，11 个 update；脚本 `~/temp/acp-smoke/smoke.mjs`，结论落 `research/p0-smoke-result.md`）。三条修正已回写 design.md：① 子进程 env 剔除 `CLAUDECODE`/`CLAUDE_CODE_*`；② preset 改用新包名 `@agentclientprotocol/claude-agent-acp@0.76.0`；③ sessionUpdate 判别面加宽。
 - [ ] 0.3 `@zed-industries/codex-acp` 同法冒烟（可选，失败仅影响 preset 文案不影响主链；包存在性已证实 0.16.0）——**顺延到 P3 preset 文档定稿前做**。
 
-## P1 并存：ACP 链路落地（A2A 原样保留）
+## P1 并存：ACP 链路落地（A2A 原样保留）✅ 已完成 2026-09-13（commit c40afd1）
 
-- [ ] 1.1 `src/acp/acp-client.ts`：`AcpClient.spawn/prompt/dispose` + `AcpStreamEvent`（per design.md 契约；stderr 尾部 4KB；startup/prompt 双超时；exit/error 清理）。
-- [ ] 1.2 `src/acp/acp-client.test.ts`（⚠️ 本目录既有 a2a 测试是同级 `.test.ts`，违反 CLAUDE.md「同级 `__tests__/`」铁律——新文件按规范放 `src/acp/__tests__/`）：假子进程（`node -e` 脚本化 ndjson 应答）覆盖握手、chunk 聚合、stopReason 五分支、子进程秒退、prompt 超时 kill、requestPermission 自动 allow_once。
-- [ ] 1.3 `src/tools/agent/acp-agent-tool.ts`：`ACP_TOOL_PREFIX='acp_'` / `acpToolName()` / `createAcpAgentTool(cfg)`；`toToolResult` 按 design 映射 stopReason；`__tests__/acp-agent-tool.test.ts`（mock AcpClient）。
-- [ ] 1.4 配置层并存：`settings-types.ts` 加 `ACPSettings`/`AcpAgentConfig` + `LoadedSettings.acp` 默认 `{agents:[]}`；`validate-settings.ts` 校验（name 唯一 + `^[A-Za-z0-9_-]+$`，command 非空）；`settings-merge.ts` 深合并；`a2a-presets.ts` → `acp-presets.ts`（claude_code + codex 两 preset，antigravity 移除）。
-- [ ] 1.5 `default-registry.ts`：`options.acp` 存在时注册 `acp_<name>` 工具（与 a2a 注册并存）；`filterToolRegistry` 放行 `acp_` 前缀；`initialize-runtime.ts`：a2aManager 原样不动。
-- [ ] 1.6 P1 收口：`npm run check:fast && npm test` 全绿 → commit ①`feat(acp): ACP client + acp_<name> 工具与配置并存落地`（含 SDK 依赖、presets、注册与测试）。
+- [x] 1.1 `src/acp/acp-client.ts`：`AcpClient.spawn/prompt/dispose` + `AcpStreamEvent`（per design.md 契约；stderr 尾部 4KB；startup/prompt 双超时；exit/error 清理）。
+- [x] 1.2 `src/acp/__tests__/acp-client.test.ts`（新文件按规范放 `__tests__/`）：假子进程（`fake-acp-agent.mjs` 脚本化 ndjson 应答）覆盖握手、chunk 聚合、stopReason、子进程异常、prompt 超时 kill、requestPermission 自动 allow_once。7 例全绿。
+- [x] 1.3 `src/tools/agent/acp-agent-tool.ts`：`ACP_TOOL_PREFIX='acp_'` / `acpToolName()` / `createAcpAgentTool(cfg)`；`toToolResult` 按 design 映射 stopReason；`src/tools/__tests__/acp-agent-tool.test.ts`（mock AcpClient）12 例全绿。
+- [x] 1.4 配置层并存：`settings-types.ts` 加 `ACPSettings`/`AcpAgentConfig` + `LoadedSettings.acp` 默认 `{agents:[]}`；`validate-settings.ts` 校验；`settings-merge.ts` 深合并；`settings-env-auth.ts` 透传+`$auth` env；`acp-presets.ts`（claude_code + codex 两 preset，antigravity 移除）。
+- [x] 1.5 `default-registry.ts`：注册 `acp_<name>`（与 a2a 并存）；`filterToolRegistry` 放行 `acp_` 前缀；`initialize-runtime.ts` 传 `settings.acp`。
+- [x] 1.6 P1 收口：`npm test` 1557 全绿 + typecheck/eslint 干净 → commit `c40afd1`。
 
-## P2 切换：默认走 ACP
+## P2 切换：默认走 ACP（进行中）
 
-- [ ] 2.1 `load-settings.ts` 迁移检测：顶层 `a2a` 块 → stderr 一次性提示 + 可粘贴 `acp.agents` 建议（claude-code server 自动映射为 preset command）；`config-writer.ts` 支持写 `acp` 块。
-- [ ] 2.2 TUI 向导：`src/tui/wizard/` A2A 页 → ACP 页（preset 选择 + command/args 自定义）；`useRuntime.ts` / logs 相关 a2a scope → acp；locale `zh.json`/`en.json` 增 acp key、暂留 a2a key（P3 删）。
-- [ ] 2.3 `initialize-runtime.ts` 删 a2a **servers 托管**段（createClaudeCodeA2AServer import、起进程循环、`a2aManager`/`stopA2AServers` 接口字段及其调用点）——本任务唯一删除动作，单独 commit 便于 revert。
-- [ ] 2.4 迁移 `~/.wasteland/settings.json`（经用户确认后：a2a 块 → acp 等价块，保留文件备份）；用户实测 R-6：TUI 里 `acp_claude_code` 下发任务，流式渲染 + 正常返回。
-- [ ] 2.5 P2 收口：全量门禁 → commit ②`feat(acp): 默认切换至 ACP 调用,旧 a2a 配置迁移提示 + 向导改造` + commit ③`refactor(runtime): 下线本机 A2A HTTP server 托管链路`。
+- [x] 2.1 `load-settings.ts` 迁移检测：`warnA2ALegacyOnce` + 纯函数 `buildA2AMigrationNotice`（可粘贴 acp 示例，进程内一次）；`config-writer.ts` 支持写 `acp` 块（`buildAcpBlock`/`WizardACPSelection`）。
+- [x] 2.2 TUI 向导：`A2AStep` → `AcpStep`（ACP_PRESETS 勾选，展示 command）；types 步骤 `'acp'`；logs 页 scope 增 `acp`；locale zh/en 增 acp key（parity 过）。旧 a2a locale key 暂留（P3 删）。→ commit `a175be1`
+- [x] 2.3 `initialize-runtime.ts` 删 a2a servers 托管段（createClaudeCodeA2AServer import、起进程循环、`a2aManager`/`stopA2AServers` 与 useRuntime/run-agent-helpers 调用链）；3 个测试 mock 同步。全量 1565 绿 → commit `10d7a11`
+- [ ] 2.4 迁移 `~/.wasteland/settings.json`（经用户确认后：a2a 块 → acp 等价块，保留文件备份）；用户实测 R-6：TUI 里 `acp_claude_code` 下发任务，流式渲染 + 正常返回。**← 当前卡点：待用户点头改配置 + 实测**
+- [ ] 2.5 P2 收口：全量门禁 + 用户实测通过。
 
 ## P3 清理：删净 A2A
 

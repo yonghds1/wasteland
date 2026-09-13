@@ -126,7 +126,7 @@ export function resolveAgentMode(value: string | undefined): AgentMode | undefin
  * - 创建 Provider
  * - 创建 SessionManager
  * - 创建 PermissionGate
- * - 创建 ToolRegistry（含 MCP 和 A2A）
+ * - 创建 ToolRegistry（含 MCP 与 ACP 直接工具）
  * - 创建 SkillExecutor
  *
  * @param params - 初始化参数
@@ -210,14 +210,12 @@ export async function initializeRuntime(
     mode: effectivePermissionMode,
   });
 
-  // 8. 创建 ToolRegistry（含 MCP、A2A 与 ACP 直接工具）
-  // A2A/ACP 均已重设计为直接工具：agents 每个成为 `a2a_<name>`/`acp_<name>`
-  // 注册进 toolRegistry。ACP 迁移下 a2a.servers 本机 HTTP 托管链路已下线
-  // （P3 删净 a2a；stdio 子进程 agent 无需常驻服务，按工具调用起停）。
+  // 8. 创建 ToolRegistry（含 MCP 与 ACP 直接工具）
+  // 远程 agent 统一为 ACP：acp.agents 每个成为工具 `acp_<name>`（stdio 子进程，
+  // 按工具调用起停；旧 A2A 协议栈与本机 HTTP 托管链路已整体移除）。
   const mcpServers = loadedSettings.settings.mcpServers;
   const { toolRegistry, startMCP, stopMCP } = createDefaultToolRegistry({
     mcpServers,
-    a2a: loadedSettings.settings.a2a,
     acp: loadedSettings.settings.acp,
   });
 

@@ -6,92 +6,6 @@ import { join } from 'node:path';
 import { loadWastelandSettings, parseSettings } from '../load-settings.js';
 
 // ============================================================
-// parseSettings: a2a 配置块
-// ============================================================
-
-describe('parseSettings a2a', () => {
-  it('parses a valid a2a block with agents and servers', async () => {
-    const settings = await parseSettings(
-      {
-        a2a: {
-          agents: [
-            {
-              name: 'codex',
-              url: 'http://localhost:9200',
-              description: 'remote coding agent',
-              token: 'secret-token',
-            },
-          ],
-          servers: {
-            'claude-code': {
-              enabled: true,
-              port: 9200,
-              command: 'claude',
-              description: 'local hosted server',
-            },
-          },
-        },
-      },
-      'test-settings.json'
-    );
-
-    expect(settings.a2a).toEqual({
-      agents: [
-        {
-          name: 'codex',
-          url: 'http://localhost:9200',
-          description: 'remote coding agent',
-          token: 'secret-token',
-        },
-      ],
-      servers: {
-        'claude-code': {
-          enabled: true,
-          port: 9200,
-          command: 'claude',
-          description: 'local hosted server',
-        },
-      },
-    });
-  });
-
-  it('defaults missing agents/servers to empty collections', async () => {
-    const settings = await parseSettings({ a2a: {} }, 'test-settings.json');
-    expect(settings.a2a).toEqual({ agents: [], servers: {} });
-  });
-
-  it('throws when a2a is not an object', async () => {
-    await expect(parseSettings({ a2a: [] }, 'test-settings.json')).rejects.toThrow(
-      'a2a 必须是对象'
-    );
-  });
-
-  it('throws when an agent is missing a non-empty url', async () => {
-    await expect(
-      parseSettings({ a2a: { agents: [{ name: 'x' }] } }, 'test-settings.json')
-    ).rejects.toThrow('a2a.agents[0].url 必须是非空字符串');
-  });
-
-  it('throws when a server port is not a positive integer', async () => {
-    await expect(
-      parseSettings(
-        { a2a: { servers: { s: { enabled: true, port: -1, command: 'c' } } } },
-        'test-settings.json'
-      )
-    ).rejects.toThrow('a2a.servers.s.port 必须是正整数');
-  });
-
-  it('throws when a server enabled flag is not boolean', async () => {
-    await expect(
-      parseSettings(
-        { a2a: { servers: { s: { enabled: 'yes', port: 1, command: 'c' } } } },
-        'test-settings.json'
-      )
-    ).rejects.toThrow('a2a.servers.s.enabled 必须是布尔值');
-  });
-});
-
-// ============================================================
 // parseSettings: mcpServers（此前缺失 parse 分支，会被静默丢弃）
 // ============================================================
 
@@ -178,10 +92,10 @@ describe('parseSettings multiAgent (mode/a2aServer removed)', () => {
 });
 
 // ============================================================
-// loadWastelandSettings: merge singleAgent + a2a（经完整管线）
+// loadWastelandSettings: merge singleAgent + acp（经完整管线）
 // ============================================================
 
-describe('loadWastelandSettings merge (singleAgent + a2a)', () => {
+describe('loadWastelandSettings merge (singleAgent + acp)', () => {
   let workDir: string;
   let userHome: string;
 
@@ -234,56 +148,56 @@ describe('loadWastelandSettings merge (singleAgent + a2a)', () => {
     expect(settings.singleAgent).toEqual({ skin: 'project-skin', model: 'user-model' });
   });
 
-  it('merges a2a servers by name and agents by name across layers', async () => {
+  it('merges acp agents by name across layers', async () => {
     await writeUserSettings({
-      a2a: {
-        agents: [{ name: 'alpha', url: 'http://alpha:1' }],
-        servers: { s1: { enabled: true, port: 100, command: 'cmd-user' } },
-      },
+      acp: { agents: [{ name: 'alpha', command: 'cmd-user' }], defaults: { timeoutMs: 111 } },
     });
     await writeProjectSettings({
-      a2a: {
+      acp: {
         agents: [
-          { name: 'alpha', url: 'http://alpha:2', description: 'overridden' },
-          { name: 'beta', url: 'http://beta:1' },
+          { name: 'alpha', command: 'cmd-project', description: 'overridden' },
+          { name: 'beta', command: 'cmd-beta' },
         ],
-        servers: {
-          s1: { enabled: false, port: 200, command: 'cmd-project' },
-          s2: { enabled: true, port: 300, command: 'cmd-s2' },
-        },
       },
     });
 
     const { settings } = await loadWastelandSettings({ cwd: workDir, env: envForTest() });
 
-    // agents：alpha 按 name 去重（project 整体覆盖），beta 追加
-    expect(settings.a2a.agents).toEqual([
-      { name: 'alpha', url: 'http://alpha:2', description: 'overridden' },
-      { name: 'beta', url: 'http://beta:1' },
+    // alpha 按 name 去重（project 整体覆盖），beta 追加；defaults 保留 user 层
+    expect(settings.acp.agents).toEqual([
+      { name: 'alpha', command: 'cmd-project', description: 'overridden' },
+      { name: 'beta', command: 'cmd-beta' },
     ]);
-
-    // servers：s1 按名浅合并（project 字段覆盖），s2 新增
-    expect(settings.a2a.servers).toEqual({
-      s1: { enabled: false, port: 200, command: 'cmd-project' },
-      s2: { enabled: true, port: 300, command: 'cmd-s2' },
-    });
+    expect(settings.acp.defaults).toEqual({ timeoutMs: 111 });
   });
 
-  it('resolves $auth ref in a2a agent token', async () => {
+  it('resolves $auth ref in acp agent env', async () => {
     const dir = join(workDir, '.wasteland');
     await mkdir(dir, { recursive: true });
     await writeFile(
       join(dir, 'settings.json'),
       JSON.stringify({
-        a2a: { agents: [{ name: 'secure', url: 'http://s:1', token: { $auth: 'A2A_TOKEN' } }] },
+        acp: { agents: [{ name: 'secure', command: 'c', env: { MY_TOKEN: { $auth: 'ACP_TOKEN' } } }] },
       }),
       'utf8'
     );
-    await writeFile(join(dir, 'auth.json'), JSON.stringify({ A2A_TOKEN: 'resolved-secret' }), 'utf8');
+    await writeFile(join(dir, 'auth.json'), JSON.stringify({ ACP_TOKEN: 'resolved-secret' }), 'utf8');
 
     const { settings } = await loadWastelandSettings({ cwd: workDir, env: envForTest() });
 
-    expect(settings.a2a.agents[0]?.token).toBe('resolved-secret');
+    expect(settings.acp.agents[0]?.env?.MY_TOKEN).toBe('resolved-secret');
+  });
+
+  it('legacy a2a block is ignored (raw passthrough) with a one-time migration notice', async () => {
+    await writeUserSettings({
+      a2a: { agents: [{ name: 'ghost', url: 'http://localhost:9041' }], servers: {} },
+    });
+
+    const { settings } = await loadWastelandSettings({ cwd: workDir, env: envForTest() });
+
+    // 旧块不产生任何运行效果：resolved 无 a2a 字段、acp 保持空
+    expect(settings).not.toHaveProperty('a2a');
+    expect(settings.acp.agents).toEqual([]);
   });
 });
 

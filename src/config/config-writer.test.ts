@@ -426,71 +426,6 @@ describe('config-writer', () => {
     });
   });
 
-  describe('A2A support in init config', () => {
-    it('generates A2A servers and agents with ports starting from 9041', () => {
-      const settings = buildInitialSettings({
-        ...SAMPLE_INPUT,
-        a2a: {
-          enabledPresetIds: ['claude_code', 'codex', 'antigravity'],
-        },
-      });
-
-      expect(settings.a2a?.servers?.['claude-code']).toEqual({
-        enabled: true,
-        port: 9041,
-        command: 'claude',
-        description: 'Claude Code A2A 本地适配服务',
-      });
-      expect(settings.a2a?.servers?.['codex']).toEqual({
-        enabled: true,
-        port: 9042,
-        command: 'codex-cli',
-        description: 'Codex CLI A2A 本地适配服务',
-      });
-      expect(settings.a2a?.servers?.['antigravity']).toEqual({
-        enabled: true,
-        port: 9043,
-        command: 'agy',
-        description: 'Google Antigravity (AGY) A2A 本地适配服务',
-      });
-
-      expect(settings.a2a?.agents).toEqual([
-        {
-          name: 'claude_code',
-          url: 'http://localhost:9041',
-          description: '调用本地 Claude Code 智能体执行全工程检索、重构与跨文件编码任务',
-        },
-        {
-          name: 'codex',
-          url: 'http://localhost:9042',
-          description: '调用本地 Codex CLI 智能体执行底层原子化代码生成、修补与测试编写',
-        },
-        {
-          name: 'antigravity',
-          url: 'http://localhost:9043',
-          description: '调用 Google Antigravity (AGY) 智能体执行总监级架构分析、多智能体协同与规划',
-        },
-      ]);
-    });
-
-    it('generates auth tokens for custom A2A agents', () => {
-      const auth = buildInitialAuth({
-        ...SAMPLE_INPUT,
-        a2a: {
-          customAgents: [
-            {
-              name: 'remote_worker',
-              url: 'http://10.0.0.1:9041',
-              token: 'secret-a2a-key',
-            },
-          ],
-        },
-      });
-
-      expect(auth['a2a_remote_worker_token']).toBe('secret-a2a-key');
-    });
-  });
-
   describe('ACP support in init config', () => {
     it('展开 preset 为 acp.agents（command/args，无端口/URL）', () => {
       const settings = buildInitialSettings({
@@ -512,8 +447,6 @@ describe('config-writer', () => {
           description: '调用本地 Codex CLI 智能体执行原子化代码生成、修补与测试编写',
         },
       ]);
-      // ACP 选择不得污染 a2a 块
-      expect(settings.a2a).toBeUndefined();
     });
 
     it('customAgents 与 preset 合并、无选择时省略块', () => {

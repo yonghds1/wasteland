@@ -10,7 +10,6 @@ import { createWebFetchTool } from '../web/web-fetch.js';
 import { createWebSearchTool } from '../web/web-search.js';
 import { createWriteFileTool } from '../fs/write-file.js';
 import { createAskUserTool } from '../interaction/ask-user.js';
-import { createA2AAgentTool } from '../agent/a2a-agent-tool.js';
 import { createAcpAgentTool } from '../agent/acp-agent-tool.js';
 import { createTuiUpdatePanelTool } from '../interaction/tui-update-panel.js';
 import {
@@ -19,7 +18,7 @@ import {
   createTaskListTool,
   createTaskGetTool,
 } from '../agent/task-tools.js';
-import type { A2ASettings, ACPSettings, MCPServersConfig } from '@config/settings-types.js';
+import type { ACPSettings, MCPServersConfig } from '@config/settings-types.js';
 import { MCPToolRegistry } from '../mcp/mcp-registry.js';
 import { t } from '@locales/index.js';
 import { SPAWN_AGENT_DESCRIPTION, SPAWN_AGENT_INPUT_SCHEMA_JSON } from '@tools/agent/spawn-agent/index.js';
@@ -30,8 +29,8 @@ import { SPAWN_AGENT_DESCRIPTION, SPAWN_AGENT_INPUT_SCHEMA_JSON } from '@tools/a
  * 这是一个"伪工具"，用于向 Provider 声明 spawn_agent 的存在。
  * 实际执行在 dispatchToolCall 中拦截并处理。
  *
- * 注：A2A 已重设计为直接工具（a2a_<name>），spawn_agent 不再被 A2A 覆盖，
- * 始终保持本地占位工具。
+ * 注：远程 agent 已统一为 ACP 直接工具（acp_<name>），spawn_agent 始终
+ * 保持本地占位工具，不被其覆盖。
  */
 function createSpawnAgentPlaceholder() {
   return {
@@ -81,24 +80,15 @@ export type CreateToolRegistryResult = {
 /**
  * createDefaultToolRegistry 的选项对象
  *
- * 旧版使用 4 个位置参数（mcpServers / a2aAgents / a2aServers / agentConfigs），
- * 存在类型漂移。现统一为选项对象签名。
+ * 旧版使用多个位置参数，存在类型漂移。现统一为选项对象签名。
  */
 export type CreateToolRegistryOptions = {
   /** MCP 服务器配置（可选） */
   mcpServers?: MCPServersConfig;
   /**
-   * A2A 顶层配置块（可选）
-   *
-   * - `agents`：每个远程 agent 注册为直接工具 `a2a_<name>`。
-   * - `servers`：本机托管的 A2A server，由 initialize-runtime 起进程，
-   *   不注册为工具（此处忽略）。
-   */
-  a2a?: A2ASettings;
-  /**
    * ACP 顶层配置块（可选）
    *
-   * - `agents`：每个 stdio agent 注册为直接工具 `acp_<name>`（与 a2a_<name> 并存过渡）。
+   * - `agents`：每个 stdio agent 注册为直接工具 `acp_<name>`。
    * - `defaults.timeoutMs`：单次任务超时，透传给工具。
    */
   acp?: ACPSettings;
@@ -107,13 +97,13 @@ export type CreateToolRegistryOptions = {
 /**
  * 创建默认工具注册表
  *
- * @param options - 选项对象（mcpServers / a2a / acp）
+ * @param options - 选项对象（mcpServers / acp）
  * @returns 包含 ToolRegistry 和 MCP 相关控制的对象
  */
 export function createDefaultToolRegistry(
   options: CreateToolRegistryOptions = {}
 ): CreateToolRegistryResult {
-  const { mcpServers, a2a, acp } = options;
+  const { mcpServers, acp } = options;
 
   // 内置工具（硬编码，安全可靠）
   const builtinTools = [
@@ -137,16 +127,8 @@ export function createDefaultToolRegistry(
     createTaskGetTool(),
   ];
 
-  // A2A 远程 agent → 直接工具（a2a_<name>）
-  // single / multi 模式统一机制：主 agent 与子 agent（经继承）都能调用。
-  // 注：a2a.servers 是"本机托管"职责（initialize-runtime 起进程），与工具无关，
-  // 这里只消费 a2a.agents。
-  for (const agent of a2a?.agents ?? []) {
-    builtinTools.push(createA2AAgentTool(agent));
-  }
-
   // ACP stdio agent → 直接工具（acp_<name>）
-  // 与 a2a_<name> 并存过渡期：两套前缀互不重叠，各自配置驱动注册。
+  // single / multi 模式统一机制：主 agent 与子 agent（经继承）都能调用。
   for (const agent of acp?.agents ?? []) {
     builtinTools.push(createAcpAgentTool(agent, agent.timeoutMs ?? acp?.defaults?.timeoutMs));
   }

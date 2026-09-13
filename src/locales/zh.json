@@ -417,11 +417,6 @@
           "hint": "定义 TUI 界面配色调色板与角色口头禅",
           "previewLabel": "战甲特征"
         },
-        "a2a": {
-          "title": "A2A 跨智能体协同生态配置 (可选)",
-          "hint": "启用后，Wasteland 主脑及工人可直接通过工具调用外部编码智能体",
-          "controls": "按 [空格] 勾选/取消 · 按 [↑/↓] 移动 · 按 [Enter] 确认并继续 (全不选直接按回车可跳过) · 按 [Esc] 返回上一步"
-        },
         "confirm": {
           "title": "请确认以下初始化配置",
           "language": "界面语言",
@@ -429,8 +424,6 @@
           "providersCount": "供应商配置池",
           "mainAgent": "主 Agent (总控主脑)",
           "subAgent": "子 Agent 矩阵",
-          "a2a": "A2A 跨智能体协同生态",
-          "a2aNone": "未启用外部 A2A 智能体 (跳过)",
           "personas": "智能体默认人设皮肤",
           "personasHint": "已自动启用官方默认人设 (支持在 ~/.wasteland/skins.json 中自定义)",
           "mainPersona": "主脑 (Orchestrator): 不死老蕉 (warlord-immortal)",

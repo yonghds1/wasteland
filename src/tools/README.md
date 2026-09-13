@@ -14,7 +14,7 @@
 - **`web/`** (网络通信)
   - 公网交互能力。包含 `web-fetch`, `web-search`, 及 HTML 解析等。
 - **`agent/`** (多智能体协作)
-  - Agent 之间的生杀与通讯权。包含 `spawn-agent` 引擎, `a2a-agent-tool`, `task-tools` 等。
+  - Agent 之间的生杀与通讯权。包含 `spawn-agent` 引擎, `acp-agent-tool`, `task-tools` 等。
 - **`mcp/`** (模型上下文协议)
   - 第三方 MCP Server 的客户端接入实现层。
 - **`interaction/`** (人机交互)

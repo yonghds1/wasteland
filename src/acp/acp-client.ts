@@ -10,9 +10,8 @@
  *   3. `session/update` 通知 → 文本聚合 + `AcpStreamEvent` 透出（供 TUI 流式）
  *   4. 超时（startup 握手 / prompt 执行各一档）
  *
- * 与旧 `a2a-client.ts`（HTTP + SSE + 轮询）的根本差异：无常驻端口/URL/token，
- * 一次 `prompt()` 即完整生命周期，`stopReason` 即终态。生命周期 = 每次工具调用
- * （spawn → prompt → dispose），不做进程池。
+ * 无常驻端口/URL/token：一次 `prompt()` 即完整生命周期，`stopReason` 即终态。
+ * 生命周期 = 每次工具调用（spawn → prompt → dispose），不做进程池。
  */
 
 import { spawn, type ChildProcessByStdio } from 'node:child_process';
@@ -54,7 +53,7 @@ export type AcpAgentLaunchConfig = {
 };
 
 /**
- * 流式事件（替代旧 A2A 的 SSEEvent 用途，供 TUI / logs 消费）
+ * 流式事件（供 TUI / logs 消费）
  */
 export type AcpStreamEvent =
   | { kind: 'chunk'; text: string }
@@ -168,6 +167,10 @@ export class AcpClient {
       stdio: ['pipe', 'pipe', 'pipe'],
       cwd: config.cwd ?? process.cwd(),
       env: sanitizeChildEnv(process.env, config.env ?? {}),
+      // POSIX 下让子进程成为新进程组组长：`npx` 等 wrapper 会派生真实
+      // acp server 孙进程，dispose 需 kill 整个进程组，否则孙进程孤儿化泄漏
+      //（P0 冒烟实测：npx 被杀后 claude-code-acp 子树被 init 收养）。
+      detached: process.platform !== 'win32',
     }) as AcpChild;
 
     const client = new AcpClient(child, config);
@@ -343,19 +346,19 @@ export class AcpClient {
     }
   }
 
-  /** 关闭并回收子进程（幂等）：SIGTERM → 2s 未退则 SIGKILL */
+  /** 关闭并回收子进程（幂等）：SIGTERM → 2s 未退则 SIGKILL（POSIX 下杀整个进程组） */
   async dispose(): Promise<void> {
     if (this.disposed) return;
     this.disposed = true;
     this.activeSessionId = undefined;
     if (isAlive(this.child)) {
-      this.child.kill('SIGTERM');
+      this.killGroup('SIGTERM');
       const exited = await Promise.race([
         this.exitPromise.then(() => true),
         new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 2_000)),
       ]);
       if (!exited && isAlive(this.child)) {
-        this.child.kill('SIGKILL');
+        this.killGroup('SIGKILL');
       }
     }
     Logger.debug({
@@ -364,6 +367,24 @@ export class AcpClient {
       message: 'acp.disposed',
       data: { name: this.config.name },
     });
+  }
+
+  /**
+   * 向子进程所在进程组发信号（spawn 时 detached=true 使 child.pid 即 PGID）。
+   * 覆盖 npx → claude-code-acp 这类 wrapper 派生的孙进程。
+   */
+  private killGroup(signal: NodeJS.Signals): void {
+    const pid = this.child.pid;
+    if (!pid) return;
+    try {
+      if (process.platform === 'win32') {
+        this.child.kill(signal);
+      } else {
+        process.kill(-pid, signal);
+      }
+    } catch {
+      // 进程组已退化为空：忽略
+    }
   }
 
   /** 包一层超时 + spawn 失败 + 子进程早退检测 */

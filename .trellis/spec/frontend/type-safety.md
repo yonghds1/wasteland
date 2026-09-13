@@ -19,7 +19,7 @@
    Source: `src/commands/sessions.ts` 的 `list` handler（无注解）先行，`context.ts` ×4、`sessions.ts` ×3、`resume.ts` ×1 已统一。
    commander 的 `OptionValues` 本就是 any 型记录，显式 `: any` 只是噪音。
 3. **外部输入在边界处声明形状**
-   Source: `a2a-claude-code-adapter.ts` 的 `ClaudeCodeEvent`（CLI JSONL 输出按期望形状声明，缺失字段 `??` 兜底）。
+   Source: `acp-client.ts` 的 `handleSessionUpdate`（`session/update` 通知按期望形状声明，未知 update 类型仅 debug 记录）。
    不要把 `any` 从边界漏进内部逻辑。
 
 ---

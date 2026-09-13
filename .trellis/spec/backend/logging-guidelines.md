@@ -90,7 +90,7 @@ export type LogTimings = {
 | `skill` | skill-executor, skin-occupancy |
 | `permission` | permission-gate |
 | `mcp` | mcp-transport(收发), mcp-registry |
-| `a2a` | a2a-client(进出), a2a-webhook, a2a-claude-code-adapter |
+| `acp` | acp-client(spawn/prompt/update) |
 | `file` | file-audit(读/编辑决策) |
 
 ### 新增 scope **必须三处同步**
@@ -595,7 +595,7 @@ async write(entry) {
 
 | ADR | 决策 | 落地 |
 |---|---|---|
-| **ADR-1** | MVP 覆盖范围 = 全量(MCP + A2A + file-audit + internal) | scope 联合 10 个 |
+| **ADR-1** | MVP 覆盖范围 = 全量(MCP + ACP + file-audit + internal) | scope 联合 10 个 |
 | **ADR-2** | 自写轻量 Logger(RxJS Subject + FileSink/MemorySink),不引入 winston/pino | `src/core/logger/` |
 | **ADR-3** | Rotation: 10MB × 5 + 7 天 gzip | `FileSinkOptions.policy` 默认 |
 | **ADR-4** | Redaction 强制 on,不可关闭 | redactor.ts 没有 `enabled` 参数 |

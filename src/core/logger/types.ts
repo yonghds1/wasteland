@@ -51,7 +51,6 @@ export const LOG_LEVEL_RANK: Readonly<Record<LogLevel, number>> = {
  * - skill: 技能系统
  * - permission: 权限闸门
  * - mcp: MCP 协议流量
- * - a2a: Agent-to-Agent 协议流量
  * - acp: Agent Client Protocol（stdio JSON-RPC）流量
  * - file: 文件审计（read/edit/write 路径追踪）
  */
@@ -64,7 +63,6 @@ export type LogScope =
   | 'skill'
   | 'permission'
   | 'mcp'
-  | 'a2a'
   | 'acp'
   | 'file';
 
@@ -193,7 +191,6 @@ export const logEntrySchema = z.object({
     'skill',
     'permission',
     'mcp',
-    'a2a',
     'acp',
     'file',
   ]),

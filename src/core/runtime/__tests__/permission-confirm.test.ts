@@ -3,12 +3,16 @@
  *
  * 覆盖：'yes' 放行、'always' 同样放行本次（规则注册由 UI 侧完成）、
  * 其他回答拒绝；非 ask 决策直接透传不经过 bridge。
+ * 另覆盖 resolveConfirmedDecision：allowed → 最终决策的映射（ask+允许 ⇒ allow）。
  */
 
 import { describe, it, expect } from 'vitest';
 import { lastValueFrom } from 'rxjs';
 
-import { requestPermissionConfirmation } from '../../engine/dispatch-utils.js';
+import {
+  requestPermissionConfirmation,
+  resolveConfirmedDecision,
+} from '../../engine/dispatch-utils.js';
 import type { PermissionDecision } from '../../engine/permission-gate.js';
 
 const session = {
@@ -65,5 +69,40 @@ describe('requestPermissionConfirmation', () => {
     );
     expect((result as any).allowed).toBe(true);
     expect((result as any).askEvents).toEqual([]);
+  });
+});
+
+/**
+ * resolveConfirmedDecision：allowed 标志 → 最终决策的映射。
+ *
+ * 这是「用户同意了却被 blocked」bug 的根因所在：ask + allowed 必须转 allow。
+ */
+describe('resolveConfirmedDecision', () => {
+  it('ask + 允许 → allow（回归：曾经原样透传 ask 导致被拦）', () => {
+    const decision = resolveConfirmedDecision(askDecision, true);
+    expect(decision.decision).toBe('allow');
+    expect(decision.mode).toBe('default');
+  });
+
+  it('ask + 拒绝 → deny，并在 reason 上标注用户拒绝', () => {
+    const decision = resolveConfirmedDecision(askDecision, false);
+    expect(decision.decision).toBe('deny');
+    expect(decision.reason).toContain('用户拒绝');
+  });
+
+  it('本就 allow + 允许 → 原样透传，保留规则命中的 reason', () => {
+    const ruleHit: PermissionDecision = {
+      decision: 'allow',
+      mode: 'default',
+      reason: '工具规则命中：bash git status*',
+    };
+    expect(resolveConfirmedDecision(ruleHit, true)).toBe(ruleHit);
+  });
+
+  it('本就 deny 且拒绝 → 保持原 reason，不叠加「用户拒绝」', () => {
+    const denied: PermissionDecision = { decision: 'deny', mode: 'default', reason: 'no write' };
+    const decision = resolveConfirmedDecision(denied, false);
+    expect(decision.decision).toBe('deny');
+    expect(decision.reason).toBe('no write');
   });
 });

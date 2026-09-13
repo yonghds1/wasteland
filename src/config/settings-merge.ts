@@ -6,9 +6,6 @@
  */
 
 import type {
-  A2AAgentsConfig,
-  A2AServersConfig,
-  A2ASettings,
   ACPSettings,
   AcpAgentConfig,
   MCPServersConfig,
@@ -98,36 +95,6 @@ export function mergeSettings(
     }
   }
 
-  // 合并 a2a 配置块
-  // - servers：按名称浅合并（后者字段覆盖前者）
-  // - agents：按 name 去重（后者整体覆盖前者）
-  const mergedA2AServers: A2AServersConfig = { ...(base.a2a?.servers ?? {}) };
-  if (next.a2a?.servers) {
-    for (const [serverName, serverConfig] of Object.entries(next.a2a.servers)) {
-      mergedA2AServers[serverName] = {
-        ...(mergedA2AServers[serverName] ?? {}),
-        ...serverConfig,
-      };
-    }
-  }
-
-  const mergedA2AAgents: A2AAgentsConfig = [...(base.a2a?.agents ?? [])];
-  if (next.a2a?.agents) {
-    for (const agent of next.a2a.agents) {
-      const existingIndex = mergedA2AAgents.findIndex((a) => a.name === agent.name);
-      if (existingIndex >= 0) {
-        mergedA2AAgents[existingIndex] = agent;
-      } else {
-        mergedA2AAgents.push(agent);
-      }
-    }
-  }
-
-  const mergedA2A: A2ASettings = {
-    agents: mergedA2AAgents,
-    servers: mergedA2AServers,
-  };
-
   // 合并 acp 配置块（stdio agent）
   // - agents：按 name 去重（后者整体覆盖前者）
   // - defaults：字段级浅合并
@@ -201,7 +168,6 @@ export function mergeSettings(
       },
     },
     mcpServers: mergedMCPServers,
-    a2a: mergedA2A,
     acp: mergedAcp,
     parallel: {
       maxConcurrency: next.parallel?.maxConcurrency ?? base.parallel.maxConcurrency,
