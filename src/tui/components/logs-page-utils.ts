@@ -153,6 +153,7 @@ export function scopeColor(scope: LogScope): string {
       return wastelandTheme.colors.primary;
     case 'mcp':
     case 'a2a':
+    case 'acp':
       return wastelandTheme.colors.success;
     case 'file':
       return wastelandTheme.colors.text;

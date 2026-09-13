@@ -43,7 +43,7 @@ import {
   ProviderLoopStep,
 } from './wizard/provider-steps.js';
 import {
-  A2AStep,
+  AcpStep,
   AssignRoleStep,
   MultiAgentConfirmStep,
 } from './wizard/role-steps.js';
@@ -113,8 +113,8 @@ export function InitWizard({ onComplete, writeConfig }: InitWizardProps): React.
     modelId: '',
   });
 
-  // Step 4: A2A Presets Selection
-  const [enabledA2APresetIds, setEnabledA2APresetIds] = useState<string[]>([]);
+  // Step 4: ACP Presets Selection
+  const [enabledAcpPresetIds, setEnabledAcpPresetIds] = useState<string[]>([]);
 
   // Status
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -340,7 +340,7 @@ export function InitWizard({ onComplete, writeConfig }: InitWizardProps): React.
         {step === 'provider-loop-confirm' && (
           <ProviderLoopStep
             providers={providers}
-            onDone={() => setStep(mode === 'single' ? 'a2a' : 'assign-main')}
+            onDone={() => setStep(mode === 'single' ? 'acp' : 'assign-main')}
             onAddMore={() => setStep('provider-select')}
             onBack={() => setStep('provider-select')}
           />
@@ -384,7 +384,7 @@ export function InitWizard({ onComplete, writeConfig }: InitWizardProps): React.
               } else if (subStrategy === 'role_by_role') {
                 setStep('assign-sub-dev');
               } else {
-                setStep('a2a');
+                setStep('acp');
               }
             }}
             onBack={() => setStep('assign-main')}
@@ -400,7 +400,7 @@ export function InitWizard({ onComplete, writeConfig }: InitWizardProps): React.
             currentBinding={unifiedSubBinding}
             onConfirm={(binding) => {
               setUnifiedSubBinding(binding);
-              setStep('a2a');
+              setStep('acp');
             }}
             onBack={() => setStep('subagent-strategy')}
           />
@@ -460,18 +460,18 @@ export function InitWizard({ onComplete, writeConfig }: InitWizardProps): React.
             currentBinding={anaBinding}
             onConfirm={(binding) => {
               setAnaBinding(binding);
-              setStep('a2a');
+              setStep('acp');
             }}
             onBack={() => setStep('assign-sub-test')}
           />
         )}
 
-        {/* Step 3.5: A2A Ecosystem */}
-        {step === 'a2a' && (
-          <A2AStep
-            selectedPresetIds={enabledA2APresetIds}
+        {/* Step 3.5: ACP Ecosystem */}
+        {step === 'acp' && (
+          <AcpStep
+            selectedPresetIds={enabledAcpPresetIds}
             onConfirm={(selected) => {
-              setEnabledA2APresetIds(selected);
+              setEnabledAcpPresetIds(selected);
               setStep('confirm');
             }}
             onBack={() => {
@@ -503,8 +503,8 @@ export function InitWizard({ onComplete, writeConfig }: InitWizardProps): React.
               tester: testBinding,
               analyst: anaBinding,
             }}
-            enabledA2APresetIds={enabledA2APresetIds}
-            onBack={() => setStep('a2a')}
+            enabledAcpPresetIds={enabledAcpPresetIds}
+            onBack={() => setStep('acp')}
             onSubmit={async () => {
               setStep('submitting');
               try {
@@ -524,9 +524,9 @@ export function InitWizard({ onComplete, writeConfig }: InitWizardProps): React.
                           analyst: anaBinding,
                         }
                       : undefined,
-                  a2a:
-                    enabledA2APresetIds.length > 0
-                      ? { enabledPresetIds: enabledA2APresetIds }
+                  acp:
+                    enabledAcpPresetIds.length > 0
+                      ? { enabledPresetIds: enabledAcpPresetIds }
                       : undefined,
                   skinId: 'warlord-immortal',
                 });

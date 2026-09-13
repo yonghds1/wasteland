@@ -39,7 +39,7 @@ export type Step =
   | 'assign-sub-res'
   | 'assign-sub-test'
   | 'assign-sub-ana'
-  | 'a2a'
+  | 'acp'
   | 'confirm'
   | 'submitting'
   | 'done'

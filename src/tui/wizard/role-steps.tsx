@@ -10,7 +10,7 @@ import { Box, Text, useInput } from 'ink';
 
 import { t } from '@locales/index.js';
 import type { WizardProviderConfig, WizardRoleBinding } from '@config/config-writer.js';
-import { A2A_PRESETS } from '@config/a2a-presets.js';
+import { ACP_PRESETS } from '@config/acp-presets.js';
 import { wastelandTheme } from '@theme/wasteland/index.js';
 import type { SubAgentStrategy } from './types.js';
 
@@ -136,7 +136,7 @@ export function AssignRoleStep({
   );
 }
 
-export function A2AStep({
+export function AcpStep({
   selectedPresetIds,
   onConfirm,
   onBack,
@@ -154,15 +154,15 @@ export function A2AStep({
       return;
     }
     if (key.upArrow || input === 'k') {
-      setCursor((prev) => (prev > 0 ? prev - 1 : A2A_PRESETS.length - 1));
+      setCursor((prev) => (prev > 0 ? prev - 1 : ACP_PRESETS.length - 1));
       return;
     }
     if (key.downArrow || input === 'j') {
-      setCursor((prev) => (prev < A2A_PRESETS.length - 1 ? prev + 1 : 0));
+      setCursor((prev) => (prev < ACP_PRESETS.length - 1 ? prev + 1 : 0));
       return;
     }
     if (input === ' ') {
-      const current = A2A_PRESETS[cursor];
+      const current = ACP_PRESETS[cursor];
       if (current) {
         setSelected((prev) =>
           prev.includes(current.id)
@@ -181,9 +181,9 @@ export function A2AStep({
   return (
     <Box flexDirection="column">
       <Text bold color={wastelandTheme.colors.primary}>
-        {t('commands.init.wizard.a2a.title')}
+        {t('commands.init.wizard.acp.title')}
       </Text>
-      <Text color={wastelandTheme.colors.muted}>{t('commands.init.wizard.a2a.hint')}</Text>
+      <Text color={wastelandTheme.colors.muted}>{t('commands.init.wizard.acp.hint')}</Text>
 
       <Box
         flexDirection="column"
@@ -192,7 +192,7 @@ export function A2AStep({
         borderColor={wastelandTheme.colors.border}
         paddingX={1}
       >
-        {A2A_PRESETS.map((preset, index) => {
+        {ACP_PRESETS.map((preset, index) => {
           const isFocused = index === cursor;
           const isChecked = selected.includes(preset.id);
           return (
@@ -204,7 +204,7 @@ export function A2AStep({
                   {preset.label}
                 </Text>
                 <Text color={wastelandTheme.colors.muted}>
-                  {` (Port: ${preset.defaultPort} · Tool: ${preset.toolName})`}
+                  {` (${preset.toAgentConfig().command} ${preset.toAgentConfig().args?.join(' ') ?? ''})`}
                 </Text>
               </Box>
               {isFocused && (
@@ -218,7 +218,7 @@ export function A2AStep({
       </Box>
 
       <Box marginTop={1}>
-        <Text color={wastelandTheme.colors.muted}>{t('commands.init.wizard.a2a.controls')}</Text>
+        <Text color={wastelandTheme.colors.muted}>{t('commands.init.wizard.acp.controls')}</Text>
       </Box>
     </Box>
   );
@@ -232,7 +232,7 @@ export function MultiAgentConfirmStep({
   subStrategy,
   unifiedSubAgent,
   roleBindings,
-  enabledA2APresetIds,
+  enabledAcpPresetIds,
   onSubmit,
   onBack,
 }: {
@@ -248,7 +248,7 @@ export function MultiAgentConfirmStep({
     tester: WizardRoleBinding;
     analyst: WizardRoleBinding;
   };
-  enabledA2APresetIds: string[];
+  enabledAcpPresetIds: string[];
   onSubmit: () => void;
   onBack: () => void;
 }): React.ReactElement {
@@ -296,16 +296,13 @@ export function MultiAgentConfirmStep({
           <Text color={undefined}>{subAgentSummary}</Text>
         </Text>
         <Text>
-          <Text color={wastelandTheme.colors.muted}>• {t('commands.init.wizard.confirm.a2a')}: </Text>
-          <Text color={enabledA2APresetIds.length > 0 ? wastelandTheme.colors.secondary : undefined}>
-            {enabledA2APresetIds.length > 0
-              ? enabledA2APresetIds
-                  .map((id) => {
-                    const p = A2A_PRESETS.find((item) => item.id === id);
-                    return p ? `${p.label} (port:${p.defaultPort})` : id;
-                  })
+          <Text color={wastelandTheme.colors.muted}>• {t('commands.init.wizard.confirm.acp')}: </Text>
+          <Text color={enabledAcpPresetIds.length > 0 ? wastelandTheme.colors.secondary : undefined}>
+            {enabledAcpPresetIds.length > 0
+              ? enabledAcpPresetIds
+                  .map((id) => ACP_PRESETS.find((item) => item.id === id)?.label ?? id)
                   .join(', ')
-              : t('commands.init.wizard.confirm.a2aNone')}
+              : t('commands.init.wizard.confirm.acpNone')}
           </Text>
         </Text>
       </Box>

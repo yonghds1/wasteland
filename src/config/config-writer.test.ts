@@ -490,4 +490,49 @@ describe('config-writer', () => {
       expect(auth['a2a_remote_worker_token']).toBe('secret-a2a-key');
     });
   });
+
+  describe('ACP support in init config', () => {
+    it('展开 preset 为 acp.agents（command/args，无端口/URL）', () => {
+      const settings = buildInitialSettings({
+        ...SAMPLE_INPUT,
+        acp: { enabledPresetIds: ['claude_code', 'codex'] },
+      });
+
+      expect(settings.acp?.agents).toEqual([
+        {
+          name: 'claude_code',
+          command: 'npx',
+          args: ['-y', '@agentclientprotocol/claude-agent-acp'],
+          description: '调用本地 Claude Code 智能体执行全工程检索、重构与跨文件编码任务',
+        },
+        {
+          name: 'codex',
+          command: 'npx',
+          args: ['-y', '@zed-industries/codex-acp'],
+          description: '调用本地 Codex CLI 智能体执行原子化代码生成、修补与测试编写',
+        },
+      ]);
+      // ACP 选择不得污染 a2a 块
+      expect(settings.a2a).toBeUndefined();
+    });
+
+    it('customAgents 与 preset 合并、无选择时省略块', () => {
+      const settings = buildInitialSettings({
+        ...SAMPLE_INPUT,
+        acp: {
+          enabledPresetIds: ['claude_code'],
+          customAgents: [{ name: 'my_agent', command: 'my-acp-server', args: ['--stdio'] }],
+        },
+      });
+      expect(settings.acp?.agents).toHaveLength(2);
+      expect(settings.acp?.agents?.[1]).toEqual({
+        name: 'my_agent',
+        command: 'my-acp-server',
+        args: ['--stdio'],
+      });
+
+      const empty = buildInitialSettings({ ...SAMPLE_INPUT, acp: { enabledPresetIds: [] } });
+      expect(empty.acp).toBeUndefined();
+    });
+  });
 });

@@ -23,6 +23,7 @@ import { resolveModelContextWindow } from '@providers/profiles.js';
 import type { SkinsFile } from '@skins/loader.js';
 import type { RolesFile } from './roles/types.js';
 import { A2A_PRESETS } from './a2a-presets.js';
+import { ACP_PRESETS } from './acp-presets.js';
 import {
   findProjectConfigDir,
   resolveProjectSettingsPath,
@@ -77,6 +78,23 @@ export type WizardA2ASelection = {
 };
 
 /**
+ * ACP 协同生态输入（stdio JSON-RPC 子进程 agent；A2A 的迁移目标）
+ *
+ * 与 A2A 不同：无 server/port/token 概念，agent 以子进程 command 启动。
+ */
+export type WizardACPSelection = {
+  /** 启用的预设 ID 列表（如 ['claude_code', 'codex']） */
+  enabledPresetIds?: string[];
+  /** 自定义 ACP Agents（command/args 直配） */
+  customAgents?: Array<{
+    name: string;
+    command: string;
+    args?: string[];
+    description?: string;
+  }>;
+};
+
+/**
  * 用户在 InitWizard 中填写的原始输入
  */
 export type InitWizardInput = {
@@ -97,8 +115,10 @@ export type InitWizardInput = {
     tester?: WizardRoleBinding;
     analyst?: WizardRoleBinding;
   };
-  /** A2A 智能体协同配置 */
+  /** A2A 智能体协同配置（已废弃，仅为旧测试/调用兼容保留；新配置请用 acp） */
   a2a?: WizardA2ASelection;
+  /** ACP 智能体协同配置（迁移目标） */
+  acp?: WizardACPSelection;
   /** 战甲皮肤 ID（默认 'warlord-immortal'） */
   skinId?: string;
   /** 界面语言：'zh' | 'en' */
@@ -188,12 +208,43 @@ function buildA2ABlock(a2aInput?: WizardA2ASelection): RawWastelandSettings['a2a
 }
 
 /**
+ * 由 ACP 选择构造 settings.acp 块（preset 展开为 command/args，合并自定义 agents）
+ */
+function buildAcpBlock(acpInput?: WizardACPSelection): RawWastelandSettings['acp'] {
+  if (!acpInput) return undefined;
+
+  const agents: NonNullable<RawWastelandSettings['acp']>['agents'] = [];
+
+  if (acpInput.enabledPresetIds?.length) {
+    for (const presetId of acpInput.enabledPresetIds) {
+      const preset = ACP_PRESETS.find((p) => p.id === presetId);
+      if (preset) agents.push(preset.toAgentConfig());
+    }
+  }
+
+  if (acpInput.customAgents) {
+    for (const agent of acpInput.customAgents) {
+      agents.push({
+        name: agent.name,
+        command: agent.command,
+        ...(agent.args ? { args: agent.args } : {}),
+        ...(agent.description ? { description: agent.description } : {}),
+      });
+    }
+  }
+
+  if (agents.length === 0) return undefined;
+  return { agents };
+}
+
+/**
  * 从输入构造 settings.json 内容
  */
 export function buildInitialSettings(input: InitWizardInput): RawWastelandSettings {
   const skinId = input.skinId ?? 'warlord-immortal';
   const isSingle = input.mode === 'single' || input.subAgentStrategy === 'single';
   const a2a = buildA2ABlock(input.a2a);
+  const acp = buildAcpBlock(input.acp);
 
   // 多 Provider 输入分支
   if (input.providers && input.providers.length > 0) {
@@ -277,6 +328,7 @@ export function buildInitialSettings(input: InitWizardInput): RawWastelandSettin
         tester: { role: 'tester', model: testModelKey },
       },
       a2a,
+      acp,
     };
   }
 
@@ -331,6 +383,7 @@ export function buildInitialSettings(input: InitWizardInput): RawWastelandSettin
       tester: { role: 'tester', model: subModelKey },
     },
     a2a,
+    acp,
   };
 }
 

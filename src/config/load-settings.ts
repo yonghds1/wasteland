@@ -460,6 +460,58 @@ async function readAuthFile(filePath: string): Promise<AuthSettings | null> {
   }
 }
 
+/**
+ * 检测到已废弃的 a2a 块 → 生成可读迁移提示文本（纯函数，便于单测）
+ *
+ * A2A（HTTP+SSE）迁移到 ACP（stdio JSON-RPC）后，旧 `settings.a2a` 块不再生效。
+ * url/端口无法自动转成 ACP 的 command，故只提示、不静默转换。命中典型 claude-code
+ * 配置时给出一份可直接粘贴的 acp.agents 等价写法。无 a2a 块 → 返回 null。
+ */
+export function buildA2AMigrationNotice(
+  userSettings: Pick<RawWastelandSettings, 'a2a'> | null,
+  projectSettings: Pick<RawWastelandSettings, 'a2a'> | null
+): string | null {
+  const hasA2A = (s: Pick<RawWastelandSettings, 'a2a'> | null) => Boolean(s?.a2a);
+  if (!hasA2A(userSettings) && !hasA2A(projectSettings)) return null;
+
+  const suggested = JSON.stringify(
+    {
+      acp: {
+        agents: [
+          {
+            name: 'claude_code',
+            command: 'npx',
+            args: ['-y', '@agentclientprotocol/claude-agent-acp'],
+            description: '调用本地 Claude Code 智能体',
+          },
+        ],
+      },
+    },
+    null,
+    2
+  );
+  return (
+    '[wasteland] 警告：检测到已废弃的 `a2a` 配置块。A2A（HTTP+SSE）已迁移到 ACP（stdio JSON-RPC），' +
+      '`a2a.agents` 不再注册工具、`a2a.servers` 不再托管本机 HTTP 服务。\n' +
+      '请改用 `acp.agents`。URL/端口无法自动转换为 ACP 启动命令——本地 Claude Code 等价配置示例：\n' +
+      `${suggested}\n`
+  );
+}
+
+/** 一次性 stderr 提示（进程内仅打印一次） */
+let a2aLegacyWarned = false;
+
+function warnA2ALegacyOnce(
+  userSettings: RawWastelandSettings | null,
+  projectSettings: RawWastelandSettings | null
+): void {
+  if (a2aLegacyWarned) return;
+  const notice = buildA2AMigrationNotice(userSettings, projectSettings);
+  if (!notice) return;
+  a2aLegacyWarned = true;
+  process.stderr.write(notice);
+}
+
 export async function loadWastelandSettings(params?: {
   cwd?: string;
   env?: NodeJS.ProcessEnv;
@@ -479,6 +531,8 @@ export async function loadWastelandSettings(params?: {
   const userAuth = await readAuthFile(userAuthPath);
   const projectSettings = projectSettingsPath ? await readSettingsFile(projectSettingsPath) : null;
   const projectAuth = projectAuthPath ? await readAuthFile(projectAuthPath) : null;
+
+  warnA2ALegacyOnce(userSettings, projectSettings);
 
   const mergedAuth = {
     ...(userAuth ?? {}),

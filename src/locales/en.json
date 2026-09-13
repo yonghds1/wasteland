@@ -445,7 +445,9 @@
           "apiKey": "API Key",
           "model": "Main Model ID",
           "subModel": "Sub-Agent Model ID",
-          "enterToSubmit": "Press Enter to write config and launch · Press Esc to go back"
+          "enterToSubmit": "Press Enter to write config and launch · Press Esc to go back",
+          "acp": "ACP Agent Ecosystem",
+          "acpNone": "No external ACP agents (skipped)"
         },
         "done": {
           "title": "✓ Init complete",
@@ -463,6 +465,11 @@
           "emptyModelId": "Model ID cannot be empty",
           "emptySubAgentModelId": "Sub-Agent Model ID cannot be empty",
           "noProviders": "At least 1 provider must be configured"
+        },
+        "acp": {
+          "title": "ACP Agent Ecosystem (optional)",
+          "hint": "Once enabled, the orchestrator and workers can call external coding agents directly as ACP (stdio JSON-RPC) subprocesses",
+          "controls": "[Space] toggle · [↑/↓] move · [Enter] confirm & continue (press Enter with none selected to skip) · [Esc] back"
         }
       }
     },

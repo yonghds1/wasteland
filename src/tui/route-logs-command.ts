@@ -83,6 +83,7 @@ const VALID_SCOPES: ReadonlySet<LogScope> = new Set<LogScope>([
   'permission',
   'mcp',
   'a2a',
+  'acp',
   'file',
 ]);
 

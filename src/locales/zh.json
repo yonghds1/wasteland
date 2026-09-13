@@ -445,7 +445,9 @@
           "apiKey": "API Key",
           "model": "主模型 ID",
           "subModel": "子模型 ID",
-          "enterToSubmit": "按 Enter 写入配置并启航 · 按 Esc 返回上一步修改"
+          "enterToSubmit": "按 Enter 写入配置并启航 · 按 Esc 返回上一步修改",
+          "acp": "ACP 跨智能体协同生态",
+          "acpNone": "未启用外部 ACP 智能体 (跳过)"
         },
         "done": {
           "title": "✓ 初始化完成",
@@ -463,6 +465,11 @@
           "emptyModelId": "模型 ID 不能为空",
           "emptySubAgentModelId": "子 Agent 模型 ID 不能为空",
           "noProviders": "至少需要配置 1 个供应商"
+        },
+        "acp": {
+          "title": "ACP 跨智能体协同生态配置 (可选)",
+          "hint": "启用后，Wasteland 主脑及工人可通过 ACP（stdio JSON-RPC）直接调用外部编码智能体子进程",
+          "controls": "按 [空格] 勾选/取消 · 按 [↑/↓] 移动 · 按 [Enter] 确认并继续 (全不选直接按回车可跳过) · 按 [Esc] 返回上一步"
         }
       }
     },
