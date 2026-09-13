@@ -87,11 +87,13 @@ export function startAgentLoop(
 }
 
 /**
- * 退出清理：停止 MCP 服务器 + 本机托管的 A2A 服务器进程（避免进程泄漏）。
+ * 退出清理：停止 MCP 服务器（避免进程泄漏）。
+ *
+ * ACP 迁移下 A2A 本机 HTTP 托管已下线；ACP agent 子进程随工具调用
+ * 起停（工具 execute 的 finally dispose），无需运行时级清理。
  */
 export async function stopRuntimeAgents(
-  runtime: Pick<RuntimeEnvironment, 'mcpManager' | 'a2aManager'>
+  runtime: Pick<RuntimeEnvironment, 'mcpManager'>
 ): Promise<void> {
   await runtime.mcpManager.stopMCP();
-  await runtime.a2aManager.stopA2AServers();
 }

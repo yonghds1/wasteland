@@ -174,7 +174,6 @@ describe('RuntimeEnvironment type', () => {
       agentMode: 'single',
       skin: {} as any,
       mcpManager: { startMCP: async () => {}, stopMCP: async () => {} },
-      a2aManager: { stopA2AServers: async () => {} },
       loadedSettings: {} as any,
     };
 

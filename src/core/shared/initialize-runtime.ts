@@ -65,11 +65,6 @@ export type RuntimeEnvironment = {
     startMCP: () => Promise<void>;
     stopMCP: () => Promise<void>;
   };
-  /** A2A 管理器（本机托管服务器的停止入口） */
-  a2aManager: {
-    /** 停止所有已启动的 A2A 服务器进程 */
-    stopA2AServers: () => Promise<void>;
-  };
   /** 加载的配置 */
   loadedSettings: LoadedWastelandSettings;
 };
@@ -216,38 +211,15 @@ export async function initializeRuntime(
   });
 
   // 8. 创建 ToolRegistry（含 MCP、A2A 与 ACP 直接工具）
-  // A2A 已重设计为直接工具：a2a.agents 每个成为工具 `a2a_<name>` 注册进 toolRegistry；
-  // a2a.servers 是"本机托管"职责，由下面 createClaudeCodeA2AServer 起进程，与工具无关。
-  // ACP（迁移目标）：acp.agents 每个成为工具 `acp_<name>`；并存过渡期两套前缀同时注册。
+  // A2A/ACP 均已重设计为直接工具：agents 每个成为 `a2a_<name>`/`acp_<name>`
+  // 注册进 toolRegistry。ACP 迁移下 a2a.servers 本机 HTTP 托管链路已下线
+  // （P3 删净 a2a；stdio 子进程 agent 无需常驻服务，按工具调用起停）。
   const mcpServers = loadedSettings.settings.mcpServers;
-  const a2aServers = loadedSettings.settings.a2a.servers;
   const { toolRegistry, startMCP, stopMCP } = createDefaultToolRegistry({
     mcpServers,
     a2a: loadedSettings.settings.a2a,
     acp: loadedSettings.settings.acp,
   });
-
-  // 8.5 启动配置的 A2A 服务器（可选，失败不阻塞）
-  const a2aServerProcesses: Array<{ name: string; stop: () => Promise<void> }> = [];
-  if (a2aServers) {
-    const { createClaudeCodeA2AServer } = await import('../../acp/a2a-claude-code-adapter.js');
-    for (const [name, config] of Object.entries(a2aServers)) {
-      if (config.enabled) {
-        try {
-          const server = await createClaudeCodeA2AServer({
-            port: config.port,
-            claudeCommand: config.command,
-          });
-          a2aServerProcesses.push({ name, stop: () => server.stop() });
-           
-          console.log(`[wasteland] A2A server "${name}" started on port ${config.port}`);
-        } catch (error) {
-           
-          console.warn(`[wasteland] A2A server "${name}" failed to start: ${error instanceof Error ? error.message : String(error)}`);
-        }
-      }
-    }
-  }
 
   // 9. 创建 SkillExecutor
   const skillRegistry = await createSkillRegistry({
@@ -284,20 +256,6 @@ export async function initializeRuntime(
     agentMode,
     skin,
     mcpManager: { startMCP, stopMCP },
-    a2aManager: {
-      // 停止所有已启动的 A2A 服务器进程
-      stopA2AServers: async () => {
-        for (const { name, stop } of a2aServerProcesses) {
-          try {
-            await stop();
-             
-            console.log(`[wasteland] A2A server "${name}" stopped`);
-          } catch {
-            // 忽略停止错误
-          }
-        }
-      },
-    },
     loadedSettings,
   };
 }

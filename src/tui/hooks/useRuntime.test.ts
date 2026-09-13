@@ -47,9 +47,6 @@ vi.mock('@core/shared/initialize-runtime.js', () => ({
       startMCP: vi.fn().mockResolvedValue(undefined),
       stopMCP: vi.fn().mockResolvedValue(undefined),
     },
-    a2aManager: {
-      stopA2AServers: vi.fn().mockResolvedValue(undefined),
-    },
     loadedSettings: {
       settings: {
         runtime: {
@@ -150,16 +147,5 @@ describe('cleanupTuiRuntime', () => {
 
     expect(mockStopMCP).toHaveBeenCalled();
     expect(mockCloseAll).toHaveBeenCalled();
-  });
-
-  it('应该停止本机托管的 A2A 服务器进程（修复进程泄漏）', async () => {
-    const context = await createTuiRuntime('/test');
-    const mockStopA2AServers = vi.fn().mockResolvedValue(undefined);
-
-    (context as any).stopA2AServers = mockStopA2AServers;
-
-    await cleanupTuiRuntime(context);
-
-    expect(mockStopA2AServers).toHaveBeenCalled();
   });
 });

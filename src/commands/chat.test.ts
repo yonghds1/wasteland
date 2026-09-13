@@ -39,9 +39,6 @@ vi.mock('@core/shared/initialize-runtime.js', () => ({
       startMCP: vi.fn().mockResolvedValue(undefined),
       stopMCP: vi.fn().mockResolvedValue(undefined),
     },
-    a2aManager: {
-      stopA2AServers: vi.fn().mockResolvedValue(undefined),
-    },
     loadedSettings: {
       settings: {
         runtime: {

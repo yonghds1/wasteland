@@ -27,8 +27,6 @@ import type { ChatInputTurn } from '@core/runtime/event-types.js';
  */
 interface InternalTuiRuntimeContext extends TuiRuntimeContext {
   stopMCP?: () => Promise<void>;
-  /** 停止本机托管的 A2A 服务器进程（退出清理，避免进程泄漏） */
-  stopA2AServers?: () => Promise<void>;
   userInputBridge?: UserInputBridge;
 }
 
@@ -147,7 +145,6 @@ export async function createTuiRuntime(
     sessionManager: runtime.sessionManager,
     providerId: runtime.provider.id,
     stopMCP: runtime.mcpManager.stopMCP,
-    stopA2AServers: runtime.a2aManager.stopA2AServers,
     skin,
     userInputBridge,
     permissionGate: runtime.permissionGate,
@@ -175,11 +172,6 @@ export async function cleanupTuiRuntime(runtime: TuiRuntimeContext): Promise<voi
   // 停止 MCP 服务器
   if (internal.stopMCP) {
     await internal.stopMCP();
-  }
-
-  // 停止本机托管的 A2A 服务器进程（修复：此前 stopA2AServers 零调用方导致进程泄漏）
-  if (internal.stopA2AServers) {
-    await internal.stopA2AServers();
   }
 
   // 关闭所有会话
