@@ -1,0 +1,7 @@
+{"file": ".trellis/spec/backend/tool-runtime-contracts.md", "reason": "acp_<name> 工具注册/前缀放行/riskLevel 闸门契约"}
+{"file": ".trellis/spec/backend/runtime-contracts.md", "reason": "initialize-runtime 生命周期,删 a2a servers 托管段需对齐契约"}
+{"file": ".trellis/spec/backend/cli-tui-contracts.md", "reason": "settings 读写/向导/TUI scope 迁移契约"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "工具契约不抛异常;子进程错误转 error 结果"}
+{"file": ".trellis/spec/backend/directory-structure.md", "reason": "src/acp 目录与 __tests__ 同级规范(修正既有外露 test)"}
+{"file": ".trellis/tasks/09-13-a2a-to-acp/research/acp-sdk-feasibility.md", "reason": "ACP SDK API 签名/类型/风险,P0-P1 直接依赖"}
+{"file": ".trellis/tasks/09-13-a2a-to-acp/design.md", "reason": "acp-client 契约与配置 schema 权威定义"}

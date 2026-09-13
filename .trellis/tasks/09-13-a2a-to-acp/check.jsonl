@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "终检门禁与质量红线(单文件500行/import type)"}
+{"file": ".trellis/spec/backend/architecture-rules.md", "reason": "core/UI 解耦、协议层边界是否被破坏"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "跨层一致性:config→runtime→tool→TUI→locale"}
+{"file": ".trellis/tasks/09-13-a2a-to-acp/prd.md", "reason": "验收标准逐条核对(含 grep a2a 零命中)"}
