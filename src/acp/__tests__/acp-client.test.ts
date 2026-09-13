@@ -109,6 +109,16 @@ describe('AcpClient', () => {
     await client.dispose();
   });
 
+  it('cancel() → session/cancel 通知使挂起 prompt 以 cancelled 收敛', async () => {
+    const client = await AcpClient.spawn(fakeConfig('hang'));
+    const pending = client.prompt('forever');
+    await new Promise((r) => setTimeout(r, 200)); // 让 prompt 抵达 agent
+    await client.cancel();
+    const result = await pending;
+    expect(result.stopReason).toBe('cancelled');
+    await client.dispose();
+  });
+
   it('agent 中途退出 → PROCESS_EXITED（带 stderr 尾部）', async () => {
     const client = await AcpClient.spawn(fakeConfig('crash'));
     await expect(client.prompt('die')).rejects.toThrow(/exited|PROCESS/i);

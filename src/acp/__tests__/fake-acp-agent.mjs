@@ -29,6 +29,8 @@ const sendNotify = (method, params) => out({ jsonrpc: '2.0', method, params });
 let pendingPromptId;
 let pendingSessionId;
 let awaitingPermId;
+let cancelablePromptId;
+let cancelableSessionId;
 
 const rl = readline.createInterface({ input: process.stdin });
 
@@ -79,7 +81,12 @@ rl.on('line', (line) => {
       return;
     }
     if (mode === 'hang') {
-      return; // 永不应答
+      // 收到 prompt 后不回应（测超时），但登记 id：收到 session/cancel 时
+      // 以 stopReason=cancelled 收敛（模拟可中断的真 agent）。
+      cancelablePromptId = id;
+      cancelableSessionId = sessionId;
+      sendUpdate(sessionId, { sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: 'started' } });
+      return;
     }
     if (mode === 'crash') {
       process.stderr.write('fake agent crashing\n');
@@ -118,6 +125,13 @@ rl.on('line', (line) => {
     sendUpdate(pendingSessionId, { sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: `PERMISSION_GRANTED:${chosen}` } });
     out({ jsonrpc: '2.0', id: pendingPromptId, result: { stopReason: 'end_turn' } });
     awaitingPermId = undefined;
+    return;
+  }
+
+  // session/cancel 通知（无 id）：可中断模式收到后以 cancelled 收敛
+  if (method === 'session/cancel' && cancelablePromptId !== undefined) {
+    out({ jsonrpc: '2.0', id: cancelablePromptId, result: { stopReason: 'cancelled' } });
+    cancelablePromptId = undefined;
     return;
   }
 });

@@ -272,7 +272,7 @@ wasteland 支持将**项目级 + 用户级持久记忆**注入 system prompt 最
 | `acp.agents[].timeoutMs` | 单次任务超时（毫秒），覆盖 `acp.defaults.timeoutMs`。 |
 
 > 首次 `npx -y` 拉取适配器可达十余秒，可预先 `npm i -g @agentclientprotocol/claude-agent-acp` 预热。
-> 官方适配器：Claude Code → `@agentclientprotocol/claude-agent-acp`；Codex → `@zed-industries/codex-acp`。
+> 官方适配器：Claude Code → `@agentclientprotocol/claude-agent-acp`；Codex → `@zed-industries/codex-acp`（要求本机 codex CLI 已登录，否则握手通过但 `session/new` 返回 Authentication required，工具会将其转为可读 error 而非崩溃）。
 > wasteland 从 Claude Code 终端里启动时，会自动剔除子进程的 `CLAUDECODE` / `CLAUDE_CODE_*` 环境变量，避免被适配器判定为嵌套会话而拒启。
 
 > 已废弃：顶层 `a2a` 块（HTTP+SSE 协议栈与本机 HTTP 托管服务）已整体移除。若配置中仍残留 `a2a`，启动时会打印一次迁移提示并忽略该块（URL 无法自动转换为 ACP 的 command，需手动改为上面的 `acp.agents` 写法）。更早的嵌套写法 `multiAgent[x].mode: 'a2a'` / `multiAgent[x].a2aServer` 亦已移除。
