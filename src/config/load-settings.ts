@@ -22,6 +22,7 @@ import { DEFAULT_LANGUAGE } from '@locales/index.js';
 import {
   isRecord,
   validateA2ASettings,
+  validateACPSettings,
   validateMCPServers,
   validateModelSettings,
   validatePermissionMode,
@@ -376,6 +377,11 @@ export async function parseSettings(raw: unknown, sourcePath: string): Promise<R
   // 解析 a2a 配置块（agents 出站调用 + servers 本机托管）
   if ('a2a' in raw && raw.a2a !== undefined) {
     settings.a2a = validateA2ASettings(raw.a2a, sourcePath);
+  }
+
+  // 解析 acp 配置块（stdio 子进程 agent，A2A 的迁移目标）
+  if ('acp' in raw && raw.acp !== undefined) {
+    settings.acp = validateACPSettings(raw.acp, sourcePath);
   }
 
   if ('parallel' in raw && raw.parallel !== undefined) {

@@ -12,6 +12,8 @@ import type {
   A2AServerConfig,
   A2AServersConfig,
   A2ASettings,
+  ACPSettings,
+  AcpAgentConfig,
   MCPServersConfig,
   MCPServerConfig,
   ModelSettings,
@@ -394,4 +396,114 @@ export function validateA2ASettings(value: unknown, sourcePath: string): A2ASett
   }
 
   return { agents, servers };
+}
+
+/**
+ * 校验 acp 配置块（stdio JSON-RPC 子进程 agent）
+ *
+ * - agents：数组，每项需有合法 name（^[A-Za-z0-9_-]+$）与非空 command；
+ *   args 为字符串数组，env 为字符串值对象，cwd/description 为字符串，timeoutMs 为正整数；
+ *   name 全表唯一。
+ * - defaults.timeoutMs：可选正整数。
+ */
+export function validateACPSettings(value: unknown, sourcePath: string): ACPSettings {
+  if (!isRecord(value)) {
+    throw new Error(`配置文件 ${sourcePath} 中 acp 必须是对象。`);
+  }
+
+  const NAME_RE = /^[A-Za-z0-9_-]+$/;
+  const agents: AcpAgentConfig[] = [];
+  const seenNames = new Set<string>();
+
+  if ('agents' in value && value.agents !== undefined) {
+    if (!Array.isArray(value.agents)) {
+      throw new Error(`配置文件 ${sourcePath} 中 acp.agents 必须是数组。`);
+    }
+
+    for (let i = 0; i < value.agents.length; i += 1) {
+      const agent = value.agents[i];
+      const at = `${sourcePath} 中 acp.agents[${i}]`;
+      if (!isRecord(agent)) {
+        throw new Error(`${at} 必须是对象。`);
+      }
+
+      if (typeof agent.name !== 'string' || !NAME_RE.test(agent.name.trim())) {
+        throw new Error(`${at}.name 必须是非空字符串，且仅含字母、数字、下划线或连字符。`);
+      }
+      const name = agent.name.trim();
+      if (seenNames.has(name)) {
+        throw new Error(`${at}.name "${name}" 与已配置的 acp agent 重名。`);
+      }
+      seenNames.add(name);
+
+      if (typeof agent.command !== 'string' || agent.command.trim().length === 0) {
+        throw new Error(`${at}.command 必须是非空字符串。`);
+      }
+
+      const parsed: AcpAgentConfig = { name, command: agent.command.trim() };
+
+      if ('args' in agent && agent.args !== undefined) {
+        if (!Array.isArray(agent.args) || agent.args.some((a) => typeof a !== 'string')) {
+          throw new Error(`${at}.args 必须是字符串数组。`);
+        }
+        parsed.args = agent.args as string[];
+      }
+
+      if ('env' in agent && agent.env !== undefined) {
+        if (!isRecord(agent.env)) {
+          throw new Error(`${at}.env 必须是对象。`);
+        }
+        for (const [envKey, envValue] of Object.entries(agent.env)) {
+          // 值可为明文字符串或 { $auth: KEY } 引用（由 resolveSettingsAuthRefs 解析），与 mcpServers.env 同语义
+          if (typeof envValue !== 'string' && !isRecord(envValue)) {
+            throw new Error(`${at}.env.${envKey} 必须是字符串或 $auth 引用对象。`);
+          }
+        }
+        parsed.env = agent.env as Record<string, string>;
+      }
+
+      if ('cwd' in agent && agent.cwd !== undefined) {
+        if (typeof agent.cwd !== 'string') {
+          throw new Error(`${at}.cwd 必须是字符串。`);
+        }
+        parsed.cwd = agent.cwd;
+      }
+
+      if ('description' in agent && agent.description !== undefined) {
+        if (typeof agent.description !== 'string') {
+          throw new Error(`${at}.description 必须是字符串。`);
+        }
+        parsed.description = agent.description;
+      }
+
+      if ('timeoutMs' in agent && agent.timeoutMs !== undefined) {
+        if (typeof agent.timeoutMs !== 'number' || !Number.isInteger(agent.timeoutMs) || agent.timeoutMs <= 0) {
+          throw new Error(`${at}.timeoutMs 必须是正整数。`);
+        }
+        parsed.timeoutMs = agent.timeoutMs;
+      }
+
+      agents.push(parsed);
+    }
+  }
+
+  const settings: ACPSettings = { agents };
+  if ('defaults' in value && value.defaults !== undefined) {
+    if (!isRecord(value.defaults)) {
+      throw new Error(`配置文件 ${sourcePath} 中 acp.defaults 必须是对象。`);
+    }
+    const d = value.defaults;
+    if (
+      'timeoutMs' in d &&
+      d.timeoutMs !== undefined &&
+      (typeof d.timeoutMs !== 'number' || !Number.isInteger(d.timeoutMs) || d.timeoutMs <= 0)
+    ) {
+      throw new Error(`配置文件 ${sourcePath} 中 acp.defaults.timeoutMs 必须是正整数。`);
+    }
+    if (typeof d.timeoutMs === 'number') {
+      settings.defaults = { timeoutMs: d.timeoutMs };
+    }
+  }
+
+  return settings;
 }

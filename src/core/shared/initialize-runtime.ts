@@ -215,14 +215,16 @@ export async function initializeRuntime(
     mode: effectivePermissionMode,
   });
 
-  // 8. 创建 ToolRegistry（含 MCP 和 A2A 直接工具）
+  // 8. 创建 ToolRegistry（含 MCP、A2A 与 ACP 直接工具）
   // A2A 已重设计为直接工具：a2a.agents 每个成为工具 `a2a_<name>` 注册进 toolRegistry；
   // a2a.servers 是"本机托管"职责，由下面 createClaudeCodeA2AServer 起进程，与工具无关。
+  // ACP（迁移目标）：acp.agents 每个成为工具 `acp_<name>`；并存过渡期两套前缀同时注册。
   const mcpServers = loadedSettings.settings.mcpServers;
   const a2aServers = loadedSettings.settings.a2a.servers;
   const { toolRegistry, startMCP, stopMCP } = createDefaultToolRegistry({
     mcpServers,
     a2a: loadedSettings.settings.a2a,
+    acp: loadedSettings.settings.acp,
   });
 
   // 8.5 启动配置的 A2A 服务器（可选，失败不阻塞）

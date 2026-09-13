@@ -9,6 +9,8 @@ import type {
   A2AAgentsConfig,
   A2AServersConfig,
   A2ASettings,
+  ACPSettings,
+  AcpAgentConfig,
   MCPServersConfig,
   MCPServerConfig,
   RawWastelandSettings,
@@ -126,6 +128,31 @@ export function mergeSettings(
     servers: mergedA2AServers,
   };
 
+  // 合并 acp 配置块（stdio agent）
+  // - agents：按 name 去重（后者整体覆盖前者）
+  // - defaults：字段级浅合并
+  const mergedAcpAgents: AcpAgentConfig[] = [...base.acp.agents];
+  if (next.acp?.agents) {
+    for (const agent of next.acp.agents) {
+      const existingIndex = mergedAcpAgents.findIndex((a) => a.name === agent.name);
+      if (existingIndex >= 0) {
+        mergedAcpAgents[existingIndex] = agent;
+      } else {
+        mergedAcpAgents.push(agent);
+      }
+    }
+  }
+
+  const mergedAcpDefaults =
+    base.acp.defaults || next.acp?.defaults
+      ? { ...(base.acp.defaults ?? {}), ...(next.acp?.defaults ?? {}) }
+      : undefined;
+
+  const mergedAcp: ACPSettings = {
+    agents: mergedAcpAgents,
+    ...(mergedAcpDefaults ? { defaults: mergedAcpDefaults } : {}),
+  };
+
   // 合并 singleAgent（字段级浅合并；此前 merge 出口漏掉 singleAgent，导致 single skin 永不生效）
   const mergedSingleAgent =
     base.singleAgent || next.singleAgent
@@ -175,6 +202,7 @@ export function mergeSettings(
     },
     mcpServers: mergedMCPServers,
     a2a: mergedA2A,
+    acp: mergedAcp,
     parallel: {
       maxConcurrency: next.parallel?.maxConcurrency ?? base.parallel.maxConcurrency,
     },

@@ -11,6 +11,7 @@ import { createWebSearchTool } from '../web/web-search.js';
 import { createWriteFileTool } from '../fs/write-file.js';
 import { createAskUserTool } from '../interaction/ask-user.js';
 import { createA2AAgentTool } from '../agent/a2a-agent-tool.js';
+import { createAcpAgentTool } from '../agent/acp-agent-tool.js';
 import { createTuiUpdatePanelTool } from '../interaction/tui-update-panel.js';
 import {
   createTaskCreateTool,
@@ -18,7 +19,7 @@ import {
   createTaskListTool,
   createTaskGetTool,
 } from '../agent/task-tools.js';
-import type { A2ASettings, MCPServersConfig } from '@config/settings-types.js';
+import type { A2ASettings, ACPSettings, MCPServersConfig } from '@config/settings-types.js';
 import { MCPToolRegistry } from '../mcp/mcp-registry.js';
 import { t } from '@locales/index.js';
 import { SPAWN_AGENT_DESCRIPTION, SPAWN_AGENT_INPUT_SCHEMA_JSON } from '@tools/agent/spawn-agent/index.js';
@@ -94,18 +95,25 @@ export type CreateToolRegistryOptions = {
    *   不注册为工具（此处忽略）。
    */
   a2a?: A2ASettings;
+  /**
+   * ACP 顶层配置块（可选）
+   *
+   * - `agents`：每个 stdio agent 注册为直接工具 `acp_<name>`（与 a2a_<name> 并存过渡）。
+   * - `defaults.timeoutMs`：单次任务超时，透传给工具。
+   */
+  acp?: ACPSettings;
 };
 
 /**
  * 创建默认工具注册表
  *
- * @param options - 选项对象（mcpServers / a2a）
+ * @param options - 选项对象（mcpServers / a2a / acp）
  * @returns 包含 ToolRegistry 和 MCP 相关控制的对象
  */
 export function createDefaultToolRegistry(
   options: CreateToolRegistryOptions = {}
 ): CreateToolRegistryResult {
-  const { mcpServers, a2a } = options;
+  const { mcpServers, a2a, acp } = options;
 
   // 内置工具（硬编码，安全可靠）
   const builtinTools = [
@@ -135,6 +143,12 @@ export function createDefaultToolRegistry(
   // 这里只消费 a2a.agents。
   for (const agent of a2a?.agents ?? []) {
     builtinTools.push(createA2AAgentTool(agent));
+  }
+
+  // ACP stdio agent → 直接工具（acp_<name>）
+  // 与 a2a_<name> 并存过渡期：两套前缀互不重叠，各自配置驱动注册。
+  for (const agent of acp?.agents ?? []) {
+    builtinTools.push(createAcpAgentTool(agent, agent.timeoutMs ?? acp?.defaults?.timeoutMs));
   }
 
   // 创建 MCP 注册表（如果配置了）

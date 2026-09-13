@@ -156,6 +156,22 @@ export function resolveSettingsAuthRefs(
       }) as A2AAgentsConfig,
       servers: { ...settings.a2a.servers },
     },
+    // acp.agents[].env 支持 $auth ref（如远程 agent 的 API key），与 mcpServers.env 同语义
+    acp: {
+      ...settings.acp,
+      agents: (settings.acp.agents ?? []).map((agent) => ({
+        ...agent,
+        ...(agent.env
+          ? {
+              env: resolveAuthRefsInValue({
+                value: agent.env,
+                auth,
+                env,
+              }) as Record<string, string>,
+            }
+          : {}),
+      })),
+    },
     parallel: {
       ...settings.parallel,
     },
@@ -204,6 +220,10 @@ export function applyEnvironmentOverrides(
     a2a: {
       agents: [...settings.a2a.agents],
       servers: { ...settings.a2a.servers },
+    },
+    acp: {
+      agents: settings.acp.agents.map((agent) => ({ ...agent })),
+      ...(settings.acp.defaults ? { defaults: { ...settings.acp.defaults } } : {}),
     },
     parallel: {
       maxConcurrency: settings.parallel.maxConcurrency,

@@ -124,6 +124,48 @@ export type A2ASettings = {
   servers: A2AServersConfig;
 };
 
+// ============================================================
+// ACP（Agent Client Protocol）配置块
+// ============================================================
+
+/**
+ * ACP Agent 配置（stdio JSON-RPC 子进程形态的远程 agent）
+ *
+ * 每个配置的 agent 成为一个直接工具 `acp_<name>`。与 A2A 的
+ * `{url, token}` 不同：ACP 无端口/URL/Bearer，agent 以子进程启动，
+ * 本地信任模型，`command/args/env/cwd` 即全部连接参数。
+ */
+export type AcpAgentConfig = {
+  /** Agent 名称（工具名后缀：acp_<name>，字符集 ^[A-Za-z0-9_-]+$） */
+  name: string;
+  /** 启动命令（如 `npx`；需是 PATH 可解析的可执行文件） */
+  command: string;
+  /** 命令参数（如 ['-y', '@agentclientprotocol/claude-agent-acp']） */
+  args?: string[];
+  /** 追加到子进程的环境变量（继承 process.env，CLAUDE_CODE_* 被自动剔除） */
+  env?: Record<string, string>;
+  /** 子进程工作目录，默认取运行时 context.cwd */
+  cwd?: string;
+  /** 描述（供 LLM 发现工具用途） */
+  description?: string;
+  /** 单次任务超时（毫秒），覆盖 acp.defaults.timeoutMs */
+  timeoutMs?: number;
+};
+
+/**
+ * ACP 顶层配置块（与 a2a 并存过渡期共存；P3 后 a2a 移除）
+ *
+ * - `agents`：出站调用的 agent 列表，每个成为工具 `acp_<name>`。
+ * - `defaults`：全局超时等默认值。
+ */
+export type ACPSettings = {
+  agents: AcpAgentConfig[];
+  defaults?: {
+    /** prompt 执行超时（毫秒），默认 300000（编码任务长） */
+    timeoutMs?: number;
+  };
+};
+
 /**
  * 子角色配置
  * 角色均可被用户自定义覆盖或新增（含主角色 orchestrator）
@@ -278,8 +320,10 @@ export type RawWastelandSettings = {
   };
   /** MCP 服务器配置 */
   mcpServers?: MCPServersConfig;
-  /** A2A 配置块（agents 出站调用 + servers 本机托管） */
+  /** A2A 配置块（agents 出站调用 + servers 本机托管）*/
   a2a?: A2ASettings;
+  /** ACP 配置块（stdio 子进程 agent 出站调用；替代 A2A 的方向） */
+  acp?: ACPSettings;
   /** 并行执行配置 */
   parallel?: {
     /** 最大并发数，-1 表示无限制，默认 -1 */
@@ -352,6 +396,8 @@ export type ResolvedWastelandSettings = {
   mcpServers: MCPServersConfig;
   /** A2A 配置块（agents 出站调用 + servers 本机托管），默认 { agents: [], servers: {} } */
   a2a: A2ASettings;
+  /** ACP 配置块（stdio 子进程 agent），默认 { agents: [] } */
+  acp: ACPSettings;
   parallel: {
     maxConcurrency: number;
   };
@@ -406,6 +452,9 @@ export const DEFAULT_WASTELAND_SETTINGS: ResolvedWastelandSettings = {
   a2a: {
     agents: [],
     servers: {},
+  },
+  acp: {
+    agents: [],
   },
   parallel: {
     maxConcurrency: -1,

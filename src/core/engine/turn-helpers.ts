@@ -12,6 +12,7 @@ import { t } from '@locales/index.js';
 import type { AgentTool } from '@tools/core/tool-types.js';
 import { ToolRegistry } from '@tools/core/tool-registry.js';
 import { A2A_TOOL_PREFIX } from '@tools/agent/a2a-agent-tool.js';
+import { ACP_TOOL_PREFIX } from '@tools/agent/acp-agent-tool.js';
 import { createDebugTraceEvent, type DebugTraceEvent } from '../runtime/debug-events.js';
 import type { TurnState } from './turn-state.js';
 
@@ -62,9 +63,10 @@ export function filterToolRegistry(
     }
   }
 
-  // 2. a2a_ 前缀工具默认放行（远程 A2A agent 直接工具）
+  // 2. a2a_ / acp_ 前缀工具默认放行（远程 agent 直接工具，用户显式配置）
   for (const name of registry.list()) {
-    if (!name.startsWith(A2A_TOOL_PREFIX) || included.has(name)) continue;
+    if (!name.startsWith(A2A_TOOL_PREFIX) && !name.startsWith(ACP_TOOL_PREFIX)) continue;
+    if (included.has(name)) continue;
     const tool = registry.get(name);
     if (tool) {
       filtered.push(tool);
