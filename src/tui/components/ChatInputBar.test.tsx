@@ -150,7 +150,11 @@ describe('ChatInputBar 权限确认', () => {
     }
   });
 
-  it('无可记模式时按 2：不注册不回答（忽略）', async () => {
+  it('无可记模式时按 2：不注册规则，但降级为本次允许（不静默吞键）', async () => {
+    // 回归 09-14-subagent-permission-hang：曾经这里直接 return，
+    // 按键被吞掉且不 resolve 等待者 —— 用户没有任何反馈，
+    // 若不再按其他键，该请求会一直挂到 agent/子 agent 超时。
+    // 现在与 CLI 侧一致：降级为「本次允许」。
     const pending = makePending('spawn_agent', { task: 'do things' });
     const { instance, stdin, provideInput, gate } = renderBar(pending);
     try {
@@ -158,7 +162,7 @@ describe('ChatInputBar 权限确认', () => {
       stdin.writeData('2');
       await settle();
       expect(gate.addSessionRule).not.toHaveBeenCalled();
-      expect(provideInput).not.toHaveBeenCalled();
+      expect(provideInput).toHaveBeenCalledWith('yes');
     } finally {
       instance.unmount();
       await instance.waitUntilExit();

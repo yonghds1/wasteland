@@ -139,8 +139,11 @@ export function ChatInputBar({ width, sendMessage, runtime }: ChatInputBarProps)
         resetSelection();
       };
       const confirmAlways = (): void => {
-        // 无可记模式或无闸门时忽略（不静默降级为 once，避免误解）
-        if (!pattern || !gate?.addSessionRule) return;
+        if (!pattern || !gate?.addSessionRule) {
+          // 无可记模式/无闸门 → 降级本次允许（与 CLI 一致）；静默 return 会吞键且等待者不 resolve。
+          confirmOnce();
+          return;
+        }
         gate.addSessionRule({
           toolName: pending?.toolName ?? '',
           decision: 'allow',

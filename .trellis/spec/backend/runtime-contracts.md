@@ -728,3 +728,86 @@ if (isReasoningRoundTripError(msg) && !roundTripRetried && hasReasoningFields(ms
 - **`/resume` 缺口（待后续任务）**：session JSONL 落盘的 `tool_call` 记录来自 `tool-dispatch.ts` 的 `createToolCallRecord`（不感知 reasoning）；带 reasoning 的 record 在 `turn-executor.ts` appendRecord 之后被 push 进 history，`session-manager.appendRecord` 的 map 又剥掉该字段。**同一会话的后续 turn 正常**，但跨进程 `/resume` 重建的 tool_call 历史缺中间步 reasoning，strict 网关会再次报错。修法：appendRecord 持久化 + history 加载（`agent-loop.ts:274`）两处透传 `reasoning`。
 - transcript 存双份思考文本（`content` 内 `<think>` + `reasoning.content`）：PRD 已接受；若二期瘦身，合并处理。
 - `estimateMessageTokens` 不计 `reasoning.content`：token 估算偏乐观，压缩阈值稍松（PRD 接受"回传全文"风险的一部分）。
+
+---
+
+## Scenario: UserInputBridge 的等待者永不悬空（FIFO 认领语义）
+
+### 1. Scope / Trigger
+
+- Trigger: 实测会话 `2026-09-13_100427_1416ba` 中 3 个并行子 agent 的 bash 权限提问无人应答，子会话无 `permission` 记录、无 `tool_result`，静默等到 `childAgentTimeout`(600000ms)。
+- Trigger: 子 agent 与父 agent 共用**同一个** `UserInputBridge`（`spawn-agent/index.ts` 传 `context.userInputBridge`），并行问询会同时占位同一队列。
+- Trigger: 2026-09-14 复现出「同一 tick 内多次 `provideInput` 丢失答案」——等待者因此**永不 resolve**（`09-14-subagent-permission-hang`）。
+
+### 2. Signatures
+
+```ts
+// core/engine/user-input-bridge.ts
+class UserInputBridge {
+  requestInput(context?: PendingInputContext): Promise<string>; // 排队，返回的 Promise 被回答时 resolve
+  provideInput(answer: string): void;   // 认领「第一个未被认领」的等待者，异步出队
+  isPending(): boolean;                 // 物理队列非空（含已认领未出队）
+  pendingCount(): number;               // 物理队列长度（含已认领未出队）
+  getPendingContext(): PendingInputContext | null; // 第一个**未认领**者的 context
+  destroy(): void;                      // 排空；等待者收到空串（按拒绝处理）
+}
+type Waiter = { context: PendingInputContext | null; resolve: (a: string) => void; claimed?: boolean };
+```
+
+### 3. Contracts
+
+- **等待者永不悬空**：任何进入队列的 `requestInput()` 最终必须被 resolve —— 由 `provideInput` 或 `destroy` 二选一。**禁止**出现"按键被处理了、但等待者没被 resolve"的路径。
+- **`provideInput` 认领「第一个未认领者」**，不是 `waiters[0]`：同 tick 多次调用时 `waiters[0]` 可能已认领（其微任务尚未执行），重复认领会因 `indexOf(head) < 0` 让**第二个答案被静默丢弃**、对应等待者永久挂起。
+  已实测可达：`cli-input-adapter` 的 `fromEvent(rl, 'line')` 对一次多行写入会在同一 tick 同步连发多个 `line` 事件（`terminal` true/false 都成立）。
+- **出队保持异步（微任务）**：`provideInput` 返回后、微任务执行前 `isPending()` 仍为 true。CLI 的 `tap → filter` 链依赖这个语义吞掉输入行，避免它泄漏成聊天消息。故 `claimed` 只标记、不移除。
+- **三个只读视图的语义分工**（新增消费方时必须区分）：
+  - `isPending()` / `pendingCount()` = 物理队列，**含已认领未出队**（吞行依赖）；
+  - `getPendingContext()` = 第一个**未认领**者（UI/CLI 要据它注册 `always` 规则，答过的那条不能再用）。
+- **UI 侧热键分支不得静默吞键**：无 pattern、无 gate 等无法"记住"的情况必须**可见地降级**（落到 `once`）或明确提示；直接 `return` 会让等待者不 resolve。TUI 与 CLI 行为必须一致。
+- `user_input_requested` 事件应携带 `toolName` + `input`；UI 由此推导模式，不靠 question 正则反推。
+
+### 4. Validation & Error Matrix
+
+| Condition | Expected behavior |
+|---|---|
+| 同一 tick 连续 N 次 `provideInput`，队列有 N 个等待者 | N 个各被认领一次，全部 resolve |
+| `provideInput` 时队列为空 | 静默丢弃（不抛错），不影响后续请求 |
+| `provideInput` 次数 > 等待者数 | 多余调用 no-op |
+| `destroy()` 时存在已认领但未出队的等待者 | 其微任务因 `indexOf < 0` 提前返回，不二次 resolve |
+| 队头已是已认领者，此时读取 `getPendingContext()` | 返回**下一个未认领**者（不是 `waiters[0]`） |
+
+### 5. Tests Required
+
+- `src/core/engine/__tests__/user-input-bridge.test.ts`：认领后 `getPendingContext()` 推进到下一个未认领者（红→绿已实证）。
+- `src/core/engine/__tests__/tool-dispatch-concurrency.test.ts`：共享 bridge 上 3 个并发 ask 各占位、逐个回答全部推进到 `tool_started`+`tool_result`；FIFO 与 `getPendingContext()` 一致；空队列静默丢弃；**同一 tick 两次 `provideInput` 各解一个**。
+- `src/tui/components/ChatInputBar.test.tsx`：无可记模式时按 `2` 不注册规则但**降级为 `provideInput('yes')`**（不再静默吞键）。
+
+### 6. Wrong vs Correct
+
+#### Wrong
+
+```ts
+// 1) 认领队头：同 tick 第二次调用拿到同一个对象，其微任务 indexOf<0 → 答案被丢
+const head = this.waiters[0];
+
+// 2) 无 pattern 时静默 return：按键被吞 + 等待者不 resolve（子 agent 挂到超时）
+if (!pattern || !gate?.addSessionRule) return;
+```
+
+#### Correct
+
+```ts
+const head = this.waiters.find((w) => !w.claimed);   // 认领第一个未认领者
+if (!head) return;
+head.claimed = true;
+queueMicrotask(() => { /* indexOf → splice → resolve */ });
+
+// 无法记住 → 可见降级，绝不吞键
+if (!pattern || !gate?.addSessionRule) { confirmOnce(); return; }
+```
+
+### 已知缺口
+
+- **H-3 未做**：等待用户回答本身没有独立上限/取消路径，`childAgentTimeout`(600s) 是唯一兜底；用户没看见卡片时症状与实测完全一致（无 `permission` 记录、无结果、600s 超时）。建议补「子 agent 正在等待权限」的可观测信号。
+- `tool-dispatch.ts` 的 ask-user 分支调 `requestInput()` **不带 context**，故队头是 ask-user 时 `getPendingContext()` 恒为 null（既有行为，非本次引入）。
+- 缺陷 1 对 **CLI 会话已实证可达**；对 **TUI 会话未证实**（`ChatInputBar` 用 `inputChar === '2'` 相等比较，多字符 chunk 不匹配热键）。

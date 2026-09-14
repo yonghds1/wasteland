@@ -63,6 +63,24 @@ describe('UserInputBridge', () => {
     expect(bridge.isPending()).toBe(false);
   });
 
+  it('同一 tick 认领后：getPendingContext 推进到下一个未认领请求', async () => {
+    // 回归 09-14-subagent-permission-hang：claimed 等待者仍留在物理队列里等微任务出队，
+    // 但「当前问题」必须跳过它——否则同一 tick 的第二次读取会拿到已答的那条。
+    const bridge = new UserInputBridge();
+    const first = bridge.requestInput({ callId: 'c1', toolName: 'bash', input: { command: 'ls' } });
+    const second = bridge.requestInput({ callId: 'c2', toolName: 'bash', input: { command: 'pwd' } });
+
+    bridge.provideInput('yes');
+    // 物理队列尚非空（tap→filter 依赖这一点吞掉当前输入行）
+    expect(bridge.isPending()).toBe(true);
+    // 但结构化上下文必须已推进到 c2
+    expect(bridge.getPendingContext()?.callId).toBe('c2');
+
+    await expect(first).resolves.toBe('yes');
+    bridge.provideInput('yes');
+    await expect(second).resolves.toBe('yes');
+  });
+
   it('destroy 排空等待者（收空串）', async () => {
     const bridge = new UserInputBridge();
     const pending = bridge.requestInput({ callId: 'c1', toolName: 'bash', input: {} });

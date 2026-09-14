@@ -70,7 +70,11 @@ export const handleSpawnAgentDispatch: PreDispatchHook = (params) => {
           turn: params.turn,
           callId: params.call.id,
           question: `${agentScopePrefix(params.session)}是否允许执行 spawn_agent (${childName})?`,
+          // spawn_agent 按设计不可"记住"（describeAllowPattern 显式排除），故只给 yes/no
           options: ['yes', 'no'],
+          // 结构化上下文：让 UI 卡片直接拿到 toolName/input，不必从 question 正则反推
+          toolName: params.call.toolName,
+          input: { ...params.call.input },
         })
       : of<RuntimeEvent>();
 

@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/backend/tool-runtime-contracts.md", "reason": "核对权限提问与终结事件契约"}
+{"file": ".trellis/spec/backend/cli-tui-contracts.md", "reason": "核对 TUI 侧权限交互契约"}

@@ -1,0 +1,3 @@
+{"file": ".trellis/spec/backend/tool-runtime-contracts.md", "reason": "工具生命周期事件与 permission gate / once-always 契约"}
+{"file": ".trellis/spec/backend/cli-tui-contracts.md", "reason": "TUI/CLI InputAdapter 与运行时事件契约（权限提问如何到达 UI）"}
+{"file": ".trellis/spec/backend/runtime-contracts.md", "reason": "跨层契约：事件流 / session / provider 数据流"}

@@ -5,9 +5,11 @@
  * 当 AI 需要用户输入时，通过此桥接器暂停 agent loop 并等待用户响应。
  *
  * 并发语义（FIFO 队列，与 Claude Code 等主流 agent 一致）：
- * - 多个 requestInput() 按调用顺序排队，每次 provideInput(answer) 只回答队头；
+ * - 多个 requestInput() 按调用顺序排队，每次 provideInput(answer) 回答队首**尚未被认领**的那个；
  * - 后到的请求不会覆盖先到的上下文，也不会偷走别人的回答；
- * - isPending() = 队列非空；getPendingContext() = 队头上下文（UI 应展示队头问题）。
+ * - 同一 tick 内的多次 provideInput 各认领一个等待者，不会丢答案（见 provideInput 注释）；
+ * - isPending() / pendingCount() = 物理队列（含已认领未出队的，CLI 的 tap→filter 靠它吞行）；
+ * - getPendingContext() = 第一个**尚未被认领**的请求上下文（UI 展示与规则推导以它为准）。
  */
 
 import type { ToolInput } from '@tools/core/tool-types.js';
@@ -25,6 +27,11 @@ export type PendingInputContext = {
 type Waiter = {
   context: PendingInputContext | null;
   resolve: (answer: string) => void;
+  /**
+   * 已被某次 provideInput 认领，会在**本 tick 的微任务**里出队并 resolve。
+   * 用于让同一 tick 内的多次 provideInput 各认领一个等待者（见 provideInput）。
+   */
+  claimed?: boolean;
 };
 
 /**
@@ -45,13 +52,25 @@ export class UserInputBridge {
     });
   }
 
-  /** 提供用户输入（只回答队头） */
+  /**
+   * 提供用户输入（回答队列中**第一个尚未被认领**的请求）
+   *
+   * 认领语义：同 tick 内的多次 provideInput 必须各认领一个等待者。
+   * 若照旧取 `waiters[0]`，第二次调用时前一个微任务还没跑、队头仍是同一个对象，
+   * 它的微任务会因 `indexOf(head) < 0` 而直接 return ——
+   * **第二个答案被静默丢弃、对应的等待者永久挂起**（一直等到 agent/子 agent 超时）。
+   * 真实触发：`cli-input-adapter` 的 `fromEvent(rl, 'line')` 在同一个输入块里同步连发
+   * 多个 line 事件（多行粘贴 / 终端缓冲）——已实测 Node readline 一次 write 会同步
+   * emit N 个 line 事件。见 09-14-subagent-permission-hang。
+   *
+   * 出队仍是异步（微任务）的：保持既有同 tick 时序——provideInput 返回后、
+   * 微任务执行前 `isPending()` 仍为 true，调用方的 tap→filter 链能正确吞掉
+   * 当前输入行，不会泄漏成聊天消息。
+   */
   provideInput(answer: string): void {
-    const head = this.waiters[0];
+    const head = this.waiters.find((w) => !w.claimed);
     if (!head) return;
-    // 异步出队：保持与旧 Subject 实现一致的同 tick 时序——provideInput 调用后、
-    // 微任务执行前 isPending() 仍为 true，调用方的 tap→filter 链能正确吞掉
-    // 当前输入行，不会泄漏成聊天消息；同时防止同 tick 重复回答偷走下一个请求。
+    head.claimed = true;
     queueMicrotask(() => {
       const idx = this.waiters.indexOf(head);
       if (idx < 0) return; // 已被 destroy 排空
@@ -70,9 +89,16 @@ export class UserInputBridge {
     return this.waiters.length;
   }
 
-  /** 取队头请求的结构化上下文（无 pending 或无上下文时返回 null）。 */
+  /**
+   * 取队内**第一个尚未被认领**的请求上下文（无可展示请求时返回 null）。
+   *
+   * 跳过已认领（已被 provideInput 回答、正在等微任务出队）的等待者：
+   * 同一 tick 内连续两次 provideInput 时，第二次读到的必须是下一个未答的问题，
+   * 否则 CLI 的 `always` 会把 session 规则注册到已经答过的那一条上。
+   */
   getPendingContext(): PendingInputContext | null {
-    return this.waiters.length > 0 ? (this.waiters[0]?.context ?? null) : null;
+    const head = this.waiters.find((w) => !w.claimed);
+    return head?.context ?? null;
   }
 
   /** 清理资源：排空队列（等待者收到空串，按拒绝处理），防止进程退出时挂起 */
