@@ -182,13 +182,16 @@ describe('RuntimeEnvironment type', () => {
 });
 
 /**
- * runtime.skinId 启动校验（H3）
+ * single 模式主 Agent 皮肤解析
  *
- * - 合法 skinId → 不打 warning，原样用
- * - 非法 skinId（拼错 / 已删除）→ warning + 回退 defaultSkin（不抛错）
- * - 缺省（无 skinId）→ 用 defaultSkin，无 warning
+ * single 模式的皮肤真源是 skins.json 的 `singleAgent.skin`（内置默认 road-nomad）；
+ * `settings.runtime.skinId` 只驱动 multi 模式 main 皮肤与角色别名，不参与 single 解析。
+ *
+ * 注：本块此前名为「runtime.skinId 校验（H3）」，测的是「非法 skinId 打 warning」这一
+ * 已被移除的行为；且 helper 未设 singleAgent，断言走的是 getSkin(undefined) →
+ * defaultSkin 的回退链——skinId 实际从未被读取，测试只是碰巧通过。
  */
-describe('initializeRuntime — runtime.skinId 校验', () => {
+describe('initializeRuntime — single 模式皮肤解析', () => {
   let warnSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
@@ -220,34 +223,36 @@ describe('initializeRuntime — runtime.skinId 校验', () => {
     };
   }
 
-  it('合法 skinId（warlord-immortal）不触发 warning', async () => {
+  it('取 skins.json 的 singleAgent.skin（内置默认 road-nomad）', async () => {
     const { loadWastelandSettings } = await import('../../../config/load-settings.js');
-    vi.mocked(loadWastelandSettings).mockResolvedValueOnce(makeLoadedSettings('warlord-immortal') as any);
+    vi.mocked(loadWastelandSettings).mockResolvedValueOnce(
+      makeLoadedSettings('warlord-immortal') as any
+    );
 
-    await initializeRuntime({ cwd: '/test' });
+    const result = await initializeRuntime({ cwd: '/test' });
     expect(warnSpy).not.toHaveBeenCalled();
+    // 配置里写的是 warlord-immortal，但 single 模式不读 runtime.skinId
+    expect((result.skin as { id?: string }).id).toBe('road-nomad');
   });
 
-  it('非法 skinId（拼错）时使用默认皮肤', async () => {
+  it('runtime.skinId 拼错不影响 single 模式皮肤', async () => {
     const { loadWastelandSettings } = await import('../../../config/load-settings.js');
     vi.mocked(loadWastelandSettings).mockResolvedValueOnce(
       makeLoadedSettings('nonexistent-skin-typo') as any
     );
 
     const result = await initializeRuntime({ cwd: '/test' });
-    // 新系统不再检查 skinId 有效性，直接使用默认皮肤
-    expect((result.skin as { label?: string }).label).toBe('不死老蕉');
+    expect((result.skin as { id?: string }).id).toBe('road-nomad');
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 
-  it('缺省 skinId（undefined）走 defaultSkin 且无 warning', async () => {
+  it('runtime.skinId 缺省同样取 skins.json 的 singleAgent.skin', async () => {
     const { loadWastelandSettings } = await import('../../../config/load-settings.js');
     vi.mocked(loadWastelandSettings).mockResolvedValueOnce(makeLoadedSettings(undefined) as any);
 
     const result = await initializeRuntime({ cwd: '/test' });
     expect(warnSpy).not.toHaveBeenCalled();
-    expect((result.skin as { label?: string }).label).toBe(
-      '不死老蕉'
-    );
+    expect((result.skin as { id?: string }).id).toBe('road-nomad');
   });
 });
 

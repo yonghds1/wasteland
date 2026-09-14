@@ -28,7 +28,7 @@ import { ToolRegistry } from '@tools/core/tool-registry.js';
 import { createSkillRegistry } from '@core/skills/skill-discovery.js';
 import { SkillExecutor } from '@core/skills/skill-executor.js';
 import { registerBuiltinCommands } from '@core/shared/command-manager.js';
-import { getSkin, initSkinRegistry, type Skin } from '@skins/index.js';
+import { getSingleAgentSkin, getSkin, initSkinRegistry, type Skin } from '@skins/index.js';
 
 // ============================================================
 // Types
@@ -168,11 +168,11 @@ export async function initializeRuntime(
   const projectConfigDir = loadedSettings.projectConfigDir ?? undefined;
   await initSkinRegistry(userConfigDir, projectConfigDir);
 
-  // 4. 获取主 Agent 皮肤（single → singleAgent.skin，multi → multiAgent.main.skin）
-  const singleAgentConfig = loadedSettings.settings.singleAgent;
+  // 4. 获取主 Agent 皮肤（single → skins.json 的 singleAgent.skin，
+  //    multi → multiAgent.main.skin）
   const multiAgent = loadedSettings.settings.multiAgent;
   const skinId = agentMode === 'single'
-    ? singleAgentConfig?.skin
+    ? getSingleAgentSkin()
     : multiAgent?.main?.skin;
   const skin = getSkin(skinId);
 

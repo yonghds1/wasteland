@@ -5,11 +5,11 @@
  * 每个角色指向内置 prompt 模板 + 默认皮肤候选。
  *
  * 皮肤候选与 `skins/default-skins.json` 中的分配保持一致：
- * - orchestrator → warlord-immortal (不死军阀)
- * - researcher → sand-scout (荒原猎犬) / fury-vanguard (狂暴领航)
- * - developer → v8-mechanic (重装机修) / fury-vanguard (狂暴领航)
- * - analyst → doof-analyst (喷火盲琴) / fury-vanguard (狂暴领航)
- * - tester → bullet-tester (弹药裁决) / fury-vanguard (狂暴领航)
+ * - orchestrator → warlord-immortal (不死老蕉)
+ * - researcher → sand-scout (暴走纳克斯) / fury-vanguard (独臂弗莎)
+ * - developer → v8-mechanic (巨汉瑞克) / fury-vanguard (独臂弗莎)
+ * - analyst → doof-analyst (电音杜夫) / fury-vanguard (独臂弗莎)
+ * - tester → bullet-tester (弹头麦哲) / fury-vanguard (独臂弗莎)
  */
 
 import type { RoleDefinition } from './types.js';
@@ -21,11 +21,11 @@ import type { RoleDefinition } from './types.js';
  * 值为可复用的完整角色定义。
  *
  * 皮肤候选与 `skins/default-skins.json` 中的分配保持一致：
- * - orchestrator → warlord-immortal (不死军阀)
- * - researcher → sand-scout (荒原猎犬) / fury-vanguard (狂暴领航)
- * - developer → v8-mechanic (重装机修) / fury-vanguard (狂暴领航)
- * - analyst → doof-analyst (喷火盲琴) / fury-vanguard (狂暴领航)
- * - tester → bullet-tester (弹药裁决) / fury-vanguard (狂暴领航)
+ * - orchestrator → warlord-immortal (不死老蕉)
+ * - researcher → sand-scout (暴走纳克斯) / fury-vanguard (独臂弗莎)
+ * - developer → v8-mechanic (巨汉瑞克) / fury-vanguard (独臂弗莎)
+ * - analyst → doof-analyst (电音杜夫) / fury-vanguard (独臂弗莎)
+ * - tester → bullet-tester (弹头麦哲) / fury-vanguard (独臂弗莎)
  */
 export const DEFAULT_ROLES: Record<string, RoleDefinition> = {
   orchestrator: {

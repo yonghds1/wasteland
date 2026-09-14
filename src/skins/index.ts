@@ -72,6 +72,18 @@ export function getSkin(name?: string): Skin {
   };
 }
 
+/**
+ * 获取 single 模式的默认皮肤 ID（来自 skins.json 的 `singleAgent.skin`，
+ * 未声明时回退 `defaultSkin`）。
+ *
+ * 这是 single 模式皮肤的真源——`settings.json` 的 `singleAgent.skin` 不参与
+ * 单 agent 皮肤解析。
+ */
+export function getSingleAgentSkin(): string {
+  if (!globalRegistry) throw new Error('Skin registry not initialized.');
+  return globalRegistry.getSingleAgentSkin() || defaultSkin;
+}
+
 export function listSkins(): SkinEntry[] {
   if (!globalRegistry) throw new Error('Skin registry not initialized.');
   return globalRegistry.listSkins().map((skin) => ({ id: skin.id, skin }));
