@@ -95,8 +95,7 @@ cp .wasteland/settings.example.json .wasteland/settings.json
 
 ```bash
 # Architect (Qwen)
-export APP_CHAT_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode"
-export APP_CHAT_API_KEY="<your-qwen-api-key>"
+export qwen_api_key="<your-qwen-api-key>"
 
 # Coder (Claude)
 export ANTHROPIC_API_KEY="<your-anthropic-api-key>"

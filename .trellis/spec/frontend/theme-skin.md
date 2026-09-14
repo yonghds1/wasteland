@@ -3,11 +3,11 @@
 ## Layer Model / 分层模型
 
 ```text
-wastelandTheme (visual)   RoleSkin + systemCommon (content)   locales (language)
-          \                         |                           /
-           \____________________ TUI render __________________/
+wastelandTheme (visual)    skin (content)    locales (language)
+           \                    |                   /
+            \____________ TUI render ____________/
 
-RoleSkin.persona.fullPrompt --------------------------> LLM system message
+role persona (English, from src/config/prompts) -----> LLM system message
 ```
 
 ## Theme / 视觉层
@@ -19,13 +19,13 @@ RoleSkin.persona.fullPrompt --------------------------> LLM system message
 
 ## Skin / 内容层
 
-- System-level content: `src/skins/system/common.ts`.
-- Role-level content: `src/skins/roles/<id>/`.
-- A role skin contains:
-  - `persona`: fixed English LLM identity and safety constraints.
-  - `roleUi`: i18n keys for label, thinking, greeting, catchphrases, and error prefix.
-- `defaultRoleSkin` is the fallback for omitted or unknown optional sub-agent skin IDs.
-- Main and sub-agent prompts place persona before functional role instructions.
+- System-level content: `src/skins/system/common.ts` — locale keys (`skins.system.*`)，渲染时经 `t()` 解析。
+- Role-level content: `src/skins/default-skins.json`（与用户级 `~/.wasteland/skins.json`、项目级 `.wasteland/skins.json` 合并，项目级优先）。
+- 每个皮肤是一条 `{ id, label, thinking[], greeting[], catchphrases[], colors? }`；文案是**内联字面量**，不经 locale 查找，故不随 `runtime.language` 变化。
+- `colors` 可选，形如 `{ label?, text?, thinking? }`（`SkinPalette`），值取 `src/theme/palette.ts` 的 token 或 hex；经 `resolvePalette(skin)` 解析为 hex 后交给 Ink。
+- `defaultSkin = 'warlord-immortal'`（`src/skins/index.ts`）：未注册 / 缺省的 skin ID 回退到它。
+- `getSingleAgentSkin()`：single 模式的默认皮肤，来自 skins.json 的 `singleAgent.skin`。
+- 角色 persona（英文）由 `src/config/prompts/` 组装，与皮肤定义分离——皮肤只管 TUI 文案与颜色。
 
 ### Sub-agent skin occupancy (SkinOccupancy registry)
 
@@ -36,22 +36,17 @@ RoleSkin.persona.fullPrompt --------------------------> LLM system message
   picks one available skin at random, registers it against the child session, and
   releases it on completion / timeout / unsubscribe.
 - When all candidates are occupied (or the list is empty), the spawn falls back to
-  `defaultRoleSkin` without acquiring — the fallback skin is *not* reserved.
-- Single-skin legacy `skin?: string` is still accepted (kept for backwards
-  compatibility) and folded into the candidate list.
-- `warlord-casual` is an alternate main persona (no sub-agent references it) —
-  listed in the registry and exposed via `roles` for future UI surfaces.
-- `hotsand-warrior` is an optional homage skin for a young wasteland-warrior archetype;
-  it is shipped but not assigned to a default sub-agent candidate list.
+  `defaultRoleSkin`（`skin-acquirer.ts` 对 `defaultSkin` 的别名）without acquiring —
+  the fallback skin is *not* reserved.
+- 单值 `SubAgentSettings.skin?: string` 已 `@deprecated`，但仍受支持（向后兼容），会被折叠进候选列表。
 
 ## i18n / 语言层
 
-- TUI translations live in `src/locales/en.json` and `src/locales/zh.json` under `skins.*`.
+- 系统级 TUI 文案在 `src/locales/en.json` / `src/locales/zh.json` 的 `skins.system.*` 下。
 - Both files must have the same key structure; run `npm run validate:i18n` after changes.
 - TUI resolves keys at render time via `t()` / `tArray()`.
 - Persona is always English and is never translated according to `runtime.language`.
-- Skin `label` keeps its defined form in both locales
-  (a skin's label stays consistent regardless of `runtime.language`).
+- 角色皮肤文案是字面量，不随 `runtime.language` 变化（`skin.label` 在两种语言下形态一致）。
 
 ## Wrong vs Correct
 
@@ -65,7 +60,7 @@ Correct:
 
 ```ts
 const color = wastelandTheme.colors.primary;
-const thinking = t(selectedSkin.roleUi.thinkingKey);
+const greeting = skin.greeting[Math.floor(Math.random() * skin.greeting.length)];
 ```
 
 ---
@@ -115,7 +110,7 @@ export type SkinPalette = {
 };
 export type ResolvedSkinPalette = { label: string; text: string; thinking: string };
 
-export function resolvePalette(skin: SkinUi): ResolvedSkinPalette;
+export function resolvePalette(skin: { colors?: SkinPalette }): ResolvedSkinPalette;
 
 // src/theme/contrast.ts
 export type ContrastRole = 'label' | 'text' | 'thinking';
@@ -128,8 +123,8 @@ export function assertContrast(
 ): void;
 
 // src/skins/index.ts
-export function validateContrastAllSkins(): void;     // throws on any failure
-export function getSkinContrastIssue(name: SkinId): string | null;
+export function getSkinContrastIssue(skin: Skin): string | null;
+export function getSingleAgentSkin(): string;
 ```
 
 #### 3. Contracts
@@ -189,63 +184,68 @@ export function getSkinContrastIssue(name: SkinId): string | null;
 - **selected 态**:只用颜色区分,不用方向图标(`▶` 已移除)。
 - **active 态**:保留 `◆` 后缀标记。
 - 07-31 statusbar 合并后,原 StatusBar 全部职责(skin label + thinking/streaming prose)在这里一并承担,顶部不再有独立的第二行。
-- **Build-time contract**: `scripts/check-contrast.ts` calls `validateContrastAllSkins()` and exits non-zero on any failure. Wired into `npm run check`.
-- **Runtime contract**: `getSkin(name)` for a registered-but-failing skin logs `[skins] warn` once per ID and returns `defaultSkin` ('warlord-stern'). User-facing flow never crashes.
+- **Build-time contract**: `scripts/check-contrast.ts` 遍历 `listSkins()` 并逐个调 `getSkinContrastIssue(skin)`，任一失败即 non-zero 退出。已接入 `npm run check`。
+- **Runtime contract**: `getSkin(name)` 对未注册或未通过的 skin ID **静默回退**到 `defaultSkin`（`'warlord-immortal'`），不抛错、**不打 warn**。用户可见流程不会崩。
 
 #### 4. Validation & Error Matrix
 
 | Condition | Build (`check:contrast`) | Runtime (`getSkin`) |
 |---|---|---|
 | Skin registered, all roles pass | exit 0 | returns skin |
-| Skin registered, role fails Lc threshold | exit non-zero with `<skinId>: <role> Lc <x> < threshold <y>` | warn once, fallback to `defaultSkin` |
+| Skin registered, role fails Lc threshold | exit non-zero with `<skinId>: <role> Lc <x> < threshold <y>` | returns skin（对比度不在运行时拦截） |
 | Skin not registered (unknown id) | n/a (script only iterates registry) | returns `defaultSkin`, no warn |
 | `skin.colors` missing entirely | resolves to wasteland defaults | returns skin; contrast checked on defaults |
 | Hex malformed | skipped during token resolution; falls back to wasteland default | same |
 
 #### 5. Good / Base / Bad Cases
 
-**Good** — token reference with safe defaults:
+**Good** — literal text + token colors:
 
-```ts
-// src/skins/scout/skinUi.ts
-export const scoutSkinUi: SkinUi = {
-  labelKey: 'skins.scout.label',
-  thinkingKey: 'skins.scout.thinking',
-  greetingKey: 'skins.scout.greeting',
-  catchphrasesKey: 'skins.scout.catchphrases',
-  errorPrefixKey: 'skins.scout.errorPrefix',
-  colors: {
-    label: 'role.label.teal',     // token → 'src/theme/palette.ts' → '#B8DFDB'
-    text: 'text',
-    thinking: 'role.thinking.teal',
-  },
-};
+```jsonc
+// src/skins/default-skins.json
+{
+  "skins": {
+    "sand-scout": {
+      "id": "sand-scout",
+      "label": "暴走纳克斯",
+      "thinking": ["正在沿着车辙追踪...", "风沙里有什么在动..."],
+      "greeting": ["猎犬已出笼，说目标。"],
+      "catchphrases": ["没有痕迹，就没有方向。"],
+      "colors": {
+        "label": "role.label.teal",     // token → src/theme/palette.ts → '#B8DFDB'
+        "thinking": "role.thinking.teal"
+        // text 省略 → 回退 wasteland 默认正文色
+      }
+    }
+  }
+}
 ```
 
 **Base** — hex escape hatch for one-off skins:
 
-```ts
-export const customSkinUi: SkinUi = {
-  labelKey: 'skins.custom.label',
-  // ...
-  colors: {
-    label: '#FFA500',             // hex literal — validated by APCA at build time
-    text: 'text',
-    thinking: 'muted',
-  },
-};
+```jsonc
+"colors": {
+  "label": "#FFA500"      // hex literal — validated by APCA at build time
+}
 ```
 
 **Bad** — never do:
 
-```ts
-// Don't write hex strings when a token exists
-colors: { label: '#E6B450', text: '#DED3C4', thinking: '#7D7468' }
-// Don't disable contrast validation
-colors: { label: '#3D3328' /* passes typing but fails Lc 45 */ }
+```jsonc
+// 不要在有 token 时写 hex
+{ "colors": { "label": "#E6B450", "text": "#DED3C4", "thinking": "#7D7468" } }
 
-// Don't bypass palette from TUI components
-<Text color="#E6B450">          // use resolvePalette(skin).label instead
+// 不要用不存在的 token —— paletteTokens 只有 role.label.* / role.thinking.*，
+// 其余名字会被 resolveColor 静默忽略并回退到 wasteland 默认色
+{ "colors": { "text": "text", "thinking": "muted" } }
+
+// 不要用 APCA 不达标的颜色（类型通过，Lc 45 不过）
+{ "colors": { "label": "#3D3328" } }
+```
+
+```tsx
+// 不要从 TUI 组件绕过 palette
+<Text color="#E6B450">          // 应使用 resolvePalette(skin).label
 ```
 
 #### 6. Tests Required
@@ -255,8 +255,8 @@ colors: { label: '#3D3328' /* passes typing but fails Lc 45 */ }
   - `resolvePalette` passes hex literal through unchanged
   - `resolvePalette` falls back to wasteland default when token is unknown
   - `assertContrast` does not throw for passing colors; throws for failing colors
-  - `validateContrastAllSkins()` throws on a failing skin; passes on all shipped skins
-  - `getSkinContrastIssue('warlord-stern')` returns null; `getSkin('failing-id')` falls back to default with one warn
+  - `scripts/check-contrast.ts` 遍历 `listSkins()`，任一皮肤失败则 non-zero 退出
+  - `getSkinContrastIssue(skin)` 对合规皮肤返回 null；`getSkin('unregistered-id')` **静默**回退 `defaultSkin`
 - `test/chat-message-colors.test.js`: assistant body text uses `resolvePalette(skin).text`; fallback path when skin lacks colors.
 - `test/locale-parity.test.js`: en.json vs zh.json recursive leaf-key parity — missing key in either file fails the parity script.
 
@@ -264,30 +264,24 @@ colors: { label: '#3D3328' /* passes typing but fails Lc 45 */ }
 
 **Wrong**:
 
-```ts
-// src/skins/some-skin/skinUi.ts — hardcoded hex + dead color field
-export const someSkinUi: SkinUi = {
-  labelKey: 'skins.some.label',
-  thinkingKey: 'skins.some.thinking',
-  // ...
-  colors: { label: '#ABCDEF', text: '#123456', thinking: '#FEDCBA' },
-};
-// Caller:
+```jsonc
+// 硬编码 hex，且调用方忽略皮肤
+{ "id": "some-skin", "label": "…", "colors": { "label": "#ABCDEF", "text": "#123456", "thinking": "#FEDCBA" } }
+```
+
+```tsx
 <Text color={wastelandTheme.colors.text}>{message}</Text>  // ignores skin
 ```
 
 **Correct**:
 
-```ts
-// src/skins/some-skin/skinUi.ts — token references
-export const someSkinUi: SkinUi = {
-  labelKey: 'skins.some.label',
-  thinkingKey: 'skins.some.thinking',
-  // ...
-  colors: { label: 'role.label.gold', text: 'text', thinking: 'muted' },
-};
-// Caller (src/tui/components/ChatMessageList.tsx):
-const palette = resolvePalette(selectedSkin);
+```jsonc
+{ "id": "some-skin", "label": "…", "colors": { "label": "role.label.gold", "thinking": "role.thinking.muted" } }
+```
+
+```tsx
+// Caller (src/tui/components/chat-message-utils.ts 等):
+const palette = resolvePalette(skin);
 <Text color={palette.text}>{message}</Text>     // skin-consistent
 ```
 
@@ -301,8 +295,9 @@ const palette = resolvePalette(selectedSkin);
 - **Cause**: Caller used `wastelandTheme.colors.text` instead of `resolvePalette(skin).text`.
 - **Fix**: Always go through `resolvePalette()`; tests cover this in `chat-message-colors.test.js`.
 
-- **Symptom**: `validateContrastAllSkins()` throws at module load in production.
-- **Cause**: Direct module-load call (removed in `skins/index.ts`; runtime must use `getSkinContrastIssue()` + warn instead).
+- **Symptom**: 期望运行时也能拦住对比度不达标的皮肤。
+- **Cause**: 对比度校验是**构建期**契约——`scripts/check-contrast.ts` 遍历 `listSkins()` 调 `getSkinContrastIssue()`。运行时 `getSkin()` 只做"未注册则回退 `defaultSkin`"，不校验对比度。
+- **Fix**: 依赖 `npm run check:contrast`，不要期待运行时报错。
 
 ### Gotchas
 

@@ -133,8 +133,12 @@ wasteland skin list
 | `ui.messages` | 提示消息 | { welcome, thinking, success, error } |
 
 **皮肤文件位置**:
-- 项目级: `.wasteland/skins/<skin-id>.json`
-- 用户级: `~/.wasteland/skins/<skin-id>.json`
+- 项目级: `.wasteland/skins.json`
+- 用户级: `~/.wasteland/skins.json`
+- 内置兜底: `src/skins/default-skins.json`
+
+每个文件形如 `{ "skins": { "<id>": {...} }, "singleAgent": { "skin": "<id>" }, "multiAgent": {...} }`。
+皮肤文案是内联字面量，不经 locale 查找。
 
 ### 3.2 Role 层（能力）
 
@@ -240,11 +244,11 @@ wasteland skin list
 ### 4.3 皮肤加载优先级
 
 ```
-.wasteland/skins/<skin-id>.json (项目级)
+.wasteland/skins.json (项目级)
   ↓ 回退
-~/.wasteland/skins/<skin-id>.json (用户级)
+~/.wasteland/skins.json (用户级)
   ↓ 回退
-内置默认皮肤 (warlord-immortal)
+src/skins/default-skins.json (内置)
 ```
 
 ## 5. UI 分层与 Adapter 架构

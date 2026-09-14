@@ -35,121 +35,96 @@ grep -r "role.label" src/theme/palette.ts
 
 ## Step-by-Step: Adding a New Skin
 
-### 1. Create the skin file
+### 1. Add the skin definition
 
-```bash
-mkdir -p src/skins/<skin-id>
-touch src/skins/<skin-id>/skinUi.ts
-```
+皮肤是 **JSON 数据**，不是 TS 模块。内置皮肤在 `src/skins/default-skins.json`；
+用户级 / 项目级皮肤放在 `~/.wasteland/skins.json` / `.wasteland/skins.json`（项目级优先）。
 
-Write the file using **token references** (preferred) or hex literals (escape hatch):
-
-```ts
-// src/skins/<skin-id>/skinUi.ts
-import type { SkinUi } from '../types.js';
-
-export const <skinIdCamel>SkinUi: SkinUi = {
-  labelKey: 'skins.<skin-id>.label',
-  thinkingKey: 'skins.<skin-id>.thinking',
-  greetingKey: 'skins.<skin-id>.greeting',
-  catchphrasesKey: 'skins.<skin-id>.catchphrases',
-  errorPrefixKey: 'skins.<skin-id>.errorPrefix',
-  colors: {
-    label: 'role.label.<token>',      // pick from src/theme/palette.ts
-    text: 'text',                     // default wasteland text
-    thinking: 'role.thinking.<token>',
+```jsonc
+// src/skins/default-skins.json
+{
+  "skins": {
+    "<skin-id>": {
+      "id": "<skin-id>",
+      "label": "<显示名>",
+      "thinking": ["...", "...", "..."],
+      "greeting": ["...", "..."],
+      "catchphrases": ["...", "...", "...", "..."],
+      "colors": {
+        "label": "role.label.<token>",       // 从 src/theme/palette.ts 选
+        "thinking": "role.thinking.<token>"
+        // text 省略 → 回退 wasteland 默认正文色
+      }
+    }
   },
-};
+  "singleAgent": { "skin": "<skin-id>" }
+}
 ```
 
 **Token reference rules:**
 
-- `label` should reference one of the `role.label.*` tokens that already passes APCA Lc 75 (see `palette.ts` for current set).
-- `text` typically uses `'text'` (default) — escape hatch with hex `#XXXXXX` only if the skin needs a distinct body color.
-- `thinking` should reference `role.thinking.muted` / `warm` / `teal`; only hex-escape if APCA Lc 45 needs a custom brightness.
+- `paletteTokens` **只有**两组：`role.label.*`（gold / amber / green / teal / violet / taupe）
+  与 `role.thinking.*`（muted / warm / teal）。**没有** `'text'` / `'muted'` 这类短名——
+  写了会被 `resolveColor()` **静默忽略**并回退到 wasteland 默认色（见 `palette.ts:65`）。
+- `label` 建议引用一个已通过 APCA Lc 75 的 `role.label.*`。
+- `text` 省略即可；确需自定义正文色才用 hex `#XXXXXX`。
+- `thinking` 引用 `role.thinking.muted` / `warm` / `teal`；仅当 Lc 45 需要特定亮度才用 hex。
 
-### 2. Add translation keys to BOTH locales
+### 2. 文案写在皮肤里，不动 locale
 
-Both `src/locales/en.json` and `src/locales/zh.json` must contain the same nested structure:
+角色皮肤文案（`label` / `thinking` / `greeting` / `catchphrases`）是**内联字面量**——
+`src/skins/types.ts` 明写"JSON 中写什么显示什么，无 i18n 翻译"。**不要**动 `src/locales/`。
 
-```json
-{
-  "skins": {
-    "<skin-id>": {
-      "label": "<English character name>",
-      "thinking": [
-        "<thinking line 1>",
-        "<thinking line 2>",
-        "<thinking line 3>"
-      ],
-      "greeting": [
-        "<greeting line 1>",
-        "<greeting line 2>",
-        "<greeting line 3>"
-      ],
-      "errorPrefix": "<error prefix word>",
-      "catchphrases": [
-        "<catchphrase 1>",
-        "<catchphrase 2>",
-        "<catchphrase 3>",
-        "<catchphrase 4>"
-      ]
-    }
-  }
-}
-```
+只有**系统级**内容（`src/skins/system/common.ts` 的 `skins.system.*`）才走 locale 键；
+新增那类文案才需要同时改 `en.json` / `zh.json` 并跑 `check:locale-parity`。
 
 Conventions:
-- `label` stays in the source language (English) for both locales — the character name should not be translated.
-- `thinking`, `greeting`, `errorPrefix`, `catchphrases` are translated normally.
-- Provide 3-5 entries in each array; the UI may pick randomly.
 
-### 3. Register in `src/skins/index.ts`
+- 每个数组提供 3-5 条，UI 会随机选取。
+- `label` 不翻译，两种语言下形态一致。
 
-```ts
-import { <skinIdCamel>SkinUi } from './<skin-id>/skinUi.js';
+### 3. 无需注册
 
-// In the tuiSkins object:
-export const tuiSkins = {
-  // ... existing 13
-  '<skin-id>': <skinIdCamel>SkinUi,
-} as const satisfies Record<string, SkinUi>;
-```
-
-TypeScript will infer the new `SkinId` literal type automatically.
+`loader.ts` 启动时按优先级（内置 → 用户级 → 项目级）合并 `skins` 对象，
+`initSkinRegistry()` 全量注册。**没有** `tuiSkins` 常量对象，也没有需要手工维护的
+`SkinId` 字面量类型。
 
 ### 4. Run the build gates
 
 ```bash
-npm run typecheck                              # strict TS
-npm run check:locale-parity                    # verify both locales have <skin-id>.* keys
-npm run check:contrast                         # verify APCA Lc 75/60/45 on label/text/thinking
-npm test                                       # run all unit + smoke tests
+npm run typecheck                # 严格 TS
+npm run check:contrast           # 遍历 listSkins() 校验 APCA Lc 75/60/45
+npm run check:locale-parity      # 仅当改过系统级 locale 键
+npm test
 ```
 
 If any gate fails:
-- **typecheck**: usually a missing import or wrong casing in the const object key.
-- **check:locale-parity**: message names the missing leaf key + which locale. Add the key.
-- **check:contrast**: message names the failing role + actual Lc. Either pick a brighter `role.label.*` token or compute a custom hex with `apcaContrast()` from `src/theme/contrast.ts`.
+
+- **check:contrast**: 报错会指出 skin ID + role + 实际 Lc。换成更亮的 `role.label.*`，
+  或用 `apcaContrast()`（`src/theme/contrast.ts`）算一个有余量的 hex。
+- **check:locale-parity**: 只在动过系统级 locale 键时才会失败。
+- **typecheck / test**: 皮肤是纯 JSON 数据，通常不会因此失败；检查是否有别的 TS 改动。
 
 ### 5. Optional: update `commands/skin.ts` list output
 
-`commands/skin.ts` automatically picks up new skins via `listSkins()`. No edit required unless you want a custom blurb in `info` output.
+`commands/skin.ts` 经 `listSkins()` 自动带上新皮肤。除非要在 `info` 输出里加自定义说明，
+否则无需改动。
 
 ### 6. Verify in TUI
 
 ```bash
 npm run dev
-# In the TUI prompt:
+# TUI 内：
 # /skin load <skin-id>
 ```
 
 Verify:
+
 - Role label renders in the new color
-- Thinking text shows the translated lines
+- Thinking text shows the new lines
 - Greeting appears on session start
 - `/skin list` shows the new skin
-- `/skin show <skin-id>` shows the resolved colors (hex output, not internal tokens)
+- `/skin show` 显示当前皮肤的解析后颜色（hex 输出，不是内部 token）
 
 ---
 
@@ -167,17 +142,23 @@ Verify:
 - `role.label.violet` (`#DACAF5`) → Lc ≈ -77.9
 - `role.label.taupe` (`#E5CDB8`) → Lc ≈ -77.9
 
-### Symptom: TUI shows `skins.<skin-id>.label` as raw key
+### Symptom: 界面显示成 raw key（如 `skins.system.labels.user`）
 
-**Cause**: Missing entry in either `en.json` or `zh.json` for the active locale. `t()` falls back to `'en'`, then to the raw key if neither locale has it.
+**Cause**: 当前 locale 的 `en.json` / `zh.json` 缺该**系统级**键。`t()` 回退顺序是
+当前 locale → `'en'` → raw key。
 
-**Fix**: Run `npm run check:locale-parity` to see exactly which key is missing.
+**Fix**: 跑 `npm run check:locale-parity` 看具体缺哪个键。
 
-### Symptom: Runtime warns `[skins] Skin "<id>" failed contrast validation, falling back to "warlord-stern"`
+> 角色皮肤文案（label/thinking/greeting/catchphrases）是内联字面量，不走 `t()`，
+> 因此**不会**出现这个症状。
 
-**Cause**: The skin registered but fails APCA at runtime. This should never happen if `npm run check:contrast` passes locally — usually indicates you skipped the gate.
+### Symptom: 期望运行时因对比度不达标而告警或回退
 
-**Fix**: Run `npm run check:contrast` locally and fix the failing role before commit.
+**Cause**: **不存在这样的运行时检查。** 对比度是构建期契约——`scripts/check-contrast.ts`
+遍历 `listSkins()` 调 `getSkinContrastIssue()`。运行时的 `getSkin()` 只做"未注册则**静默**
+回退 `defaultSkin`（`'warlord-immortal'`）"，不校验对比度、**不打 warn**。
+
+**Fix**: 依赖 `npm run check:contrast`，不要期待运行时报错。
 
 ---
 

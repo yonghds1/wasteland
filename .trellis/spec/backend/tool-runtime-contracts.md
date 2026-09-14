@@ -609,8 +609,8 @@ function assembleSubAgentPrompt(params: {
 - **模型优先级**：`subAgentConfig.model` > minimax 传入 `model`
   - **关键修复**：`subAgentConfig.model` 可能是 alias（如 `"minimax_model"`），需要从 `settings.models[alias].model` 解析为真实 model name（如 `"MiniMax-M3"`）
   - 解析失败（alias 不在 models 表）→ 保留原 alias（兼容 alias 即 model name 的场景）
-- **prompt 注入**：先用 `PromptAssembler.assemble(...)` 渲染功能 prompt，再用 `composeAgentPrompt(getRoleSkin(subAgentConfig.skin), functionalPrompt)` 把固定英文 persona 放在前面，传给 `runAgentLoop({ ..., prompt })`
-- **skin 默认值**：`subAgentConfig.skin` 缺失或未注册时回退 `defaultRoleSkin = "warlord-stern"`；没有 `subAgentConfig` 时仍不注入任何 prompt
+- **prompt 注入**：先用 `PromptAssembler.assemble(...)` 渲染功能 prompt（无 `promptTemplate` 时回退 `role-worker` 模板），再用 `composeAgentPrompt(roleName, functionalPrompt, format?)` 把固定英文 persona 放在前面，经 `injectMemory()` 注入 memory 后传给 `runAgentLoop({ ..., prompt })`。**首个参数是角色名（`params.roleName`），不是皮肤对象。**
+- **skin 默认值**：`subAgentConfig.skin` 缺失或未注册时由 `skin-acquirer.ts` 回退 `defaultRoleSkin`（= `defaultSkin` = `"warlord-immortal"`）；没有 `subAgentConfig` 时仍不注入任何 prompt
 - **链路**：`runAgentLoop.prompt` → `createTurnContext.prompt` → `buildMessages` → OpenAI system message → minimax 收到
 
 #### debug log 字段（`spawn-agent.ts` `debugLog({ kind: "spawn_agent", ... })`）

@@ -249,9 +249,7 @@ spawn_agent({
 
 ```bash
 # 1. 配置 Qwen API Key（如果还没配置）
-export APP_CHAT_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode"
-export APP_CHAT_API_KEY="<your-key>"
-export APP_CHAT_MODEL="qwen3-max"
+export qwen_api_key="<your-qwen-api-key>"
 
 # 2. 使用 local provider 测试 spawn_agent 命令
 npm run dev -- chat --provider local --message "/spawn analyst 分析 package.json"
@@ -297,17 +295,12 @@ npm run dev -- chat --permission-mode bypass_permissions --message "..."
 - `WASTELAND_LANGUAGE`：覆盖界面语言（如 `zh`、`en`）
 - `WASTELAND_MAX_CONCURRENCY`：覆盖并行子 Agent 最大并发数（`-1` 表示无限制）
 
-当前还支持一组面向 Qwen 接入的环境变量桥接：
-
-- `APP_CHAT_BASE_URL`
-- `APP_CHAT_API_KEY`
-- `APP_CHAT_MODEL`
+Provider 接入通过预设完成：`deepseek` / `openai` / `qwen` / `glm` / `minimax` / `ollama` / `opencode-zen` / `opencode-go` / `custom`。凭据键名统一为 `<provider>_api_key`（如 `qwen_api_key`），放在 `.wasteland/auth.json` 或环境变量中。
 
 兼容策略：
 
 - 旧环境变量 `RX_CLI_SESSION_DIR` 仍可用，但只作为过渡兼容，主推荐值已经是 `WASTELAND_SESSION_DIR`
 - 旧项目数据目录 `.rx-cli/` 不再作为默认路径；如有历史 transcript，请手动迁移到 `.wasteland/`
-- 如果未显式传 `--provider` 且未设置 `WASTELAND_PROVIDER`，当 `APP_CHAT_API_KEY` 和 `APP_CHAT_MODEL` 同时存在时，默认 provider 会自动切到 `qwen`
 
 最小配置示例：
 
@@ -334,17 +327,15 @@ npm run dev -- chat --permission-mode bypass_permissions --message "..."
 Qwen 最小使用方式：
 
 ```bash
-export APP_CHAT_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode"
-export APP_CHAT_API_KEY="<your-key>"
-export APP_CHAT_MODEL="qwen3-max"
+export qwen_api_key="<your-qwen-api-key>"
 
 npm run dev
 ```
 
 说明：
 
-- `APP_CHAT_BASE_URL` 即使不带 `/v1` 也可以，当前 provider 会自动补成兼容接口根路径
-- 这组三个值更适合放在本地 shell 配置或本地 `.wasteland/settings.json`，不要提交真实 key
+- baseUrl 由预设提供（Qwen 为 `https://dashscope.aliyuncs.com/compatible-mode/v1`），无需手填
+- 凭据更适合放在本地 shell 配置或 `.wasteland/auth.json`，不要提交真实 key
 
 当前第一版多角色配置已经支持：
 

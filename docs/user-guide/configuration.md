@@ -61,15 +61,15 @@ wasteland init --force  # 强制覆盖已有配置
 ```jsonc
 // ~/.wasteland/skins.json
 {
-  "skins": { "scout": { "id": "scout", "label": "荣耀之路车长", ... } },
-  "singleAgent": { "skin": "warlord-immortal" }
+  "skins": { "road-nomad": { "id": "road-nomad", "label": "疯子麦克", ... } },
+  "singleAgent": { "skin": "road-nomad" }
 }
 
 // ~/.wasteland/roles.json
 {
   "roles": {
-    "researcher": { "promptTemplate": "role-worker", "description": "信息收集与研究", "skins": ["sand-scout"] },
-    "developer": { "promptTemplate": "role-worker", "description": "代码开发与实现", "skins": ["v8-mechanic"] }
+    "researcher": { "promptTemplate": "role-worker", "description": "信息收集与研究 - 搜索、发现、检索信息和资源", "skins": ["sand-scout", "fury-vanguard"] },
+    "developer": { "promptTemplate": "role-worker", "description": "代码开发与实现 - 编写、修改、调试代码", "skins": ["v8-mechanic", "fury-vanguard"] }
   }
 }
 ```
@@ -304,16 +304,11 @@ wasteland 支持将**项目级 + 用户级持久记忆**注入 system prompt 最
 ### Provider 环境变量
 
 ```bash
-# jdcloud
-export jdcloud_api_key='your-key'
+# Qwen
+export qwen_api_key='your-qwen-api-key'
 
-# xiaomi
-export xiaomi_api_key='your-key'
-
-# Qwen (兼容 OpenAI)
-export APP_CHAT_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode"
-export APP_CHAT_API_KEY="your-key"
-export APP_CHAT_MODEL="qwen3-max"
+# DeepSeek
+export deepseek_api_key='your-deepseek-api-key'
 ```
 
 ## 权限模式
@@ -329,8 +324,8 @@ export APP_CHAT_MODEL="qwen3-max"
 ### TUI(主界面)
 
 ```bash
-npm run dev -- tui --provider jdcloud --role orchestrator --permission-mode bypass_permissions --debug
-# 或(全局安装后):wasteland tui --provider jdcloud --role orchestrator
+npm run dev -- tui --provider qwen --role orchestrator --permission-mode bypass_permissions --debug
+# 或(全局安装后):wasteland tui --provider qwen --role orchestrator
 # --attach <session-id> 可直接恢复指定会话
 ```
 
@@ -341,7 +336,7 @@ TUI 是交互式界面,无需 `--message`。选项:`-p/--provider`、`-r/--role`
 `chat` 命令已从 `--help` 隐藏,保留作脚本/管道场景:
 
 ```bash
-wasteland chat --provider jdcloud --role orchestrator --permission-mode bypass_permissions --message "你好"
+wasteland chat --provider qwen --role orchestrator --permission-mode bypass_permissions --message "你好"
 ```
 
 ## 配置验证
