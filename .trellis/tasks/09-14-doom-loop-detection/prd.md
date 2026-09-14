@@ -50,22 +50,22 @@
 
 ## Acceptance Criteria
 
-- [ ] **默认阈值下**连续 3 次同名同参工具调用触发短路，本轮不再发起 provider 调用
-- [ ] 连续 2 次不触发；第 3 次不同参数不触发；中间插入任意不同调用后计数重置
-- [ ] 阈值改为 5 时，第 3、4 次不触发，第 5 次才触发（阈值真的生效，非写死 3）
-- [ ] 参数键序不同但语义相同的两次调用**判定为相同**（稳定序列化生效）
-- [ ] 命中的 tool 名与次数出现在持久化消息中，模型可在下一轮看到
-- [ ] trace 发出 `turn.doom_loop`
-- [ ] `runtime.doomLoopDetected` 在 en/zh 两份字典均存在，`npm run check:i18n` 通过
-- [ ] **`runtime.doomLoopThreshold` 默认值为 3**：不写任何配置时按 3 生效
-- [ ] **配置可覆盖**：`settings.json` 写 `"doomLoopThreshold": 5` 后阈值变 5
-- [ ] **环境变量可覆盖**：`WASTELAND_DOOM_LOOP_THRESHOLD=5` 生效，优先级高于配置文件
-- [ ] **`WASTELAND_DOOM_LOOP_THRESHOLD=0` 关闭检测**，此时行为与改动前完全一致
-- [ ] 非法值（负数 / 非整数 / 非数字）在加载时报错，错误信息含配置项名与来源
-- [ ] 单测覆盖判据纯函数（含边界：0/1/2 次、键序、重置）
-- [ ] 单测覆盖配置解析（默认值 / 文件覆盖 / env 覆盖 / env 关闭 / 非法值报错）
-- [ ] `npm run check:fast` + `npx vitest run` 全绿
-- [ ] 未超步数限制时行为与改动前完全一致（无回归）
+- [x] **默认阈值下**连续 3 次同名同参工具调用触发短路，本轮不再发起 provider 调用
+- [x] 连续 2 次不触发；第 3 次不同参数不触发；中间插入任意不同调用后计数重置
+- [x] 阈值改为 5 时，第 3、4 次不触发，第 5 次才触发（阈值真的生效，非写死 3）
+- [x] 参数键序不同但语义相同的两次调用**判定为相同**（稳定序列化生效）
+- [x] 命中的 tool 名与次数出现在持久化消息中，模型可在下一轮看到
+- [x] trace 发出 `turn.doom_loop`
+- [x] `runtime.doomLoopDetected` 在 en/zh 两份字典均存在，`npm run check:i18n` 通过
+- [x] **`runtime.doomLoopThreshold` 默认值为 3**：不写任何配置时按 3 生效
+- [x] **配置可覆盖**：`settings.json` 写 `"doomLoopThreshold": 5` 后阈值变 5
+- [x] **环境变量可覆盖**：`WASTELAND_DOOM_LOOP_THRESHOLD=5` 生效，优先级高于配置文件
+- [x] **`WASTELAND_DOOM_LOOP_THRESHOLD=0` 关闭检测**，此时行为与改动前完全一致
+- [x] 非法值（负数 / 非整数 / 非数字）在加载时报错，错误信息含配置项名与来源
+- [x] 单测覆盖判据纯函数（含边界：0/1/2 次、键序、重置）
+- [x] 单测覆盖配置解析（默认值 / 文件覆盖 / env 覆盖 / env 关闭 / 非法值报错）
+- [~] `npm run check:fast` + `npx vitest run` 全绿 —— **vitest 全绿**（111 文件 / 1544 通过 / 3 跳过）；`check:fast` 非全绿，唯一 error 是 `src/tools/agent/spawn-agent/__tests__/sidecar.test.ts:73` 的 `no-dynamic-delete`，已在 HEAD 复现确认为 `7373a8c` 遗留，与本任务无关
+- [x] 未超步数限制时行为与改动前完全一致（无回归）
 
 ## Out of Scope (explicit)
 
