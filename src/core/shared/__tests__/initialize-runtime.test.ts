@@ -185,7 +185,9 @@ describe('RuntimeEnvironment type', () => {
  * single 模式主 Agent 皮肤解析
  *
  * single 模式的皮肤真源是 skins.json 的 `singleAgent.skin`（内置默认 road-nomad）；
- * `settings.runtime.skinId` 只驱动 multi 模式 main 皮肤与角色别名，不参与 single 解析。
+ * multi 模式走 `multiAgent.main.skin`。`settings.runtime.skinId` **两者都不参与**——
+ * 它只用于角色别名（`ensureRoleAliases`）与 `/skin` 命令显示，并在 `setup` 生成配置时
+ * 作为 `multiAgent.main.skin` 的初值。
  *
  * 注：本块此前名为「runtime.skinId 校验（H3）」，测的是「非法 skinId 打 warning」这一
  * 已被移除的行为；且 helper 未设 singleAgent，断言走的是 getSkin(undefined) →
@@ -281,7 +283,7 @@ describe('resolveAgentMode', () => {
  * --mode 启动参数：agentMode 选择 + 主 skin 切换 + 透传 resolveChatRuntime
  *
  * agentMode 来源优先级：params.mode > settings.runtime.mode > 'single'
- * skin：single → singleAgent.skin，multi → multiAgent.main.skin
+ * skin：single → skins.json 的 singleAgent.skin，multi → multiAgent.main.skin
  */
 describe('initializeRuntime — --mode 覆盖（agentMode）', () => {
   beforeEach(() => {
@@ -290,7 +292,6 @@ describe('initializeRuntime — --mode 覆盖（agentMode）', () => {
 
   function makeModeSettings(overrides: {
     mode?: 'single' | 'multi';
-    singleAgent?: { skin?: string; model?: string; promptTemplate?: string };
     multiAgent?: Record<string, { skin?: string }>;
   }) {
     return {
@@ -304,7 +305,6 @@ describe('initializeRuntime — --mode 覆盖（agentMode）', () => {
         providers: {},
         models: {},
         multiAgent: overrides.multiAgent ?? {},
-        singleAgent: overrides.singleAgent,
         mcpServers: {},
         acp: { agents: [] },
       },
@@ -341,12 +341,11 @@ describe('initializeRuntime — --mode 覆盖（agentMode）', () => {
     expect(result.agentMode).toBe('single');
   });
 
-  it('single 模式取 singleAgent.skin', async () => {
+  it('single 模式取 skins.json 的 singleAgent.skin（内置默认 road-nomad）', async () => {
     const { loadWastelandSettings } = await import('../../../config/load-settings.js');
     vi.mocked(loadWastelandSettings).mockResolvedValueOnce(
       makeModeSettings({
         mode: 'single',
-        singleAgent: { skin: 'road-nomad' },
         multiAgent: { main: { skin: 'fury-vanguard' } },
       }) as any
     );
@@ -361,7 +360,6 @@ describe('initializeRuntime — --mode 覆盖（agentMode）', () => {
     vi.mocked(loadWastelandSettings).mockResolvedValueOnce(
       makeModeSettings({
         mode: 'multi',
-        singleAgent: { skin: 'road-nomad' },
         multiAgent: { main: { skin: 'fury-vanguard' } },
       }) as any
     );

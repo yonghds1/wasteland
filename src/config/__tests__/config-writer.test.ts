@@ -71,7 +71,9 @@ describe('config-writer', () => {
         model: 'deepseek-coder',
       });
       expect(settings.multiAgent?.researcher?.model).toBe('sub_worker');
-      expect(settings.singleAgent?.skin).toBe('scout');
+      // input.skinId 仍驱动 multi 主 Agent 皮肤；singleAgent 块不再写 skin
+      expect(settings.multiAgent?.main?.skin).toBe('scout');
+      expect(settings.singleAgent).not.toHaveProperty('skin');
     });
 
     it('supports single agent mode', () => {
@@ -99,7 +101,6 @@ describe('config-writer', () => {
 
       expect(settings.singleAgent).toEqual({
         model: INITIAL_MODEL_KEY,
-        skin: 'warlord-immortal',
         promptTemplate: 'orchestrator',
       });
 

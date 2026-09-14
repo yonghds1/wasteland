@@ -126,26 +126,37 @@ describe('loadWastelandSettings merge (singleAgent + acp)', () => {
 
   it('singleAgent survives the full load pipeline (previously dropped)', async () => {
     await writeProjectSettings({
-      singleAgent: { skin: 'solo-skin', model: 'solo-model', promptTemplate: 'orchestrator' },
+      singleAgent: { model: 'solo-model', promptTemplate: 'orchestrator' },
     });
 
     const { settings } = await loadWastelandSettings({ cwd: workDir, env: envForTest() });
 
     expect(settings.singleAgent).toMatchObject({
-      skin: 'solo-skin',
       model: 'solo-model',
       promptTemplate: 'orchestrator',
     });
   });
 
-  it('merges singleAgent field-wise across user and project layers', async () => {
-    await writeUserSettings({ singleAgent: { skin: 'user-skin', model: 'user-model' } });
-    await writeProjectSettings({ singleAgent: { skin: 'project-skin' } });
+  it('忽略残留的 singleAgent.skin（旧配置兼容：不报错、不保留）', async () => {
+    await writeProjectSettings({
+      singleAgent: { skin: 'warlord-immortal', model: 'solo-model' },
+    });
 
     const { settings } = await loadWastelandSettings({ cwd: workDir, env: envForTest() });
 
-    // project skin 覆盖 user skin；user model 保留
-    expect(settings.singleAgent).toEqual({ skin: 'project-skin', model: 'user-model' });
+    // skin 是死字段：加载不因它失败，也不进入解析结果（single 皮肤真源是 skins.json）
+    expect(settings.singleAgent).toEqual({ model: 'solo-model' });
+    expect(settings.singleAgent).not.toHaveProperty('skin');
+  });
+
+  it('merges singleAgent field-wise across user and project layers', async () => {
+    await writeUserSettings({ singleAgent: { model: 'user-model', promptTemplate: 'role-worker' } });
+    await writeProjectSettings({ singleAgent: { model: 'project-model' } });
+
+    const { settings } = await loadWastelandSettings({ cwd: workDir, env: envForTest() });
+
+    // project model 覆盖 user model；user promptTemplate 保留
+    expect(settings.singleAgent).toEqual({ model: 'project-model', promptTemplate: 'role-worker' });
   });
 
   it('merges acp agents by name across layers', async () => {

@@ -38,7 +38,6 @@ wasteland init --force  # 强制覆盖已有配置
   },
   "singleAgent": {
     "model": "default",
-    "skin": "warlord-immortal",
     "promptTemplate": "orchestrator"
   },
   "multiAgent": {
@@ -141,7 +140,7 @@ CLI 参数 > 环境变量 > 项目配置 > 全局配置 > 内置默认值
 | `defaultRole` | string | `orchestrator` | 默认角色 |
 | `defaultModel` | string | - | 默认模型 |
 | `mode` | string | `single` | 运行模式（`single` 单 Agent / `multi` 多 Agent），可被 `--mode` 启动参数覆盖 |
-| `skinId` | string | `warlord-immortal` | 皮肤主题 id（与角色独立） |
+| `skinId` | string | `warlord-immortal` | 不参与运行时皮肤解析：仅用于角色别名与 `setup` 生成配置时的初值。运行时皮肤取 `skins.json` 的 `singleAgent.skin`（single 模式）或 `multiAgent.main.skin`（multi 模式） |
 | `permissionMode` | string | `default` | 权限模式 |
 | `maxStepsPerTurn` | number | `30` | 单轮最大步数 |
 | `doomLoopThreshold` | number | `3` | 连续同名同参工具调用阈值，达阈值即短路本轮并回灌提示；`0` 表示关闭检测 |
@@ -208,7 +207,6 @@ wasteland 的自动压缩分为两层，由两个阈值构成缓冲带：
 {
   "singleAgent": {
     "model": "minimax_model",
-    "skin": "warlord-immortal",
     "promptTemplate": "orchestrator"
   },
   "multiAgent": {
@@ -218,7 +216,9 @@ wasteland 的自动压缩分为两层，由两个阈值构成缓冲带：
 }
 ```
 
-- `singleAgent`：`single` 模式下完整取用（`model` / `skin` / `promptTemplate`），并去掉多角色编排提示词。
+- `singleAgent`：`single` 模式下取用 `model` / `promptTemplate`，并去掉多角色编排提示词。
+  皮肤不在 settings.json 声明——`single` 模式皮肤的真源是 `skins.json` 的 `singleAgent.skin`
+  （见[角色与皮肤](../architecture/role-skin.md)）。
 - `multiAgent`：`multi` 模式下注入主 Agent 的子角色清单；每个 key 是一个子角色名，值为
   `{ role, skin }` 引用。角色定义在 `.wasteland/roles.json`（见[多 Agent 使用指南](./multi-agent.md)）。
 

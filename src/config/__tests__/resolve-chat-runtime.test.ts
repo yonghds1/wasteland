@@ -120,7 +120,8 @@ describe('resolveChatRuntime — agentMode', () => {
   });
 
   it('single 模式无 singleAgent.model 时回退角色/默认 model 解析', () => {
-    const settings = makeSettings({ singleAgent: { skin: 'warlord-casual' } });
+    // singleAgent 块存在但未声明 model → 回退 runtime.defaultModel（orch-model）
+    const settings = makeSettings({ singleAgent: {} });
 
     // 无 singleAgent.model → 回退 runtime.defaultModel（orch-model）
     const result = resolveChatRuntime({ settings, agentMode: 'single' });

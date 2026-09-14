@@ -195,7 +195,7 @@ wasteland 通过 `runtime.mode` 区分两种运行模式：
 
 | 模式 | 语义 |
 |------|------|
-| `single` | 单 Agent 模式：完整取 `singleAgent` 配置（`skin` / `model` / `promptTemplate`），**去掉多角色编排提示词**（orchestrator 不注入子角色清单）。`spawn_agent` 工具仍然可用。 |
+| `single` | 单 Agent 模式：取 `singleAgent` 的 `model` / `promptTemplate`，**去掉多角色编排提示词**（orchestrator 不注入子角色清单）。`spawn_agent` 工具仍然可用。皮肤由 `skins.json` 的 `singleAgent.skin` 决定，不在 `settings.json` 声明。 |
 | `multi` | 多 Agent 模式：orchestrator 注入 `multiAgent` 子角色清单，按角色专长自动派发子 Agent。 |
 
 > 默认值为 `single`。两种模式都**不禁用** `spawn_agent`，区别仅在于是否注入多角色编排提示词与是否取 `singleAgent` 配置。
@@ -208,7 +208,6 @@ wasteland 通过 `runtime.mode` 区分两种运行模式：
 {
   "singleAgent": {
     "model": "minimax_model",
-    "skin": "warlord-immortal",
     "promptTemplate": "orchestrator"
   }
 }

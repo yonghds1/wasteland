@@ -225,7 +225,6 @@ export function buildInitialSettings(input: InitWizardInput): RawWastelandSettin
       models: modelsMap,
       singleAgent: {
         model: INITIAL_MODEL_KEY,
-        skin: skinId,
         promptTemplate: 'orchestrator',
       },
       multiAgent: {
@@ -280,7 +279,6 @@ export function buildInitialSettings(input: InitWizardInput): RawWastelandSettin
     models,
     singleAgent: {
       model: INITIAL_MODEL_KEY,
-      skin: skinId,
       promptTemplate: 'orchestrator',
     },
     multiAgent: {

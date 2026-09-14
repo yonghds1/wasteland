@@ -195,12 +195,15 @@ describe('加载管线 合并优先级', () => {
   });
 
   it('用户级与项目级按字段合并（不同字段互补）', async () => {
-    await writeUserSettings({ singleAgent: { skin: 'user-skin' } });
-    await writeProjectSettings({ singleAgent: { model: 'project-model' } });
+    await writeUserSettings({ singleAgent: { model: 'user-model' } });
+    await writeProjectSettings({ singleAgent: { promptTemplate: 'role-worker' } });
 
     const { settings } = await getOrLoadSettings(workDir, envForTest());
 
-    expect(settings.singleAgent).toEqual({ skin: 'user-skin', model: 'project-model' });
+    expect(settings.singleAgent).toEqual({
+      model: 'user-model',
+      promptTemplate: 'role-worker',
+    });
   });
 
   it('环境变量覆盖文件配置（布尔解析）', async () => {

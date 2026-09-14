@@ -120,7 +120,7 @@ export function mergeSettings(
     ...(mergedAcpDefaults ? { defaults: mergedAcpDefaults } : {}),
   };
 
-  // 合并 singleAgent（字段级浅合并；此前 merge 出口漏掉 singleAgent，导致 single skin 永不生效）
+  // 合并 singleAgent（字段级浅合并；此前 merge 出口漏掉 singleAgent，导致 model/promptTemplate 永不生效）
   const mergedSingleAgent =
     base.singleAgent || next.singleAgent
       ? { ...(base.singleAgent ?? {}), ...(next.singleAgent ?? {}) }

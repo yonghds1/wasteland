@@ -160,8 +160,9 @@ export function validateRoleSettings(
 /**
  * 校验 singleAgent 配置
  *
- * singleAgent 必须是对象；model / skin / promptTemplate 若存在必须是非空字符串。
- * 此前 parse 分支直接 `as` 透传无任何校验，这里补基本字段校验。
+ * singleAgent 必须是对象；model / promptTemplate 若存在必须是非空字符串。
+ * 皮肤不在此处声明：single 模式皮肤的真源是 `skins.json` 的 `singleAgent.skin`，
+ * 此块不再接受 `skin` 字段（旧配置残留的 `skin` 会被静默忽略，不报错）。
  */
 export function validateSingleAgentSettings(
   value: unknown,
@@ -171,7 +172,7 @@ export function validateSingleAgentSettings(
     throw new Error(`配置文件 ${sourcePath} 中 singleAgent 必须是对象。`);
   }
 
-  const readStringField = (field: 'model' | 'skin' | 'promptTemplate'): string | undefined => {
+  const readStringField = (field: 'model' | 'promptTemplate'): string | undefined => {
     const raw = value[field];
     if (raw === undefined) {
       return undefined;
@@ -184,10 +185,8 @@ export function validateSingleAgentSettings(
 
   const singleAgent: RawWastelandSettings['singleAgent'] = {};
   const model = readStringField('model');
-  const skin = readStringField('skin');
   const promptTemplate = readStringField('promptTemplate');
   if (model !== undefined) singleAgent.model = model;
-  if (skin !== undefined) singleAgent.skin = skin;
   if (promptTemplate !== undefined) singleAgent.promptTemplate = promptTemplate;
 
   return singleAgent;

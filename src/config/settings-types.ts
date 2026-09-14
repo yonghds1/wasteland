@@ -168,7 +168,6 @@ export type RawWastelandSettings = {
    */
   singleAgent?: {
     model?: string;
-    skin?: string;
     promptTemplate?: string;
   };
   /**
@@ -298,7 +297,6 @@ export type ResolvedWastelandSettings = {
    */
   singleAgent?: {
     model?: string;
-    skin?: string;
     promptTemplate?: string;
   };
   /**

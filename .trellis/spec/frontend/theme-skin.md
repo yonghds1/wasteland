@@ -24,7 +24,7 @@ role persona (English, from src/config/prompts) -----> LLM system message
 - 每个皮肤是一条 `{ id, label, thinking[], greeting[], catchphrases[], colors? }`；文案是**内联字面量**，不经 locale 查找，故不随 `runtime.language` 变化。
 - `colors` 可选，形如 `{ label?, text?, thinking? }`（`SkinPalette`），值取 `src/theme/palette.ts` 的 token 或 hex；经 `resolvePalette(skin)` 解析为 hex 后交给 Ink。
 - `defaultSkin = 'warlord-immortal'`（`src/skins/index.ts`）：未注册 / 缺省的 skin ID 回退到它。
-- `getSingleAgentSkin()`：single 模式的默认皮肤，来自 skins.json 的 `singleAgent.skin`。
+- `getSingleAgentSkin()`：single 模式的默认皮肤，来自 skins.json 的 `singleAgent.skin`。`settings.json` 的 `singleAgent` **只有** `model` / `promptTemplate`，**不含** skin——皮肤真源唯一在 skins.json（旧配置残留的 `singleAgent.skin` 会被静默忽略）。
 - 角色 persona（英文）由 `src/config/prompts/` 组装，与皮肤定义分离——皮肤只管 TUI 文案与颜色。
 
 ### Sub-agent skin occupancy (SkinOccupancy registry)
