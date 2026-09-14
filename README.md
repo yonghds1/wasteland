@@ -315,7 +315,7 @@ npm run dev -- chat --permission-mode bypass_permissions --message "..."
 {
   "runtime": {
     "permissionMode": "default",
-    "maxStepsPerTurn": 8,
+    "maxStepsPerTurn": 30,
     "doomLoopThreshold": 3,
     "debug": false
   },

@@ -181,7 +181,7 @@ Adapter 层定义 UI 与 core 之间的契约,使 UI 可替换:
 
 ## 范围说明
 
-- **皮肤系统(Skin)**:TUI 已在 `createTuiRuntime` 中经 `loadSkin()` 加载皮肤(默认 `warlord-stern`),皮肤属于 TUI 渲染增强,不作为 CLI/TUI 分层差异的核心议题,本文不展开。
+- **皮肤系统(Skin)**:TUI 已在 `createTuiRuntime` 中经 `loadSkin()` 加载皮肤(默认 `warlord-immortal`),皮肤属于 TUI 渲染增强,不作为 CLI/TUI 分层差异的核心议题,本文不展开。
 - **精确接口签名**:见 [input-output-adapters.md](./input-output-adapters.md)。
 - **运行时分层契约**:见 [runtime-boundaries.md](./runtime-boundaries.md)。
 

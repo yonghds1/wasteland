@@ -69,7 +69,7 @@ wasteland skin list
 ### 2.1 主 Agent（orchestrator）
 
 - **数量**: 唯一 1 个，**不可增加**
-- **默认皮肤**: warlord-stern（热沙总督）
+- **默认皮肤**: warlord-immortal（热沙总督）
 - **职责**: 接收用户输入，分析任务，决定是否 spawn 子 agent，汇总结果
 - **可覆盖**: 皮肤配置、角色配置均可通过 settings 覆盖
 - **不可覆盖**: 不能添加第二个主 agent
@@ -163,7 +163,7 @@ wasteland skin list
       "promptTemplate": "role-worker",
       "model": "sonnet",
       "tools": ["read-file", "write-file", "edit-file", "bash"],
-      "skins": ["coder"]
+      "skins": ["v8-mechanic"]
     }
   }
 }
@@ -171,7 +171,7 @@ wasteland skin list
 // .wasteland/settings.json — 引用组合
 {
   "multiAgent": {
-    "developer": { "role": "developer", "skin": "coder" }
+    "developer": { "role": "developer", "skin": "v8-mechanic" }
   }
 }
 ```
@@ -209,17 +209,16 @@ wasteland skin list
     "smart": { "provider": "anthropic", "model": "claude-sonnet-4-20250514" }
   },
   "multiAgent": {
-    "coder": { "role": "developer", "skin": "coder" },
-    "planner": { "role": "planner", "skin": "warlord-casual" },
-    "reviewer": { "role": "reviewer", "skin": "sentinel" },
-    "researcher": { "role": "researcher", "skin": "scout" },
-    "my-custom-agent": { "role": "my-custom-agent", "skin": "warlord-stern" }
+    "coder": { "role": "developer", "skin": "v8-mechanic" },
+    "planner": { "role": "planner", "skin": "fury-vanguard" },
+    "reviewer": { "role": "reviewer", "skin": "bullet-tester" },
+    "researcher": { "role": "researcher", "skin": "sand-scout" },
+    "my-custom-agent": { "role": "my-custom-agent", "skin": "warlord-immortal" }
   },
   "runtime": {
     "defaultRole": "orchestrator",
     "permissionMode": "default",
-    "maxStepsPerTurn": 8,
-    "maxTurns": 20,
+    "maxStepsPerTurn": 30,
     "childAgentTimeout": 120000,
     "debug": false,
     "language": "en"
@@ -245,7 +244,7 @@ wasteland skin list
   ↓ 回退
 ~/.wasteland/skins/<skin-id>.json (用户级)
   ↓ 回退
-内置默认皮肤 (warlord-stern)
+内置默认皮肤 (warlord-immortal)
 ```
 
 ## 5. UI 分层与 Adapter 架构
@@ -318,7 +317,7 @@ Provider.runStep(TurnContext, TurnState)
   │           └── 结果返回主 agent
   └── assistant_message -> turn 结束
   ↓
-检查 maxStepsPerTurn / maxTurns
+检查 maxStepsPerTurn / doomLoopThreshold
   ↓
 TurnState 更新，进入下一轮
   ↓

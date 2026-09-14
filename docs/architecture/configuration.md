@@ -94,7 +94,7 @@ $WASTELAND_HOME/auth.json
   "runtime": {
     "defaultRole": "chat",
     "permissionMode": "default",
-    "maxStepsPerTurn": 8,
+    "maxStepsPerTurn": 30,
     "debug": false
   },
   "models": {

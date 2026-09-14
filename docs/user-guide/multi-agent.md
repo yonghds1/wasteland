@@ -147,12 +147,12 @@ spawn_agent({ name: "developer", task: "编写测试", tools: ["bash", "read-fil
       "description": "信息收集与研究 - 搜索、发现、检索信息和资源",
       "model": "worker_model",
       "tools": "read-file, glob, grep, list-directory, web-fetch",
-      "skins": ["scout"]
+      "skins": ["sand-scout"]
     },
     "developer": {
       "promptTemplate": "role-worker",
       "description": "代码开发与实现 - 编写、修改、调试代码",
-      "skins": ["coder"]
+      "skins": ["v8-mechanic"]
     }
   }
 }
@@ -160,8 +160,8 @@ spawn_agent({ name: "developer", task: "编写测试", tools: ["bash", "read-fil
 // .wasteland/settings.json — 引用组合
 {
   "multiAgent": {
-    "researcher": { "role": "researcher", "skin": "scout" },
-    "developer": { "role": "developer", "skin": "coder" }
+    "researcher": { "role": "researcher", "skin": "sand-scout" },
+    "developer": { "role": "developer", "skin": "v8-mechanic" }
   }
 }
 ```
@@ -208,7 +208,7 @@ wasteland 通过 `runtime.mode` 区分两种运行模式：
 {
   "singleAgent": {
     "model": "minimax_model",
-    "skin": "warlord-stern",
+    "skin": "warlord-immortal",
     "promptTemplate": "orchestrator"
   }
 }

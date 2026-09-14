@@ -38,11 +38,11 @@ wasteland init --force  # 强制覆盖已有配置
   },
   "singleAgent": {
     "model": "default",
-    "skin": "warlord-stern",
+    "skin": "warlord-immortal",
     "promptTemplate": "orchestrator"
   },
   "multiAgent": {
-    "main": { "role": "orchestrator", "model": "default", "skin": "warlord-stern" },
+    "main": { "role": "orchestrator", "model": "default", "skin": "warlord-immortal" },
     "researcher": { "role": "researcher", "model": "default" },
     "developer": { "role": "developer", "model": "default" },
     "analyst": { "role": "analyst", "model": "default" },
@@ -62,14 +62,14 @@ wasteland init --force  # 强制覆盖已有配置
 // ~/.wasteland/skins.json
 {
   "skins": { "scout": { "id": "scout", "label": "荣耀之路车长", ... } },
-  "singleAgent": { "skin": "warlord-stern" }
+  "singleAgent": { "skin": "warlord-immortal" }
 }
 
 // ~/.wasteland/roles.json
 {
   "roles": {
-    "researcher": { "promptTemplate": "role-worker", "description": "信息收集与研究", "skins": ["scout"] },
-    "developer": { "promptTemplate": "role-worker", "description": "代码开发与实现", "skins": ["coder"] }
+    "researcher": { "promptTemplate": "role-worker", "description": "信息收集与研究", "skins": ["sand-scout"] },
+    "developer": { "promptTemplate": "role-worker", "description": "代码开发与实现", "skins": ["v8-mechanic"] }
   }
 }
 ```
@@ -104,21 +104,20 @@ CLI 参数 > 环境变量 > 项目配置 > 全局配置 > 内置默认值
     "defaultModel": "main_model",
     "permissionMode": "bypass_permissions",
     "maxStepsPerTurn": 15,
-    "maxTurns": 30,
     "debug": false,
     "language": "en"
   },
   "providers": {
-    "jdcloud": {
+    "qwen": {
       "type": "openai-compatible",
-      "baseUrl": "https://modelservice.jdcloud.com/coding/openai/v1",
-      "apiKey": { "$auth": "jdcloud_api_key" }
+      "baseUrl": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+      "apiKey": { "$auth": "qwen_api_key" }
     }
   },
   "models": {
     "main_model": {
-      "provider": "jdcloud",
-      "model": "GLM-5"
+      "provider": "qwen",
+      "model": "qwen-plus"
     }
   }
 }
@@ -128,8 +127,8 @@ CLI 参数 > 环境变量 > 项目配置 > 全局配置 > 内置默认值
 
 ```json
 {
-  "jdcloud_api_key": "your-api-key",
-  "xiaomi_api_key": "your-api-key"
+  "qwen_api_key": "your-qwen-api-key",
+  "deepseek_api_key": "your-deepseek-api-key"
 }
 ```
 
@@ -142,17 +141,27 @@ CLI 参数 > 环境变量 > 项目配置 > 全局配置 > 内置默认值
 | `defaultRole` | string | `orchestrator` | 默认角色 |
 | `defaultModel` | string | - | 默认模型 |
 | `mode` | string | `single` | 运行模式（`single` 单 Agent / `multi` 多 Agent），可被 `--mode` 启动参数覆盖 |
-| `skinId` | string | `warlord-stern` | 皮肤主题 id（与角色独立） |
+| `skinId` | string | `warlord-immortal` | 皮肤主题 id（与角色独立） |
 | `permissionMode` | string | `default` | 权限模式 |
-| `maxStepsPerTurn` | number | `8` | 单轮最大步数 |
+| `maxStepsPerTurn` | number | `30` | 单轮最大步数 |
 | `doomLoopThreshold` | number | `3` | 连续同名同参工具调用阈值，达阈值即短路本轮并回灌提示；`0` 表示关闭检测 |
-| `maxTurns` | number | `20` | 最大轮次数 |
-| `contextWindowSize` | number | `30` | 上下文压缩滑动窗口（保留的最近消息数） |
+| `childAgentTimeout` | number | `600000` | 子 Agent 执行超时（毫秒） |
+| `compactionBudgetRatio` | number | `0.6` | 压缩目标预算占比（0-1）：`contextWindow × 本值` = 压缩后保留窗口的 token 预算 |
 | `compactionThreshold` | number | `0.8` | 触发同步压缩的低水位（0-1），token 占比超此值即滑动切割 |
 | `summarizationThreshold` | number | `0.95` | 触发异步摘要压缩的高水位（0-1），须 >= `compactionThreshold` |
+| `projectMemory` | boolean | `true` | 会话启动时是否读取并注入 `.wasteland/memory.md` |
 | `contextSummarization` | boolean | `true` | 压缩时是否用 LLM 生成摘要替代直接丢弃 |
+| `promptFormat` | string | `markdown` | 提示词格式（`markdown` / `xml`） |
 | `debug` | boolean | `false` | 调试模式 |
 | `language` | string | `en` | 语言 |
+| `showThinking` | boolean | `true` | 是否展示模型的 reasoning 内容 |
+| `spinnerIntervalMs` | number | `80` | 加载动画帧间隔（毫秒），默认取自主题 |
+| `typewriterRateMs` | number | `30` | 打字机输出速率（毫秒/字符），默认取自主题 |
+| `log.level` | string | `info` | 日志级别 |
+| `log.redact` | boolean | `true` | 是否对敏感字段脱敏 |
+| `log.tailLines` | number | `50` | 日志尾部读取行数 |
+
+> 历史配置项 `maxTurns` 与 `contextWindowSize` 已移除：轮次数不再设上限（由 context window 自然耗尽管理），上下文窗口改由 `compactionThreshold` / `summarizationThreshold` 分层控制。
 
 #### 上下文压缩缓冲带
 
@@ -199,12 +208,12 @@ wasteland 的自动压缩分为两层，由两个阈值构成缓冲带：
 {
   "singleAgent": {
     "model": "minimax_model",
-    "skin": "warlord-stern",
+    "skin": "warlord-immortal",
     "promptTemplate": "orchestrator"
   },
   "multiAgent": {
-    "researcher": { "role": "researcher", "skin": "scout" },
-    "developer": { "role": "developer", "skin": "coder" }
+    "researcher": { "role": "researcher", "skin": "sand-scout" },
+    "developer": { "role": "developer", "skin": "v8-mechanic" }
   }
 }
 ```

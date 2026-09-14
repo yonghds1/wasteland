@@ -344,7 +344,7 @@ RuntimeEvent$ ──▶ UI渲染
 │                           ▼                                                 │
 │                                                                             │
 │   5. 内置默认值                                                             │
-│      provider: "local", permissionMode: "default", maxStepsPerTurn: 8      │
+│      provider: "local", permissionMode: "default", maxStepsPerTurn: 30      │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```

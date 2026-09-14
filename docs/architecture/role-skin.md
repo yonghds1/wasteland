@@ -5,8 +5,8 @@
 Wasteland 将终端表现拆成三个独立层：
 
 1. **Theme（视觉）**：`src/theme/wasteland/`，只决定颜色、排版、间距、装饰和动画节奏。
-2. **Skin（内容）**：`src/skins/`，分为与角色无关的系统内容，以及角色级 TUI 文案键和 LLM persona。
-3. **i18n（语言）**：`src/locales/{en,zh}.json`，在 TUI 渲染时解析 skin 保存的翻译键。
+2. **Skin（内容）**：`src/skins/`，分为与角色无关的系统内容，以及角色级 TUI 文案和 LLM persona。
+3. **i18n（语言）**：`src/locales/{en,zh}.json`，在 TUI 渲染时解析系统级内容保存的翻译键。
 
 功能角色模板（orchestrator / worker）仍负责工作方式；角色 skin persona 负责稳定的人设、语气和隐藏提示词保护。两者共同组成最终 system prompt。
 
@@ -32,7 +32,7 @@ Wasteland 将终端表现拆成三个独立层：
       "promptTemplate": "role-worker",
       "description": "信息收集与研究",
       "tools": "read-file, glob, grep, web-fetch",
-      "skins": ["scout"]
+      "skins": ["sand-scout"]
     }
   }
 }
@@ -40,8 +40,8 @@ Wasteland 将终端表现拆成三个独立层：
 // .wasteland/settings.json
 {
   "multiAgent": {
-    "main": { "role": "orchestrator", "skin": "warlord-stern" },
-    "researcher": { "role": "researcher", "skin": "scout" }
+    "main": { "role": "orchestrator", "skin": "warlord-immortal" },
+    "researcher": { "role": "researcher", "skin": "sand-scout" }
   }
 }
 ```
@@ -80,23 +80,25 @@ Ink 组件和 CLI terminal renderer 都直接消费 `wastelandTheme`。旧的 `s
 ### 角色级内容
 
 皮肤定义在 `src/skins/default-skins.json`（与 `.wasteland/skins.json` 合并），每个
-皮肤是一份 UI 文案（label/thinking/greeting/catchphrases/errorPrefix）。
+皮肤是一份 UI 文案（`label` / `thinking` / `greeting` / `catchphrases`）。
 
 当前内置皮肤：
 
-| skin ID | 定位 |
+| skin ID | 名称 |
 |---|---|
-| `warlord-stern` | 热沙总督，默认主 agent 编排者 |
-| `warlord-casual` | 狂沙行者，备用主 agent |
-| `scout` | 荣耀之路车长，信息侦察与路线判断 |
-| `coder` | 铜湾机师，代码开发与修复 |
-| `scholar` | 金沙书记官，系统分析与档案推理 |
-| `sentinel` | 火线巡检官，测试验证与风险拦截 |
-| `hotsand-warrior` | 热沙战士，年轻废土战士原型 |
+| `warlord-immortal` | 不死老蕉 |
+| `road-nomad` | 疯子麦克 |
+| `fury-vanguard` | 独臂弗莎 |
+| `v8-mechanic` | 巨汉瑞克 |
+| `sand-scout` | 暴走纳克斯 |
+| `bullet-tester` | 弹头麦哲 |
+| `doof-analyst` | 电音杜夫 |
 
-`src/skins/index.ts` 定义 `defaultSkin = 'warlord-stern'`。可选 skin 未注册时回退
-默认 skin；显式 CLI `skin load` 对未知 ID 报错。皮肤候选由 `roles.json` 的角色定义
-（`skins` 列表）或 `multiAgent[name].skin` 驱动。
+皮肤只承载 UI 文案，不含角色语义；"哪个角色用哪个皮肤"由 `roles.json` 的角色定义
+（`skins` 列表）或 `multiAgent[name].skin` 驱动，与皮肤 ID 本身无关。
+
+`src/skins/index.ts` 定义 `defaultSkin = 'warlord-immortal'`。可选 skin 未注册时回退
+默认 skin；显式 CLI `skin load` 对未知 ID 报错。
 
 ## Sub-agent SkinOccupancy
 
@@ -123,10 +125,10 @@ persona。
 ```json
 {
   "roles": {
-    "researcher": { "model": "minimax_model", "skins": ["scout"] },
-    "developer": { "model": "minimax_model", "skins": ["coder"] },
-    "analyst": { "model": "minimax_model", "skins": ["scholar"] },
-    "tester": { "model": "minimax_model", "skins": ["sentinel"] }
+    "researcher": { "model": "minimax_model", "skins": ["sand-scout"] },
+    "developer": { "model": "minimax_model", "skins": ["v8-mechanic"] },
+    "analyst": { "model": "minimax_model", "skins": ["doof-analyst"] },
+    "tester": { "model": "minimax_model", "skins": ["bullet-tester"] }
   }
 }
 ```
@@ -155,19 +157,16 @@ subAgent 配置时保持旧降级路径，不额外注入 prompt。
 
 ## TUI i18n
 
-角色 UI 对象只保存 key：
+皮肤内容分两层，i18n 处理方式不同：
 
-```ts
-roleUi = {
-  labelKey: 'skins.scout.label',
-  thinkingKey: 'skins.scout.thinking',
-  greetingKey: 'skins.scout.greeting',
-  catchphrasesKey: 'skins.scout.catchphrases',
-  errorPrefixKey: 'skins.scout.errorPrefix',
-};
-```
+- **系统级内容**（`src/skins/system/common.ts`）保存 locale 键（`skins.system.labels.*` 等），
+  渲染时经 `t()` / `tArray()` 解析，切换 `runtime.language` 即时生效。
+- **角色级皮肤文案**（`default-skins.json` 的 `label` / `thinking` / `greeting` /
+  `catchphrases`）是**内联字面量**，不经 locale 查找。
 
-组件在渲染时调用 `t()` / `tArray()`，因此切换 `runtime.language` 不需要重建 persona 或视觉主题。`npm run validate:i18n` 校验 en/zh 键结构一致。
+因此切换 `runtime.language` 会改变系统级 label 与 persona 之外的用户可见文本，但不会
+改变角色皮肤文案本身。`npm run validate:i18n` 校验 en/zh 键结构一致；`npm run
+check:locale-parity` 校验双侧 leaf-key 对齐。
 
 ## 配置示例
 
@@ -179,11 +178,11 @@ roleUi = {
       "promptTemplate": "role-worker",
       "description": "信息收集与研究",
       "tools": "read-file, glob, grep, web-fetch",
-      "skins": ["scout"]
+      "skins": ["sand-scout"]
     },
     "analyst": {
       "promptTemplate": "role-worker",
-      "skins": ["scholar"]
+      "skins": ["doof-analyst"]
     }
   }
 }
@@ -192,13 +191,13 @@ roleUi = {
 {
   "runtime": {
     "defaultRole": "orchestrator",
-    "skinId": "warlord-stern",
+    "skinId": "warlord-immortal",
     "language": "zh"
   },
   "multiAgent": {
-    "main": { "role": "orchestrator", "skin": "warlord-stern" },
-    "researcher": { "role": "researcher", "skin": "scout" },
-    "analyst": { "role": "analyst", "skin": "scholar" }
+    "main": { "role": "orchestrator", "skin": "warlord-immortal" },
+    "researcher": { "role": "researcher", "skin": "sand-scout" },
+    "analyst": { "role": "analyst", "skin": "doof-analyst" }
   }
 }
 ```
@@ -221,8 +220,8 @@ roleUi = {
 
 ## Skin development guide
 
-皮肤颜色优先引用 `src/theme/palette.ts` 的共享 token，而不是在每个
-`skinUi.ts` 中重复 hex：
+皮肤颜色优先引用 `src/theme/palette.ts` 的共享 token，而不是在 `.wasteland/skins.json`
+的每个皮肤定义里重复 hex：
 
 ```ts
 colors: {

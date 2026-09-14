@@ -112,7 +112,7 @@ type PromptSection = {
       "promptTemplate": "role-worker",
       "model": "qwen-max",
       "tools": "bash, read, edit, write",
-      "skins": ["coder"]
+      "skins": ["v8-mechanic"]
     }
   }
 }
@@ -120,7 +120,7 @@ type PromptSection = {
 // .wasteland/settings.json
 {
   "multiAgent": {
-    "coder": { "role": "developer", "skin": "coder" }
+    "coder": { "role": "developer", "skin": "v8-mechanic" }
   },
   "runtime": {
     "defaultRole": "orchestrator"
@@ -135,17 +135,17 @@ type PromptSection = {
 {
   "roles": {
     "orchestrator": { "promptTemplate": "role-orchestrator", "model": "qwen-max" },
-    "developer": { "promptTemplate": "role-worker", "model": "qwen-max", "skins": ["coder"] },
-    "analyst": { "promptTemplate": "role-worker", "model": "qwen-fast", "skins": ["scholar"] }
+    "developer": { "promptTemplate": "role-worker", "model": "qwen-max", "skins": ["v8-mechanic"] },
+    "analyst": { "promptTemplate": "role-worker", "model": "qwen-fast", "skins": ["doof-analyst"] }
   }
 }
 
 // .wasteland/settings.json
 {
   "multiAgent": {
-    "main": { "role": "orchestrator", "skin": "warlord-stern" },
-    "coder": { "role": "developer", "skin": "coder" },
-    "reviewer": { "role": "analyst", "skin": "scholar" }
+    "main": { "role": "orchestrator", "skin": "warlord-immortal" },
+    "coder": { "role": "developer", "skin": "v8-mechanic" },
+    "reviewer": { "role": "analyst", "skin": "doof-analyst" }
   },
   "runtime": {
     "defaultRole": "orchestrator"
@@ -169,7 +169,7 @@ type PromptSection = {
       },
       "model": "qwen-max",
       "tools": "bash, read, sql-query",
-      "skins": ["warlord-stern"]
+      "skins": ["warlord-immortal"]
     }
   }
 }
