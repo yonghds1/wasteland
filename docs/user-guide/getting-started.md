@@ -27,11 +27,11 @@ wasteland 支持多种 AI Provider。你需要配置至少一个 Provider 才能
 ### 方式 1: 环境变量
 
 ```bash
-# 配置 jdcloud (GLM-5)
-export jdcloud_api_key='your-jdcloud-api-key'
+# 配置 Qwen（DashScope，OpenAI 兼容）
+export qwen_api_key='your-qwen-api-key'
 
-# 配置 xiaomi (mimo-v2.5)
-export xiaomi_api_key='your-xiaomi-api-key'
+# 配置 DeepSeek
+export deepseek_api_key='your-deepseek-api-key'
 ```
 
 ### 方式 2: 配置文件
@@ -40,10 +40,14 @@ export xiaomi_api_key='your-xiaomi-api-key'
 
 ```json
 {
-  "jdcloud_api_key": "your-jdcloud-api-key",
-  "xiaomi_api_key": "your-xiaomi-api-key"
+  "qwen_api_key": "your-qwen-api-key",
+  "deepseek_api_key": "your-deepseek-api-key"
 }
 ```
+
+> 键名统一为 `<provider>_api_key`，与 settings 里的 `apiKey: { "$auth": "<provider>_api_key" }` 对应。
+> 可用 provider：`deepseek`、`openai`、`qwen`、`glm`、`minimax`、`ollama`、`opencode-zen`、
+> `opencode-go`、`custom`（全部为 `openai-compatible` 接入）。
 
 ## 启动 TUI
 
@@ -74,7 +78,7 @@ TUI 支持以下启动选项：
 
 ```bash
 # 指定 provider 启动
-npm run dev -- tui --provider jdcloud
+npm run dev -- tui --provider qwen
 
 # 恢复某个历史会话
 npm run dev -- tui --attach <session-id>
@@ -160,21 +164,21 @@ npm run dev -- tui --attach <session-id>
 ### 单次消息
 
 ```bash
-# 使用 jdcloud provider
-wasteland chat --provider jdcloud --message "你好"
+# 使用 qwen provider
+wasteland chat --provider qwen --message "你好"
 
-# 使用 xiaomi provider
-wasteland chat --provider xiaomi --message "你好"
+# 使用 deepseek provider
+wasteland chat --provider deepseek --message "你好"
 ```
 
 ### 管道输入
 
 ```bash
 # 从文件读取
-cat prompt.txt | wasteland chat --provider jdcloud
+cat prompt.txt | wasteland chat --provider qwen
 
 # 从命令输出
-echo "列出当前目录" | wasteland chat --provider jdcloud
+echo "列出当前目录" | wasteland chat --provider qwen
 ```
 
 `chat` 的常用选项：`-m/--message`、`-p/--provider`、`-r/--role`、`--debug`、`--debug-format`、`--permission-mode`。

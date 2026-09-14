@@ -111,7 +111,7 @@ wasteland 采用三层分层架构，UI 层可替换，core 不依赖任何具�
 npm run dev
 
 # 指定 provider / role 启动
-npm run dev -- tui --provider jdcloud --role orchestrator
+npm run dev -- tui --provider qwen --role orchestrator
 ```
 
 启动后在 TUI 界面直接输入消息即可对话，响应流式渲染。
@@ -163,13 +163,13 @@ npm run dev -- tui --attach <session-id>
 
 ```bash
 # 单次消息（脚本场景）
-npm run dev -- chat --provider jdcloud --message "你好"
+npm run dev -- chat --provider qwen --message "你好"
 
 # 管道输入
-echo "列出当前目录" | npm run dev -- chat --provider jdcloud
+echo "列出当前目录" | npm run dev -- chat --provider qwen
 
 # 交互式 CLI（非 TTY 无法启动 TUI 时的 fallback）
-npm run dev -- chat --provider jdcloud
+npm run dev -- chat --provider qwen
 ```
 
 `chat` 命令的三条输入路径：

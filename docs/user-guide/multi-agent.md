@@ -49,7 +49,7 @@ wasteland 采用 **Agents-as-Tools** 模式实现多 Agent 编排：
 wasteland
 
 # 或显式指定 tui 子命令与选项
-wasteland tui --provider jdcloud
+wasteland tui --provider qwen
 wasteland tui -r <role>
 wasteland tui --permission-mode bypass_permissions
 wasteland tui --attach <session>
@@ -439,13 +439,13 @@ TUI 是唯一主界面。当处于非交互环境（管道、脚本、CI）或�
 
 ```bash
 # 单次消息
-wasteland chat --provider jdcloud --message "分析这个项目的架构"
+wasteland chat --provider qwen --message "分析这个项目的架构"
 
 # 管道输入
-echo "分析 package.json" | wasteland chat --provider jdcloud
+echo "分析 package.json" | wasteland chat --provider qwen
 
 # 带权限模式（适用于自动化脚本）
-wasteland chat --provider jdcloud --message "..." --permission-mode bypass_permissions
+wasteland chat --provider qwen --message "..." --permission-mode bypass_permissions
 ```
 
 chat 选项：
