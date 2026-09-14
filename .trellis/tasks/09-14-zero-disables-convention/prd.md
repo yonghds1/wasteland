@@ -38,14 +38,14 @@
 
 ## Acceptance Criteria
 
-- [ ] 形成一份逐项结论表：每项标注「采纳 0=关闭」/「不采纳」+ 理由
-- [ ] 采纳项：校验改为允许 `>= 0`，`0` 触发关闭分支，且有对应单测
-- [ ] 不采纳项：保持原校验，并在类型注释或文档中写明原因
-- [ ] 护栏类给出明确决策（关闭 / 保持 / 关闭但带警告），不得默认放行
-- [ ] `doomLoopThreshold` 的语义与最终约定一致（若约定推翻，同步修改该任务产物）
-- [ ] 约定写入 `docs/user-guide/configuration.md` 与 `docs/architecture/configuration.md`
-- [ ] `npm run check:fast` + `npx vitest run` 全绿
-- [ ] 无回归：所有默认值下行为与改动前一致
+- [x] 形成一份逐项结论表：每项标注「采纳 0=关闭」/「不采纳」+ 理由 —— 见 Decisions 的逐项结论表（10 项全覆盖）
+- [x] 采纳项：校验改为允许 `>= 0`，`0` 触发关闭分支，且有对应单测 —— **无新增采纳项**（判据收敛后仅计数类适用，而计数类两项早已符合）
+- [x] 不采纳项：保持原校验，并在类型注释或文档中写明原因 —— 已在 `docs/user-guide/configuration.md` 与 `docs/architecture/configuration.md` 写明判据与逐类理由
+- [x] 护栏类给出明确决策（关闭 / 保持 / 关闭但带警告），不得默认放行 —— **保持**：`maxStepsPerTurn` / `childAgentTimeout` 的 `0` 是护栏失效而非关闭，维持 `> 0` 校验
+- [x] `doomLoopThreshold` 的语义与最终约定一致（若约定推翻，同步修改该任务产物） —— 一致：它的 `0 = 关闭` 不再表述为特例，而是计数类判据下的自然结果
+- [x] 约定写入 `docs/user-guide/configuration.md` 与 `docs/architecture/configuration.md` —— 两处均已写入
+- [x] `npm run check:fast` + `npx vitest run` 全绿 —— vitest **111 文件 / 1545 通过 / 3 跳过**；`check:fast` 非全绿，唯一 error 是 `src/tools/agent/spawn-agent/__tests__/sidecar.test.ts:73` 的 `no-dynamic-delete`（`7373a8c` 遗留，与本任务无关）
+- [x] 无回归：所有默认值下行为与改动前一致 —— 本任务**无代码改动**，仅文档
 
 ## Out of Scope (explicit)
 

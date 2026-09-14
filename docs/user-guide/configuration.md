@@ -162,6 +162,19 @@ CLI 参数 > 环境变量 > 项目配置 > 全局配置 > 内置默认值
 
 > 历史配置项 `maxTurns` 与 `contextWindowSize` 已移除：轮次数不再设上限（由 context window 自然耗尽管理），上下文窗口改由 `compactionThreshold` / `summarizationThreshold` 分层控制。
 
+#### 数值配置的「0」语义
+
+**只有计数类配置支持 `0`，且 `0` 表示关闭该行为。** 其余类别不适用：
+
+| 类别 | `0` 的含义 | 涉及配置 |
+|---|---|---|
+| **计数** | 关闭该行为 ✅ | `doomLoopThreshold: 0` 关闭死循环检测；`multiAgent[x].maxRetries: 0` 不重试 |
+| 时长 / 间隔 | 无意义——有**刻意**设的下限 | `spinnerIntervalMs` 限 `16..1000`；`typewriterRateMs` 限 `5..200` |
+| 护栏 | **护栏失效**，与"关闭"相反，故拒绝 | `maxStepsPerTurn: 0` 会变成无步数上限；`childAgentTimeout: 0` 会永不超时 |
+| 比例 | 落在值域外 | `compactionThreshold` / `summarizationThreshold` / `compactionBudgetRatio` 均为 `(0,1]` |
+
+时长类若要"关掉某个效果"（如打字机动画），应使用独立的布尔开关，而不是把数值设成 `0`——速率和开关是两个概念。
+
 #### 上下文压缩缓冲带
 
 wasteland 的自动压缩分为两层，由两个阈值构成缓冲带：

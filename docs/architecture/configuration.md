@@ -127,6 +127,11 @@ $WASTELAND_HOME/auth.json
 - `providers.<providerId>`：按 provider 透传的配置对象，当前由 `ProviderRegistry.resolve(id, config)` 交给具体 provider
 - `{"$auth":"KEY_NAME"}`：通用敏感值引用；当前会从 `auth.json` 或进程环境变量解析成真实字符串
 
+> **数值配置的 `0` 语义**：只有**计数类**支持 `0 = 关闭`（`doomLoopThreshold` 关闭检测、
+> `multiAgent[x].maxRetries` 不重试）。时长/间隔类有刻意设的下限（`spinnerIntervalMs` `16..1000`、
+> `typewriterRateMs` `5..200`）；护栏类的 `0` 是**失效**而非关闭，故拒绝（`maxStepsPerTurn`、
+> `childAgentTimeout`）；比例类为 `(0,1]`。详见 `docs/user-guide/configuration.md`。
+
 ---
 
 ## 环境变量
