@@ -674,6 +674,12 @@ describeAllowPattern(toolName: string, input?: ToolInput): AllowPattern | null;
 
 // 回答协议（dispatch-utils requestPermissionConfirmation）：
 // 'yes' → 本次放行；'always' → 本次放行（规则由 UI 侧先注册）；其他 → 拒绝。
+
+// dispatch-utils.ts —— 把「用户是否放行」落成最终权限决策（两条 dispatch 路径共用）
+resolveConfirmedDecision(rawDecision: PermissionDecision, allowed: boolean): PermissionDecision;
+// ask + allowed  ⇒ { ...raw, decision: 'allow', reason: '用户已确认允许本次工具调用。' }
+// ask + !allowed ⇒ { ...raw, decision: 'deny',  reason: raw.reason + '（用户拒绝）' }
+// 非 ask         ⇒ rawDecision 原样返回（保留 permissionRuleHit 等「为何直接放行」的 reason）
 ```
 
 ### 3. Contracts
@@ -684,11 +690,25 @@ describeAllowPattern(toolName: string, input?: ToolInput): AllowPattern | null;
 - `user_input_requested` 携带 `toolName` + `input`（可选字段，ask-user 工具可不填）；UI 由此推导模式，不正则反解析 question。
 - CLI：`always`/`once`/`yes`/`no` 关键字，复用同一 helper；无 gate/无 pattern 时降级本次允许并提示。
 - 子 agent 与父共享 gate 实例，同 session 自动跟进（落盘前无跨 session 继承问题）。
-```
+- **用户同意必须落成 `decision: 'allow'`**：`ask` + 用户答 yes/always 时，授权门原始决策仍是 `ask`，
+  必须经 `resolveConfirmedDecision` 转成 `allow` 再往下走。两条 dispatch 路径
+  （`engine/tool-dispatch.ts`、`spawn-agent/dispatch-handler.ts`）下游统一用
+  `decision.decision !== 'allow'` 判定是否执行，原样透传 `ask` 会把「用户已同意」当未授权拦掉，
+  记成 `tool_result status='blocked'`。判定旁证：被拒时 reason 追加「（用户拒绝）」，被误拦时**不带**该后缀。
+- 该映射只有一份实现（`resolveConfirmedDecision`）。历史上同一段 6 行分支在两个文件里各写了一遍，
+  两份都漏了 ask→allow，所以修 bug 请改 helper，不要在调用点重新内联。
 
 ### 4. Tests Required
 
 - gate：前缀命中/未命中、静态 deny 优先、clear 生效（`permission-gate.test.ts`）。
 - 回答语义：`always` 放行本次（`permission-confirm.test.ts`）。
+- 决策映射：`ask`+同意 ⇒ `allow`；`ask`+拒绝 ⇒ `deny` 且 reason 带「（用户拒绝）」；非 ask 原样透传
+  （`permission-confirm.test.ts` 的 `resolveConfirmedDecision` 组）。
+- **集成（回归防线）**：`yes`/`always` 回答后必须跑到 `tool_started` + `tool_result status='success'`，
+  且不出现 `tool_failed`。只断言 helper 的 `allowed` 布尔值**不足以**覆盖此 bug
+  ——`tool-dispatch-permission.test.ts` 曾把这个 bug 当预期行为写进注释并断言 `decision='ask'` +
+  `status='blocked'`，正是它让 bug 长期隐身。
 - TUI：选项 2 注册规则且不发 bypass、无模式时忽略（`ChatInputBar.test.tsx`）。
 - CLI：`always` 关键字注册+放行、降级提示（`cli-input-adapter.test.ts`）。
+- 已知 UX 缺口（未修）：链式命令的 always 规则永不命中（`isSafeCommandRemainder` fail-closed），
+  但 TUI 仍显示 `[已允许·本会话]`，用户会误以为下次免问。
