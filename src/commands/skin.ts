@@ -2,7 +2,8 @@
  * skin.ts - 皮肤管理命令
  *
  * 管理 TUI 皮肤：列出、查看、加载、重置皮肤。
- * 皮肤数据从 `.wasteland/skins/*.json` 动态加载。
+ * 皮肤数据从 `skins.json` 动态加载（内置 `src/skins/default-skins.json`
+ * → 用户级 `~/.wasteland/skins.json` → 项目级 `.wasteland/skins.json`，后者优先）。
  *
  * ## 命令
  *
