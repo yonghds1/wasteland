@@ -39,14 +39,33 @@ OpenAI-compatible 线上实现"字面回传"契约：**上游在这条 assistant
 ### R-6 端到端验证（用户环境实测）
 构建后用户在 wasteland TUI（opencode-go + deepseek-v4.1-flash）复跑"用子 agent 分析项目"：turn ≥ 3 步工具循环不再出现 `reasoning_content must be passed back` 报错，spawn_agent 正常执行。**此项由用户在下一轮 link 环境实测确认**，AI 侧以日志/录屏无法自证。
 
+#### 收口（2026-09-14，用户明确表示不再复测 → 以间接证据收口）
+
+证据链（均可复查）：
+
+1. 会话 `2026-09-13_100427_1416ba`（同配置、fix 后）跑出 **≥4 step** 工具循环（tool_calls 分布在 4 个 step），**全程零 reasoning 报错**；唯一 provider 错误是 `Duplicate value for 'tool_call_id'`——那是另一任务的 bug，已单独修复。
+2. 该会话**确实走了 R-1 捕获路径**，不是"没触发所以没报错"。判据是 chunk 形状与 `2026-09-12_231650_f5100b`（**原始报错那次**，确定使用了 `reasoning_content`）逐一同构：
+
+   | 日志 preview | 对应 `openai.ts` 代码 |
+   |---|---|
+   | `<think>The` / `<think>用户` | 首个非空 reasoning delta → `emitChunk(\`<think>${delta}\`)` |
+   | `</think>\n你好` | 首个 content delta → `emitChunk(\`</think>\n${content}\`)` |
+   | 光秃的 `</think>\n` | **tool_calls 分支** → 模型思考完直接发起工具调用 |
+
+   第三种形状在 09-13 出现 **3 次**，恰是最需要回传 reasoning 的步骤。
+3. 09-12 是在**第二次请求**就被拒（首轮 assistant 消息缺 reasoning）；09-13 同类循环跑满 4 步无此错，两次之间只有本次修复这一个变量。
+
+**残余不确定性（诚实声明）**：日志不记录上游 delta 是否真的带 `reasoning_content` 键，"没报错"理论上也可能是网关那一次未强制要求。但 09-12 的错误文案证明该网关**会**强制要求，且没有任何网关行为变更的证据。据此判定 R-6 以间接证据收口，**而非**"用户实测通过"。
+
 ## Acceptance Criteria
 
-- [ ] 同一思考模型多轮工具循环（≥4 step）请求均成功（用户实测 R-6）。
-- [ ] 回传报文含源字段名与完整原值（单测断言请求 body）。
-- [ ] 不带 reasoning 的 provider（OpenAI 官方 mock）请求体与改前逐字节一致。
-- [ ] 旧 session（字段缺失记录）续聊行为与今天一致，不炸不造。
-- [ ] 自愈路径：mock"拒收回传"端点 → 自动去字段重试成功并记忆。
-- [ ] `npm test` / `typecheck` / eslint 全绿。
+- [x] 同一思考模型多轮工具循环（≥4 step）请求均成功 —— **以间接证据收口**（见 R-6「收口」节，用户不再复测）。
+- [x] 回传报文含源字段名与完整原值（单测断言请求 body）：`message-builder-reasoning.test.ts`「history assistant message 带 reasoning → 原 key 原值放回」等；`openai-self-heal.test.ts` 直接断言**实际请求体**。
+- [x] 不带 reasoning 的 provider 请求体与改前逐字节一致：`message-builder-reasoning.test.ts`「旧记录（无 reasoning）序列化与改前逐字节一致」「无 reasoning 的 toolResults → 仅 role/content/tool_calls」。
+- [x] 旧 session（字段缺失记录）续聊行为与今天一致，不炸不造：同上「逐字节一致」+「reasoning.content 为空串时不回传（绝不凭空造上游没发过的字段）」。
+- [x] 自愈路径：mock「拒收回传」端点 → 自动去字段重试成功并记忆（`openai-self-heal.test.ts`，含「要求多带」不重试、重试失败不落记忆等反向用例）。
+- [x] `npm test`（28 个 reasoning 用例全绿、全量 1522 passed）/ `typecheck` 全绿；
+      eslint 无新增（`src/tools/agent/spawn-agent/sidecar.test.ts:73` 的 1 个 error 为既有、本次未触碰该文件）。
 
 ## Non-goals
 
