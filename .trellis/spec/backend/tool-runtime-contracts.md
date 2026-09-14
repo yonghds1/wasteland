@@ -354,6 +354,18 @@ checkReadBeforeEdit(params: {
   - 例外（既有行为，非缺陷）：`spawnChildAgentForwarding$` 的两处**早退**校验失败
     （输入解析失败 / 超出嵌套深度）在 retry+catchError 管线**之外**直接 `of(tool_failed)`，
     不发记录。它们不经 `invokeFinish`，不受本契约的「唯一产出点」约束。
+  - 已知缺口①（本次改动引入的窗口，`maxRetries > 0` 才可达）：失败记录从
+    「首次失败即写」（invokeFinish）移到「重试耗尽后写」（catchError），因此退避等待
+    期间若订阅被 teardown（用户 Ctrl+C / 进程被杀），既无终结事件也无父 session 记录。
+    默认 `maxRetries=0` 时该窗口约等于 0。旧行为在该窗口下有记录但**无**事件
+    （history 里出现孤立 tool_result），并非更优；要彻底消除需把「记录只由最终
+    attempt 写」做成显式终态收尾（catchError + finalize 二选一，且不得重复写）。
+  - 已知缺口②（既有，非本次引入）：`assembleForwardObservable` 的超时定时器
+    **不检查 `isSummarizing`**。子 agent 在超时前刚产出 `assistant_message`、
+    摘要 LLM 往返超出剩余预算时，超时回调会把这次**成功**改判为失败（并触发整轮重试），
+    随后摘要 resolve 时 `finish('success')` 因 `state.called` 早退 → 已完成的子 agent
+    工作被静默丢弃。修法是超时回调先看 `isSummarizing`（放行摘要）或把超时预算与
+    摘要预算分开。
   - 回归防线：`event-forwarder.test.ts` 的 `maxRetries=2` 用例同时断言
     「终结事件恰好 1 条」与「父 session 记录恰好 1 条」。
 

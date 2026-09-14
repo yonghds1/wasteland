@@ -32,6 +32,7 @@ import { join, resolve as resolvePath } from 'node:path';
 import { Logger } from '@core/logger/index.js';
 import { resolveDataProjectId, resolveDefaultDataDir } from '@config/paths.js';
 import { runAgentLoop } from '@core/engine/agent-loop.js';
+import { createToolResultRecord } from '@core/engine/dispatch-utils.js';
 import type { RuntimeEvent, SessionToolResultRecord } from '@core/runtime/event-types.js';
 
 import { defaultSkin as defaultRoleSkin } from '@skins/index.js';
@@ -331,16 +332,15 @@ export function spawnChildAgentForwarding$(params: {
     // 重复**记录**会让 /resume 经 history 分支重建消息时同样重复。
     catchError((err) => {
       const message = `子 agent ${childName} 失败 ${resolved.maxRetries + 1} 次: ${err.message}`;
-      const record: SessionToolResultRecord = {
-        type: 'tool_result',
-        sessionId: parentId,
+      // 复用工厂而非手写字面量：工厂是结果记录的唯一构造口径，
+      // 日后加字段/改时间戳来源时这里不会漏（成功路径同理）。
+      const record: SessionToolResultRecord = createToolResultRecord({
+        session: context.session,
         turn: context.turn,
-        callId: call.id,
-        toolName: call.toolName,
+        call,
         status: 'error',
         error: message,
-        timestamp: new Date().toISOString(),
-      };
+      });
       context.sessionManager.appendRecord(context.session, record).catch(() => {});
 
       return of<RuntimeEvent>({

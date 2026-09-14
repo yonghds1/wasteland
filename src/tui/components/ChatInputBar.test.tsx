@@ -188,6 +188,43 @@ describe('ChatInputBar 权限确认', () => {
       await instance.waitUntilExit();
     }
   });
+
+  // 09-14 回归：ink 对同一 stdin chunk 只回调一次，快速连击/粘贴会把整串作为一个
+  // inputChar 传入（实测解析器从不拆分可打印串）。只做单键相等比较时这类输入块
+  // 会被末尾 return 整块吞掉 —— 既不回答权限也不进输入框，等待者挂到超时。
+  it("整串输入 'always'：仍按 always 处理（不再整块吞掉）", async () => {
+    const pending = makePending('bash', { command: 'git status' });
+    const { instance, stdin, provideInput, gate } = renderBar(pending);
+    try {
+      await settle();
+      stdin.writeData('always');
+      await settle();
+      expect(gate.addSessionRule).toHaveBeenCalled();
+      expect(provideInput).toHaveBeenCalledWith('always');
+    } finally {
+      instance.unmount();
+      await instance.waitUntilExit();
+    }
+  });
+
+  it("整串输入 'yes' → 本次允许；'no' → 拒绝", async () => {
+    for (const [chunk, expected] of [
+      ['yes', 'yes'],
+      ['no', 'no'],
+    ] as const) {
+      const pending = makePending('bash', { command: 'ls' });
+      const { instance, stdin, provideInput } = renderBar(pending);
+      try {
+        await settle();
+        stdin.writeData(chunk);
+        await settle();
+        expect(provideInput).toHaveBeenCalledWith(expected);
+      } finally {
+        instance.unmount();
+        await instance.waitUntilExit();
+      }
+    }
+  });
 });
 
 describe('ChatInputBar 框内权限渲染', () => {

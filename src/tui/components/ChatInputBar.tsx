@@ -183,16 +183,23 @@ export function ChatInputBar({ width, sendMessage, runtime }: ChatInputBarProps)
         return;
       }
 
-      if (inputChar === '1' || inputChar === 'y' || inputChar === 'Y') {
-        confirmOnce();
+      // 归一化后匹配：ink 对同一 stdin chunk 只回调一次，快速连击/粘贴会把多个字符
+      // 作为一个 inputChar 传进来（实测解析器从不拆分可打印串）。若只做单键相等比较，
+      // 这类输入块会**不匹配任何分支、被末尾 return 整块吞掉**——既不回答权限、也不进
+      // 输入框，等待者一直挂到超时（09-14 复现：写入 'aa' 后 pendingCount 仍为 2）。
+      // 故同时接受精确单词（与 CLI 侧 provideInput(line.trim()) 的语义对齐），
+      // 单键语义保持不变。
+      const token = inputChar.trim().toLowerCase();
+      if (key.escape || token === '3' || token === 'n' || token === 'no') {
+        deny();
         return;
       }
-      if (inputChar === '2' || inputChar === 'a' || inputChar === 'A') {
+      if (token === '2' || token === 'a' || token === 'always') {
         confirmAlways();
         return;
       }
-      if (inputChar === '3' || inputChar === 'n' || inputChar === 'N' || key.escape) {
-        deny();
+      if (token === '1' || token === 'y' || token === 'yes' || token === '是') {
+        confirmOnce();
         return;
       }
       // 等待权限确认时拦截其他无关字符输入，防止误发聊天消息

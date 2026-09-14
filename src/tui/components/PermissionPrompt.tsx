@@ -40,7 +40,12 @@ const CARD_BOX = {
   borderBottom: false,
 };
 
-function HintRow(props: { label: string; active: boolean; disabled?: boolean; color: string }): React.ReactElement {
+function HintRow(props: {
+  label: string;
+  active: boolean;
+  disabled?: boolean;
+  color: string;
+}): React.ReactElement {
   return (
     <Box flexDirection="row">
       <Text
@@ -55,7 +60,11 @@ function HintRow(props: { label: string; active: boolean; disabled?: boolean; co
   );
 }
 
-export function PermissionPrompt({ card, queuedCount, selection }: PermissionPromptProps): React.ReactElement {
+export function PermissionPrompt({
+  card,
+  queuedCount,
+  selection,
+}: PermissionPromptProps): React.ReactElement {
   // 详情缺失兜底：只给可用的两个选项（无法判断该工具能否「记住这类」）
   if (!card) {
     // selection===1（记住这类）在本兜底里没有对应行，而按 Enter 会走 confirmAlways
@@ -74,7 +83,11 @@ export function PermissionPrompt({ card, queuedCount, selection }: PermissionPro
           active={yesActive}
           color={wastelandTheme.colors.success}
         />
-        <HintRow label={t('tui.session.input.hints.no')} active={selection === 2} color={wastelandTheme.colors.error} />
+        <HintRow
+          label={t('tui.session.input.hints.no')}
+          active={selection === 2}
+          color={wastelandTheme.colors.error}
+        />
       </Box>
     );
   }
@@ -92,7 +105,9 @@ export function PermissionPrompt({ card, queuedCount, selection }: PermissionPro
       {card.command && (
         <Box
           flexDirection="row"
-          backgroundColor={wastelandTheme.colors.backgroundSecondary || wastelandTheme.colors.borderDim}
+          backgroundColor={
+            wastelandTheme.colors.backgroundSecondary || wastelandTheme.colors.borderDim
+          }
           paddingLeft={1}
           marginTop={1}
           marginBottom={1}
@@ -115,7 +130,11 @@ export function PermissionPrompt({ card, queuedCount, selection }: PermissionPro
         disabled={!canRemember}
         color={wastelandTheme.colors.primary}
       />
-      <HintRow label={t('tui.session.input.hints.no')} active={selection === 2} color={wastelandTheme.colors.error} />
+      <HintRow
+        label={t('tui.session.input.hints.no')}
+        active={selection === 2}
+        color={wastelandTheme.colors.error}
+      />
       {queuedCount > 0 && (
         <Box flexDirection="row">
           <Text color={wastelandTheme.colors.muted} dimColor>

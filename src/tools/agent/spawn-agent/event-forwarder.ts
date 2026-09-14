@@ -7,7 +7,7 @@
  *    - 释放 skin 占用（agent_completed / unsubscribe 兜底）
  *    - 关闭子 session（修复 take(1) 退订导致 session.jsonl 不完整）
  *    - 累积中间事件
- *    - 写 agent_completed + tool_result/tool_failed + 父 session 记录
+ *    - 写 agent_completed（终结事件与父 session 记录见 invokeFinish 的完成语义）
  * 3. assembleForwardObservable - 组装最终 Observable<RuntimeEvent>：
  *    - subscriber.next(spawnedEvent)
  *    - 订阅 events$ 单订阅 + 翻译 + 累积
@@ -135,9 +135,9 @@ export type FinishResult = {
  * 终结事件仅成功分支发 tool_result，失败分支交由外层 catchError 产出唯一一条 tool_failed）
  *
  * 完成语义：
- * - status === 'success' 时：发 tool_result 事件 + subscriber.complete()
- * - 其他状态时：**不发事件**，只写 error 记录并 subscriber.error(...)，
- *   由外层 catchError（重试耗尽后）产出唯一一条 tool_failed —— 避免同 callId 双终结事件。
+ * - status === 'success' 时：发 tool_result 事件、写父 session 记录，然后 subscriber.complete()
+ * - 其他状态时：**事件与记录都不产**，只 subscriber.error(...)；
+ *   二者由外层 catchError（重试耗尽后）唯一产出 —— 避免同 callId 双终结事件 / 双结果记录。
  *
  * 幂等：重复调用直接 return。
  */

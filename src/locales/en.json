@@ -673,8 +673,8 @@
         "hints": {
           "default": "enter to send · esc to blur · shift+enter for new line · / for commands · ↑↓ for history",
           "permission": "↑↓ select · enter confirm · Y/A/N shortcuts",
-        "permissionQueued": "{{count}} more confirmation(s) queued",
-        "permissionUnknownTitle": "△ Permission · a call is awaiting confirmation (no details received)",
+          "permissionQueued": "{{count}} more confirmation(s) queued",
+          "permissionUnknownTitle": "△ Permission · a call is awaiting confirmation (no details received)",
           "permissionTitle": "△ Permission · {{toolName}} Pending",
           "yes": "[y] Allow once",
           "always": "[a] Remember: {{label}} (Session)",

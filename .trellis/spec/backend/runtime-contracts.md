@@ -764,6 +764,7 @@ type Waiter = { context: PendingInputContext | null; resolve: (a: string) => voi
   - `isPending()` / `pendingCount()` = 物理队列，**含已认领未出队**（吞行依赖）；
   - `getPendingContext()` = 第一个**未认领**者（UI/CLI 要据它注册 `always` 规则，答过的那条不能再用）。
 - **UI 侧热键分支不得静默吞键**：无 pattern、无 gate 等无法"记住"的情况必须**可见地降级**（落到 `once`）或明确提示；直接 `return` 会让等待者不 resolve。TUI 与 CLI 行为必须一致。
+- **热键必须按「归一化 token」匹配，不能只做单键相等比较**：ink 对同一 stdin chunk 只回调一次，快速连击/粘贴会把多个字符作为一个 `inputChar` 传入（实测 `createInputParser.push('aa' | 'always')` **从不拆分可打印串**）。只比较单字符时这类输入块会不匹配任何分支、被末尾 `return` 整块吞掉——既不回答权限也不进输入框，等待者挂到超时。故 TUI 侧 `inputChar.trim().toLowerCase()` 后同时接受单键与精确单词（`yes`/`always`/`no`/`是`），与 CLI 的 `provideInput(line.trim())` 语义对齐。回归：`ChatInputBar.test.tsx` 的整串输入用例。
 - **有等待就必须可见**：只要 `bridge.isPending()` 为真，界面必须给出可操作提示——含「详情缺失」（卡片为空）时也要渲染兜底。禁止"输入被当权限回答吞掉、界面却空白"的静默死锁。TUI 由 `isPendingPermission ? <PermissionPrompt card={…}/> : 正常输入区` 保证，`card` 为 null 时渲染 `permissionUnknownTitle`。
 - **队列深度必须可见**：卡片 FIFO 逐个上位，用户需知道还排着几个（并行子 agent 同批提问时尤其重要）。TUI 渲染 `state.permission.queue.length`；**不要**用 `bridge.pendingCount()` 反推——它以物理队列为准、含已认领未出队者，刚回答完会多算 1。
 - **reducer 必须按 `callId` 摘卡，而非只认队头**：被回答的若不是队头（卡片 FIFO 与 bridge FIFO 背离时可能发生），仍要从 `queue` 摘除并记入 `history`；否则留下幽灵卡片，之后错误上位、让用户的回答被 `provideInput` 认领给**另一个**等待者。

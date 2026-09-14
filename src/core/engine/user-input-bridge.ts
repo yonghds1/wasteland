@@ -8,7 +8,8 @@
  * - 多个 requestInput() 按调用顺序排队，每次 provideInput(answer) 回答队首**尚未被认领**的那个；
  * - 后到的请求不会覆盖先到的上下文，也不会偷走别人的回答；
  * - 同一 tick 内的多次 provideInput 各认领一个等待者，不会丢答案（见 provideInput 注释）；
- * - isPending() / pendingCount() = 物理队列（含已认领未出队的，CLI 的 tap→filter 靠它吞行）；
+ * - isPending() = **物理队列**是否非空（含已认领未出队的，CLI 的 tap→filter 靠它吞行）；
+ * - pendingCount() = 仍**未认领**（真正还在等回答）的请求数；
  * - getPendingContext() = 第一个**尚未被认领**的请求上下文（UI 展示与规则推导以它为准）。
  */
 
@@ -85,14 +86,14 @@ export class UserInputBridge {
   }
 
   /**
-   * **物理队列**长度（含已认领、正等微任务出队的等待者）。
+   * 仍在等待回答的请求数（**不含**已被 provideInput 认领、只是等微任务出队的那些）。
    *
-   * 注意别拿它算「还有几个待确认」：刚 `provideInput` 完会多算 1（已认领者仍在队内）。
-   * 需要那个数字时看 UI 自己的卡片队列——TUI 用 `state.permission.queue.length`。
-   * `isPending()` 同样基于物理队列，CLI 的 `tap→filter` 正是靠它吞掉当前输入行。
+   * 这就是 UI 想展示的「还有几个待确认」；不要改用 `isPending()`/物理队列长度，
+   * 刚 `provideInput` 完会多算 1。TUI 侧另有自己的卡片队列
+   * （`state.permission.queue.length`），因为它还要排除已展示的队头。
    */
   pendingCount(): number {
-    return this.waiters.length;
+    return this.waiters.reduce((n, w) => (w.claimed ? n : n + 1), 0);
   }
 
   /**
