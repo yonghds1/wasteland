@@ -72,11 +72,48 @@ src/ui/cli-input-adapter.test.ts
 
 ## Acceptance Criteria
 
-- [ ] `find src -name '*.test.ts*' | grep -v '/__tests__/'` 为空（外露数 = 0）。
-- [ ] `npm test` 通过数与迁移前**完全相同**（迁移前为 1524 passed | 3 skipped）。
-- [ ] `npm run typecheck` 干净；`npm run lint` 结论与迁移前一致（仅 `sidecar.test.ts:73` 那个既有 error，位置随文件移动）。
-- [ ] 迁移前后**用例名集合**比对一致（可用 vitest 的 reporter 输出 diff 验证）。
-- [ ] 迁移纯机械：`git diff --stat` 中这 29 个文件的改动仅含路径移动与说明符改写。
+- [x] `find src -name '*.test.ts*' | grep -v '/__tests__/'` 为空（外露数 29 → **0**）。
+- [x] `npm test` 通过数与迁移前**完全相同**：迁移前后均 `1524 passed | 3 skipped`。
+- [x] `npm run typecheck` 干净；`npm run lint` 结论一致（仍仅 `sidecar.test.ts:73` 那个既有
+      error，位置随文件移动）。
+- [x] 用例名集合比对一致：以 `basename | describe | name` 排序后与迁移前**逐条完全相同**（1524 条）。
+- [x] 迁移纯机械：diff 共 **78 删 / 78 增**，且机器校验确认**每条新增行都恰好是对应删除行的
+      相对说明符前插 `../` 的展开**（不匹配数 0）⇒ 无任何其他内容改动。
+
+## 落地记录（2026-09-14）
+
+### 比"样式合规"更实际的一条：修掉了一个真实的发布泄漏
+
+`scripts/prune-dist.mjs` 的职责是**发布前删除 dist 下所有 `__tests__/` 目录**
+（tsc 会把 src 内单测一并编译，不应随包发布），且它确实接在
+`prepublishOnly: npm run build && node scripts/prune-dist.mjs` 上，`package.json` 的
+`files` 白名单含 `dist`。
+
+那 29 个外露测试不在 `__tests__/` 下 ⇒ **prune 覆盖不到 ⇒ 一直被编译进 dist 并随
+npm 包发布**。实测：迁移前 `find dist -name '*.test.js'` 为 **110**；迁移后清干净重建
++ prune，为 **0**（prune 报告 `removed 31 __tests__ dirs`）。
+
+### 做过的风险勘察（勿重新推导）
+
+| 风险 | 结论 |
+|---|---|
+| 与既有 `__tests__/` 同名冲突 | 无 |
+| 快照 / `__dirname` / `import.meta.url` / `readFileSync` | 无 |
+| **数据型相对路径字符串**（断言里的 `'./x'`） | 无 ⇒ 机械改写不误伤 |
+| `vi.mock` 相对路径 | 有，3 个文件，已纳入改写 |
+| 动态 `import()` 相对路径 | 有，2 个文件，已纳入改写 |
+| tsconfig / vitest / eslint 引用具体测试路径 | 无 |
+
+### 一处自身脚本缺陷（已修）
+
+首轮替换把 `./x.js` 改成了 `.././x.js`（可解析但难看），共 41 处；已统一为 `../x.js`。
+
+### 未做（有意）
+
+- 不排除 tsconfig 的测试编译：tsconfig 收录测试是为了让 `typecheck` 覆盖测试代码，
+  属有意设计；排除反而会让测试脱离类型检查，且 `prune-dist` 已负责发布隔离。
+- 未加"防止再次漂移"的自动门禁（见下）。
+
 
 ## Non-goals
 
