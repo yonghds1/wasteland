@@ -131,11 +131,13 @@ export type FinishResult = {
 };
 
 /**
- * 调用 finish 收尾状态机（释放占用 + 关闭 session + 转发累积 + 写 agent_completed + tool_result/tool_failed + 父 session 记录）
+ * 调用 finish 收尾状态机（释放占用 + 关闭 session + 转发累积 + 写 agent_completed + 父 session 记录；
+ * 终结事件仅成功分支发 tool_result，失败分支交由外层 catchError 产出唯一一条 tool_failed）
  *
  * 完成语义：
- * - status === 'success' 时 subscriber.complete()
- * - 其他状态时 subscriber.error(...)（触发外层 retry）
+ * - status === 'success' 时：发 tool_result 事件 + subscriber.complete()
+ * - 其他状态时：**不发事件**，只写 error 记录并 subscriber.error(...)，
+ *   由外层 catchError（重试耗尽后）产出唯一一条 tool_failed —— 避免同 callId 双终结事件。
  *
  * 幂等：重复调用直接 return。
  */
@@ -184,7 +186,8 @@ export function invokeFinish(
     sessionPath: childSessionPath,
   });
 
-  // 3) tool_result / tool_failed + 写入父 session
+  // 3) 终结：success 发 tool_result 事件；失败只写 error 记录
+  //    （失败事件由外层 catchError 唯一产出，见上方失败分支注释）
   const ts = new Date().toISOString();
   if (status === 'success') {
     const output = content || t('tools.spawnAgent.executionComplete');
@@ -215,15 +218,11 @@ export function invokeFinish(
       (status === 'timeout'
         ? `子 Agent 执行超时 (timeout: ${params.childAgentTimeoutMs}ms)`
         : t('tools.spawnAgent.executionFailed'));
-    subscriber.next({
-      type: 'tool_failed',
-      sessionId: parentId,
-      turn,
-      callId: call.id,
-      toolName: call.toolName,
-      status: 'error',
-      error: errMsg,
-    });
+    // 失败分支**不**发 tool_failed 事件：本 observable 外层有 retry + catchError，
+    // 终结事件由 catchError 统一产出。这里若也 next(tool_failed)，同一个 callId 会
+    // 发出两条终结事件（本函数一条 + catchError 一条），turn-executor 会把两条都记进
+    // state.toolResults，buildMessages 因而生成重复 tool_call_id 被上游拒收。
+    // 见 09-14-duplicate-tool-call-id。
     const record: SessionToolResultRecord = {
       type: 'tool_result',
       sessionId: parentId,
@@ -236,7 +235,8 @@ export function invokeFinish(
     };
     context.sessionManager.appendRecord(context.session, record).catch(() => {});
 
-    // 失败：调 subscriber.error 触发外层 retry（按 multiAgent.maxRetries 重试）
+    // 失败：调 subscriber.error 触发外层 retry（按 multiAgent.maxRetries 重试）；
+    // 重试耗尽后由 catchError 产出唯一一条 tool_failed。
     subscriber.error(new Error(error || `子 Agent 失败 (${status})`));
   }
 
