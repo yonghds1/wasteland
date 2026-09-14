@@ -218,26 +218,15 @@ export function invokeFinish(
       (status === 'timeout'
         ? `子 Agent 执行超时 (timeout: ${params.childAgentTimeoutMs}ms)`
         : t('tools.spawnAgent.executionFailed'));
-    // 失败分支**不**发 tool_failed 事件：本 observable 外层有 retry + catchError，
-    // 终结事件由 catchError 统一产出。这里若也 next(tool_failed)，同一个 callId 会
-    // 发出两条终结事件（本函数一条 + catchError 一条），turn-executor 会把两条都记进
-    // state.toolResults，buildMessages 因而生成重复 tool_call_id 被上游拒收。
+    // 失败分支既不 next(tool_failed)、也不 appendRecord：本 observable 外层有
+    // retry + catchError，终结事件**与父 session 记录**都收归 catchError 一处产出，
+    // 保证同一个 callId 只有一条事件、一条记录。
+    //   - 这里若也 next(tool_failed)：turn-executor 记两次 → buildMessages 生成
+    //     重复 tool_call_id 被上游拒收。
+    //   - 这里若也 appendRecord：maxRetries>0 时每次 attempt 各写一条，/resume 经
+    //     history 分支重建消息时同样重复。
     // 见 09-14-duplicate-tool-call-id。
-    const record: SessionToolResultRecord = {
-      type: 'tool_result',
-      sessionId: parentId,
-      turn,
-      callId: call.id,
-      toolName: call.toolName,
-      status: 'error',
-      error: errMsg,
-      timestamp: ts,
-    };
-    context.sessionManager.appendRecord(context.session, record).catch(() => {});
-
-    // 失败：调 subscriber.error 触发外层 retry（按 multiAgent.maxRetries 重试）；
-    // 重试耗尽后由 catchError 产出唯一一条 tool_failed。
-    subscriber.error(new Error(error || `子 Agent 失败 (${status})`));
+    subscriber.error(new Error(errMsg));
   }
 
   state.resolved = true;

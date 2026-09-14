@@ -32,7 +32,7 @@ import { join, resolve as resolvePath } from 'node:path';
 import { Logger } from '@core/logger/index.js';
 import { resolveDataProjectId, resolveDefaultDataDir } from '@config/paths.js';
 import { runAgentLoop } from '@core/engine/agent-loop.js';
-import type { RuntimeEvent } from '@core/runtime/event-types.js';
+import type { RuntimeEvent, SessionToolResultRecord } from '@core/runtime/event-types.js';
 
 import { defaultSkin as defaultRoleSkin } from '@skins/index.js';
 import * as skinOccupancy from '@core/runtime/skin-occupancy.js';
@@ -324,18 +324,35 @@ export function spawnChildAgentForwarding$(params: {
         return timer(resolved.retryDelayMs * Math.pow(2, count - 1));
       },
     }),
-    // ---- 全部重试失败：返回明确 tool_failed（避免 minimax 自己脑补） ----
-    catchError((err) =>
-      of<RuntimeEvent>({
+    // ---- 全部重试失败：这里是**唯一**的终结产出点（事件 + 父 session 记录） ----
+    // invokeFinish 失败分支既不 next(tool_failed) 也不 appendRecord，避免
+    // maxRetries>0 时每次 attempt 各产一条，导致同 callId 重复：
+    // 重复**事件**会让 turn-executor 记两次 → buildMessages 生成重复 tool_call_id；
+    // 重复**记录**会让 /resume 经 history 分支重建消息时同样重复。
+    catchError((err) => {
+      const message = `子 agent ${childName} 失败 ${resolved.maxRetries + 1} 次: ${err.message}`;
+      const record: SessionToolResultRecord = {
+        type: 'tool_result',
+        sessionId: parentId,
+        turn: context.turn,
+        callId: call.id,
+        toolName: call.toolName,
+        status: 'error',
+        error: message,
+        timestamp: new Date().toISOString(),
+      };
+      context.sessionManager.appendRecord(context.session, record).catch(() => {});
+
+      return of<RuntimeEvent>({
         type: 'tool_failed',
         sessionId: parentId,
         turn: context.turn,
         callId: call.id,
         toolName: call.toolName,
         status: 'error',
-        error: `子 agent ${childName} 失败 ${resolved.maxRetries + 1} 次: ${err.message}`,
-      })
-    )
+        error: message,
+      });
+    })
   );
 }
 

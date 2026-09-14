@@ -341,19 +341,17 @@ checkReadBeforeEdit(params: {
   - `turn-executor` 把二者都记进 `state.toolResults`；同一 `callId` 记两次会让
     `buildMessages` 产出重复 `tool_call_id`，上游以 `invalid_request_error`
     (`Duplicate value for 'tool_call_id'`) 拒收**整个 turn**。
-  - spawn_agent 是唯一带 PreDispatchHook 的工具，也是唯一有「两个终结事件产出点」
-    风险的工具：`invokeFinish` 失败分支**只** `subscriber.error(...)`（不发事件），
-    终结事件由 `spawnChildAgentForwarding$` 的 `catchError` 唯一产出；成功分支仍直接发
-    `tool_result`。
-  - 失败分支仍必须写 `tool_result status="error"` 到父 session —— 去掉事件不等于
-    可以丢掉整条结果。
+  - spawn_agent 是唯一带 PreDispatchHook 的工具，也是唯一有「两个终结产出点」
+    风险的工具：`invokeFinish` 失败分支**只** `subscriber.error(...)`（不发事件、不写记录），
+    终结事件**与父 session 记录**都由 `spawnChildAgentForwarding$` 的 `catchError`
+    唯一产出；成功分支仍由 `invokeFinish` 直接发 `tool_result` 并写记录。
+  - 失败时**记录也必须收归一处**：若 `invokeFinish` 每次 attempt 各写一条，
+    `maxRetries > 0` 时会写入多条同 `callId` 记录，`/resume` 经 history 分支重建
+    消息时同样会出现重复 `tool_call_id`（与重复事件同一种上游拒收）。
   - 新增工具/hook 时的检查项：一个 tool_call 无论经历几次重试、几个错误来源，
-    父侧只能有一条终结事件。
-  - 已知缺口（未修，记录在案）：`multiAgent[name].maxRetries > 0` 时，每次 attempt 的
-    `invokeFinish` 都各写一条同 `callId` 的父 session `tool_result` 记录；事件流仍只有
-    一条终结事件，但 `/resume` 经 history 分支重建消息时会再现重复 `tool_call_id`。
-    `maxRetries` 是文档化的用户可配开关（见 `docs/user-guide/multi-agent.md`），
-    当前用户配置未设故走默认 `0`；根治需把「记录只由最终 attempt 写」落地。
+    父侧只能有**一条**终结事件**和一条**结果记录。
+  - 回归防线：`event-forwarder.test.ts` 的 `maxRetries=2` 用例同时断言
+    「终结事件恰好 1 条」与「父 session 记录恰好 1 条」。
 
 - Local provider demo contract
   - input starts with `/read `

@@ -69,8 +69,12 @@
 
 ## 已知残余风险（本任务不修，记录在案）
 
-- **`maxRetries > 0` 时同一 callId 会写入多条 `tool_result` 记录**：每次重试 attempt 都会跑一遍 forwarder，失败时 `invokeFinish` 各写一条父 session 记录。`maxRetries` 是**文档化的用户可配开关**（`docs/user-guide/multi-agent.md`、`settings-types.ts`），当前用户配置未设故走默认 0，但一旦设为 >0，`/resume` 经 history 分支重建消息时会再现重复 `tool_call_id` —— 属真实风险而不仅是理论风险。根治需把「记录只由最终 attempt 写」做进 `invokeFinish`（它当前拿不到 attempt 序号），属独立改动。
-  终结**事件**侧已不受影响：复核新增的 `maxRetries=2` 用例断言重试耗尽后父侧仍恰好 1 条终结事件。
+- **~~`maxRetries > 0` 时同一 callId 会写入多条 `tool_result` 记录~~（2026-09-14 已收口）**：
+  该缺口经 `/resume` 的 history 分支会再现同一个上游拒收（重复 `tool_call_id`），
+  故本轮一并修掉——把失败时的父 session 记录也收归 `catchError` 一处产出
+  （`invokeFinish` 失败分支不再 `appendRecord`），成功路径仍由 `invokeFinish` 自己写。
+  与"事件收归一处"同一原则：**一个 callId 一条终结事件 + 一条结果记录**。
+  回归防线：`event-forwarder.test.ts` 的 `maxRetries=2` 用例同时断言两者恰好为 1（红→绿已实证）。
 - **产出点唯一性是真正的防线，不要靠收紧 `turn-executor`**：复核确认 `collected` 已预过滤，收紧 `else` 只是换写法、不增加安全性，反而会在未来出现第三种终结类型时变成静默丢弃。
 - 相关但反向的同类缺口（**丢掉**终结事件，非重复）：`ask-user` 的 `result$`（`tool-dispatch.ts`）若 `requestInput()` 抛错，会走 error 而非产出终结事件。归到 `09-14-subagent-permission-hang` 一并考虑。
 

@@ -190,19 +190,17 @@ describe('invokeFinish', () => {
     expect(h.nextEvents.filter((e) => e.type === 'tool_failed')).toHaveLength(0);
     // agent_completed 仍然发（进度展示依赖）
     expect(h.nextEvents.filter((e) => e.type === 'agent_completed')).toHaveLength(1);
-    // 失败记录仍要落盘（不能因为去掉事件把结果整条丢了）
-    expect(h.siblingRecords).toHaveLength(1);
-    expect(h.siblingRecords[0]).toMatchObject({
-      type: 'tool_result',
-      callId: 'call-1',
-      status: 'error',
-    });
+    // 失败记录**不**在这里写：maxRetries>0 时每次 attempt 各写一条会让 /resume
+    // 重建出重复 tool_call_id。记录与事件一并收归外层 catchError（见下一组用例）。
+    expect(h.siblingRecords).toHaveLength(0);
     // 走 error 触发外层 retry / catchError
     expect(h.flags.errorCalled).toBe(true);
     expect(h.flags.completeCalled).toBe(false);
+    // 原始失败原因要经 err.message 传给 catchError（否则终结事件会丢掉「超时」细节）
+    expect(h.flags.errorMessage).toContain('超时');
   });
 
-  it('success：发 tool_result 且 complete（成功路径不受影响）', () => {
+  it('success：发 tool_result、写记录且 complete（成功路径不受影响）', () => {
     const h = makeHarness();
     invokeFinish(h.params, 'success', '子 agent 结论', undefined, makeSubscriber(h), {
       resolved: false,
@@ -213,11 +211,14 @@ describe('invokeFinish', () => {
     expect(results).toHaveLength(1);
     expect(results[0]).toMatchObject({ status: 'success', callId: 'call-1' });
     expect(h.nextEvents.filter((e) => e.type === 'tool_failed')).toHaveLength(0);
+    // 成功路径仍由 invokeFinish 自己写记录
+    expect(h.siblingRecords).toHaveLength(1);
+    expect(h.siblingRecords[0]).toMatchObject({ type: 'tool_result', callId: 'call-1', status: 'success' });
     expect(h.flags.completeCalled).toBe(true);
     expect(h.flags.errorCalled).toBe(false);
   });
 
-  it('幂等：重复调用不产生第二条记录或事件', () => {
+  it('幂等：重复调用不产生第二条事件或记录', () => {
     const h = makeHarness();
     const state = { resolved: false, called: false };
     const sub = makeSubscriber(h);
@@ -225,7 +226,7 @@ describe('invokeFinish', () => {
     invokeFinish(h.params, 'timeout', undefined, 'boom', sub, state);
 
     expect(h.nextEvents.filter((e) => e.type === 'agent_completed')).toHaveLength(1);
-    expect(h.siblingRecords).toHaveLength(1);
+    expect(h.siblingRecords).toHaveLength(0);
   });
 });
 
@@ -310,32 +311,44 @@ function makeForwardHarness(
  *
  * 生产链路上 spawnChildAgentForwarding$ 内部就是这个形状：本 observable
  * error → 按 multiAgent.maxRetries 重试 → 耗尽后 catchError 产出**唯一一条**
- * tool_failed。此处保持同构；若 index.ts 改了尾巴结构，本组断言需同步复核。
+ * tool_failed **和唯一一条父 session 记录**。此处保持同构；若 index.ts 改了
+ * 尾巴结构，本组断言需同步复核。
  */
 function withSpawnTail(
   source$: Observable<RuntimeEvent>,
-  maxRetries: number
+  maxRetries: number,
+  records: unknown[]
 ): Observable<RuntimeEvent> {
   return source$.pipe(
     // retry: count <= 0 时 rxjs 直接等价 identity（不重试），error 直达 catchError
     retry({ count: maxRetries }),
-    // catchError: 重试耗尽后把 error 转成唯一一条终结事件
-    catchError((err: unknown) =>
-      of<RuntimeEvent>({
+    // catchError: 重试耗尽后把 error 转成唯一一条终结事件 + 唯一一条记录
+    catchError((err: unknown) => {
+      const message = err instanceof Error ? err.message : String(err);
+      records.push({
+        type: 'tool_result',
+        sessionId: PARENT_ID,
+        turn: 3,
+        callId: CALL_ID,
+        toolName: 'spawn_agent',
+        status: 'error',
+        error: message,
+      });
+      return of<RuntimeEvent>({
         type: 'tool_failed',
         sessionId: PARENT_ID,
         turn: 3,
         callId: CALL_ID,
         toolName: 'spawn_agent',
         status: 'error',
-        error: err instanceof Error ? err.message : String(err),
-      })
-    )
+        error: message,
+      });
+    })
   );
 }
 
 describe('assembleForwardObservable — 终结事件唯一性', () => {
-  it('超时失败：forwarder 自身不发终结事件，只 error（记录仍落盘）', async () => {
+  it('超时失败：forwarder 自身不发终结事件、不写记录，只 error', async () => {
     const { forward$, parentRecords } = makeForwardHarness(NEVER);
     const run = await collectRun(forward$);
 
@@ -343,35 +356,38 @@ describe('assembleForwardObservable — 终结事件唯一性', () => {
     expect(run.terminal).toHaveLength(0);
     // agent_completed 仍要发（TUI 进度依赖）
     expect(run.events.filter((e) => e.type === 'agent_completed')).toHaveLength(1);
-    // 失败记录不能因为去掉事件而整条丢掉
-    expect(parentRecords).toHaveLength(1);
-    expect(parentRecords[0]).toMatchObject({ type: 'tool_result', callId: CALL_ID, status: 'error' });
+    // 记录也交给外层写：每次 attempt 各写一条会让 /resume 重建出重复 tool_call_id
+    expect(parentRecords).toHaveLength(0);
     // 通过 error 把终结权交给外层
     expect(run.error?.message).toContain('超时');
   });
 
-  it('超时失败经 retry + catchError：父侧只收到一条终结事件', async () => {
-    const { forward$ } = makeForwardHarness(NEVER);
-    const run = await collectRun(withSpawnTail(forward$, 0));
+  it('超时失败经 retry + catchError：父侧只收到一条终结事件 + 一条记录', async () => {
+    const { forward$, parentRecords } = makeForwardHarness(NEVER);
+    const run = await collectRun(withSpawnTail(forward$, 0, parentRecords));
 
     // 这就是被记进 state.toolResults 的条数：必须为 1
     expect(run.terminal).toHaveLength(1);
     expect(run.terminal[0]).toMatchObject({ type: 'tool_failed', callId: CALL_ID, status: 'error' });
+    // 父 session 记录同样只有一条
+    expect(parentRecords).toHaveLength(1);
+    expect(parentRecords[0]).toMatchObject({ type: 'tool_result', callId: CALL_ID, status: 'error' });
     // 原始失败原因仍要透传到终结事件（不能被包装吞掉）
     const failed = run.terminal[0] as RuntimeEvent & { error?: string };
     expect(failed.error).toContain('超时');
     expect(run.error).toBeUndefined();
   });
 
-  it('maxRetries > 0：重试耗尽后父侧仍只收到一条终结事件', async () => {
-    const { forward$ } = makeForwardHarness(NEVER);
-    const run = await collectRun(withSpawnTail(forward$, 2));
+  it('maxRetries > 0：重试耗尽后仍只收到一条终结事件 + 一条记录', async () => {
+    const { forward$, parentRecords } = makeForwardHarness(NEVER);
+    const run = await collectRun(withSpawnTail(forward$, 2, parentRecords));
 
-    // 3 次 attempt（1 次 + 2 次重试）各自 agent_spawned，但终结事件只有一条
+    // 3 次 attempt（1 次 + 2 次重试）各自 agent_spawned，但终结产物流只有一份
     expect(run.events.filter((e) => e.type === 'agent_spawned')).toHaveLength(3);
     expect(run.terminal).toHaveLength(1);
-    // 注：此时父 session 文件会有 3 条同 callId 的 error tool_result 记录
-    // （每次 attempt 的 invokeFinish 各写一条）—— 已知残余风险，
-    // 见 09-14-duplicate-tool-call-id PRD「已知残余风险」，本任务不修。
+    // 回归 09-14：记录若在每次 attempt 各写一条，/resume 经 history 分支重建消息时
+    // 会出现重复 tool_call_id（同样是上游 invalid_request_error）
+    expect(parentRecords).toHaveLength(1);
+    expect(parentRecords[0]).toMatchObject({ type: 'tool_result', callId: CALL_ID, status: 'error' });
   });
 });
