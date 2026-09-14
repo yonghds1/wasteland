@@ -186,8 +186,8 @@ export function invokeFinish(
     sessionPath: childSessionPath,
   });
 
-  // 3) 终结：success 发 tool_result 事件；失败只写 error 记录
-  //    （失败事件由外层 catchError 唯一产出，见上方失败分支注释）
+  // 3) 终结：success 发 tool_result 事件并写父 session 记录；
+  //    失败**什么都不产**，事件与记录都交给外层 catchError（见失败分支注释）
   const ts = new Date().toISOString();
   if (status === 'success') {
     const output = content || t('tools.spawnAgent.executionComplete');

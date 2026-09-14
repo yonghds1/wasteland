@@ -4,7 +4,7 @@
  * 覆盖：
  * - 单请求：回答后 resolve + 不再 pending
  * - 并发两请求：依次回答，各得其所（不互相覆盖、不共用答案）
- * - getPendingContext 始终返回队头
+ * - getPendingContext 返回第一个**未认领**的请求（同 tick 认领后即推进）
  * - 无等待时 provideInput 无操作
  * - destroy 排空等待者（收空串，按拒绝处理）
  */

@@ -84,7 +84,13 @@ export class UserInputBridge {
     return this.waiters.length > 0;
   }
 
-  /** 队内等待中的请求数（UI 可选展示“还有 N 个确认”） */
+  /**
+   * **物理队列**长度（含已认领、正等微任务出队的等待者）。
+   *
+   * 注意别拿它算「还有几个待确认」：刚 `provideInput` 完会多算 1（已认领者仍在队内）。
+   * 需要那个数字时看 UI 自己的卡片队列——TUI 用 `state.permission.queue.length`。
+   * `isPending()` 同样基于物理队列，CLI 的 `tap→filter` 正是靠它吞掉当前输入行。
+   */
   pendingCount(): number {
     return this.waiters.length;
   }

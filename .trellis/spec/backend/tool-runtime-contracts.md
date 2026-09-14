@@ -349,7 +349,11 @@ checkReadBeforeEdit(params: {
     `maxRetries > 0` 时会写入多条同 `callId` 记录，`/resume` 经 history 分支重建
     消息时同样会出现重复 `tool_call_id`（与重复事件同一种上游拒收）。
   - 新增工具/hook 时的检查项：一个 tool_call 无论经历几次重试、几个错误来源，
-    父侧只能有**一条**终结事件**和一条**结果记录。
+    父侧最多一条终结事件、最多一条结果记录（「多」才是 bug；数量不足不触发上游拒收，
+    但仍是有损历史，故正常路径应恰好各一条）。
+  - 例外（既有行为，非缺陷）：`spawnChildAgentForwarding$` 的两处**早退**校验失败
+    （输入解析失败 / 超出嵌套深度）在 retry+catchError 管线**之外**直接 `of(tool_failed)`，
+    不发记录。它们不经 `invokeFinish`，不受本契约的「唯一产出点」约束。
   - 回归防线：`event-forwarder.test.ts` 的 `maxRetries=2` 用例同时断言
     「终结事件恰好 1 条」与「父 session 记录恰好 1 条」。
 
