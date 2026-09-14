@@ -60,6 +60,7 @@ async function runCurrentConfig(options: ConfigCurrentOptions): Promise<void> {
           runtime: {
             permissionMode: resolved.permissionMode,
             maxStepsPerTurn: loadedSettings.settings.runtime.maxStepsPerTurn,
+            doomLoopThreshold: loadedSettings.settings.runtime.doomLoopThreshold,
             childAgentTimeout: loadedSettings.settings.runtime.childAgentTimeout,
             debug: loadedSettings.settings.runtime.debug,
           },

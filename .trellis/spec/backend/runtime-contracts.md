@@ -816,3 +816,111 @@ if (!pattern || !gate?.addSessionRule) { confirmOnce(); return; }
 - **H-3 未做**：等待用户回答本身没有独立上限/取消路径，`childAgentTimeout`(600s) 是唯一兜底；用户没看见卡片时症状与实测完全一致（无 `permission` 记录、无结果、600s 超时）。建议补「子 agent 正在等待权限」的可观测信号。
 - `tool-dispatch.ts` 的 ask-user 分支调 `requestInput()` **不带 context**，故队头是 ask-user 时 `getPendingContext()` 恒为 null（既有行为，非本次引入）。
 - 缺陷 1 对 **CLI 会话已实证可达**；对 **TUI 会话未证实**（`ChatInputBar` 用 `inputChar === '2'` 相等比较，多字符 chunk 不匹配热键）。
+
+---
+
+## Scenario: doom loop 检测（连续同名同参工具调用刹车）
+
+> 来源：`.trellis/tasks/09-14-doom-loop-detection`。此前只有 `maxStepsPerTurn`（默认 30）粗兜底——模型陷入重复调用要把 30 步全部付完才停，每步都是一次完整 LLM 调用且历史递增更贵，真实成本可达正常一轮的 10~50 倍且全程无报错。本契约把"静默烧 30 步"变成"达阈值即停下并说明原因"。
+
+### 1. Scope / Trigger
+
+- Trigger: 改动 `TurnExecutor.processProviderTail` 的工具调用收尾路径，或调整 `runtime.doomLoopThreshold` 相关配置接线。
+- Trigger: 接入新的单轮守卫（第 3 个 `check*` 函数）时，形状必须与本契约一致。
+- 范围外：跨 turn 的重复（由用户驱动，属意图而非死循环）；`permission.ask` 式交互询问（本仓取"短路+回灌"）；按工具类型分别配置阈值。
+
+### 2. Signatures
+
+```ts
+// src/core/engine/loop-helpers.ts —— 纯函数判据（无 RxJS、无副作用，可直接单测）
+export function isDoomLoop(toolCalls: readonly ToolCall[], threshold: number): boolean;
+
+// src/core/engine/loop-helpers.ts —— 外壳与 checkMaxStepsExceeded 同形状：
+// null = 放行，有值 = 接管本轮
+export function checkDoomLoop(params: {
+  state: TurnState;
+  doomLoopThreshold: number;
+  session: SessionMetadata;
+  sessionManager: SessionManager;
+  history: HistoryRecord[];
+  contextManager: ContextManager;
+  trace: (event: DebugTraceInput) => void;
+}): Observable<RuntimeEvent> | null;
+
+// src/core/engine/turn-helpers.ts
+export function buildDoomLoopMessage(toolName: string, threshold: number): string;
+```
+
+### 3. Contracts
+
+- **判据语义**：`isDoomLoop` 只看尾部——最近 `threshold` 条调用必须同名**且**同参；任何一次不同调用都会打断连续段（只看尾部天然实现"重置"）。调用数不足 `threshold` 返回 `false`；`threshold <= 0` 返回 `false`（关闭检测）。
+- **参数比较顺序无关**：对 `input` 做**递归键排序后的稳定序列化**再比较，不裸用 `JSON.stringify`（键序不同会漏判）。`undefined` 值字段按 `JSON.stringify` 语义丢弃。
+- **挂载点**：`TurnExecutor.processProviderTail` 内 `recordToolCall` 循环之后、`dispatchSingleToolCall` 之前。命中即**不执行**这次重复工具调用，也不再回到 provider。
+- **短路方式**：与步数守卫一致（`if (doomLoop$) return doomLoop$;`）。额外置 `nextAction = 'complete'`，让 `execute()` 的 `continuation$` 返回 EMPTY，避免多补一条 fallback assistant message。
+- **命中动作**：`failTurnState` + `persistAssistantMessage`，消息点明工具名与**当前生效阈值**（不写死 3），供模型下一轮自纠。**不做**交互询问。
+- **仅本 turn 内检测**：`TurnState.toolCalls` 按 turn 累积（`advanceTurnState` 跨 step 保留、`createInitialTurnState` 每 turn 清零），正好匹配。
+- **trace**：`phase: 'turn.doom_loop'`，`data` 含 `tool` 与 `callCount`（对齐 `turn.max_steps`）。
+- **配置**：`runtime.doomLoopThreshold`，默认 `3`，env 覆盖 `WASTELAND_DOOM_LOOP_THRESHOLD`，**`0` 表示关闭检测**。校验允许 `>= 0`，与 `maxStepsPerTurn` 的 `> 0` **故意不同**：doom-loop 存在合法误报（轮询构建、等文件出现），用户需要干净的关闭开关；`multiAgent.maxRetries` 的 `0=不重试` 是既有先例。
+- **不适用本约定**：`maxStepsPerTurn` / `childAgentTimeout` 这类护栏的 `0` 等于护栏消失，不适用 `0=关闭`。
+
+### 4. Validation & Error Matrix
+
+| 场景 | 行为 |
+|---|---|
+| 连续重复次数 < 阈值 | `isDoomLoop` 返回 `false`，正常 dispatch |
+| 连续重复次数 >= 阈值 | 短路本轮，持久化 `runtime.doomLoopDetected` 消息 |
+| 第 N 次参数/工具名不同 | 连续段被打断，不触发 |
+| 参数键序不同但语义相同 | 判定为相同，触发 |
+| `doomLoopThreshold = 0` | 检测关闭，行为与改动前完全一致（回落 `maxStepsPerTurn` 兜底） |
+| `settings.json` 写 `doomLoopThreshold: -1` / `2.5` | 加载报错，信息含 `runtime.doomLoopThreshold` 与来源路径 |
+| `WASTELAND_DOOM_LOOP_THRESHOLD=abc` / `-1` / `2.5` | 加载报错，信息含 `WASTELAND_DOOM_LOOP_THRESHOLD` |
+| `WASTELAND_DOOM_LOOP_THRESHOLD=0` | 合法，关闭检测 |
+| env 与文件同时给值 | env 优先（既有优先级链） |
+| 单 step 内多个重复 tool_call | 记录后统一判定，尾部满足条件即触发 |
+
+### 5. Good / Base / Bad Cases
+
+- Good: 模型连续 3 次 `bash({cmd:"ls"})`（默认阈值）→ provider 只被调用 3 次，持久化消息含 `bash` 与 `3`，trace 发 `turn.doom_loop`。
+- Good: 阈值 5 时第 3、4 次放行，第 5 次触发（阈值真生效，非写死 3）。
+- Base: 非重复工具循环 → 尾部永不满足，行为与改动前逐字节一致。
+- Bad: 裸用 `JSON.stringify(input)` 比较（键序不同漏判）。
+- Bad: 在 `execute()` 里把判据写成 RxJS 操作符链（同步谓词，违反 `backend/index.md` 的 RxJS 边界规则）。
+- Bad: 消息里写死 `3`（配置改阈值后文案与判据不一致）。
+
+### 6. Tests Required
+
+- `src/core/engine/__tests__/doom-loop.test.ts`：
+  - 纯函数边界：0/1/2 次不触发；达阈值触发；第 N 次参数/工具名不同不触发；中间插入不同调用后重置；键序（含嵌套对象）无关；阈值 `0`/负数关闭。
+  - 集成：默认阈值 3 时 provider 只被调用 3 次且持久化消息含工具名与次数；阈值 5 时第 5 次才触发；键序不同仍触发；阈值 0 时走满 `maxStepsPerTurn` 且无 `turn.doom_loop` trace。
+- `src/config/__tests__/loaded-settings.test.ts`：默认 3、文件覆盖、env 覆盖、`env=0` 关闭、文件非法值报错、env 非法值报错。
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```ts
+// 裸 JSON.stringify：键序不同即漏判
+const recent = state.toolCalls.slice(-3);
+return recent.every((c) => JSON.stringify(c.input) === JSON.stringify(recent[0].input));
+
+// 消息写死 3：阈值改 5 后文案与判据不一致
+return persistAssistantMessage({ content: t('runtime.doomLoopDetected', { tool, count: '3' }) });
+```
+
+#### Correct
+
+```ts
+// 尾部 threshold 条同名 + 稳定序列化同参
+const recent = toolCalls.slice(toolCalls.length - threshold);
+const firstArgs = stableSerialize(recent[0].input);
+return recent.every((c) => c.toolName === recent[0].toolName && stableSerialize(c.input) === firstArgs);
+
+// 次数取当前生效阈值
+return persistAssistantMessage({ content: buildDoomLoopMessage(toolName, doomLoopThreshold) });
+```
+
+### 已知边界
+
+- `estimateMessageTokens` 不计入本消息的特殊开销（与既有守卫同，可忽略）。
+- 阈值 `1` 语法合法但语义退化（任意一次工具调用即命中），未额外拦截。
+- 子 Agent 由 `spawn-agent` 透传同一 `doomLoopThreshold`；未配置时由 `runAgentLoop` 兜底为 3。

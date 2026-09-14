@@ -167,6 +167,11 @@ export function runAgentLoop(params: {
   cwd: string;
   mode: RuntimeMode;
   maxStepsPerTurn?: number;
+  /**
+   * 可选：doom loop 检测阈值（连续同名同参工具调用次数），默认 3。
+   * 0 表示关闭检测。
+   */
+  doomLoopThreshold?: number;
   /** 可选：已有的 session（用于子 Agent） */
   existingSession?: SessionMetadata;
   /** 可选：技能执行器 */
@@ -221,6 +226,9 @@ export function runAgentLoop(params: {
     });
   };
   const maxStepsPerTurn = params.maxStepsPerTurn ?? 30;
+  // doom loop 阈值兜底：未传时用 3（与 DEFAULT_WASTELAND_SETTINGS 一致）；
+  // 显式传 0 表示关闭检测，不能用 ?? 把它吞掉。
+  const doomLoopThreshold = params.doomLoopThreshold ?? 3;
 
   // 用户输入桥接器（用于 ask-user 工具与权限确认）。
   // 未提供时仅交互模式自动创建：非交互（`--message` / 管道）无人应答，
@@ -382,6 +390,7 @@ export function runAgentLoop(params: {
             permissionGate: params.permissionGate,
             cwd: params.cwd,
             maxStepsPerTurn,
+            doomLoopThreshold,
             trace,
             skillExecutor: params.skillExecutor,
             providerRegistry: params.providerRegistry,

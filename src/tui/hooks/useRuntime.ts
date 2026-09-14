@@ -90,6 +90,7 @@ export async function createTuiRuntime(
     cwd,
     mode: 'interactive',
     maxStepsPerTurn: runtime.loadedSettings.settings.runtime.maxStepsPerTurn,
+    doomLoopThreshold: runtime.loadedSettings.settings.runtime.doomLoopThreshold,
     prompt: runtime.resolvedRuntime.prompt,
     debug: runtime.loadedSettings.settings.runtime.debug,
     userInputBridge,

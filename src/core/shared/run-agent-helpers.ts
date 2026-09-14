@@ -30,6 +30,8 @@ export type BaseLoopArgs = {
   cwd: string;
   mode: LoopParams['mode'];
   maxStepsPerTurn: number;
+  /** doom loop 检测阈值（0 表示关闭检测），来自 settings.runtime.doomLoopThreshold */
+  doomLoopThreshold: number;
   /** 功能 prompt（会被 composeAgentPrompt 包上角色指令） */
   prompt?: string;
   /** CLI --debug 或 settings.runtime.debug（任一即开 runAgentLoop 落盘） */
@@ -65,6 +67,7 @@ export function startAgentLoop(
     cwd: args.cwd,
     mode: args.mode,
     maxStepsPerTurn: args.maxStepsPerTurn,
+    doomLoopThreshold: args.doomLoopThreshold,
     prompt: composeAgentPrompt(
       runtime.resolvedRuntime.role?.name ?? 'orchestrator',
       args.prompt

@@ -286,6 +286,7 @@ npm run dev -- chat --permission-mode bypass_permissions --message "..."
 - `WASTELAND_PROVIDER`：覆盖默认 provider
 - `WASTELAND_PERMISSION_MODE`：覆盖默认权限模式
 - `WASTELAND_MAX_STEPS_PER_TURN`：覆盖单轮最大 step 数
+- `WASTELAND_DOOM_LOOP_THRESHOLD`：覆盖 doom loop 检测阈值（默认 `3`，`0` 表示关闭检测）
 - `WASTELAND_DEBUG`：默认打开调试追踪
 - `WASTELAND_LOG_LEVEL`：日志最低等级，支持 `debug` / `info` / `warn` / `error`，默认 `info`；`WASTELAND_DEBUG=1` 等价于设为 `debug`
 - `WASTELAND_LOG_DIR`：覆盖日志目录，默认中央数据根 `~/.wasteland/data/logs/<projectId>/`
@@ -315,6 +316,7 @@ npm run dev -- chat --permission-mode bypass_permissions --message "..."
   "runtime": {
     "permissionMode": "default",
     "maxStepsPerTurn": 8,
+    "doomLoopThreshold": 3,
     "debug": false
   },
   "models": {

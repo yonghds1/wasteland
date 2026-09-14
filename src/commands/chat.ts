@@ -85,6 +85,7 @@ async function runChatSession(params: {
   projectConfigDir: string | null;
   permissionMode: ReturnType<typeof resolvePermissionMode>;
   maxStepsPerTurn: number;
+  doomLoopThreshold: number;
   prompt?: string;
   outputAdapter?: CliOutputAdapter;
   userInputBridge?: UserInputBridge;
@@ -98,6 +99,7 @@ async function runChatSession(params: {
       cwd: params.cwd,
       mode: params.mode,
       maxStepsPerTurn: params.maxStepsPerTurn,
+      doomLoopThreshold: params.doomLoopThreshold,
       prompt: params.prompt,
       debug: params.debug,
       userInputBridge: params.userInputBridge,
@@ -164,6 +166,7 @@ export function configureChatCommand(cmd: Command): Command {
       const debug = options.debug === true || runtime.loadedSettings.settings.runtime.debug;
       const debugFormat = resolveDebugFormat(options.debugFormat);
       const maxStepsPerTurn = runtime.loadedSettings.settings.runtime.maxStepsPerTurn;
+      const doomLoopThreshold = runtime.loadedSettings.settings.runtime.doomLoopThreshold;
 
       // debug 启用时升 Logger level（FileSink 已装配）
       if (debug) {
@@ -196,6 +199,7 @@ export function configureChatCommand(cmd: Command): Command {
           projectConfigDir: runtime.loadedSettings.projectConfigDir,
           permissionMode,
           maxStepsPerTurn,
+          doomLoopThreshold,
           prompt: runtime.resolvedRuntime.prompt,
           outputAdapter,
         });
@@ -225,6 +229,7 @@ export function configureChatCommand(cmd: Command): Command {
           projectConfigDir: runtime.loadedSettings.projectConfigDir,
           permissionMode,
           maxStepsPerTurn,
+          doomLoopThreshold,
           prompt: runtime.resolvedRuntime.prompt,
           outputAdapter,
         });
@@ -262,6 +267,7 @@ export function configureChatCommand(cmd: Command): Command {
           projectConfigDir: runtime.loadedSettings.projectConfigDir,
           permissionMode,
           maxStepsPerTurn,
+          doomLoopThreshold,
           prompt: runtime.resolvedRuntime.prompt,
           outputAdapter,
           userInputBridge,

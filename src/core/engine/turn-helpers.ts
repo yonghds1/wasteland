@@ -112,6 +112,20 @@ export function buildMaxStepsMessage(_maxStepsPerTurn: number): string {
 }
 
 /**
+ * 构建命中 doom loop 时的提示消息
+ *
+ * 次数使用当前生效阈值（不写死 3），消息点明工具名与连续次数，
+ * 供模型在下一轮看到并自纠（换思路或换参数）。
+ *
+ * @param toolName - 被连续重复调用的工具名
+ * @param threshold - 当前生效的连续重复阈值
+ * @returns 提示消息
+ */
+export function buildDoomLoopMessage(toolName: string, threshold: number): string {
+  return t('runtime.doomLoopDetected', { tool: toolName, count: String(threshold) });
+}
+
+/**
  * 首 token 计时上下文（processStreamedNonToolEvent 透传）。
  */
 export interface FirstChunkMeasure {

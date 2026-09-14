@@ -145,6 +145,7 @@ CLI 参数 > 环境变量 > 项目配置 > 全局配置 > 内置默认值
 | `skinId` | string | `warlord-stern` | 皮肤主题 id（与角色独立） |
 | `permissionMode` | string | `default` | 权限模式 |
 | `maxStepsPerTurn` | number | `8` | 单轮最大步数 |
+| `doomLoopThreshold` | number | `3` | 连续同名同参工具调用阈值，达阈值即短路本轮并回灌提示；`0` 表示关闭检测 |
 | `maxTurns` | number | `20` | 最大轮次数 |
 | `contextWindowSize` | number | `30` | 上下文压缩滑动窗口（保留的最近消息数） |
 | `compactionThreshold` | number | `0.8` | 触发同步压缩的低水位（0-1），token 占比超此值即滑动切割 |
@@ -287,6 +288,7 @@ wasteland 支持将**项目级 + 用户级持久记忆**注入 system prompt 最
 | `WASTELAND_PROVIDER` | 覆盖默认 provider |
 | `WASTELAND_PERMISSION_MODE` | 覆盖权限模式 |
 | `WASTELAND_MAX_STEPS_PER_TURN` | 覆盖最大步数 |
+| `WASTELAND_DOOM_LOOP_THRESHOLD` | 覆盖 doom loop 检测阈值（`0` 表示关闭检测） |
 | `WASTELAND_DEBUG` | 启用调试模式 |
 | `WASTELAND_SESSION_DIR` | 覆盖 session 目录 |
 

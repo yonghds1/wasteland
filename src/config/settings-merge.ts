@@ -146,6 +146,7 @@ export function mergeSettings(
       defaultModel: next.runtime?.defaultModel ?? base.runtime.defaultModel,
       permissionMode: next.runtime?.permissionMode ?? base.runtime.permissionMode,
       maxStepsPerTurn: next.runtime?.maxStepsPerTurn ?? base.runtime.maxStepsPerTurn,
+      doomLoopThreshold: next.runtime?.doomLoopThreshold ?? base.runtime.doomLoopThreshold,
       childAgentTimeout: next.runtime?.childAgentTimeout ?? base.runtime.childAgentTimeout,
       compactionBudgetRatio:
         next.runtime?.compactionBudgetRatio ?? base.runtime.compactionBudgetRatio,

@@ -51,7 +51,7 @@ import {
   maybeCompactContext,
   maybeSummaryCompact,
   persistCompactionRecord} from '../memory/context-compaction.js';
-import { routeSkillCommand, checkMaxStepsExceeded, checkBudgetAndPreCompact } from "./loop-helpers.js";
+import { routeSkillCommand, checkMaxStepsExceeded, checkDoomLoop, checkBudgetAndPreCompact } from "./loop-helpers.js";
 
 export interface TurnExecutorParams {
   session: SessionMetadata;
@@ -64,6 +64,11 @@ export interface TurnExecutorParams {
   permissionGate?: PermissionGate;
   cwd: string;
   maxStepsPerTurn: number;
+  /**
+   * doom loop 检测阈值（连续同名同参工具调用次数）。
+   * 0 表示关闭检测；缺省时由 runAgentLoop 兜底为 3。
+   */
+  doomLoopThreshold: number;
   trace: (event: DebugTraceInput) => void;
   /** 技能执行器（可选） */
   skillExecutor?: SkillExecutor;
@@ -412,6 +417,25 @@ export class TurnExecutor {
       for (const { event } of this.toolCallBuffer) {
         this.state = recordToolCall(this.state, event.call);
       }
+
+      // ---- doom loop 检测 ----
+      // 挂载点在 recordToolCall 之后、dispatch 之前：命中即短路，
+      // 不再执行重复的工具调用，也不回到 provider。
+      const doomLoop$ = checkDoomLoop({
+        state: this.state,
+        doomLoopThreshold: this.params.doomLoopThreshold,
+        session: this.params.session,
+        sessionManager: this.params.sessionManager,
+        history: this.params.history,
+        contextManager: this.params.contextManager,
+        trace: this.params.trace});
+      if (doomLoop$) {
+        // 标记 complete：让 execute() 的 continuation$ 返回 EMPTY，
+        // 避免再走一次 fallback assistant message。
+        this.nextAction = 'complete';
+        return doomLoop$;
+      }
+
       this.nextAction = 'tool';
 
       const spawnEvents = this.toolCallBuffer.filter(

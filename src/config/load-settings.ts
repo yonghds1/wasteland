@@ -156,6 +156,20 @@ export async function parseSettings(raw: unknown, sourcePath: string): Promise<R
       runtime.maxStepsPerTurn = raw.runtime.maxStepsPerTurn;
     }
 
+    if ('doomLoopThreshold' in raw.runtime && raw.runtime.doomLoopThreshold !== undefined) {
+      if (
+        typeof raw.runtime.doomLoopThreshold !== 'number' ||
+        !Number.isInteger(raw.runtime.doomLoopThreshold) ||
+        raw.runtime.doomLoopThreshold < 0
+      ) {
+        throw new Error(
+          `配置文件 ${sourcePath} 中 runtime.doomLoopThreshold 必须是非负整数（0 表示关闭检测）。`
+        );
+      }
+
+      runtime.doomLoopThreshold = raw.runtime.doomLoopThreshold;
+    }
+
     if ('childAgentTimeout' in raw.runtime && raw.runtime.childAgentTimeout !== undefined) {
       if (
         typeof raw.runtime.childAgentTimeout !== 'number' ||

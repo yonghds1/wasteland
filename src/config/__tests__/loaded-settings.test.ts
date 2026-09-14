@@ -231,6 +231,69 @@ describe('加载管线 合并优先级', () => {
     ).rejects.toThrow(/正整数/);
   });
 
+  it('doomLoopThreshold 默认值为 3', async () => {
+    const { settings } = await getOrLoadSettings(workDir, envForTest());
+
+    expect(settings.runtime.doomLoopThreshold).toBe(3);
+  });
+
+  it('项目文件覆盖 doomLoopThreshold', async () => {
+    await writeProjectSettings({ runtime: { doomLoopThreshold: 5 } });
+
+    const { settings } = await getOrLoadSettings(workDir, envForTest());
+
+    expect(settings.runtime.doomLoopThreshold).toBe(5);
+  });
+
+  it('环境变量覆盖文件的 doomLoopThreshold', async () => {
+    await writeProjectSettings({ runtime: { doomLoopThreshold: 5 } });
+
+    const { settings } = await getOrLoadSettings(
+      workDir,
+      envForTest({ WASTELAND_DOOM_LOOP_THRESHOLD: '7' })
+    );
+
+    expect(settings.runtime.doomLoopThreshold).toBe(7);
+  });
+
+  it('WASTELAND_DOOM_LOOP_THRESHOLD=0 关闭检测', async () => {
+    const { settings } = await getOrLoadSettings(
+      workDir,
+      envForTest({ WASTELAND_DOOM_LOOP_THRESHOLD: '0' })
+    );
+
+    expect(settings.runtime.doomLoopThreshold).toBe(0);
+  });
+
+  it('文件里的非法 doomLoopThreshold 报错并含配置项名与来源', async () => {
+    const settingsPath = join(workDir, '.wasteland', 'settings.json');
+
+    // 负数 / 非整数 / 非数字类型（字符串）三种非法输入，错误信息均须含配置项名与来源路径
+    for (const bad of [-1, 2.5, '3']) {
+      await writeProjectSettings({ runtime: { doomLoopThreshold: bad } });
+
+      let err: unknown;
+      try {
+        await getOrLoadSettings(workDir, envForTest());
+      } catch (e) {
+        err = e;
+      }
+
+      expect(err).toBeInstanceOf(Error);
+      const message = (err as Error).message;
+      expect(message).toContain('doomLoopThreshold');
+      expect(message).toContain(settingsPath);
+    }
+  });
+
+  it('非法的 doomLoopThreshold 环境变量报错', async () => {
+    for (const bad of ['abc', '-1', '2.5']) {
+      await expect(
+        getOrLoadSettings(workDir, envForTest({ WASTELAND_DOOM_LOOP_THRESHOLD: bad }))
+      ).rejects.toThrow(/WASTELAND_DOOM_LOOP_THRESHOLD/);
+    }
+  });
+
   it('sources 记录实际读到的用户/项目文件', async () => {
     await writeUserSettings({ defaultProvider: 'user-provider' });
     await writeProjectSettings({ defaultProvider: 'project-provider' });

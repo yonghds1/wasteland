@@ -187,6 +187,7 @@ export function applyEnvironmentOverrides(
       defaultModel: settings.runtime.defaultModel,
       permissionMode: settings.runtime.permissionMode,
       maxStepsPerTurn: settings.runtime.maxStepsPerTurn,
+      doomLoopThreshold: settings.runtime.doomLoopThreshold,
       childAgentTimeout: settings.runtime.childAgentTimeout,
       compactionBudgetRatio: settings.runtime.compactionBudgetRatio,
       compactionThreshold: settings.runtime.compactionThreshold,
@@ -238,6 +239,19 @@ export function applyEnvironmentOverrides(
     }
 
     resolved.runtime.maxStepsPerTurn = parsed;
+  }
+
+  const doomLoopEnv = env.WASTELAND_DOOM_LOOP_THRESHOLD ?? env.JOE_DOOM_LOOP_THRESHOLD;
+  if (typeof doomLoopEnv === 'string' && doomLoopEnv.trim().length > 0) {
+    // 用 Number 而非 parseInt：'2.5' / '3abc' 这类非整数必须报错，不能被截断成合法值
+    const parsed = Number(doomLoopEnv.trim());
+
+    // 0 合法（关闭检测）；负数、非整数、非数字非法
+    if (!Number.isInteger(parsed) || parsed < 0) {
+      throw new Error('环境变量 WASTELAND_DOOM_LOOP_THRESHOLD 必须是非负整数（0 表示关闭检测）。');
+    }
+
+    resolved.runtime.doomLoopThreshold = parsed;
   }
 
   const debugEnv = env.WASTELAND_DEBUG ?? env.JOE_DEBUG;

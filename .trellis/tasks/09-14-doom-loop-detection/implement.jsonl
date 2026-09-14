@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/backend/index.md", "reason": "RxJS 使用边界：明确要求勿把 RxJS 硬塞给同步变换——本任务判据用纯函数的依据"}
+{"file": ".trellis/spec/backend/runtime-contracts.md", "reason": "跨层契约：chat/runtime/provider/session 流；守卫属 runtime 层，需对齐既有契约"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "代码标准与禁止模式：新增守卫函数须符合既有风格"}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "复用优先：checkDoomLoop 须 1:1 复用 checkMaxStepsExceeded 形状，勿另造范式"}

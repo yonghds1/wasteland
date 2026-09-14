@@ -27,6 +27,7 @@
 - `WASTELAND_PROVIDER`
 - `WASTELAND_PERMISSION_MODE`
 - `WASTELAND_MAX_STEPS_PER_TURN`
+- `WASTELAND_DOOM_LOOP_THRESHOLD`
 - `WASTELAND_DEBUG`
 - `WASTELAND_SESSION_DIR`
 - `RX_CLI_SESSION_DIR`：仅保留 session 目录覆盖的旧兼容别名
@@ -47,6 +48,7 @@
 - `runtime.defaultRole`
 - `runtime.permissionMode`
 - `runtime.maxStepsPerTurn`
+- `runtime.doomLoopThreshold`
 - `runtime.debug`
 - provider/model/role 下的通用 `$auth` 引用
 

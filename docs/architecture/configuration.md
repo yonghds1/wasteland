@@ -122,6 +122,7 @@ $WASTELAND_HOME/auth.json
 - `runtime.defaultRole`：未显式传 `--role` 时的默认角色
 - `runtime.permissionMode`：默认权限模式
 - `runtime.maxStepsPerTurn`：单轮最大 step 数
+- `runtime.doomLoopThreshold`：连续同名同参工具调用阈值（默认 `3`），达阈值即短路本轮；`0` 表示关闭检测
 - `runtime.debug`：默认是否打开调试 trace
 - `providers.<providerId>`：按 provider 透传的配置对象，当前由 `ProviderRegistry.resolve(id, config)` 交给具体 provider
 - `{"$auth":"KEY_NAME"}`：通用敏感值引用；当前会从 `auth.json` 或进程环境变量解析成真实字符串
@@ -136,6 +137,7 @@ $WASTELAND_HOME/auth.json
 - `WASTELAND_PROVIDER`
 - `WASTELAND_PERMISSION_MODE`
 - `WASTELAND_MAX_STEPS_PER_TURN`
+- `WASTELAND_DOOM_LOOP_THRESHOLD`
 - `WASTELAND_DEBUG`
 - `WASTELAND_SESSION_DIR`
 

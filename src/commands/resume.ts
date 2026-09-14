@@ -246,6 +246,7 @@ export function createResumeCommand(): Command {
       const debug = options.debug === true || loadedSettings.settings.runtime.debug;
       const debugFormat = options.debugFormat === 'jsonl' ? 'jsonl' : 'pretty';
       const maxStepsPerTurn = loadedSettings.settings.runtime.maxStepsPerTurn ?? 8;
+      const doomLoopThreshold = loadedSettings.settings.runtime.doomLoopThreshold;
       const tty = detectTTY();
       const renderStyle = tty.stdoutIsTTY ? 'interactive' : 'classic';
 
@@ -265,6 +266,7 @@ export function createResumeCommand(): Command {
             cwd,
             mode: 'single',
             maxStepsPerTurn,
+            doomLoopThreshold,
             prompt: resolvedRuntime.prompt,
             debug,
             existingSession: resumedSession,
@@ -294,6 +296,7 @@ export function createResumeCommand(): Command {
             cwd,
             mode: 'interactive',
             maxStepsPerTurn,
+            doomLoopThreshold,
             prompt: resolvedRuntime.prompt,
             debug,
             userInputBridge,

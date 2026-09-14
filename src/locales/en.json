@@ -742,6 +742,7 @@
           "defaultRole": "Default agent role (e.g. orchestrator)",
           "permissionMode": "Permission mode: default | accept_edits | bypass_permissions",
           "maxStepsPerTurn": "Max tool steps per turn (default: 30)",
+          "doomLoopThreshold": "Consecutive repeated tool call threshold (default: 3, 0 disables)",
           "language": "UI language: en | zh",
           "providerType": "API protocol: openai-compatible | anthropic | local"
         },
@@ -1026,6 +1027,7 @@
   "runtime": {
     "noFinalMessage": "Current provider did not return a final message.",
     "maxStepsReached": "Current turn has reached the maximum tool steps limit...",
+    "doomLoopDetected": "Doom loop detected: tool \"{{tool}}\" was called {{count}} times in a row with identical arguments. This turn has been stopped. Change your approach or the arguments before retrying.",
     "noToolRegistry": "Current runtime is not configured with tool registry or permission gate.",
     "readBeforeEdit": "read-before-edit check failed.",
     "toolNotFound": "Tool not found:",

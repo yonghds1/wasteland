@@ -2,11 +2,12 @@ import { EMPTY, of, type Observable } from 'rxjs';
 import { tap } from 'rxjs';
 import type { SkillExecutor } from '@core/skills/skill-executor.js';
 import type { ToolRegistry } from '@tools/core/tool-registry.js';
+import type { ToolCall } from '@tools/core/tool-types.js';
 import type { PermissionGate } from './permission-gate.js';
 import type { AgentProvider } from '@providers/provider-types.js';
 import { type SessionMetadata, type SessionManager } from '../session/session-manager.js';
 import type { HistoryRecord, RuntimeEvent, SessionMessageRecord } from '../runtime/event-types.js';
-import { type DebugTraceInput, buildMaxStepsMessage } from './turn-helpers.js';
+import { type DebugTraceInput, buildDoomLoopMessage, buildMaxStepsMessage } from './turn-helpers.js';
 import type { TurnState } from './turn-state.js';
 import { failTurnState } from './turn-state.js';
 import type { ContextManager } from '../memory/context-manager.js';
@@ -137,6 +138,106 @@ export function checkMaxStepsExceeded(params: {
     sessionManager: params.sessionManager,
     history: params.history,
     turn: limitedState.turn,
+    content: message,
+    contextManager: params.contextManager,
+  });
+}
+
+/**
+ * 稳定序列化：对对象按键名递归排序后再序列化。
+ *
+ * 工具参数来自模型，键序不保证稳定（`{a:1,b:2}` 与 `{b:2,a:1}` 语义相同）。
+ * 裸用 `JSON.stringify` 会因键序不同把同一调用判成不同调用，从而漏判死循环。
+ *
+ * @param value - 任意 JSON 值
+ * @returns 键序无关的字符串表示
+ */
+function stableSerialize(value: unknown): string {
+  if (value === null || typeof value !== 'object') {
+    return JSON.stringify(value) ?? 'undefined';
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stableSerialize(item)).join(',')}]`;
+  }
+  const entries = Object.entries(value as Record<string, unknown>)
+    // JSON.stringify 会丢弃 undefined 值字段，这里对齐同一语义
+    .filter(([, entryValue]) => entryValue !== undefined)
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+  return `{${entries
+    .map(([key, entryValue]) => `${JSON.stringify(key)}:${stableSerialize(entryValue)}`)
+    .join(',')}}`;
+}
+
+/**
+ * doom loop 判据（纯函数，无副作用，可直接单测）。
+ *
+ * 判定尾部是否出现「连续 threshold 次同名且同参」的工具调用：
+ * - 只在本 turn 的累积调用序列上判断，任何一次不同调用都会打断连续段。
+ * - 参数比较为键序无关的稳定序列化，避免键序不同漏判。
+ * - threshold <= 0 表示关闭检测（与多 Agent maxRetries 的 0=关闭约定一致）。
+ *
+ * @param toolCalls - 本 turn 内按时间顺序累积的工具调用
+ * @param threshold - 连续重复触发阈值
+ * @returns 命中死循环返回 true
+ */
+export function isDoomLoop(toolCalls: readonly ToolCall[], threshold: number): boolean {
+  if (threshold <= 0) return false;
+  if (toolCalls.length < threshold) return false;
+
+  const recent = toolCalls.slice(toolCalls.length - threshold);
+  const first = recent[0];
+  const firstArgs = stableSerialize(first.input);
+  return recent.every(
+    (call) => call.toolName === first.toolName && stableSerialize(call.input) === firstArgs
+  );
+}
+
+/**
+ * doom loop 守卫：模型连续重复调用同名同参工具达到阈值时，
+ * 短路本轮并持久化一条说明消息（与 checkMaxStepsExceeded 同形状）。
+ *
+ * 未命中或检测已关闭（threshold <= 0）返回 null。
+ *
+ * @param params.state - 当前 turn 状态（含已累积的 toolCalls）
+ * @param params.doomLoopThreshold - 连续重复阈值，0 表示关闭检测
+ * @returns 接管本轮的事件流；放行时返回 null
+ */
+export function checkDoomLoop(params: {
+  state: TurnState;
+  doomLoopThreshold: number;
+  session: SessionMetadata;
+  sessionManager: SessionManager;
+  history: HistoryRecord[];
+  contextManager: ContextManager;
+  trace: (event: DebugTraceInput) => void;
+}): Observable<RuntimeEvent> | null {
+  if (!isDoomLoop(params.state.toolCalls, params.doomLoopThreshold)) {
+    return null;
+  }
+
+  const exhausted = params.state.toolCalls[params.state.toolCalls.length - 1];
+  const loopedState = failTurnState(params.state);
+  const message = buildDoomLoopMessage(exhausted.toolName, params.doomLoopThreshold);
+
+  params.trace({
+    sessionId: params.session.id,
+    turn: loopedState.turn,
+    step: loopedState.step,
+    scope: 'turn',
+    phase: 'turn.doom_loop',
+    message: 'doom loop detected',
+    data: {
+      tool: exhausted.toolName,
+      callCount: params.doomLoopThreshold,
+    },
+  });
+
+  // 返回持久化消息的 Observable，不再继续
+  return persistAssistantMessage({
+    session: params.session,
+    sessionManager: params.sessionManager,
+    history: params.history,
+    turn: loopedState.turn,
     content: message,
     contextManager: params.contextManager,
   });

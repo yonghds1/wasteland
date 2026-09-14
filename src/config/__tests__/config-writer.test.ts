@@ -40,6 +40,7 @@ describe('config-writer', () => {
         mode: 'multi',
         skinId: 'warlord-immortal',
         maxStepsPerTurn: 30,
+        doomLoopThreshold: 3,
         language: 'zh',
       });
       expect(settings.providers).toEqual({

@@ -187,6 +187,11 @@ export type RawWastelandSettings = {
     defaultModel?: string;
     permissionMode?: PermissionMode;
     maxStepsPerTurn?: number;
+    /**
+     * doom loop 检测阈值：模型连续 N 次用同名同参调用工具即短路本轮，默认 3。
+     * 0 表示关闭检测（存在合法误报，如轮询构建、等文件出现）。
+     */
+    doomLoopThreshold?: number;
     childAgentTimeout?: number;
     /**
      * 压缩预算占比（0-1，默认 0.6）：contextWindow × compactionBudgetRatio = 压缩目标预算。
@@ -309,6 +314,8 @@ export type ResolvedWastelandSettings = {
     defaultModel?: string;
     permissionMode: PermissionMode;
     maxStepsPerTurn: number;
+    /** doom loop 检测阈值（默认 3）；0 表示关闭检测 */
+    doomLoopThreshold: number;
     childAgentTimeout: number;
     /** 压缩预算占比（0-1），默认 0.6：contextWindow × compactionBudgetRatio = 压缩目标预算 */
     compactionBudgetRatio: number;
@@ -374,6 +381,7 @@ export const DEFAULT_WASTELAND_SETTINGS: ResolvedWastelandSettings = {
     mode: 'single',
     permissionMode: 'default',
     maxStepsPerTurn: 30,
+    doomLoopThreshold: 3,
     childAgentTimeout: 600000,
     compactionBudgetRatio: 0.6,
     compactionThreshold: 0.8,

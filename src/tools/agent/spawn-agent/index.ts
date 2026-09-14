@@ -232,6 +232,8 @@ export function spawnChildAgentForwarding$(params: {
       maxStepsPerTurn: context.loadedSettings?.settings?.runtime?.maxStepsPerTurn
         ? Math.max(context.loadedSettings.settings.runtime.maxStepsPerTurn, 50)
         : 50,
+      // doom loop 检测沿用用户配置（0 表示关闭）；未配置时由 runAgentLoop 兜底为 3
+      doomLoopThreshold: context.loadedSettings?.settings?.runtime?.doomLoopThreshold,
     });
 
     // 日志：记录子 agent 实际配置（验证 minimax 调用时输入 + 解析后的 model/tools）
