@@ -51,11 +51,15 @@ function makePending(toolName: string, input?: Record<string, unknown>) {
   };
 }
 
-function renderBar(pending: ReturnType<typeof makePending> | null) {
+function renderBar(
+  pending: ReturnType<typeof makePending> | null,
+  opts: { queue?: ReturnType<typeof makePending>[]; isPending?: boolean } = {}
+) {
   const provideInput = vi.fn();
-  const bridge = { isPending: () => true, provideInput };
+  const bridge = { isPending: () => opts.isPending ?? true, provideInput };
   const gate = { addSessionRule: vi.fn() };
   const sendMessage = vi.fn();
+  const queue = opts.queue ?? [];
 
   const baseState: AppState = {
     currentPage: 'session',
@@ -66,7 +70,7 @@ function renderBar(pending: ReturnType<typeof makePending> | null) {
     filterMode: false,
     editMode: false,
     permissionSelection: 0,
-    permission: { pending, queue: [], history: [] },
+    permission: { pending, queue, history: [] },
     logPageFilter: {},
     session: {
       agents: [],
@@ -76,7 +80,7 @@ function renderBar(pending: ReturnType<typeof makePending> | null) {
       isStreaming: false,
       streamingContent: '',
       streamingMessageId: null,
-      permission: { pending, queue: [], history: [] },
+      permission: { pending, queue, history: [] },
       usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0, cachedTokens: 0 },
       context: { isCompacting: false },
     },
@@ -189,9 +193,10 @@ describe('ChatInputBar 权限确认', () => {
 describe('ChatInputBar 框内权限渲染', () => {
   async function renderAndCollect(
     pending: ReturnType<typeof makePending> | null,
-    keys: string[] = []
+    keys: string[] = [],
+    opts: { queue?: ReturnType<typeof makePending>[]; isPending?: boolean } = {}
   ): Promise<string> {
-    const { instance, stdin, stdout } = renderBar(pending);
+    const { instance, stdin, stdout } = renderBar(pending, opts);
     try {
       await settle();
       for (const key of keys) {
@@ -227,8 +232,36 @@ describe('ChatInputBar 框内权限渲染', () => {
   });
 
   it('非 pending 时显示输入占位、无权限标题', async () => {
-    const output = await renderAndCollect(null);
-    expect(output).not.toContain('Permission ·');
-    expect(output).not.toContain('[y]');
+    // 显式 isPending:false —— bridge 无等待者、无卡片，才是真正的「无权限交互」态
+    const output = await renderAndCollect(null, [], { isPending: false });
+    expect(output).not.toContain('hints.permissionTitle');
+    expect(output).not.toContain('hints.permissionUnknownTitle');
+    expect(output).not.toContain('hints.yes');
+  });
+
+  it('队列非空时显示「还有 N 个确认排队等待回答」', async () => {
+    // 09-14-subagent-permission-hang：并行子 agent 同批提问时，卡片 FIFO 逐个上位，
+    // 此前用户无从知道还排着几个确认。
+    const pending = makePending('bash', { command: 'git status' });
+    const output = await renderAndCollect(pending, [], {
+      queue: [makePending('web-fetch'), makePending('bash')],
+    });
+    expect(output).toContain('hints.permissionQueued');
+  });
+
+  it('队列为空时不显示排队提示', async () => {
+    const pending = makePending('bash', { command: 'git status' });
+    const output = await renderAndCollect(pending, [], { queue: [] });
+    expect(output).not.toContain('hints.permissionQueued');
+  });
+
+  it('bridge 等待中但卡片缺失时显示兜底提示（不再静默吞输入）', async () => {
+    // isPendingPermission 取自 bridge，卡片取自 state.permission.pending；两者背离时
+    // 旧实现会走到普通输入区渲染 —— 输入被当权限回答吞掉，界面却毫无提示（静默死锁）。
+    const output = await renderAndCollect(null, [], { isPending: true });
+    expect(output).toContain('hints.permissionUnknownTitle');
+    // 兜底状态仍给出可用按键
+    expect(output).toContain('hints.yes');
+    expect(output).toContain('hints.no');
   });
 });

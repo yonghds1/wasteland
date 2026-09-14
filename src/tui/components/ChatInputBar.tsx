@@ -16,6 +16,7 @@ import { useAppContext } from '../context/AppContext.js';
 import { t } from '@locales/index.js';
 import { wastelandTheme } from '@theme/wasteland/index.js';
 import { describeAllowPattern } from '@core/engine/permission-gate.js';
+import { PermissionPrompt } from './PermissionPrompt.js';
 import { getCommandManager } from '@core/shared/command-manager.js';
 import {
   applyCompletion,
@@ -339,10 +340,7 @@ export function ChatInputBar({ width, sendMessage, runtime }: ChatInputBarProps)
   const contentColor = isCommand ? wastelandTheme.colors.secondary : wastelandTheme.colors.success;
 
   const pendingPermission = state.permission?.pending ?? null;
-  const allowPattern =
-    pendingPermission != null
-      ? describeAllowPattern(pendingPermission.toolName, pendingPermission.input)
-      : null;
+  const queuedCount = state.permission?.queue.length ?? 0;
   const permissionSelection = state.permissionSelection ?? 0;
 
   const renderPermissionBadge = () => {
@@ -370,49 +368,8 @@ export function ChatInputBar({ width, sendMessage, runtime }: ChatInputBarProps)
 
   return (
     <Box flexDirection="column" width={width} flexShrink={0} paddingX={1} paddingTop={1}>
-      {isPendingPermission && pendingPermission ? (
-        <Box flexDirection="column" backgroundColor="#0A0A0A" paddingLeft={1} borderLeftColor={wastelandTheme.colors.warning} borderStyle="single" borderTop={false} borderRight={false} borderBottom={false}>
-          <Box flexDirection="row">
-            <Text color={wastelandTheme.colors.warning} bold>
-              {t('tui.session.input.hints.permissionTitle', { toolName: pendingPermission.toolName })}
-            </Text>
-          </Box>
-          {pendingPermission.command && (
-            <Box flexDirection="row" backgroundColor={wastelandTheme.colors.backgroundSecondary || wastelandTheme.colors.borderDim} paddingLeft={1} marginTop={1} marginBottom={1}>
-              <Text color={wastelandTheme.colors.secondary}>$ {pendingPermission.command}</Text>
-            </Box>
-          )}
-          <Box flexDirection="row">
-            <Text
-              color={permissionSelection === 0 ? wastelandTheme.colors.success : wastelandTheme.colors.muted}
-              bold={permissionSelection === 0}
-              dimColor={permissionSelection !== 0}
-            >
-              {permissionSelection === 0 ? '▶ ' : '  '}
-              {t('tui.session.input.hints.yes')}
-            </Text>
-          </Box>
-          <Box flexDirection="row">
-            <Text
-              color={permissionSelection === 1 && allowPattern ? wastelandTheme.colors.primary : wastelandTheme.colors.muted}
-              bold={permissionSelection === 1 && !!allowPattern}
-              dimColor={permissionSelection !== 1 || !allowPattern}
-            >
-              {permissionSelection === 1 && allowPattern ? '▶ ' : '  '}
-              {allowPattern ? t('tui.session.input.hints.always', { label: allowPattern.label }) : t('tui.session.input.hints.alwaysDisabled')}
-            </Text>
-          </Box>
-          <Box flexDirection="row">
-            <Text
-              color={permissionSelection === 2 ? wastelandTheme.colors.error : wastelandTheme.colors.muted}
-              bold={permissionSelection === 2}
-              dimColor={permissionSelection !== 2}
-            >
-              {permissionSelection === 2 ? '▶ ' : '  '}
-              {t('tui.session.input.hints.no')}
-            </Text>
-          </Box>
-        </Box>
+      {isPendingPermission ? (
+        <PermissionPrompt card={pendingPermission} queuedCount={queuedCount} selection={permissionSelection} />
       ) : (
         <Box flexDirection="column">
           {/* 靠左的醒目状态栏（只保留权限模式） */}

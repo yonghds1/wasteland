@@ -673,6 +673,8 @@
         "hints": {
           "default": "enter 发送 · esc 退出输入 · shift+enter 换行 · / 命令 · ↑↓历史",
           "permission": "↑↓选择 · 回车确认 · Y/A/N 快捷键",
+        "permissionQueued": "还有 {{count}} 个确认排队等待回答",
+        "permissionUnknownTitle": "△ Permission · 有调用正在等待确认（未收到详情）",
           "permissionTitle": "△ Permission · {{toolName}} 拦截",
           "yes": "[y] 本次允许",
           "always": "[a] 记住这类：{{label}}（本会话）",

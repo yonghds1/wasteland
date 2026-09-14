@@ -764,6 +764,9 @@ type Waiter = { context: PendingInputContext | null; resolve: (a: string) => voi
   - `isPending()` / `pendingCount()` = 物理队列，**含已认领未出队**（吞行依赖）；
   - `getPendingContext()` = 第一个**未认领**者（UI/CLI 要据它注册 `always` 规则，答过的那条不能再用）。
 - **UI 侧热键分支不得静默吞键**：无 pattern、无 gate 等无法"记住"的情况必须**可见地降级**（落到 `once`）或明确提示；直接 `return` 会让等待者不 resolve。TUI 与 CLI 行为必须一致。
+- **有等待就必须可见**：只要 `bridge.isPending()` 为真，界面必须给出可操作提示——含「详情缺失」（卡片为空）时也要渲染兜底。禁止"输入被当权限回答吞掉、界面却空白"的静默死锁。TUI 由 `isPendingPermission ? <PermissionPrompt card={…}/> : 正常输入区` 保证，`card` 为 null 时渲染 `permissionUnknownTitle`。
+- **队列深度必须可见**：卡片 FIFO 逐个上位，用户需知道还排着几个（并行子 agent 同批提问时尤其重要）。TUI 渲染 `state.permission.queue.length`；**不要**用 `bridge.pendingCount()` 反推——它以物理队列为准、含已认领未出队者，刚回答完会多算 1。
+- **reducer 必须按 `callId` 摘卡，而非只认队头**：被回答的若不是队头（卡片 FIFO 与 bridge FIFO 背离时可能发生），仍要从 `queue` 摘除并记入 `history`；否则留下幽灵卡片，之后错误上位、让用户的回答被 `provideInput` 认领给**另一个**等待者。
 - `user_input_requested` 事件应携带 `toolName` + `input`；UI 由此推导模式，不靠 question 正则反推。
 
 ### 4. Validation & Error Matrix
@@ -780,7 +783,8 @@ type Waiter = { context: PendingInputContext | null; resolve: (a: string) => voi
 
 - `src/core/engine/__tests__/user-input-bridge.test.ts`：认领后 `getPendingContext()` 推进到下一个未认领者（红→绿已实证）。
 - `src/core/engine/__tests__/tool-dispatch-concurrency.test.ts`：共享 bridge 上 3 个并发 ask 各占位、逐个回答全部推进到 `tool_started`+`tool_result`；FIFO 与 `getPendingContext()` 一致；空队列静默丢弃；**同一 tick 两次 `provideInput` 各解一个**。
-- `src/tui/components/ChatInputBar.test.tsx`：无可记模式时按 `2` 不注册规则但**降级为 `provideInput('yes')`**（不再静默吞键）。
+- `src/tui/components/ChatInputBar.test.tsx`：无可记模式时按 `2` 不注册规则但**降级为 `provideInput('yes')`**（不再静默吞键）；队列非空渲染 `permissionQueued`、为空不渲染；`isPending()` 为真而卡片缺失时渲染 `permissionUnknownTitle` 兜底。
+- `src/tui/hooks/runtime-reducers/tool-reducer.test.ts`：回答队头 → 排队者上位；回答**非队头** → 从 `queue` 摘除并记入 `history`（不留幽灵卡片）。
 
 ### 6. Wrong vs Correct
 

@@ -141,13 +141,21 @@ describe('user_input_requested FIFO 排队', () => {
     expect(draft.permission.pending).toBeNull();
   });
 
-  it('非队头的回答不推进队列', () => {
+  it('非队头的回答：把它从队列摘除并记入 history（不留幽灵卡片）', () => {
+    // 09-14-subagent-permission-hang：卡片 FIFO 与 bridge 等待者 FIFO 若背离，
+    // 被回答的可能不是队头。旧行为（原样留在队列）会留下幽灵项——之后答队头时它会
+    // 错误上位，用户对着「已被回答过」的卡片再答一次，provideInput 就会认领**另一个**
+    // 等待者的答案（错配：例如 always 规则注册到错的工具上）。故改为摘除 + 记入 history。
     const draft = emptyDraft();
     request(draft, 'c1', 'bash');
     request(draft, 'c2', 'web-fetch');
     receive(draft, 'c2', 'yes');
-    expect(draft.permission.history).toHaveLength(0);
+    expect(draft.permission.history).toHaveLength(1);
+    expect(draft.permission.history[0]?.callId).toBe('c2');
+    expect(draft.permission.history[0]?.status).toBe('resolved');
+    // 队头不被这次回答推进（它自己的答案还没来）
     expect(draft.permission.pending?.callId).toBe('c1');
-    expect(draft.permission.queue.map((c) => c.callId)).toEqual(['c2']);
+    // 关键：c2 不再滞留在队列中
+    expect(draft.permission.queue).toHaveLength(0);
   });
 });

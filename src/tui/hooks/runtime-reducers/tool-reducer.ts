@@ -173,20 +173,36 @@ export function reduceToolEvent(
         type: 'user',
         content: event.answer,
       });
+      const ans = event.answer.trim().toLowerCase();
+      const decision: PermissionCard['decision'] =
+        ans === 'always'
+          ? 'allow_always'
+          : ans === 'yes' || ans === 'y' || ans === '是'
+            ? 'allow'
+            : 'deny';
+      const resolvedAt = new Date().toISOString();
+
       if (permission.pending && permission.pending.callId === event.callId) {
-        const ans = event.answer.trim().toLowerCase();
-        const decision: PermissionCard['decision'] =
-          ans === 'always'
-            ? 'allow_always'
-            : ans === 'yes' || ans === 'y' || ans === '是'
-              ? 'allow'
-              : 'deny';
         permission.history = [
           ...permission.history,
-          { ...permission.pending, status: 'resolved', decision, timestamp: new Date().toISOString() },
+          { ...permission.pending, status: 'resolved', decision, timestamp: resolvedAt },
         ];
         // 队头出队：后续等待上位（bridge 侧同 tick 已把答案路由给正确的等待者）。
         permission.pending = permission.queue.shift() ?? null;
+      } else {
+        // 被回答的不是队头：卡片 FIFO 与 bridge 等待者 FIFO 若发生背离，就会出现这种情况。
+        // 仍必须把这张卡从队列里摘掉——否则它会永久滞留，后续每次回答都对不上队头，
+        // 卡片区长期显示旧内容而真正的等待者无人应答（09-14-subagent-permission-hang）。
+        const qi = permission.queue.findIndex((c) => c.callId === event.callId);
+        if (qi >= 0) {
+          const [resolved] = permission.queue.splice(qi, 1);
+          if (resolved) {
+            permission.history = [
+              ...permission.history,
+              { ...resolved, status: 'resolved', decision, timestamp: resolvedAt },
+            ];
+          }
+        }
       }
       break;
     }

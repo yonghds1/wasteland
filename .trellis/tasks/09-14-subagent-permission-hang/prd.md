@@ -62,10 +62,12 @@ if (inputChar === '2' || inputChar === 'a' || inputChar === 'A') {
 
 ## Acceptance Criteria
 
-- [ ] 有并发复现测试，能显示修复前的失败与修复后的通过。
-- [ ] 无 pattern 的确认框上按 `a`/`2` 不再出现"按键被吞且等待者不 resolve"（有测试断言队列被推进）。
-- [ ] 子 agent 权限提问不再无应答到超时（用户实测或等价集成测试）。
-- [ ] `npm test` / `typecheck` / lint 全绿。
+- [x] 有并发复现测试，能显示修复前的失败与修复后的通过。
+      （`tool-dispatch-concurrency.test.ts` 红→绿已实证；另 bridge/reducer/ChatInputBar 三处各自红→绿）
+- [x] 无 pattern 的确认框上按 `a`/`2` 不再出现"按键被吞且等待者不 resolve"（有测试断言队列被推进）。
+- [~] 子 agent 权限提问不再无应答到超时：等价集成测试覆盖 + 可观测性补齐；
+      **用户实测不做**（用户明确表示不复测），故本项以「机制已修 + 测试防线」收口，不做端到端确认。
+- [x] `npm test` / `typecheck` / lint 全绿。
 
 ## Non-goals
 
@@ -78,3 +80,40 @@ if (inputChar === '2' || inputChar === 'a' || inputChar === 'A') {
 
 - 复现测试可能因 RxJS 时序（`queueMicrotask` in `provideInput`）而不稳定；需要显式控制微任务推进。
 - H-2 的"降级到 once"是否可接受需产品判断：静默放行与静默拒绝都不理想，可能需要在 UI 上明确呈"该工具不支持本会话记住"。
+
+---
+
+## 本次落地（2026-09-14）
+
+### H-1 已做：钉死了一个真实机制
+
+新增 `src/core/engine/__tests__/tool-dispatch-concurrency.test.ts`（4 用例）。它当场失败并暴露出：
+
+**`UserInputBridge.provideInput` 认领队头 → 同 tick 多次回答丢答案。**
+第二次调用时前一次的微任务未执行、`waiters[0]` 仍是同一对象 → 其微任务 `indexOf(head) < 0` 直接 return → **第二个答案被静默丢弃、对应等待者永久挂起**。
+
+可达性已实测：`cli-input-adapter` 的 `fromEvent(rl, 'line')` 对一次多行写入会在**同一 tick 同步连发多个 `line` 事件**（Node readline，`terminal` true/false 均成立）。
+
+修法：`Waiter` 加 `claimed` 标记，认领「第一个未认领者」；出队仍异步（保住 `isPending()` 在微任务前为 true 的既有语义）。`getPendingContext()` 同步改为只看未认领者（否则同 tick 第二次 `always` 会把规则注册到已答过的那条上）。
+
+### H-2 已做
+
+- `ChatInputBar.confirmAlways()`：无 pattern/无 gate 时**降级为本次允许**，不再静默 `return`（与 CLI 侧 `registerAlwaysFromBridge` 一致）。
+- `spawn-agent/dispatch-handler.ts` 的 `askRequested$` 补 `toolName`/`input`。
+- **超出原 PRD 补做**（同属"不让用户静默卡住"）：
+  - `ChatInputBar` 此前**只渲染队头卡片、从不渲染 queue** → 新增「还有 N 个确认排队等待回答」。
+  - `isPendingPermission`（取自 bridge）与卡片（取自 reducer）背离时，旧实现渲染普通输入区而输入仍被吞 → 新增兜底提示（`permissionUnknownTitle`），消除"界面空白但输入无效"的静默死锁。
+  - reducer 的 `user_input_received`：被回答的若不是队头，仍从 queue 摘除并记入 history（旧行为会留下幽灵卡片，之后错误上位导致答案错配）。
+  - 抽出 `PermissionPrompt.tsx`（`ChatInputBar.tsx` 当时顶到 502 行，违反 500 行铁律）。
+
+### H-3 部分做：只做可观测性，刻意不加超时
+
+- **已做**：排队数 + 兜底提示让"有确认在等待"始终可见；`n`/`y` 均可立即 resolve，等待本身已是可取消的。
+- **刻意不做**：为权限等待另加自动超时。理由：会自动否定用户的待确认请求，属行为变更且风险高于收益；`childAgentTimeout`(600s) 已提供上界。
+
+### 已知遗留（明确记录，非疏漏）
+
+- **缺陷 1 对 TUI 会话未证实**：TUI 用 `inputChar === '2'` 相等比较，多字符 chunk 不匹配热键，构造不出同 tick 双答路径。CLI 侧已实证。
+- **CLI 侧不加排队数**：`provideInput` 异步出队，调用后 `pendingCount()` 仍计入刚认领的那条，「还剩几个」会多 1，需靠减一猜，太脆；且 CLI 是行式 REPL，答完立即出现下一个提问，信息价值低。
+- **未做子 agent 归属展示**：`question` 里已带 `[name] ` 前缀但未渲染到卡片；做好需要 childName→agent 的结构化映射（当前只是展示字符串），不宜半做。
+- **`ask-user` 调 `requestInput()` 不带 context** → 队头是 ask-user 时 `getPendingContext()` 恒为 null（既有行为）。
