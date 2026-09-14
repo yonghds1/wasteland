@@ -52,13 +52,13 @@
 
 ## Acceptance Criteria
 
-- [ ] `settings.json` 的 `singleAgent.skin` 不再有任何"写入但无消费"的状态（按选定方案消解）
-- [ ] `initialize-runtime` 的 single 模式皮肤解析行为**无变化**（仍取 `skins.json` 的 `singleAgent.skin`）
-- [ ] 现有含 `singleAgent.skin` 的用户配置仍能正常加载（若选移除方案）
-- [ ] 受影响测试全部更新且通过；`npx vitest run` 全绿
-- [ ] `npm run typecheck` 通过
-- [ ] 文档同步（`docs/user-guide/configuration.md` 及相关示例）
-- [ ] `input.skinId` → `runtime.skinId` / `multiAgent.main.skin` 的链路仍被测试覆盖
+- [x] `settings.json` 的 `singleAgent.skin` 不再有任何"写入但无消费"的状态（按选定方案消解）
+- [x] `initialize-runtime` 的 single 模式皮肤解析行为**无变化**（仍取 `skins.json` 的 `singleAgent.skin`）——该文件在本次 diff 中**零改动**
+- [x] 现有含 `singleAgent.skin` 的用户配置仍能正常加载（若选移除方案）——`load-settings.test.ts:140` 单测覆盖，并对本机真实的 `.wasteland/settings.json`（仍含 `skin: warlord-stern`）做了实机 smoke，静默丢弃、不抛错
+- [x] 受影响测试全部更新且通过；`npx vitest run` 全绿（111 文件 / 1545 通过 / 3 跳过）
+- [x] `npm run typecheck` 通过
+- [x] 文档同步（`docs/user-guide/configuration.md` 及相关示例）——另同步了 `multi-agent.md`
+- [x] `input.skinId` → `runtime.skinId` / `multiAgent.main.skin` 的链路仍被测试覆盖（`config-writer.test.ts` 断言两者随 `skinId='scout'` 变化）
 
 ## Out of Scope (explicit)
 

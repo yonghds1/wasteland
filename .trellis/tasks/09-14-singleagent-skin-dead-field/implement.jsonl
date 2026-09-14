@@ -1,0 +1,3 @@
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "代码标准：类型/校验/写入三处同步修改须符合既有风格"}
+{"file": ".trellis/spec/backend/runtime-contracts.md", "reason": "配置加载与 session 契约：singleAgent 解析链路"}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "移除字段而非新增抽象；沿用既有校验/写作模式"}

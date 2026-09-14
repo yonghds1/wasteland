@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "代码标准与禁止模式"}
+{"file": ".trellis/spec/backend/runtime-contracts.md", "reason": "契约符合性：single 模式皮肤解析行为不得变化"}
