@@ -56,7 +56,8 @@ main 上 `src/tools/agent/spawn-agent/__tests__/sidecar.test.ts:73` 的 lint err
       —— 实测 run `34924298354`：conclusion **success**；
       `check (node 22)` success、`check (node 24)` success。
 - [x] AC6：CI 单次耗时已记录。
-      —— node 22 = 144s、node 24 = 110s，合计约 4.2 分钟/push；见 design.md 第 7 节。
+      —— node 22 = 144s、node 24 = 110s（并行，墙钟 ≈148s）；按 GitHub「每 job 向上取整到
+      整分钟」的计费口径为 **5 计费分钟/push** ≈ 400 次/月。见 design.md 第 7 节。
 
 ## Out of Scope
 

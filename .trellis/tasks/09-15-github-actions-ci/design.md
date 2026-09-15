@@ -83,8 +83,10 @@ concurrency: 按 ref 分组, cancel-in-progress: true
 ## 6. 已知遗留（本任务不处理，仅留痕）
 
 - `engines: node >=20` 与矩阵（22/24）不一致：Node 20 已于 2026-04 EOL。见 PRD B5。
-- 未开 branch protection：CI 红灯不阻塞合并（用户决策）。这意味着 CI 的约束力是**提示级**的，
-  若日后发现红灯被习惯性忽略，应回头再来开 B6。
+- 未开 branch protection：CI 红灯不阻塞合并，约束力是**提示级**的。
+  **且这不只是选择**：实测该仓库下 `gh api repos/.../branches/main/protection` 返回
+  `403 Upgrade to GitHub Pro or make this repository public` —— 私有仓库在 GitHub Free 上
+  该功能**不可用**。日后要把它变成硬门禁，需先改计划或仓库可见性，光点开关不够。
 - **同仓分支的重复运行**：`on: [push, pull_request]` 下，给同仓分支开 PR 后，
   一次 push 会同时触发 `push`（refs/heads/x）与 `pull_request`（refs/pull/N/merge）两条，
   而 `concurrency` 按 ref 分组**不会**互相取消 → 4 个 job 而非 2 个。
@@ -93,12 +95,16 @@ concurrency: 按 ref 分组, cancel-in-progress: true
 
 ## 7. 实测结果（AC6）
 
-首次真实运行 `34924298354`（2026-09-15，push 到 main，全部 success）：
+真实运行记录（2026-09-15，push 到 main，均 success）：
 
-| job | 耗时 |
-|---|---|
-| check (node 22) | 144s |
-| check (node 24) | 110s |
+| run | job | 耗时 |
+|---|---|---|
+| `34924298354` | check (node 22) | 144s |
+| `34924298354` | check (node 24) | 110s |
+| `34925010449` | check (node 22 / 24) | success（补 `permissions` 后复跑） |
 
-单次 push 合计约 **254s ≈ 4.2 分钟**。private 仓库免费额度 2000 分钟/月
-→ 约 **470 次 push/月**，个人开发远用不完。
+两个 job 并行，单次 push 墙钟 ≈ 148s。
+
+**计费口径要分清**：GitHub 按**每个 job 向上取整到整分钟**计费，
+故 144s→3min、110s→2min，一次 push 计 **5 分钟**而非墙钟的 2.5 分钟。
+private 仓库免费额度 2000 分钟/月 → 约 **400 次 push/月**，个人开发仍远用不完。
