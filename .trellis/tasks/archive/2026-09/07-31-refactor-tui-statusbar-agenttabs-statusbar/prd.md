@@ -159,3 +159,7 @@ export function getRightSideProse(
 - 加 prose + flexGrow 后 AgentTabs 顶行宽度可能超 `terminalWidth`,在窄终端(80 列以下 + 多个 sub-agent)时 prose 会截断。Ink 默认行为:text overflow 由终端处理(可能 wrap 或 字符换行),按现状(未加 flexWrap)依然 OK。
 - StatusBar 删除后,老的 `tsc --noEmit` 验证整体 UI 类型还能 pass(`runtime` 类型在 ChatArea 与 AgentTabs 间通)。
 - locale parity 在 cn/en 一致("Main" + "Main")所以 100% pass。
+
+## 收口记录（2026-09-15）
+
+方案 C 已完整执行：StatusBar.tsx 已删除，AgentTabs 在位并承担 Main tab 皮肤后缀与右侧流式文案。
