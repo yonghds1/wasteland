@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "质量门禁定义：npm run check 各环节的期望"}
+{"file": ".trellis/spec/backend/architecture-rules.md", "reason": "构建/依赖边界与测试放置约束"}
