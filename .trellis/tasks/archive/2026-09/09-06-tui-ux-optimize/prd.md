@@ -50,3 +50,7 @@
 ## Open Questions
 
 - 无阻塞问题。范围已由用户决策为 P0+P1。
+
+## 收口记录（2026-09-15）
+
+TUI UX 项已落地：Help 页 src/tui/components/HelpCommandsView.tsx 在位，输入历史、斜杠补全、ctx 显示、窄屏可读性均已实现。
