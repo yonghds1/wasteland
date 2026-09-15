@@ -77,3 +77,55 @@
    通读 926 行。主因是"签名要对码"（109 个标识符逐个 grep），而非行数。
 3. 结论：**契约型文件的单位成本约为存在性型的 2–3 倍**，但过期后果也更重（读者照签名写代码）。
    父任务排期时宜按此系数估计剩余批次。
+
+---
+
+## E. 收工自审（2026-09-15）
+
+对本次改动做的对抗性回查。**自审抓到 3 处我自己引入或漏掉的问题**，均已修。
+
+### E-1 真缺陷：我改的签名本身没验全（3 处）
+
+| 位置 | 问题 | 证据 | 处理 |
+|---|---|---|---|
+| `resolveChatRuntime` | 我只把 `ResolvedRxcSettings` 换成真名，**没核对签名完整性**——真实现还有 `cwd?` 与 `agentMode?` | `src/config/resolve-chat-runtime.ts:276-286` | 补齐两参数 |
+| `runAgentLoop` 入参 | 文档只列 3 个可选参数，真实现有 **18 个**（含 `doomLoopThreshold`、`abort$`、`loadedSettings` 等）。属**旧有缺陷**，非我引入，但我改过相邻行却没发现 | `src/core/engine/agent-loop.ts:161-205` | 必需项列全，可选项全名列举并指向源码 |
+| `runAgentLoop` 返回 | 文档内联 `{events$, debug$}`，真类型 `AgentRun` 还有第三个字段 `userInputBridge` | `agent-loop.ts:75-80` | 改为引用 `AgentRun` 并注明三字段 |
+
+**根因与我记下的 R7 同源**：第一轮我用"标识符是否 grep 得到"来验证签名，
+但**名字存在不等于签名正确**。这是本批最重要的自我批评——我写下 R7（"找不到要归因"）之后，
+**自己又犯了它的镜像错误**："找得到"就没有再往下核对。
+
+### E-2 高危否定句：经更严格复验后成立
+
+我在文档里新增了一句否定断言——"nothing spawns the CLI entry point"。这类断言若写错，
+就是**新引入的假信息**，故用比首次更严格的手段复查：
+
+- 首次（可能失效）：`grep -rln ... src/**/__tests__/*.ts` —— zsh 无 globstar 时 `**` 只匹配一层，**不可靠**。
+- 复验：`find src -path "*__tests__*" -name "*.test.ts*"` → **112 个测试文件**，逐个 `xargs grep`
+  `child_process|execFile|execa|spawnSync|execSync` → **零命中**。
+
+结论：该否定断言**成立**，且这次是可复现的严格搜索。
+
+### E-3 归属核实
+
+初步 edit 把会话缺省路径归给 `src/config/paths.ts:108-113`。复验函数边界：
+`resolveDefaultSessionDir`（`paths.ts:95-113`）内含该返回，且先走 `resolveSessionDirOverride`；
+`src/core/session/session-index.ts:102` 与 `session-manager.ts:47` 各自的 `resolveSessionDir()`
+均**委托**同一实现 → 归属正确。
+同理复验 `resolveDefaultTraceDir` 确由 `src/ui/debug-trace-helper.ts:30` 调用（非仅"定义存在"）→ trace 结论成立。
+
+### E-4 核验为真、明确选择不改的
+
+| 项 | 实况 | 为何不改 |
+|---|---|---|
+| `ProviderRegistry.register(id, factory)` | 真参名为 `register(type, factory)`（`provider-registry.ts:35`） | 位置参数语义等价，改之属润色而非纠错 |
+| `readPipedInput(stdin?: Readable)` | 真为 `stdin: Readable = process.stdin` | 调用方视角等价（省略即取默认） |
+| `AgentProvider` | `{readonly id: string; runStep(input): Observable<…>}` 逐字相符 | 无漂移 |
+
+### E-5 自审未覆盖的部分（诚实边界）
+
+本批核验重心是**可机械核验的断言**（标识符、路径、品牌名、签名）。7 个 scenario 中
+`### 3. Contracts` 与 `### 4. Validation & Error Matrix` 的**散文式行为描述**（如
+"abort$ 触发 → AbortError，下游 catchError 转中断消息"）**未逐条对码验证**——那需要读实现并构造用例，
+成本远高于本批。因此本表的覆盖**只到"签名与引用"层**，不应被读作对全文件的逐句核验。

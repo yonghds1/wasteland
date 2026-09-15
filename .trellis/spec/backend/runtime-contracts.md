@@ -18,18 +18,21 @@
 
 ```ts
 runAgentLoop(params: {
+  // 必需
   input$: Observable<ChatInputTurn>;
   provider: AgentProvider;
   sessionManager: SessionManager;
-  toolRegistry?: ToolRegistry;
-  permissionGate?: PermissionGate;
   cwd: string;
   mode: RuntimeMode;
-  maxStepsPerTurn?: number;
-}): {
-  events$: Observable<RuntimeEvent>;
-  debug$: Observable<DebugTraceEvent>;
-}
+  // 可选：toolRegistry / permissionGate / maxStepsPerTurn / doomLoopThreshold /
+  // existingSession / skillExecutor / prompt / resolvePrompt / providerRegistry /
+  // providerSettings / childAgentTimeout / userInputBridge / interactive /
+  // spawnDepth / debug / loadedSettings / initialHistory / abort$
+  // （完整签名与各参数语义见 src/core/engine/agent-loop.ts:161）
+}): AgentRun
+// AgentRun = { events$: Observable<RuntimeEvent>;
+//              debug$: Observable<DebugTraceEvent>;
+//              userInputBridge: UserInputBridge | undefined }
 ```
 
 - Config entry:
@@ -44,6 +47,8 @@ resolveChatRuntime(params: {
   settings: ResolvedWastelandSettings;
   roleName?: string;
   providerName?: string;
+  cwd?: string;
+  agentMode?: AgentMode;   // 缺省取 settings.runtime.mode，再缺省 'single'
 }): ResolvedChatRuntime
 ```
 
