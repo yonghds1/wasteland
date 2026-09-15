@@ -39,3 +39,7 @@
 ## Technical Notes
 
 * 受影响文件: `scripts/create-aliases.sh`
+
+## 收口记录（2026-09-15）
+
+scripts/create-aliases.sh 已改用 ln -sf（L68、L104），不再因已存在链接中断。
