@@ -106,3 +106,7 @@ APCA primary text Lc:
 ### 风险
 
 - 0 — 与 acb4cca 同样简单的 token 局部改动。但**这次专门走 design-first 流程,避免再次表面"`#2A2014` 突兀"**。
+
+## 收口记录（2026-09-15）
+
+titleSurface token 方案随 StatusBar.tsx 删除一并退役；当前源码中已无 titleSurface 与 surfaceSunken 引用。
