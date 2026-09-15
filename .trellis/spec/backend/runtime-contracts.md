@@ -35,13 +35,13 @@ runAgentLoop(params: {
 - Config entry:
 
 ```ts
-loadRxcSettings(params?: {
+loadWastelandSettings(params?: {
   cwd?: string;
   env?: NodeJS.ProcessEnv;
-}): Promise<LoadedRxcSettings>
+}): Promise<LoadedWastelandSettings>
 
 resolveChatRuntime(params: {
-  settings: ResolvedRxcSettings;
+  settings: ResolvedWastelandSettings;
   roleName?: string;
   providerName?: string;
 }): ResolvedChatRuntime
@@ -110,8 +110,11 @@ renderDebugTrace(
 ```ts
 createSingleTurnInput(message: string, source: "message" | "stdin"): Observable<ChatInputTurn>
 readPipedInput(stdin?: Readable): Promise<string | null>
-createInteractiveTurnStream(...): InteractiveTurnStream
 ```
+
+- Interactive input is provided by `CliInputAdapter implements InputAdapter`
+  (`src/ui/cli-input-adapter.ts`), against the contract in `src/core/input-adapter.ts`.
+  The former `createInteractiveTurnStream(...)` / `InteractiveTurnStream` pair no longer exists.
 
 ### 3. Contracts
 
@@ -156,25 +159,25 @@ createInteractiveTurnStream(...): InteractiveTurnStream
   - `/clear`
   - `/exit`
   - `/quit`
-  - these are handled inside `createInteractiveTurnStream(...)`
+  - these are handled inside the CLI input adapter (`CliInputAdapter`, `src/ui/cli-input-adapter.ts`)
   - they do not emit `ChatInputTurn`
 
 - Configuration sources
-  - project: `.rxc/settings.json`
-  - project auth: `.rxc/auth.json`
-  - user global: `~/.rxc/settings.json`
-  - user global auth: `~/.rxc/auth.json`
-  - env override root: `RXC_HOME`
+  - project: `.wasteland/settings.json`
+  - project auth: `.wasteland/auth.json`
+  - user global: `~/.wasteland/settings.json`
+  - user global auth: `~/.wasteland/auth.json`
+  - env override root: `WASTELAND_HOME`
   - settings precedence inside config loader:
     - CLI params
-    - `RXC_*` process env
-    - project `.rxc/settings.json`
-    - user global `~/.rxc/settings.json`
+    - `WASTELAND_*` process env
+    - project `.wasteland/settings.json`
+    - user global `~/.wasteland/settings.json`
     - built-in defaults
   - auth ref precedence:
     - process env with the same key
-    - project `.rxc/auth.json`
-    - user global `~/.rxc/auth.json`
+    - project `.wasteland/auth.json`
+    - user global `~/.wasteland/auth.json`
 
 - Generic auth refs
   - provider / model / role free-form fields may contain `{"$auth":"KEY_NAME"}`
@@ -192,17 +195,18 @@ createInteractiveTurnStream(...): InteractiveTurnStream
     - default permission mode
 
 - Session directory override
-  - `RXC_SESSION_DIR`
+  - `WASTELAND_SESSION_DIR` (single-directory override)
   - optional
-  - `RX_CLI_SESSION_DIR` remains as a legacy fallback alias
-  - if both are absent, default to `.rxc/sessions/` under current working directory
+  - legacy fallback aliases, in order: `JOE_SESSION_DIR`, `RX_CLI_SESSION_DIR` (`src/config/paths.ts:116-122`)
+  - if all are absent, sessions resolve to the **central data root** — `<dataRoot>/sessions/<projectId>/`
+    (`src/config/paths.ts:108-113`) — not a project-local directory
 
 - Chat debug surface
   - `chat --debug`
   - when enabled, pretty debug trace goes to `stderr`
   - normal assistant / tool output remains on `stdout`
   - `chat --debug --debug-format jsonl`
-  - JSONL format outputs to both `stderr` and file `.rxc/traces/<sessionId>.jsonl`
+  - JSONL format outputs to both `stderr` and file `.wasteland/traces/<sessionId>.jsonl`
   - each JSONL line is a serialized `DebugTraceEvent`
   - `--debug-format` supports `pretty` (default) and `jsonl`
 
@@ -213,7 +217,10 @@ createInteractiveTurnStream(...): InteractiveTurnStream
   - enables chronological sorting and human identification
 
 - Trace directory
-  - `.rxc/traces/` (parallel to `.rxc/sessions/`)
+  - `.wasteland/traces/` — resolved by `resolveDefaultTraceDir` (`src/config/paths.ts:128-138`):
+    project config dir + `traces/`, else `~/.wasteland/traces/`.
+    Note sessions no longer live beside it — they resolve to the central data root
+    (`<dataRoot>/sessions/<projectId>/`), so the two are **not** siblings.
   - created automatically when `--debug-format jsonl` is used
   - trace file name matches session ID: `<sessionId>.jsonl`
 
@@ -243,7 +250,7 @@ createInteractiveTurnStream(...): InteractiveTurnStream
 | a `$auth` key is referenced but missing everywhere | Throw `未找到 auth key: <key>` before entering runtime |
 | `providers.qwen.baseUrl` does not end with `/v1` | qwen provider normalizes it to a compatible root before requesting chat completions |
 | `--debug` is enabled | runtime still writes normal reply output to `stdout`; debug trace writes to `stderr` |
-| `--debug --debug-format jsonl` is enabled | runtime writes JSONL to `stderr` AND persists to `.rxc/traces/<sessionId>.jsonl` |
+| `--debug --debug-format jsonl` is enabled | runtime writes JSONL to `stderr` AND persists to `.wasteland/traces/<sessionId>.jsonl` |
 | `--debug` is used without `--debug-format` | defaults to `pretty` format, `stderr` only, no trace file |
 | trace directory does not exist | `renderDebugTrace` creates it recursively before subscribing |
 | `--message` contains only whitespace | Treat as absent; continue stdin / interactive detection |
@@ -274,6 +281,12 @@ createInteractiveTurnStream(...): InteractiveTurnStream
 
 ### 6. Tests Required
 
+> **No process-level CLI test harness exists today.** The former `test/` directory and its smoke
+> tests were removed; nothing spawns the CLI entry point, and there is no top-level `test/`.
+> The entries below state the **required** coverage — where it is satisfied today, it lives in
+> vitest files under `src/**/__tests__/`. Read every "Process-level …" line as
+> *required, not currently implemented in that form*.
+
 - Process-level smoke test for `chat --message`
   - assert rendered assistant output
 - Process-level smoke test for stdin path
@@ -288,15 +301,15 @@ createInteractiveTurnStream(...): InteractiveTurnStream
   - assert trace output appears in `stderr`
 - Process-level CLI test for `--debug --debug-format jsonl`
   - assert JSONL output goes to `stderr`
-  - assert trace file is created at `.rxc/traces/<sessionId>.jsonl`
+  - assert trace file is created at `.wasteland/traces/<sessionId>.jsonl`
   - assert each JSONL line is valid JSON
   - assert session ID uses timestamp prefix format
 - If provider contract changes later
   - add/adjust tests for new runtime event types, debug trace behavior, and transcript behavior
 - Process-level CLI test for unsupported provider
   - assert command fails before entering runtime
-- Process-level CLI test for `.rxc/auth.json`
-  - assert secrets can live outside `.rxc/settings.json`
+- Process-level CLI test for `.wasteland/auth.json`
+  - assert secrets can live outside `.wasteland/settings.json`
   - assert `$auth` values reach provider resolution
 - Process-level CLI test for auth ref env override
   - assert process env can override the same key from `auth.json`
@@ -479,7 +492,7 @@ stopRuntimeAgents(runtime: Pick<RuntimeEnvironment, 'mcpManager'>): Promise<void
 
 ### 4. Tests Required
 
-- `src/commands/chat.test.ts`、`src/commands/__tests__/resume.test.ts`、`src/tui/hooks/useRuntime.test.ts`：三种入口装配回归（本轮重构后 15 用例全绿）。
+- `src/commands/__tests__/chat.test.ts`、`src/commands/__tests__/resume.test.ts`、`src/tui/hooks/__tests__/useRuntime.test.ts`：三种入口装配回归。
 - 新增入口时：补对应装配测试，断言 `loadedSettings` / `debug` / `userInputBridge` 透传。
 
 ### 5. Wrong vs Correct
@@ -521,7 +534,7 @@ Why correct:
 ### 2. Signatures
 
 ```ts
-// src/core/runtime/context-manager.ts
+// src/core/memory/context-manager.ts
 export type ContextManagerConfig = {
   /** context window 大小（token 数） */
   contextWindow: number;
@@ -581,7 +594,7 @@ export type CompactionPlan = {
 
 ### 6. Tests Required
 
-- `src/core/runtime/__tests__/context-manager.test.ts`：
+- `src/core/memory/__tests__/context-manager.test.ts`：
   - 全部记录 ≤ 预算 → `null`
   - 短记录保留更多条 / 长记录保留更少条（`cutIndex` 与 `removedRecords` 断言）
   - 单条超预算至少保留最后一条
@@ -784,8 +797,8 @@ type Waiter = { context: PendingInputContext | null; resolve: (a: string) => voi
 
 - `src/core/engine/__tests__/user-input-bridge.test.ts`：认领后 `getPendingContext()` 推进到下一个未认领者（红→绿已实证）。
 - `src/core/engine/__tests__/tool-dispatch-concurrency.test.ts`：共享 bridge 上 3 个并发 ask 各占位、逐个回答全部推进到 `tool_started`+`tool_result`；FIFO 与 `getPendingContext()` 一致；空队列静默丢弃；**同一 tick 两次 `provideInput` 各解一个**。
-- `src/tui/components/ChatInputBar.test.tsx`：无可记模式时按 `2` 不注册规则但**降级为 `provideInput('yes')`**（不再静默吞键）；队列非空渲染 `permissionQueued`、为空不渲染；`isPending()` 为真而卡片缺失时渲染 `permissionUnknownTitle` 兜底。
-- `src/tui/hooks/runtime-reducers/tool-reducer.test.ts`：回答队头 → 排队者上位；回答**非队头** → 从 `queue` 摘除并记入 `history`（不留幽灵卡片）。
+- `src/tui/components/__tests__/ChatInputBar.test.tsx`：无可记模式时按 `2` 不注册规则但**降级为 `provideInput('yes')`**（不再静默吞键）；队列非空渲染 `permissionQueued`、为空不渲染；`isPending()` 为真而卡片缺失时渲染 `permissionUnknownTitle` 兜底。
+- `src/tui/hooks/runtime-reducers/__tests__/tool-reducer.test.ts`：回答队头 → 排队者上位；回答**非队头** → 从 `queue` 摘除并记入 `history`（不留幽灵卡片）。
 
 ### 6. Wrong vs Correct
 
