@@ -139,3 +139,7 @@
 
 - [`.trellis/spec/frontend/component-guidelines.md`](../../spec/frontend/component-guidelines.md) — 顶部辅助带必须可交互，且 07-31 后已合并 StatusBar 到 AgentTabs。
 - [`.trellis/spec/frontend/focus-management.md`](../../spec/frontend/focus-management.md) — focus cycle 和 useInput gating 规则，不能把一个不可交互的组件放进焦点链。
+
+## 收口记录（2026-09-15）
+
+顶部 agentbar 与输入框的视觉简化已落地，最终形态由 AgentTabs 承担（无边框）。
