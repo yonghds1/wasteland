@@ -284,13 +284,20 @@ on a Node matrix of **22 and 24**, with `fail-fast: false`. Added 2026-09-15.
 - **Why it exists**: the gates above are only worth anything if they actually run.
   Before CI, `main` sat red on a lint error (`sidecar.test.ts` dynamic `delete`)
   without anyone noticing.
-- **Advisory only**: branch protection is deliberately **not** enabled, so a red CI
-  does not block a merge. The signal is a prompt, not a gate — if red runs start being
-  ignored, revisit this decision.
-- **Job budget**: one push ≈ 4.2 min (node 22 ≈ 144s, node 24 ≈ 110s). A private repo
-  gets 2,000 Actions minutes/month ⇒ roughly 470 pushes/month.
+- **Advisory only**: branch protection is **not** enabled, so a red CI does not block a
+  merge. Note this is a platform limit, not (only) a choice: on a **private** repo under
+  GitHub Free the branch-protection API answers
+  `403 Upgrade to GitHub Pro or make this repository public to enable this feature`.
+  So turning it into a hard gate later needs a plan/visibility change first — a settings
+  toggle alone is not enough.
+- **Job budget**: one push is ≈ 254s wall-clock (node 22 ≈ 144s, node 24 ≈ 110s). GitHub
+  bills **per job, rounded up to the whole minute**, so a push costs ≈ 5 billed minutes
+  (3 + 2), not 4.2. A private repo gets 2,000 Actions minutes/month ⇒ roughly **400**
+  billed pushes/month (the 4.2 figure above is wall-clock, not billed).
 - **Duplicate runs**: with `on: [push, pull_request]`, a branch with an open PR triggers
   both events (different `github.ref`, so `concurrency` does not cancel across them).
+- **Least privilege**: the workflow declares `permissions: contents: read`, uses no secrets,
+  and does not publish — so it is safe to run on fork PRs.
 
 ### Dependency Registry Convention
 
@@ -301,8 +308,11 @@ regional mirror (e.g. `mirrors.tencent.com`, `registry.npmmirror.com`) therefore
 installs unreproducible on GitHub runners and for anyone outside that mirror's region.
 
 - Verify: `grep -c 'mirrors\.tencent\.com\|registry\.npmmirror\.com' package-lock.json` → must be `0`.
-- To fix, rewrite only the host prefix; all three sources share the identical path shape
-  (`<host>/<pkg>/-/<name>-<version>.tgz`, scoped packages included).
+- To fix, rewrite the URL prefix — but this is **not** a bare host swap, check the path shape:
+  npmmirror → npmjs is host-only (`registry.npmmirror.com/<pkg>/-/...`), whereas tencent
+  carries an extra segment (`http://mirrors.tencent.com/npm/<pkg>/-/...`) that must be
+  dropped too. Target shape: `https://registry.npmjs.org/<pkg>/-/<name>-<version>.tgz`,
+  scoped packages included (`@scope/name/-/name-<version>.tgz`).
   **Never touch `version` or `integrity`** — and if a rewrite leaves them unchanged, a
   subsequent `npm ci` passing is itself proof the official tarball matches the recorded hash.
 - Do not regenerate the lockfile to fix this: that lets transitive versions drift within
@@ -310,11 +320,15 @@ installs unreproducible on GitHub runners and for anyone outside that mirror's r
 
 ### Why these gates exist
 
-- **Locale parity** prevents translation drift: a skin id registered in `src/skins/index.ts` but missing from either locale produces `t()` falling back to the raw key in the UI. Today both locales are at 100% parity for the 13 shipped skins × 5 categories; the gate keeps them there.
-- **Contrast check** prevents shipping skins whose `label` / `text` / `thinking` colors are unreadable on the wasteland dark background. WCAG 2.1 4.5:1 lets all 13 current skins pass; APCA Lc 75/60/45 correctly flags 0 skins today (after the 7 originally-failing skins were fixed in `07-29-refactor-skins-roles-palette-token-i18n`).
-- **Lint scope**: gate 2 runs eslint over all of `src/` (no exclusions). Only **error**-severity
+- **Locale parity** prevents translation drift: `en.json` and `zh.json` must expose the same
+  set of leaf keys, otherwise `t()` silently falls back to the raw key in the UI. The gate
+  keeps the two files in lockstep.
+- **Contrast check** prevents shipping skins whose `label` / `text` / `thinking` colors are unreadable on the wasteland dark background. Thresholds are APCA `label` Lc 75 / `text` Lc 60 / `thinking` Lc 45 (`src/skins/index.ts`), checked against `wastelandColors.background` for every registered skin. There are currently **7** registered skins (`src/skins/default-skins.json`) and the gate flags 0 of them.
+- **Lint scope**: gate 2 runs `eslint src/`. There are no source-level carve-outs; the config
+  ignores only `dist/`, `node_modules/` and bare `*.js` / `*.cjs` / `*.mjs`, which today
+  excludes exactly one file (`src/acp/__tests__/fake-acp-agent.mjs`). Only **error**-severity
   findings fail it; warnings are reported but pass. The tree currently sits at 0 errors and
-  ~150 warnings (mostly `@typescript-eslint/no-explicit-any`), so a new *error* is a genuine
+  156 warnings (mostly `@typescript-eslint/no-explicit-any`), so a new *error* is a genuine
   regression signal rather than noise.
 
 ### Registry/Handler validation gates
@@ -347,7 +361,7 @@ For modules that implement a registration pattern (CommandRegistry, SkillRegistr
 
 ## Gaps Not To Paper Over / 当前仍然缺失的部分
 
-- No linter or formatter is configured yet.
+- No enforcement of the ESLint *warning* backlog (~156 `no-explicit-any` warnings pass gate 2 by design); ESLint (`eslint.config.js`) and Prettier (`.prettierrc`) are configured, but `format:check` is not part of `npm run check`.
 - No structured logging policy exists yet.
 - No database or persistence layer exists yet.
 - No real external model provider exists yet.
