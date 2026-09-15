@@ -60,3 +60,7 @@ wasteland 现状：
 ## Open Questions
 
 - 无阻塞问题。迁移策略已由用户决策为绿地新做（不迁旧数据）。
+
+## 收口记录（2026-09-15）
+
+中央数据根已落地并成为既有事实：docs/architecture/configuration.md 的「中央数据根」节即其产物，日志/transcript/导出物统一按 projectID 收纳。
