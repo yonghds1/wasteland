@@ -120,3 +120,7 @@ class LRUCache<T> {
 * 依赖：cheerio（npm 包）
 * 代码库路径：/home/ubuntu/workspace/wasteland
 * Trellis 管理：.trellis/ 目录
+
+## 收口记录（2026-09-15）
+
+web-search 已改用专业 HTML 解析与缓存：src/tools/web/html-to-markdown.ts 用 cheerio；web-search.ts 引入 LRUCache 做结果缓存。正则解析已退役。
