@@ -143,3 +143,7 @@ class McpPromptGetTool implements AgentTool {
 * 协议版本：`2024-11-05`
 * 代码库路径：/home/ubuntu/workspace/wasteland
 * Trellis 管理：.trellis/ 目录
+
+## 收口记录（2026-09-15）
+
+MCP 三件套已落地：SSE 传输见 src/tools/mcp/mcp-transport.ts（SseTransport）；Resources / Prompts 见 mcp-client.ts 的 resources/list 与 prompts/list。
