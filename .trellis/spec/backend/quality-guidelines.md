@@ -263,20 +263,59 @@ export type ToolCall = {
 
 ## Build-time Gate Scripts
 
-`npm run check` chains four gates; all must pass before merge:
+`npm run check` chains six gates; all must pass before merge:
 
 | Order | Script | Purpose | Failure Mode |
 |---|---|---|---|
 | 1 | `npm run typecheck` | `tsc --noEmit` against `tsconfig.json` (strict) | exit non-zero on TS error |
-| 2 | `npm test` | vitest unit + process-level smoke tests | exit non-zero on assertion fail |
-| 3 | `npm run check:locale-parity` | recursive comparison of `src/locales/en.json` vs `src/locales/zh.json` leaf keys | exit non-zero + message naming missing key + locale |
-| 4 | `npm run check:contrast` | APCA Lc 75/60/45 validation for all skins in `src/skins/index.ts` against `wastelandColors.background` | exit non-zero + message naming skin ID + role + Lc value |
+| 2 | `npm run lint` | eslint over `src/` | exit non-zero on **error**-severity rule (warnings do not fail) |
+| 3 | `npm run validate:i18n` | key-structure consistency across every file in `src/locales/` | exit non-zero + message naming the drifting locale file |
+| 4 | `npm run check:locale-parity` | recursive comparison of `src/locales/en.json` vs `src/locales/zh.json` leaf keys | exit non-zero + message naming missing key + locale |
+| 5 | `npm run check:contrast` | APCA Lc 75/60/45 validation for all skins against `wastelandColors.background` | exit non-zero + message naming skin ID + role + Lc value |
+| 6 | `npm test` | vitest unit + process-level smoke tests | exit non-zero on assertion fail |
+
+`npm run check:fast` = gates 1–2 only (typecheck + lint); use it for the tight local loop.
+
+### CI Contract
+
+`.github/workflows/ci.yml` runs `npm run check` on every `push` and `pull_request`,
+on a Node matrix of **22 and 24**, with `fail-fast: false`. Added 2026-09-15.
+
+- **Why it exists**: the gates above are only worth anything if they actually run.
+  Before CI, `main` sat red on a lint error (`sidecar.test.ts` dynamic `delete`)
+  without anyone noticing.
+- **Advisory only**: branch protection is deliberately **not** enabled, so a red CI
+  does not block a merge. The signal is a prompt, not a gate — if red runs start being
+  ignored, revisit this decision.
+- **Job budget**: one push ≈ 4.2 min (node 22 ≈ 144s, node 24 ≈ 110s). A private repo
+  gets 2,000 Actions minutes/month ⇒ roughly 470 pushes/month.
+- **Duplicate runs**: with `on: [push, pull_request]`, a branch with an open PR triggers
+  both events (different `github.ref`, so `concurrency` does not cancel across them).
+
+### Dependency Registry Convention
+
+**`package-lock.json` must resolve every entry to `https://registry.npmjs.org`.**
+
+`npm ci` fetches from the `resolved` URL recorded in the lockfile. A lockfile pinned to a
+regional mirror (e.g. `mirrors.tencent.com`, `registry.npmmirror.com`) therefore makes
+installs unreproducible on GitHub runners and for anyone outside that mirror's region.
+
+- Verify: `grep -c 'mirrors\.tencent\.com\|registry\.npmmirror\.com' package-lock.json` → must be `0`.
+- To fix, rewrite only the host prefix; all three sources share the identical path shape
+  (`<host>/<pkg>/-/<name>-<version>.tgz`, scoped packages included).
+  **Never touch `version` or `integrity`** — and if a rewrite leaves them unchanged, a
+  subsequent `npm ci` passing is itself proof the official tarball matches the recorded hash.
+- Do not regenerate the lockfile to fix this: that lets transitive versions drift within
+  semver ranges. (History: 2026-09-15 normalized 258 mirror-pinned entries this way.)
 
 ### Why these gates exist
 
 - **Locale parity** prevents translation drift: a skin id registered in `src/skins/index.ts` but missing from either locale produces `t()` falling back to the raw key in the UI. Today both locales are at 100% parity for the 13 shipped skins × 5 categories; the gate keeps them there.
 - **Contrast check** prevents shipping skins whose `label` / `text` / `thinking` colors are unreadable on the wasteland dark background. WCAG 2.1 4.5:1 lets all 13 current skins pass; APCA Lc 75/60/45 correctly flags 0 skins today (after the 7 originally-failing skins were fixed in `07-29-refactor-skins-roles-palette-token-i18n`).
-- **Out of scope**: ESLint pre-existing errors in `src/acp/*`, `src/core/runtime/*`, `src/providers/openai.ts` are not part of `npm run check` and remain unaddressed.
+- **Lint scope**: gate 2 runs eslint over all of `src/` (no exclusions). Only **error**-severity
+  findings fail it; warnings are reported but pass. The tree currently sits at 0 errors and
+  ~150 warnings (mostly `@typescript-eslint/no-explicit-any`), so a new *error* is a genuine
+  regression signal rather than noise.
 
 ### Registry/Handler validation gates
 
