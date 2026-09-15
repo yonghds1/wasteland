@@ -35,3 +35,7 @@ nightowl 已 npm 化(TypeScript 重写 + `@yonghds1/nightowl@0.1.2` 已发布,`i
 
 - 目标仓库:`/home/ubuntu/workspace/wasteland`
 - settings.json 修改点:permissions.allow 中删除 `Bash(python3 nightowl.py *)`、`Bash(python nightowl.py *)`、`Bash(./nightowl.py *)`、`Bash(python3 .claude/skills/nightowl/scripts/nightowl.py *)`、`Bash(./.claude/skills/nightowl/scripts/nightowl.py *)`,新增 `Bash(nightowl *)`
+
+## 收口记录（2026-09-15）
+
+意图已被取代：自 3efc574 起改为「项目级技能重铺（版本戳自检 + 版本提示引导）」，不再走「移除内嵌技能、只留全局」的路线。当前 .claude/skills/nightowl-* 即该路线的产物。
