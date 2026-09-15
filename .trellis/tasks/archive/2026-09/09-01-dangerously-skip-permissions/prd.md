@@ -92,3 +92,7 @@ export function resolveEffectivePermissionMode(options: {
   - CLI 参数解析测试（`--dangerously-skip-permissions` 优先级覆盖）；
   - `ChatInputBar` 状态栏渲染断言（三种模式下的颜色与文本展示）；
   - 全量 1334 测试回归。
+
+## 收口记录（2026-09-15）
+
+本目录无 task.json（未按 task.py 正式建过任务），故不在任务池内。目标产物已落地：src/core/shared/initialize-runtime.ts、src/commands/resume.ts 及 locale 文案均支持 dangerously-skip-permissions。

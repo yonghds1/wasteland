@@ -33,3 +33,7 @@
 - [ ] **M1**: 设计 `KeybindingRegistry` 与 `useKeymap` Hook；
 - [ ] **M2**: 重构 `App.tsx`、`ChatInputBar.tsx`、`LogsPage.tsx` 等组件，接入统一分发；
 - [ ] **M3**: 支持 `~/.wasteland/keybindings.json` 配置文件与 `/keybindings` 命令。
+
+## 收口记录（2026-09-15）
+
+本目录无 task.json（未按 task.py 正式建过任务），故不在任务池内。目标产物已落地：src/tui/keymap/ 统一键盘分发层（types.ts / key-matcher.ts / keymap-registry.ts + __tests__）。
