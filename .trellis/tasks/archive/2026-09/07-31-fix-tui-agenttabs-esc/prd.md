@@ -129,3 +129,7 @@ return (
 
 - 这次不查 Ink `useInput` 内部实现(已知结论)。
 - 不查其它 TUI(OpenCode/Claude Code)对 AgentTabs 这类组件聚焦的设计——本次方案用本仓库现有 token 与已有 contract,不需横向对比。
+
+## 收口记录（2026-09-15）
+
+AgentTabs 聚焦态已可视化（组件在位且承担原 StatusBar 职责），Esc 焦点归属问题随该链条一并收敛。
