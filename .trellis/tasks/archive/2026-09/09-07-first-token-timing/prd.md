@@ -15,9 +15,14 @@
 
 ## Acceptance Criteria
 
-- [ ] AC1：真实一轮对话后，`/logs`（或 `wasteland logs show <sid>`）可见 `provider.first_chunk ... elapsedMs`。
-- [ ] AC2：多 chunk 只记一条；工具多 step 不重复刷。
-- [ ] AC3：相关单测绿；typecheck/lint 绿。
+- [x] AC1：真实一轮对话后，`/logs`（或 `wasteland logs show <sid>`）可见 `provider.first_chunk ... elapsedMs`。
+      —— **实证程度有限**：实现路径已核实（`turn-executor.ts:99,162,302-314` 记录起点并在首个带文本事件发
+      `provider.first_chunk` trace，经 `turn-helpers.ts:145-171` 产出，走既有 `Logger.info` → FileSink），
+      但**未做真实一轮对话的端到端跑验**。经确认按「代码 + 单测」证据接受，不视为已实跑验证。
+- [x] AC2：多 chunk 只记一条；工具多 step 不重复刷。
+      —— 实证：`src/core/engine/__tests__/first-chunk-trace.test.ts` 4 passed，含首 chunk 触发、次 chunk 不触发。
+- [x] AC3：相关单测绿；typecheck/lint 绿。
+      —— 实证：`npm run check:fast` exit 0；全量 1580 passed。
 
 ## Out of Scope
 
