@@ -173,3 +173,7 @@ AgentTabs render 的 `<Box borderStyle={focusBorder.borderStyle} borderColor={fo
 
 - `paddingY={1}` 让 StatusBar Box 高度 +2(1→3 行)。如果终端窄(<10 行),主体可能被吃光 → 仍用 `flexShrink={0}`,主体 `flexGrow={1}` 自动吸收。窄终端情况(常见于 telemetry)可能让 StatusBar 超出可视——可在 spec 加 note 但本次不增加"窄终端 fallback"。
 - AgentTabs `borderStyle='single'` 永远开 = 失焦态会多一条暗线(`#3D3328` vs 主背景). 设计上假定失焦用 `borderDim` 与背景差异够小(Lc -9.4),用户不会感知到强边框。如果实测"暗线太显眼",可在 PR 验证阶段反向弱化。
+
+## 收口记录（2026-09-15）
+
+该视觉迭代链条的终端状态为「方案 C」：StatusBar.tsx 已删除、由 AgentTabs 承担标题段职责，不再存在高度抖动问题。
