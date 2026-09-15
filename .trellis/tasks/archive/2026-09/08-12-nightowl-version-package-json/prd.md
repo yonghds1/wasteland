@@ -27,3 +27,7 @@
 
 - 目标文件 `/home/ubuntu/workspace/nightowl/src/cli.ts`
 - 读版本:`JSON.parse(fs.readFileSync(path.join(pkgRoot(), 'package.json'), 'utf8')).version`
+
+## 收口记录（2026-09-15）
+
+版本漂移已修：nightowl src/cli.ts 中已无硬编码版本号，仓库当前版本 0.4.2。
