@@ -64,3 +64,7 @@
   - `src/core/runtime/context-manager.ts` — `resolveContextWindow`（86-150 行）改为读 profile
   - `src/config/settings-types.ts` — `ModelSettings.contextWindow` 已存在，无需改 schema
 - 相关 spec：`.trellis/spec/` 下 providers 相关 layer（待 `get_context.py --mode packages` 确认路径）
+
+## 收口记录（2026-09-15）
+
+ProviderProfile 声明式表已落地：src/providers/profiles.ts 导出 ProviderProfile 类型与供应商表，新增供应商不再改链路。
