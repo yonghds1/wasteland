@@ -73,3 +73,7 @@
 * [x] `--skip-permissions` → 不碰 settings.json
 * [x] `--scope local` → 写 settings.local.json
 * [x] `setup-permissions` 重构后行为不变(exit 0)
+
+## 收口记录（2026-09-15）
+
+任务状态本已是 done，此处补归档。
