@@ -70,7 +70,7 @@ function makeSessionManagerStub() {
 afterEach(async () => {
   process.chdir(origCwd);
   if (origDataDir === undefined) {
-    delete process.env[WASTELAND_DATA_DIR_ENV];
+    Reflect.deleteProperty(process.env, WASTELAND_DATA_DIR_ENV);
   } else {
     process.env[WASTELAND_DATA_DIR_ENV] = origDataDir;
   }
