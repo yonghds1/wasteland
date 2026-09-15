@@ -127,3 +127,7 @@
 
 - 横向对比其他 TUI StatusBar 设计:本次按 Ink prop API + 仓库现状走,不需外部参考。
 - Ink `borderTop={false}` 兼容性:已在 Ink 4.x 文档里有(`Box.d.ts:77`),不需验证。
+
+## 收口记录（2026-09-15）
+
+256-color 下的 palette 量化问题随 StatusBar 删除而消失（该组件已不存在），本条目标不再适用。
