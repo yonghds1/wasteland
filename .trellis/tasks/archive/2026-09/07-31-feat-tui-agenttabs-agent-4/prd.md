@@ -220,3 +220,7 @@ const activeId = state.viewFilter ?? tabs[0]?.id; // "active" 包含 Main
 - `useEffect` 副作用仅在 focusArea 跳到 'agentTabs' 时触发一次,但 React 18 strict mode 会渲染两次,需要 `prevFocusRef` 守门避免 focusArea 已为 agentTabs 时被再次重置。
 - `tab.id` 与 Main agent uuid 的关系需在测试里假数据覆盖。
 - 4 态视觉用 Ink 颜色(`#E6B450` + `#FFF3D6` 等)都是 256-color palette 不友好的(都是 > 50 RGB 通道值,deep palette 都是 black 16);highlights 仍需谨慎设计。本任务暂时只在文字前缀/后缀 + color 区分,bg highlight 仅在 selectedActive(小概率发生,样本小)上,视觉代价低。
+
+## 收口记录（2026-09-15）
+
+AgentTabs 落地（src/tui/components/AgentTabs.tsx 在位），四项：默认选中激活项、方向键切换、选中与激活两态视觉区分。
