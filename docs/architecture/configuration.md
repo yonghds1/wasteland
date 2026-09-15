@@ -201,8 +201,10 @@ $WASTELAND_HOME/auth.json
 
 如果本地已有历史数据，建议手动迁移：
 
-1. 把 `.rx-cli/sessions/` 合并到 `.wasteland/sessions/`
+1. 把 `.rx-cli/sessions/` 合并到中央数据根的 `sessions/<projectId>/`（目录布局见上文「中央数据根」）
 2. 确认没有脚本继续依赖 `RX_CLI_SESSION_DIR`
-3. 后续统一改用 `.wasteland/` 与 `WASTELAND_*`
+3. 后续统一改用 `WASTELAND_*` 与中央数据根
+
+早期版本的项目本地目录 `.wasteland/{logs,sessions}` 已不再读写，其历史数据同样按上述目标迁入。
 
 这样可以避免 runtime 在代码、文档和本地目录上继续维护两套主命名。
