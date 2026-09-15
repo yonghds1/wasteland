@@ -90,3 +90,7 @@ handler 只返回 action，异步落地放 App.tsx 拦截层（同 /logs）：
 - 配置 `a2a.agents` 后，主 agent 与子 agent 都能调 `a2a_<name>` 工具；`a2a.servers` enabled 时本机起进程。
 - `multiAgent[x].mode/a2aServer` 已移除；`a2a-spawn-agent.ts` 已删。
 - 全量测试 + locale parity + typecheck 通过。
+
+## 收口记录（2026-09-15）
+
+single/multi 模式切换已落地：src/config/agent-mode-state.ts、resolve-chat-runtime.ts 在位，A2A 配置随 ProviderProfile 一并收敛。
