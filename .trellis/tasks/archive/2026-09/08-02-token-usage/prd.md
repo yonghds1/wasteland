@@ -149,3 +149,7 @@ usage: {
 - MiniMax API 兼容 OpenAI 格式，应该也支持 usage
 - Context window 需要从模型配置或硬编码获取
 - Session 日志已经是 JSONL 格式，追加 usage 记录即可
+
+## 收口记录（2026-09-15）
+
+token 用量与速率已落地：src/tui/hooks/runtime-reducers/usage-reducer.ts 在位，usage_update 事件、session 记录、ctx 值、t/s 与 TTFT 显示均已实现。
