@@ -13,9 +13,12 @@ spawn-agent 子会话 sidecar（meta.json + skeleton jsonl）不再硬编码 `<c
 
 ## Acceptance Criteria
 
-- [ ] AC1：spawn 后 sidecar 落在 `$DATA/logs/<pid>/transcript/<parentSid>/subagents/`，meta.json + jsonl 齐全。
-- [ ] AC2：`WASTELAND_DATA_DIR` 覆盖生效；`sidecar.test.ts` 全绿。
-- [ ] AC3：写盘失败仍不阻塞 spawn 主流程（既有单测保持绿）。
+- [x] AC1：spawn 后 sidecar 落在 `$DATA/logs/<pid>/transcript/<parentSid>/subagents/`，meta.json + jsonl 齐全。
+      —— 实证：`src/tools/agent/spawn-agent/index.ts:376-386` 即 `join(dataRoot,'logs',projectId,'transcript',parentSid,'subagents')`。
+- [x] AC2：`WASTELAND_DATA_DIR` 覆盖生效；`sidecar.test.ts` 全绿。
+      —— 实证：测试以 `WASTELAND_DATA_DIR` 指向 mkdtemp 隔离；`npx vitest run sidecar.test.ts` 2 passed。
+- [x] AC3：写盘失败仍不阻塞 spawn 主流程（既有单测保持绿）。
+      —— 实证：用例「writeSubagentSidecar 写盘失败时 spawn 主流程仍继续」在位。
 
 ## Out of Scope
 
