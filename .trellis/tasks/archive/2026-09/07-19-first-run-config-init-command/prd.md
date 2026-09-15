@@ -138,3 +138,7 @@ auth.json:
 - `src/ui/tty-detect.ts` — 已有 TTY 检测工具
 - `docs/user-guide/configuration.md` — 配置文档
 - 依赖：无需新增（ink/react 已在）
+
+## 收口记录（2026-09-15）
+
+src/commands/init.ts 在位（141 行），用 ink render 做交互式引导，文件头注释即「交互式生成 ~/.wasteland/settings.json 与 auth.json」。
