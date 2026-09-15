@@ -45,6 +45,12 @@ spec 声称存在三类注册守卫，实际 `CommandManager.register()` 零校�
 **R7 "找不到"必须归因**：判定"某文件/符号不存在"前，先确认**自己的匹配手段是否够全**。
 实例：`ChatInputBar.test.ts` 被两轮判为"不存在"，真因是匹配模式不含 `.tsx`。
 
+**R8 "找得到"不等于"写得对"**（R7 的镜像，runtime-contracts 收工自审暴露）：
+验证签名时，**确认符号存在只是第一步，必须接着核对完整签名**。
+实例：我把 `loadRxcSettings` 改名后，只验了新名存在，**没看签名**——而同一块里的
+`resolveChatRuntime` 缺 `cwd?` / `agentMode?`、`runAgentLoop` 缺 18 个可选参数与返回类型的一个字段。
+做法：签名类断言一律**读源码定义处**（`grep -A N "export function X"`），不要停在 `grep -l`。
+
 ## Rollout Order（按风险，不按字母）
 
 试点经验：**成本差异主要来自文件类型**，而非行数——"文件/脚本存在性"类断言便宜且命中率高；
