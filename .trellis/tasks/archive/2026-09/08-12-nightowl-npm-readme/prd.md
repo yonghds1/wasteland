@@ -51,3 +51,7 @@
 - 命令清单来自 `src/cli.ts`（17 个 createXxxCommand 注册）
 - 状态文件来自 `src/paths.ts`（POOL_FILE/STATE_FILE/LOG_FILE/CHECKPOINT/REPORT/CONTEXT/TASKS_DIR）
 - 工作流语义来自 3 个 SKILL.md（nightowl-plan / nightowl-run / nightowl-report）
+
+## 收口记录（2026-09-15）
+
+nightowl 仓库已有 README.md（~/workspace/nightowl/README.md），包主页内容齐备。
