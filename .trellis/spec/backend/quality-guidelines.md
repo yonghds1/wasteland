@@ -1,21 +1,18 @@
 # Quality Guidelines
 
-> Current baseline / 当前基线: this repository has a TypeScript CLI quality baseline built around compiler checks and smoke tests.
+> Current baseline / 当前基线: this repository has a TypeScript CLI quality baseline built around compiler checks, lint, locale/contrast gates, and a vitest suite.
 
 ---
 
 ## Observed Baseline / 已观察到的基线
 
 - `.trellis/workflow.md` establishes a planning-first task workflow, spec maintenance, and quality-check expectations at the project level.
-- `package.json` defines `build`, `dev`, `chat`, `start`, `typecheck`, `test`, and `check` scripts.
+- `package.json` defines 28 scripts (build, dev, test, check, lint, format, alias/completion helpers, …). There is **no** `chat` script and **no** `start` script — the TUI is the primary entry (`npm run tui`; `dev` runs the CLI entry point).
 - `tsconfig.json` enables strict TypeScript compilation.
-- `test/cli.test.js` validates the built CLI through process-level smoke tests.
-- `test/cli.test.js` now also validates process-level `/read <path>` and `/bash <command>` tool paths through the main chat runtime.
-- `test/tool-runtime.test.js` validates the Phase 2 tool lifecycle skeleton.
-- `rxjs` is now part of the runtime dependency baseline for stream-based CLI behavior.
-- Phase 1 runtime/provider/ui/session skeleton files now exist under `src/runtime/`, `src/providers/`, and `src/ui/`.
-- Phase 2 tool/permission skeleton files now exist under `src/tools/` and `src/runtime/`.
-- There is no dedicated linter configured yet; that absence is part of the current baseline.
+- `rxjs` (^7.8.2) is a runtime dependency, used for the stream-shaped input / provider / render pipelines.
+- Tests live beside their subjects in `src/**/__tests__/` and run through vitest directly against TypeScript sources (no build step). There is no top-level `test/` directory and no process-level smoke-test file.
+- Runtime code lives under `src/core/` (engine, session, logger, runtime). The Phase 1–2 `src/runtime/` directory no longer exists.
+- Both a linter (ESLint, `eslint.config.js`) and a formatter (Prettier, `.prettierrc`) **are** configured; `npm run lint` is gate 2 of `npm run check`.
 
 ---
 
@@ -254,10 +251,9 @@ export type ToolCall = {
 
 - `npm run typecheck`
 - `npm run build`
-- `npm run chat -- --message "你好"`
-- `printf 'hello' | npm run dev -- chat`
 - `npm test`（vitest 直跑 `src`，不再先构建；发布前完整校验用 `npm run test:full`）
 - `npm run check`（全链） / `npm run check:fast`（typecheck + lint，日常/PR 前用）
+- `npm run tui`（主入口） / `npm run setup`（首次运行引导）
 
 ---
 
@@ -333,13 +329,24 @@ installs unreproducible on GitHub runners and for anyone outside that mirror's r
 
 ### Registry/Handler validation gates
 
-For modules that implement a registration pattern (CommandRegistry, SkillRegistry, etc.):
+Required contracts for modules implementing a registration pattern
+(`CommandManager` in `src/core/shared/command-manager.ts`, `SkillRegistry` in
+`src/skills/skill-registry.ts`, …).
 
-- **Duplicate guard**: `register` must throw on duplicate primary name (e.g., `CommandRegistryImpl` throws on second `register({ name: '/foo' })`).
-- **Alias guard**: `register` must throw on duplicate alias, AND on alias-collides-with-existing-name.
-- **Name format guard**: `register` must throw on names that don't follow the required format (e.g., commands must start with `/`).
-- **Singleton injection**: provide `setX` / `resetX` for test isolation; tests should call `resetX` in `beforeEach` to prevent state leak.
-- **Idempotent bootstrap**: if a "bootstrap from upstream registry" function exists, it must be idempotent (re-calling with the same upstream is safe).
+> **Implementation status — verified 2026-09-15.** Read this before relying on any guard below.
+> Only **singleton injection** is implemented today. The **duplicate, alias, and name-format
+> guards are NOT implemented**: `CommandManager.register()` is a bare `Map.set()` plus an alias
+> loop, so a repeated name or alias **silently overwrites** the existing entry instead of throwing,
+> and no test asserts any of the three. Treat them as **requirements, not existing behaviour** —
+> and add the guard together with a test if a feature starts depending on it.
+> (The former example here named `CommandRegistryImpl`; that class no longer exists — it was
+> replaced by `CommandManager`.)
+
+- **Duplicate guard** *(required · NOT implemented)*: `register` must throw on a duplicate primary name.
+- **Alias guard** *(required · NOT implemented)*: `register` must throw on a duplicate alias, AND on an alias that collides with an existing name.
+- **Name format guard** *(required · NOT implemented)*: `register` must throw on names that don't follow the required format (e.g., commands must start with `/`). Note the `startsWith('/')` checks in `command-executor.ts` are **input parsing**, not registration validation.
+- **Singleton injection** *(implemented)*: `setCommandManager` / `getCommandManager` / `resetCommandManager` are exported for test isolation; tests should call the reset in `beforeEach` to prevent state leak.
+- **Idempotent bootstrap**: if a "bootstrap from upstream registry" function exists, it must be idempotent (re-calling with the same upstream is safe). *(not verified in this pass)*
 
 ### Adding a new build-time gate
 
@@ -362,10 +369,14 @@ For modules that implement a registration pattern (CommandRegistry, SkillRegistr
 ## Gaps Not To Paper Over / 当前仍然缺失的部分
 
 - No enforcement of the ESLint *warning* backlog (~156 `no-explicit-any` warnings pass gate 2 by design); ESLint (`eslint.config.js`) and Prettier (`.prettierrc`) are configured, but `format:check` is not part of `npm run check`.
-- No structured logging policy exists yet.
-- No database or persistence layer exists yet.
-- No real external model provider exists yet.
-- No real external provider is wired into the tool runtime yet; current tool path is demonstrated via `local` provider.
-- No MCP boundary implementation exists yet.
+- **No registry guards.** The duplicate / alias / name-format guards required by *Registry/Handler validation gates* above are not implemented: a repeated command name or alias silently overwrites the existing entry, and no test covers it.
+- **No database.** Persistence is file-based — session JSONL under the central data root, indexed by `src/core/session/session-index.ts`. There is no query layer.
+
+Removed from this list on 2026-09-15 after verifying they are no longer true — do not re-add without
+re-checking: **structured logging policy** (`.trellis/spec/backend/logging-guidelines.md`, 633 lines,
+plus `src/core/logger/`), **real external model providers** (`src/providers/openai.ts` 492 lines /
+`claude.ts` 451 lines, both wired through `fetchWithRetry` and streaming into the runtime), and the
+**MCP boundary** (`src/tools/mcp/`: client, transport incl. `SseTransport`, resources, registry — all
+with tests).
 
 Do not invent rules for these areas until real code or tooling is added.
