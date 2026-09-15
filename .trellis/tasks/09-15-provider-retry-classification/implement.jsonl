@@ -1,0 +1,3 @@
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "错误分类与异常处理约定，重试白名单须与之一致"}
+{"file": ".trellis/spec/backend/runtime-contracts.md", "reason": "provider 边界契约：claude/openai 共用的 fetch 建立阶段约定"}
+{"file": ".trellis/spec/backend/architecture-rules.md", "reason": "模块边界与 __tests__ 布局规则（新测试文件落位）"}
