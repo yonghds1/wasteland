@@ -72,3 +72,7 @@ Consequences: Names are more memorable and have clearer homage value while prese
   - `src/core/shared/initialize-runtime.test.ts`
   - `src/tui/components/AgentTabs.tsx`
   - `src/tui/hooks/useRuntimeEvents.ts`
+
+## 收口记录（2026-09-15）
+
+皮肤命名已改为稳妥致敬式：.wasteland/skins.json 共 7 个皮肤（warlord-stern、warlord-casual、scout、hotsand-warrior、coder、scholar、sentinel），无 IP 名或谐音。
