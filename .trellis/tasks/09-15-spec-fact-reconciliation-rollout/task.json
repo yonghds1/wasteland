@@ -1,0 +1,28 @@
+{
+  "id": "spec-fact-reconciliation-rollout",
+  "name": "spec-fact-reconciliation-rollout",
+  "title": "spec 事实对账（全量推广）",
+  "description": "按风险分批核验 .trellis/spec 全部文件的「关于本仓库客观状态」的断言并修正；父任务承载方法与推广顺序，各文件为独立可验收的子任务",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "yonghds1",
+  "assignee": "yonghds1",
+  "createdAt": "2026-09-15",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "09-15-spec-reconcile-runtime-contracts"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}
