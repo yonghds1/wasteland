@@ -75,11 +75,24 @@ function emit(event: unknown): void {
       runId: e.runId,
     });
   } else if (e.type === "workflow.done") {
-    taskManager.complete(e.taskId, e.result);
+    const usage = (e as { usage?: { inputTokens?: number; outputTokens?: number } }).usage;
+    const tokens = (usage?.inputTokens ?? 0) + (usage?.outputTokens ?? 0);
+    taskManager.complete(e.taskId, e.result, {
+      workflowId: e.name,
+      runId: e.runId,
+      agentId: "main",
+      tokens,
+      toolCalls: 0,
+    });
   } else if (e.type === "workflow.fail") {
     taskManager.fail(
       e.taskId,
       e.error instanceof Error ? e.error.message : String(e.error),
+      {
+        workflowId: e.name,
+        runId: e.runId,
+        agentId: "main",
+      },
     );
   }
 }

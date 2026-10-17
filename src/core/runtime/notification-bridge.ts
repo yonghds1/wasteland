@@ -14,7 +14,8 @@ function escapeXml(unsafe: string): string {
 }
 
 /**
- * 格式化任务完成通知为 XML 结构
+ * 格式化任务完成通知为符合 PRD 验收标准的 XML 结构（六字段齐全）
+ * 包含：workflowId, runId, agentId, tokens, toolCalls, elapsedMs
  */
 export function formatTaskNotification(task: AsyncTaskRecord): string {
   const content = task.status === 'failed' ? (task.error ?? 'Unknown error') : task.output;
@@ -26,13 +27,24 @@ export function formatTaskNotification(task: AsyncTaskRecord): string {
       : JSON.stringify(content, null, 2);
 
   const payloadTag = task.status === 'failed' ? 'error' : 'output';
+  const meta = task.metadata ?? {};
+
+  const workflowId = String(meta.workflowId ?? task.toolName.replace(/^workflow:/, ''));
+  const runId = String(meta.runId ?? task.taskId);
+  const agentId = String(meta.agentId ?? 'main');
+  const tokens = Number(meta.tokens ?? 0);
+  const toolCalls = Number(meta.toolCalls ?? 0);
+  const elapsedMs = task.elapsedMs ?? 0;
 
   return [
     '<task-notification>',
-    `  <taskId>${escapeXml(task.taskId)}</taskId>`,
-    `  <toolName>${escapeXml(task.toolName)}</toolName>`,
+    `  <workflowId>${escapeXml(workflowId)}</workflowId>`,
+    `  <runId>${escapeXml(runId)}</runId>`,
+    `  <agentId>${escapeXml(agentId)}</agentId>`,
     `  <status>${task.status}</status>`,
-    `  <elapsedMs>${task.elapsedMs ?? 0}</elapsedMs>`,
+    `  <tokens>${tokens}</tokens>`,
+    `  <toolCalls>${toolCalls}</toolCalls>`,
+    `  <elapsedMs>${elapsedMs}</elapsedMs>`,
     `  <${payloadTag}>${escapeXml(serialized)}</${payloadTag}>`,
     '</task-notification>',
   ].join('\n');

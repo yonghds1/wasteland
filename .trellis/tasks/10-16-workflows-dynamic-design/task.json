@@ -3,16 +3,16 @@
   "name": "workflows-dynamic-design",
   "title": "Dynamic workflows design",
   "description": "Design /workflows dynamic multi-agent workflow system modeled on Claude Code official dynamic workflows: entry, Workflow tool, local JS runtime, DSL semantics, gates and observability",
-  "status": "planning",
+  "status": "completed",
   "dev_type": null,
   "scope": null,
   "package": null,
-  "priority": "P2",
+  "priority": "P1",
   "creator": "yonghds1",
   "assignee": "yonghds1",
   "createdAt": "2026-10-16",
-  "completedAt": null,
-  "branch": null,
+  "completedAt": "2026-10-18",
+  "branch": "main",
   "base_branch": "main",
   "worktree_path": null,
   "commit": null,
@@ -20,7 +20,27 @@
   "subtasks": [],
   "children": [],
   "parent": null,
-  "relatedFiles": [],
-  "notes": "",
-  "meta": {}
+  "relatedFiles": [
+    "src/workflows/sandbox.ts",
+    "src/workflows/scheduler.ts",
+    "src/workflows/loader.ts",
+    "src/workflows/wiring.ts",
+    "src/workflows/errors.ts",
+    "src/workflows/budget.ts",
+    "src/workflows/types.ts",
+    "src/tools/workflow/workflow-tool.ts",
+    "src/skills/workflows-skill.ts",
+    "workflows/builtin/review.workflow.js",
+    "src/core/runtime/async-task-manager.ts",
+    "src/core/runtime/notification-bridge.ts"
+  ],
+  "notes": "P1 dynamic workflows system implemented and verified. Generic async task manager and 6-field task-notification XML format aligned with PRD.",
+  "meta": {
+    "commits": [
+      "5e1f37e",
+      "ebb78f0",
+      "78b0a7f",
+      "7096b89"
+    ]
+  }
 }

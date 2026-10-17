@@ -18,7 +18,14 @@ export interface AsyncTaskRecord<T = unknown> {
   elapsedMs?: number;
   output?: T;
   error?: string;
-  metadata?: Record<string, unknown>;
+  metadata?: {
+    workflowId?: string;
+    runId?: string;
+    agentId?: string;
+    tokens?: number;
+    toolCalls?: number;
+    [key: string]: unknown;
+  };
 }
 
 export class AsyncTaskManager {
@@ -68,7 +75,11 @@ export class AsyncTaskManager {
   /**
    * 标记任务完成
    */
-  complete<T = unknown>(taskId: string, output?: T): boolean {
+  complete<T = unknown>(
+    taskId: string,
+    output?: T,
+    metadataUpdate?: Record<string, unknown>
+  ): boolean {
     const task = this.tasks.get(taskId);
     if (!task || task.status !== 'running') {
       return false;
@@ -79,6 +90,9 @@ export class AsyncTaskManager {
     task.endTime = endTime;
     task.elapsedMs = endTime - task.startTime;
     task.output = output;
+    if (metadataUpdate) {
+      task.metadata = { ...(task.metadata ?? {}), ...metadataUpdate };
+    }
 
     this.completedSubject$.next({ ...task });
     return true;
@@ -87,7 +101,11 @@ export class AsyncTaskManager {
   /**
    * 标记任务失败
    */
-  fail(taskId: string, error: string): boolean {
+  fail(
+    taskId: string,
+    error: string,
+    metadataUpdate?: Record<string, unknown>
+  ): boolean {
     const task = this.tasks.get(taskId);
     if (!task || task.status !== 'running') {
       return false;
@@ -98,6 +116,9 @@ export class AsyncTaskManager {
     task.endTime = endTime;
     task.elapsedMs = endTime - task.startTime;
     task.error = error;
+    if (metadataUpdate) {
+      task.metadata = { ...(task.metadata ?? {}), ...metadataUpdate };
+    }
 
     this.completedSubject$.next({ ...task });
     return true;

@@ -412,7 +412,9 @@ export class WorkflowScheduler {
         type: "workflow.done",
         taskId: record.taskId,
         runId: record.runId,
+        name: record.name,
         result,
+        usage: { ...record.usage },
       });
     } catch (e) {
       if (record.aborted || record.status === "cancelled") {
