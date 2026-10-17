@@ -11,6 +11,7 @@ import { helpSkill } from './skills/help-skill.js';
 import { statusSkill } from './skills/status-skill.js';
 import { toolsSkill } from './skills/tools-skill.js';
 import { reviewSkill } from './skills/review-skill.js';
+import { workflowsSkill } from './workflows-skill.js';
 
 /**
  * 内置技能列表
@@ -29,6 +30,9 @@ export const DEFAULT_SKILLS: Skill[] = [
 
   // 代码审查
   reviewSkill,
+
+  // 动态工作流（P1：未装配 scheduler 前仅列表/提交占位）
+  workflowsSkill,
 
   // 未来可以添加更多内置技能:
   // testSkill,      // 测试运行

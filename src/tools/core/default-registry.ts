@@ -22,6 +22,7 @@ import type { ACPSettings, MCPServersConfig } from '@config/settings-types.js';
 import { MCPToolRegistry } from '../mcp/mcp-registry.js';
 import { t } from '@locales/index.js';
 import { SPAWN_AGENT_DESCRIPTION, SPAWN_AGENT_INPUT_SCHEMA_JSON } from '@tools/agent/spawn-agent/index.js';
+import { createWorkflowTool } from '../workflow/workflow-tool.js';
 
 /**
  * 创建 spawn_agent 的占位工具定义
@@ -125,6 +126,8 @@ export function createDefaultToolRegistry(
     createTaskUpdateTool(),
     createTaskListTool(),
     createTaskGetTool(),
+    // 动态工作流扳机（P1：未装配 scheduler，调用返回 not wired 错误）
+    createWorkflowTool(),
   ];
 
   // ACP stdio agent → 直接工具（acp_<name>）

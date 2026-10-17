@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "质量门（单文件500行/__tests__/约定）"}
+{"file": ".trellis/tasks/10-16-workflows-dynamic-design/design.md", "reason": "D4事件映射与D6脱敏TTL核对"}

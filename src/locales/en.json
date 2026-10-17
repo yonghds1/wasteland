@@ -974,6 +974,13 @@
     "logsHelp": {
       "title": "Logs subcommands",
       "helpText": "Logs page — view runtime logs (current session + disk history).\n\nFilters compose: /logs show + /logs level + /logs scope can all stack.\nSource legend in table: [D]=disk history  [L]=live (current session)\n\nSubcommands:\n  /logs              Enter Logs page (keep current filter)\n  /logs close        Return to chat page\n  /logs all          Clear all filters, show full log history\n  /logs errors       Set level=error only (most severe)\n  /logs show <sid>   Filter by sessionId (substring match, e.g. \"2026-08\")\n  /logs level <l>    Set min level: debug|info|warn|error\n  /logs scope <s>    Set scope filter (comma-separated, e.g. \"tool,provider\")\n  /logs help         Show this help\n\nExamples:\n  /logs show 2026-08-08_230211\n  /logs level debug\n  /logs scope tool,permission\n  /logs show abc level error scope provider\n  /logs all\n\nKeys in Logs page:\n  ↑/↓   Select entry (↑=older, ↓=newer)\n  Enter Expand selected entry's full JSON\n  P     Pause/resume follow new entries\n  L     Cycle min level\n  S     Cycle scope\n  K     Cycle event kind\n  /     Enter sessionId filter\n  C     Clear current entries\n  Esc   Return to chat page"
+    },
+    "workflows": {
+      "description": "Manage workflows: list playbooks and submit runs",
+      "listEmpty": "No workflows available",
+      "listHeader": "Available workflows:",
+      "submitted": "Workflow submitted: {name} (taskId={taskId}, runId={runId})",
+      "notInit": "Workflows module not initialized; wire deps first"
     }
   },
   "tools": {

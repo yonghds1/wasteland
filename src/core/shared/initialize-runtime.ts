@@ -219,6 +219,25 @@ export async function initializeRuntime(
     acp: loadedSettings.settings.acp,
   });
 
+  // 8.5 接线动态工作流 runtime（失败不阻塞主流程）
+  try {
+    const { configureWorkflowsHost } = await import('../../workflows/wiring.js');
+    configureWorkflowsHost({
+      cwd,
+      sessionDir,
+      sessionManager,
+      provider,
+      providerRegistry,
+      toolRegistry,
+      permissionGate,
+      loadedSettings: loadedSettings as never,
+    });
+  } catch (error) {
+    console.warn(
+      `Workflows wiring failed: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+
   // 9. 创建 SkillExecutor
   const skillRegistry = await createSkillRegistry({
     projectSkillsDir: loadedSettings.projectConfigDir

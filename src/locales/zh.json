@@ -974,6 +974,13 @@
     "logsHelp": {
       "title": "Logs 子命令",
       "helpText": "Logs 页面 — 查看运行时日志(当前 session + 磁盘历史)\n\n过滤器可叠加: /logs show + /logs level + /logs scope 可以组合使用\n表格来源标识: [D]=磁盘历史  [L]=实时(当前 session)\n\n子命令:\n  /logs              进入 Logs page(保留当前过滤)\n  /logs close        回到 chat page\n  /logs all          清除所有过滤,显示全量日志\n  /logs errors       仅显示 error 级别(最严重)\n  /logs show <sid>   按 sessionId 过滤(子串匹配,如 \"2026-08\")\n  /logs level <l>    设置最低 level: debug|info|warn|error\n  /logs scope <s>    设置 scope 过滤(逗号分隔,如 \"tool,provider\")\n  /logs help         显示此帮助\n\n示例:\n  /logs show 2026-08-08_230211\n  /logs level debug\n  /logs scope tool,permission\n  /logs show abc level error scope provider\n  /logs all\n\nLogs page 快捷键:\n  ↑/↓   选择条目(↑=更早, ↓=更新)\n  Enter 展开选中条目的完整 JSON\n  P     暂停/恢复跟随新条目\n  L     循环切换最低 level\n  S     循环切换 scope\n  K     循环切换事件 kind\n  /     输入 sessionId 过滤\n  C     清空当前条目\n  Esc   回到 chat page"
+    },
+    "workflows": {
+      "description": "管理工作流：列出可用剧本并发起运行",
+      "listEmpty": "暂无可用工作流",
+      "listHeader": "可用工作流：",
+      "submitted": "已提交工作流任务：{name}（taskId={taskId}，runId={runId}）",
+      "notInit": "工作流模块未初始化，请先装配依赖"
     }
   },
   "tools": {
