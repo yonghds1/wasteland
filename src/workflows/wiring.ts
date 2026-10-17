@@ -1,3 +1,4 @@
+import { getAsyncTaskManager } from "../core/runtime/async-task-manager.js";
 import path from "node:path";
 /**
  * wiring.ts - workflow runtime 接线层
@@ -56,6 +57,31 @@ let host: WorkflowsHostConfig | null = null;
 function emit(event: unknown): void {
   eventRing.push(event);
   if (eventRing.length > 200) eventRing.shift();
+
+  const e = event as {
+    type?: string;
+    taskId?: string;
+    runId?: string;
+    name?: string;
+    result?: unknown;
+    error?: unknown;
+  };
+  if (!e || !e.type || !e.taskId) return;
+
+  const taskManager = getAsyncTaskManager();
+  if (e.type === "workflow.start") {
+    taskManager.register("workflow:" + (e.name ?? "workflow"), undefined, {
+      taskId: e.taskId,
+      runId: e.runId,
+    });
+  } else if (e.type === "workflow.done") {
+    taskManager.complete(e.taskId, e.result);
+  } else if (e.type === "workflow.fail") {
+    taskManager.fail(
+      e.taskId,
+      e.error instanceof Error ? e.error.message : String(e.error),
+    );
+  }
 }
 
 /** 内存事件环（P1 观测口；TUI 订阅是 P2）。 */

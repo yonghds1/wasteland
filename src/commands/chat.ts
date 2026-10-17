@@ -1,3 +1,5 @@
+import { NotificationBridge } from "../core/runtime/notification-bridge.js";
+import { merge } from "rxjs";
 /**
  * chat-unified.ts - 统一的 chat 命令实现
  *
@@ -256,9 +258,12 @@ export function configureChatCommand(cmd: Command): Command {
         showThinking: runtime.loadedSettings.settings.runtime.showThinking,
       });
 
+      const notificationBridge = new NotificationBridge();
+      const sessionInput$ = merge(inputAdapter.input$, notificationBridge.notification$);
+
       try {
         await runChatSession({
-          input$: inputAdapter.input$,
+          input$: sessionInput$,
           runtime,
           cwd,
           mode: 'interactive',
@@ -273,8 +278,11 @@ export function configureChatCommand(cmd: Command): Command {
           userInputBridge,
         });
       } catch (error) {
+        notificationBridge.destroy();
         inputAdapter.destroy();
         throw error;
+      } finally {
+        notificationBridge.destroy();
       }
 
       await inputAdapter.done;
