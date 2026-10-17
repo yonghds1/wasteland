@@ -77,6 +77,11 @@ function routeCommand(
     return of(turn);
   }
 
+  // 若为已识别的技能命令（内置或外部动态安装），放行至下游执行
+  if (writer.isSkillCommand?.(input)) {
+    return of(turn);
+  }
+
   const firstWord = input.split(/\s+/)[0]?.toLowerCase();
   const cmd = getCommandManager().get(firstWord);
   const passthroughSkills = new Set(["/workflows", "/wf", "/review", "/init", "/status"]);

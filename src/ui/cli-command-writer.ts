@@ -53,6 +53,10 @@ export class CliCommandWriter implements CommandWriter {
   /**
    * 渲染 SyncCommandResult 到输出流。
    */
+  isSkillCommand(input: string): boolean {
+    return this.skillExecutor?.isSkillCommand(input) ?? false;
+  }
+
   write(result: SyncCommandResult): void {
     switch (result.type) {
       case 'output':

@@ -13,6 +13,7 @@ import { createResumeCommand } from './commands/resume.js';
 import { createSkinCommand } from './commands/skin.js';
 import { createExportCommand } from './commands/export.js';
 import { createLogsCommand } from './commands/logs.js';
+import { createSkillsCommand } from './commands/skills.js';
 import { createContextCommand, createContextHistoryCommand, createContextCompactionCommand, createContextTrendCommand } from './commands/context.js';
 import { isConfigEmpty } from './config/config-writer.js';
 import { ensureRoleAliases } from './config/symlink-manager.js';
@@ -33,6 +34,7 @@ function registerRootCommands(program: Command): void {
   program.addCommand(createSkinCommand());
   program.addCommand(createExportCommand());
   program.addCommand(createLogsCommand());
+  program.addCommand(createSkillsCommand());
 
   // Context 命令
   const contextCmd = createContextCommand();
