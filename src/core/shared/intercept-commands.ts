@@ -77,6 +77,16 @@ function routeCommand(
     return of(turn);
   }
 
+  const firstWord = input.split(/\s+/)[0]?.toLowerCase();
+  const cmd = getCommandManager().get(firstWord);
+  const passthroughSkills = new Set(["/workflows", "/wf", "/review", "/init", "/status"]);
+  if (
+    passthroughSkills.has(firstWord) ||
+    (cmd?.category === "skill" && !["/help", "/tools", "/skills"].includes(firstWord))
+  ) {
+    return of(turn);
+  }
+
   // / 开头（含未注册命令）：执行 + 写入 + 消费
   // 关键：拦截所有 / 前缀输入，未注册命令也会被 writer.write(error) 报错
   // 防止 /unknown /halp 等拼写错误变成 agent 对话

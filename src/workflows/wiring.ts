@@ -1,3 +1,4 @@
+import path from "node:path";
 /**
  * wiring.ts - workflow runtime 接线层
  *
@@ -169,6 +170,7 @@ export function configureWorkflowsHost(config: WorkflowsHostConfig): void {
     list: async () => {
       const manifests = await scanManifests([
         { dir: defaultGlobalDir(), scope: "global" },
+        { dir: path.join(config.cwd, "workflows/builtin"), scope: "global" as const },
         { dir: defaultProjectDir(config.cwd), scope: "project" },
       ]);
       return manifests.map((m) => ({ name: m.name, path: m.path }));

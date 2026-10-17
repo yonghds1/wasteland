@@ -240,7 +240,7 @@ describe('Command Definitions', () => {
 
   describe('builtinCommands', () => {
     it('should contain all built-in commands', () => {
-      expect(builtinCommands).toHaveLength(12);
+      expect(builtinCommands).toHaveLength(13);
       expect(builtinCommands.map((c) => c.name)).toEqual([
         '/clear',
         '/sessions',
@@ -254,13 +254,14 @@ describe('Command Definitions', () => {
         '/status',
         '/init',
         '/review',
+        '/workflows',
       ]);
     });
   });
 
   describe('CommandManager integration', () => {
     it('should register all built-in commands', () => {
-      expect(manager.getAll()).toHaveLength(12);
+      expect(manager.getAll()).toHaveLength(13);
     });
 
     it('should recognize built-in commands', () => {

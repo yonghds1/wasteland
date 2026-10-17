@@ -234,6 +234,8 @@ export const reviewCommand: CommandDefinition = {
   },
 };
 
+export const workflowsCommand: CommandDefinition = { name: "/workflows", aliases: ["/wf"], category: "skill", description: "skills.workflows.description", args: [{ name: "name", type: "string", optional: true, description: "Workflow name or target" }], execute: async (_params: CommandExecutionContext): Promise<CommandResult> => ({ type: "action", action: "workflows" }) };
+
 // ============================================================
 // 命令列表
 // ============================================================
@@ -254,4 +256,5 @@ export const builtinCommands: CommandDefinition[] = [
   statusCommand,
   initCommand,
   reviewCommand,
+  workflowsCommand,
 ];
