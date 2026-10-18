@@ -154,10 +154,9 @@ export function ChatMessageList({
               (h) => `? ${h.question}` === message.content
             )
           : null;
-        const isHistory = !!historyEntry;
 
-        // 历史态：置灰 + 结果徽章，不再高亮交互
-        if (isHistory && historyEntry) {
+        // 历史记录已完成态：只读展示结果徽章与详情
+        if (historyEntry) {
           const badge =
             historyEntry.decision === 'allow'
               ? ' [已允许]'
@@ -192,30 +191,8 @@ export function ChatMessageList({
               );
             });
           }
-          continue;
         }
-
-        // pending 态：高亮可交互，detail 自动换行
-        visualLines.push(
-          <Box key={`${message.id}-perm-head`} width={contentWidth} height={1} flexDirection="row">
-            {timePrefixRender}
-            <Text color={wastelandTheme.colors.warning} bold>? [Permission: {toolName}]</Text>
-          </Box>
-        );
-        if (detail) {
-          const detailLines = wrapTextToLines(detail, contentWidth - 12);
-          detailLines.forEach((line, idx) => {
-            visualLines.push(
-              <Box key={`${message.id}-perm-detail-${idx}`} width={contentWidth} height={1} overflow="hidden">
-                <Text color={wastelandTheme.colors.primary} bold>
-                  {idx === 0 ? '  Command: ' : '           '}
-                </Text>
-                <Text color={wastelandTheme.colors.text}>{line}</Text>
-              </Box>
-            );
-          });
-        }
-        // 选项已搬进输入框内（ChatInputBar 权限态）；消息流只留 `?` 存档行与历史徽章。
+        // 移除消息流中对 pending 态权限的重复交互式表单渲染，仅保留历史记录已完成徽章（只读），消除视觉割裂
         continue;
       }
 

@@ -43,15 +43,55 @@ export class InputPipeline extends EventEmitter {
     // 重写 stdin.emit，在 'data' 和 'keypress' 事件分发前精准识别并完全消化鼠标帧
     // 用箭头函数保持 InputPipeline 的 this 绑定，避免 self 别名
     stdin.emit = (event: string | symbol, ...args: unknown[]): boolean => {
-      // 1. 拦截下游 readline 产生的 keypress 鼠标泄漏残片
+      // 1. 拦截下游 readline 产生的 keypress 鼠标泄漏残片，以及重写扩展终端换行序列
       if (event === 'keypress') {
-        const [char, key] = args as [unknown, { sequence?: string; code?: string } | undefined];
+        const [char, key] = args as [
+          unknown,
+          (
+            | {
+                sequence?: string;
+                code?: string;
+                name?: string;
+                ctrl?: boolean;
+                meta?: boolean;
+                shift?: boolean;
+                alt?: boolean;
+                return?: boolean;
+              }
+            | undefined
+          ),
+        ];
         if (
           (key && (key.sequence?.startsWith('\x1b[<') || key.sequence?.startsWith('\x1b[M') || key.code === '[<')) ||
           (typeof char === 'string' && (char.includes('\x1b[<') || char.includes('[<')))
         ) {
           return true; // 拦截 keypress 鼠标泄漏
         }
+
+        // 识别扩展终端按键序列：Kitty (ESC[13;2u), xterm (ESC[27;2;13~), Alt+Enter (ESC\r, ESC\n)
+        const seq =
+          (key && typeof key.sequence === 'string' ? key.sequence : '') || (typeof char === 'string' ? char : '');
+        if (
+          seq === '\x1b[13;2u' ||
+          seq === '\x1b[27;2;13~' ||
+          seq === '\x1b\r' ||
+          seq === '\x1b\n' ||
+          key?.sequence === '\x1b[13;2u' ||
+          key?.sequence === '\x1b[27;2;13~' ||
+          key?.sequence === '\x1b\r' ||
+          key?.sequence === '\x1b\n'
+        ) {
+          const rewrittenKey = {
+            ...(typeof key === 'object' && key !== null ? key : {}),
+            name: 'return',
+            return: true,
+            shift: true,
+            alt: true,
+            meta: true,
+          };
+          return originalEmit(event, char, rewrittenKey, ...args.slice(2));
+        }
+
         return originalEmit(event, ...args);
       }
 

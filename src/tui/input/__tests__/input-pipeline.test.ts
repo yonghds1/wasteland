@@ -4,7 +4,7 @@ import { InputPipeline } from '../input-pipeline.js';
 
 describe('InputPipeline', () => {
   it('正确拦截并消费 SGR 鼠标滚轮帧，阻断向下游发送', () => {
-    const mockStdin = new EventEmitter() as any;
+    const mockStdin = new EventEmitter() as unknown as NodeJS.ReadStream;
     const pipeline = new InputPipeline();
     pipeline.attach(mockStdin);
 
@@ -31,7 +31,7 @@ describe('InputPipeline', () => {
   });
 
   it('普通按键和文本数据正常透传给下游', () => {
-    const mockStdin = new EventEmitter() as any;
+    const mockStdin = new EventEmitter() as unknown as NodeJS.ReadStream;
     const pipeline = new InputPipeline();
     pipeline.attach(mockStdin);
 
@@ -54,7 +54,7 @@ describe('InputPipeline', () => {
   });
 
   it('多报文与鼠标点击/释放序列被完全提取并阻断，不泄露到下游', () => {
-    const mockStdin = new EventEmitter() as any;
+    const mockStdin = new EventEmitter() as unknown as NodeJS.ReadStream;
     const pipeline = new InputPipeline();
     pipeline.attach(mockStdin);
 
@@ -73,6 +73,88 @@ describe('InputPipeline', () => {
     expect(mouseHandler).toHaveBeenNthCalledWith(3, { kind: 'down', x: 47, y: 35 });
     expect(mouseHandler).toHaveBeenNthCalledWith(4, { kind: 'up', x: 47, y: 35 });
     expect(downstreamDataHandler).not.toHaveBeenCalled();
+
+    pipeline.detach();
+  });
+
+  it('识别 Kitty 扩展换行序列 \\x1b[13;2u 并重写 key 为 return + shift + alt', () => {
+    const mockStdin = new EventEmitter() as unknown as NodeJS.ReadStream;
+    const pipeline = new InputPipeline();
+    pipeline.attach(mockStdin);
+
+    const keypressHandler = vi.fn();
+    mockStdin.on('keypress', keypressHandler);
+
+    mockStdin.emit('keypress', '\x1b[13;2u', { sequence: '\x1b[13;2u' });
+
+    expect(keypressHandler).toHaveBeenCalledWith(
+      '\x1b[13;2u',
+      expect.objectContaining({
+        name: 'return',
+        return: true,
+        shift: true,
+        alt: true,
+      })
+    );
+
+    pipeline.detach();
+  });
+
+  it('识别 xterm 扩展换行序列 \\x1b[27;2;13~ 并重写 key 为 return + shift + alt', () => {
+    const mockStdin = new EventEmitter() as unknown as NodeJS.ReadStream;
+    const pipeline = new InputPipeline();
+    pipeline.attach(mockStdin);
+
+    const keypressHandler = vi.fn();
+    mockStdin.on('keypress', keypressHandler);
+
+    mockStdin.emit('keypress', undefined, { sequence: '\x1b[27;2;13~' });
+
+    expect(keypressHandler).toHaveBeenCalledWith(
+      undefined,
+      expect.objectContaining({
+        name: 'return',
+        return: true,
+        shift: true,
+        alt: true,
+      })
+    );
+
+    pipeline.detach();
+  });
+
+  it('识别 Alt+Enter (\\x1b\\r 与 \\x1b\\n) 序列并重写 key 为 return + shift + alt', () => {
+    const mockStdin = new EventEmitter() as unknown as NodeJS.ReadStream;
+    const pipeline = new InputPipeline();
+    pipeline.attach(mockStdin);
+
+    const keypressHandler = vi.fn();
+    mockStdin.on('keypress', keypressHandler);
+
+    mockStdin.emit('keypress', '\r', { sequence: '\x1b\r' });
+    mockStdin.emit('keypress', '\n', { sequence: '\x1b\n' });
+
+    expect(keypressHandler).toHaveBeenNthCalledWith(
+      1,
+      '\r',
+      expect.objectContaining({
+        name: 'return',
+        return: true,
+        shift: true,
+        alt: true,
+      })
+    );
+
+    expect(keypressHandler).toHaveBeenNthCalledWith(
+      2,
+      '\n',
+      expect.objectContaining({
+        name: 'return',
+        return: true,
+        shift: true,
+        alt: true,
+      })
+    );
 
     pipeline.detach();
   });

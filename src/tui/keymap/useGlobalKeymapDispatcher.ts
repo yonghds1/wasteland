@@ -5,6 +5,7 @@ import path from 'node:path';
 import { resolveUserConfigDir } from '@config/paths.js';
 import { getKeymapRegistry } from './index.js';
 import { buildTabs, selectTabViewFilter } from '../components/AgentTabs.js';
+import { handlePermissionKey } from '../components/chat/PermissionPromptBar.js';
 import type { AppState, PageName, FocusArea, HelpView } from '../context/AppContext.js';
 import type { TuiRuntimeContext } from '../types.js';
 
@@ -62,6 +63,30 @@ export function useGlobalKeymapDispatcher({
   }, []);
 
   useInput((input, key) => {
+    // 0. 当有权限确认等待时，赋予单键拦截（1/2/3/y/a/n/Esc）最高处理优先级，无论当前 focusArea 在何处均能直接响应，彻底根除焦点死锁！
+    if (runtime.userInputBridge?.isPending()) {
+      if (key.ctrl && (input === 'c' || input === 'C')) {
+        if (state.session.isStreaming || state.session.isThinking) {
+          if (runtime.abort$) {
+            runtime.abort$.next();
+            return;
+          }
+        }
+        setExitConfirmPending(true);
+        return;
+      }
+
+      handlePermissionKey(
+        input,
+        key,
+        state.permission?.pending ?? null,
+        runtime,
+        state.permissionSelection ?? 0,
+        (next) => setState((prev) => ({ ...prev, permissionSelection: next })),
+      );
+      return;
+    }
+
     const action = getKeymapRegistry().findAction(input, key, {
       activeModal: state.showHelp ? 'help' : null,
       focusArea: state.focusArea,
