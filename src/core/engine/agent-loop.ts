@@ -1,26 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { TurnExecutor } from "./turn-executor.js";
-/**
- * agent-loop.ts - 核心 Agent 循环逻辑
- *
- * 本文件实现了 Agent 的主循环，使用 RxJS 的响应式模式来处理：
- * - 用户输入流
- * - Provider 响应流
- * - 工具调用和结果流
- *
- * ## 核心设计模式
- *
- * ### 1. defer + concat + 递归 循环模式
- * 使用 `defer` 延迟执行，`concat` 顺序拼接，通过递归实现循环。
- * 这种模式可以确保每一步都在上一步完成后才开始。
- *
- * ### 2. 数据流向
- * ```
- * 用户输入 → runAgentLoop → runTurnLoop → Provider → 工具调用 → 递归 runTurnLoop
- *                ↓
- *           RuntimeEvent 输出
- * ```
- */
+/** agent-loop.ts - 核心 Agent 循环逻辑 (RxJS 响应式模式) */
 
 import {
   Observable,
@@ -33,7 +13,6 @@ import {
   tap,
 } from 'rxjs';
 
-
 import { type DebugTraceEvent } from '../runtime/debug-events.js';
 import { Logger } from '@core/logger/index.js';
 import { UserInputBridge } from './user-input-bridge.js';
@@ -41,6 +20,7 @@ import type { AgentProvider } from '@providers/provider-types.js';
 import { ToolRegistry } from '@tools/core/tool-registry.js';
 import type {
   ChatInputTurn,
+  FinishReason,
   HistoryRecord,
   RuntimeEvent,
   RuntimeMode,
@@ -321,6 +301,9 @@ export function runAgentLoop(params: {
       // 使用 concatMap 顺序处理每个用户输入
       // 注：不再限制 maxTurns，由 context window 自然耗尽管理；
       // maxStepsPerTurn 仍保留以防止单轮工具死循环
+      let sessionFinishReason: FinishReason = 'stop';
+      let sessionError: string | undefined;
+
       const turns$ = params.input$.pipe(
         concatMap((turn) => {
           // 创建历史快照（用于传递给 Provider）
@@ -404,8 +387,23 @@ export function runAgentLoop(params: {
             abort$: params.abort$,
           }).execute();
 
+          const trackedAssistant$ = assistant$.pipe(
+            tap((event) => {
+              if (event.type === 'assistant_message') {
+                if (event.content.includes('[错误] provider 调用失败:')) {
+                  sessionFinishReason = 'error';
+                  sessionError = event.content;
+                } else if (event.content.includes('[系统] 已达到单轮最大步数上限')) {
+                  sessionFinishReason = 'max_steps';
+                } else if (event.content.includes('[系统] 已中断响应。')) {
+                  sessionFinishReason = 'abort';
+                }
+              }
+            })
+          );
+
           // concat 确保先处理 user$，再处理 assistant$
-          return concat(user$, assistant$);
+          return concat(user$, trackedAssistant$);
         })
       );
 
@@ -432,6 +430,8 @@ export function runAgentLoop(params: {
           (): RuntimeEvent => ({
             type: 'session_ended',
             sessionId: session.id,
+            finishReason: sessionFinishReason,
+            error: sessionError,
           })
         )
       );

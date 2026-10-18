@@ -22,8 +22,48 @@ import { setLoadedSettings, clearLoadedSettings } from './config/loaded-settings
 import { initI18n, t, DEFAULT_LANGUAGE } from './locales/index.js';
 import { detectTTY } from './ui/tty-detect.js';
 
+export const REGISTERED_SUBCOMMANDS = new Set([
+  'config',
+  'setup',
+  'init',
+  'tui',
+  'sessions',
+  'resume',
+  'skin',
+  'export',
+  'logs',
+  'skills',
+  'context',
+  'chat',
+]);
+
+export function resolveEffectiveArgv(argv: string[], isStdinTTY = process.stdin.isTTY): string[] {
+  const binArgs = argv.length >= 2 ? argv.slice(0, 2) : ['node', 'wasteland'];
+  const rawArgs = argv.slice(2);
+
+  if (rawArgs.length === 0) {
+    if (!isStdinTTY) {
+      return [...binArgs, 'chat'];
+    }
+    return [...binArgs, 'tui'];
+  }
+
+  const firstArg = rawArgs[0];
+  const isHelpOrVersion =
+    firstArg === '-h' ||
+    firstArg === '--help' ||
+    firstArg === '-V' ||
+    firstArg === '--version';
+
+  if (!REGISTERED_SUBCOMMANDS.has(firstArg) && !isHelpOrVersion) {
+    return [...binArgs, 'chat', ...rawArgs];
+  }
+
+  return argv;
+}
+
 function registerRootCommands(program: Command): void {
-  // chat 命令作为非交互式 fallback（非 TTY 场景使用 --message）
+  // chat 命令作为非交互式 fallback（非 TTY 场景使用 --message / -p / prompt）
   configureChatCommand(program.command('chat'));
   program.addCommand(createConfigCommand());
   program.addCommand(createCurrentConfigCommand());
@@ -76,10 +116,18 @@ export async function run(argv = process.argv): Promise<void> {
     await initI18n(DEFAULT_LANGUAGE);
   }
 
-  // 首次运行引导：空配置 + 交互式终端 + 非 init/help/version 子命令 → 自动进入引导
-  const cliArgs = argv.slice(2);
-  const isConfigCommand = cliArgs[0] === 'init' || cliArgs.includes('--help') || cliArgs.includes('-h')
-    || cliArgs.includes('--version') || cliArgs.includes('-V');
+  const effectiveArgv = resolveEffectiveArgv(argv, process.stdin.isTTY);
+  const cliArgs = effectiveArgv.slice(2);
+
+  // 首次运行引导：空配置 + 交互式终端 + 非 init/setup/help/version 子命令 → 自动进入引导
+  const isConfigCommand =
+    cliArgs[0] === 'init' ||
+    cliArgs[0] === 'setup' ||
+    cliArgs.includes('--help') ||
+    cliArgs.includes('-h') ||
+    cliArgs.includes('--version') ||
+    cliArgs.includes('-V');
+
   if (!isConfigCommand && loadedSettings && isConfigEmpty(loadedSettings.settings) && detectTTY().isInteractive) {
     try {
       const outcome = await runInitWizardFlow({ onExisting: 'skip' });
@@ -104,15 +152,12 @@ export async function run(argv = process.argv): Promise<void> {
   // 缓存已加载配置，供 initializeRuntime 复用，避免重复加载
   setLoadedSettings(loadedSettings);
 
-  // 无参数时默认启动 TUI（CLI chat 模式已从 help 隐藏，TUI 为唯一主入口）
-  if (cliArgs.length === 0) {
-    argv = [...argv, 'tui'];
-  }
-
-  await createProgram().parseAsync(argv);
+  await createProgram().parseAsync(effectiveArgv);
 
   // 清理配置缓存
   clearLoadedSettings();
 }
 
-void run();
+if (process.env.NODE_ENV !== 'test') {
+  void run();
+}

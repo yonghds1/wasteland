@@ -84,7 +84,7 @@ describe('interceptCommands', () => {
     });
   });
 
-  describe('unregistered /-commands', () => {
+  describe('unregistered /-commands (default)', () => {
     it('should intercept /unknown and write error (NOT pass to agent)', async () => {
       const { writer, calls } = createTestWriter();
       const source = of(makeTurn('/unknown')).pipe(interceptCommands(writer));
@@ -104,6 +104,49 @@ describe('interceptCommands', () => {
       expect(results).toHaveLength(0);
       expect(calls).toHaveLength(1);
       expect(calls[0]?.type).toBe('error');
+    });
+  });
+
+  describe('unregistered /-commands with passthroughUnknown: true', () => {
+    it('should pass through /unknown to agent without writing error', async () => {
+      const { writer, calls } = createTestWriter();
+      const source = of(makeTurn('/unknown')).pipe(
+        interceptCommands(writer, { passthroughUnknown: true }),
+      );
+      const result = await firstValueFrom(source);
+      expect(result.content).toBe('/unknown');
+      expect(calls).toHaveLength(0);
+    });
+
+    it('should pass through file path prompt like /src/app.ts 语法错误 to agent', async () => {
+      const { writer, calls } = createTestWriter();
+      const source = of(makeTurn('/src/app.ts 语法错误')).pipe(
+        interceptCommands(writer, { passthroughUnknown: true }),
+      );
+      const result = await firstValueFrom(source);
+      expect(result.content).toBe('/src/app.ts 语法错误');
+      expect(calls).toHaveLength(0);
+    });
+
+    it('should still intercept registered system commands like /help', async () => {
+      const { writer, calls } = createTestWriter();
+      const source = of(makeTurn('/help')).pipe(
+        interceptCommands(writer, { passthroughUnknown: true }),
+      );
+      const results = await firstValueFrom(source.pipe(toArray()));
+      expect(results).toHaveLength(0);
+      expect(calls).toHaveLength(1);
+      expect(calls[0]?.type).toBe('action');
+    });
+
+    it('should still intercept registered system commands like /clear', async () => {
+      const { writer, calls } = createTestWriter();
+      const source = of(makeTurn('/clear')).pipe(
+        interceptCommands(writer, { passthroughUnknown: true }),
+      );
+      const results = await firstValueFrom(source.pipe(toArray()));
+      expect(results).toHaveLength(0);
+      expect(calls).toHaveLength(1);
     });
   });
 

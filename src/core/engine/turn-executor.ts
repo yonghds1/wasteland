@@ -36,6 +36,7 @@ import {
   advanceTurnState,
   appendAssistantChunk,
   completeTurnState,
+  failTurnState,
   recordToolCall,
   recordToolResult,
   type TurnState} from './turn-state.js';
@@ -215,7 +216,7 @@ export class TurnExecutor {
               message: isAbort ? 'provider aborted by user' : `provider failed: ${errMsg}`,
               data: { provider: this.params.provider.id }});
             const errorContent = isAbort ? `[系统] 已中断响应。` : `[错误] provider 调用失败: ${errMsg}`;
-            this.state = completeTurnState(this.state, errorContent);
+            this.state = failTurnState(this.state);
             return from(
               this.params.sessionManager.appendRecord(
                 this.params.session,

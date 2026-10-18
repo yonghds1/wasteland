@@ -1,16 +1,14 @@
 import { NotificationBridge } from "../core/runtime/notification-bridge.js";
 import { merge } from "rxjs";
 /**
- * chat-unified.ts - 统一的 chat 命令实现
- *
- * 使用 initializeRuntime()、CliInputAdapter 和 DefaultOutputAdapter，
- * 替换原来的重复初始化代码。
+ * chat.ts - 统一的 chat 命令实现（含无头命令行增强）
  */
 
 import type { Observable } from 'rxjs';
+import { tap } from 'rxjs';
 import { Command } from 'commander';
 
-import type { ChatInputTurn, RuntimeMode } from '@core/runtime/event-types.js';
+import type { ChatInputTurn, FinishReason, RuntimeEvent, RuntimeMode } from '@core/runtime/event-types.js';
 import { UserInputBridge } from '@core/engine/user-input-bridge.js';
 import {
   initializeRuntime,
@@ -39,16 +37,27 @@ import { t } from '@locales/index.js';
 // Types
 // ============================================================
 
+export type OutputFormat = 'text' | 'json' | 'stream-json';
+
+export type SessionOutcome = {
+  sessionId?: string;
+  finishReason: FinishReason;
+  error?: string;
+  finalMessage?: string;
+};
+
 type ChatOptions = {
   debug?: boolean;
   debugFormat?: DebugFormat;
+  prompt?: string;
   message?: string;
   provider?: string;
   role?: string;
   dangerouslySkipPermissions?: boolean;
   permissionMode?: string;
-  /** --mode 启动参数（原始字符串，经 resolveAgentMode 收窄为 single/multi） */
   mode?: string;
+  outputFormat?: OutputFormat;
+  json?: boolean;
 };
 
 // ============================================================
@@ -57,20 +66,29 @@ type ChatOptions = {
 
 function resolvePermissionMode(value: string | undefined) {
   const mode = value ?? 'default';
-
   if (mode === 'default' || mode === 'accept_edits' || mode === 'bypass_permissions') {
     return mode;
   }
-
   throw new Error(`${t('commands.chat.errors.permissionMode')} ${mode}`);
 }
 
 function resolveDebugFormat(value: string | undefined): DebugFormat {
-  if (value === 'jsonl') {
-    return 'jsonl';
-  }
+  return value === 'jsonl' ? 'jsonl' : 'pretty';
+}
 
-  return 'pretty';
+export function resolveExitCode(finishReason: FinishReason): number {
+  switch (finishReason) {
+    case 'stop':
+      return 0;
+    case 'error':
+      return 2;
+    case 'max_steps':
+      return 3;
+    case 'abort':
+      return 130;
+    default:
+      return 1;
+  }
 }
 
 // ============================================================
@@ -91,8 +109,13 @@ async function runChatSession(params: {
   prompt?: string;
   outputAdapter?: CliOutputAdapter;
   userInputBridge?: UserInputBridge;
-}): Promise<void> {
+}): Promise<SessionOutcome> {
   const { runtime } = params;
+
+  let sessionId: string | undefined;
+  let finishReason: FinishReason = 'stop';
+  let error: string | undefined;
+  let finalMessage: string | undefined;
 
   try {
     const run = startAgentLoop({
@@ -105,14 +128,26 @@ async function runChatSession(params: {
       prompt: params.prompt,
       debug: params.debug,
       userInputBridge: params.userInputBridge,
-      // mode === 'interactive'（readline）才有人能应答；--message / 管道传 false，
-      // ask 直接拒绝而不是无限挂起
       interactive: params.mode === 'interactive',
     });
 
-    // 使用 CliOutputAdapter 处理事件
+    const trackedEvents$ = run.events$.pipe(
+      tap((event: RuntimeEvent) => {
+        if (event.type === 'session_started') {
+          sessionId = event.sessionId;
+        } else if (event.type === 'assistant_message') {
+          finalMessage = event.content;
+        } else if (event.type === 'session_ended') {
+          if (event.finishReason) {
+            finishReason = event.finishReason;
+          }
+          error = event.error;
+        }
+      })
+    );
+
     const outputAdapter = params.outputAdapter ?? new CliOutputAdapter();
-    const work: Promise<void>[] = [outputAdapter.handleEvents(run.events$)];
+    const work: Promise<void>[] = [outputAdapter.handleEvents(trackedEvents$)];
 
     attachDebugTrace(work, run.debug$, {
       debug: params.debug,
@@ -122,6 +157,7 @@ async function runChatSession(params: {
     });
 
     await Promise.all(work);
+    return { sessionId, finishReason, error, finalMessage };
   } finally {
     await stopRuntimeAgents(runtime);
   }
@@ -134,158 +170,213 @@ async function runChatSession(params: {
 export function configureChatCommand(cmd: Command): Command {
   return cmd
     .description(t('commands.chat.description'))
+    .argument('[prompt]', t('commands.chat.options.prompt'))
+    .option('-p, --prompt <text>', t('commands.chat.options.prompt'))
     .option('-m, --message <text>', t('commands.chat.options.once'))
-    .option('-p, --provider <name>', t('commands.chat.options.provider'))
+    .option('--provider <name>', t('commands.chat.options.provider'))
     .option('-r, --role <name>', t('commands.chat.options.role'))
+    .option('--output-format <format>', 'Output format: text, json, stream-json', 'text')
+    .option('--json', 'Output result in JSON format (shortcut for --output-format json)')
     .option('--debug', t('commands.chat.options.debug'))
     .option('--debug-format <format>', t('commands.chat.options.debugFormat'))
     .option('--dangerously-skip-permissions', t('commands.chat.options.dangerouslySkipPermissions'))
     .option('--permission-mode <mode>', t('commands.chat.options.permissionMode'))
     .option('--mode <mode>', t('commands.chat.options.mode'))
-    .action(async (options: ChatOptions) => {
-      const cwd = process.cwd();
-
-      // 装配 FileSink + Logger（默认 info；debug 路径见下）
-      initializeFileSinkFromEnv({ cwd, env: process.env });
-
-      // 权限模式解析：--dangerously-skip-permissions 强置 bypass_permissions，否则取 --permission-mode
-      const explicitPermissionMode = options.dangerouslySkipPermissions
-        ? 'bypass_permissions'
-        : options.permissionMode;
-
-      // 使用 initializeRuntime() 初始化
-      // mode：--mode 启动参数（收窄为 single/multi）透传给 initializeRuntime，
-      // 只影响 agentMode（skin/singleAgent 语义），不碰 runChatSession 的 RuntimeMode
-      const runtime = await initializeRuntime({
-        cwd,
-        roleName: options.role,
-        providerName: options.provider,
-        mode: resolveAgentMode(options.mode),
-        permissionMode: explicitPermissionMode ? resolvePermissionMode(explicitPermissionMode) : undefined,
-      });
-
-      const permissionMode = runtime.resolvedRuntime.permissionMode;
-      const debug = options.debug === true || runtime.loadedSettings.settings.runtime.debug;
-      const debugFormat = resolveDebugFormat(options.debugFormat);
-      const maxStepsPerTurn = runtime.loadedSettings.settings.runtime.maxStepsPerTurn;
-      const doomLoopThreshold = runtime.loadedSettings.settings.runtime.doomLoopThreshold;
-
-      // debug 启用时升 Logger level（FileSink 已装配）
-      if (debug) {
-        enableDebugLog();
-      }
-
-      // TTY 检测
-      const tty = detectTTY();
-      const renderStyle = tty.stdoutIsTTY ? 'interactive' : 'classic';
-
-      if (options.message?.trim()) {
-        // 创建输出适配器
-        const outputAdapter = new CliOutputAdapter({ style: renderStyle });
-        // 命令 writer：拦截 / 命令时输出命令结果（help/clear/mode 等）
-        const commandWriter = new CliCommandWriter(
-          process.stdout,
-          runtime.skillExecutor,
-        );
-
-        await runChatSession({
-          // 单消息模式：pipe interceptCommands 拦截 / 命令
-          input$: createSingleTurnInput(options.message, 'message').pipe(
-            interceptCommands(commandWriter),
-          ),
-          runtime,
-          cwd,
-          mode: 'single',
-          debug,
-          debugFormat,
-          projectConfigDir: runtime.loadedSettings.projectConfigDir,
-          permissionMode,
-          maxStepsPerTurn,
-          doomLoopThreshold,
-          prompt: runtime.resolvedRuntime.prompt,
-          outputAdapter,
-        });
-        return;
-      }
-
-      const pipedInput = await readPipedInput(process.stdin);
-
-      if (pipedInput) {
-        // 创建输出适配器
-        const outputAdapter = new CliOutputAdapter({ style: 'classic' });
-        const commandWriter = new CliCommandWriter(
-          process.stdout,
-          runtime.skillExecutor,
-        );
-
-        await runChatSession({
-          // 管道输入模式：pipe interceptCommands 拦截 / 命令
-          input$: createSingleTurnInput(pipedInput, 'stdin').pipe(
-            interceptCommands(commandWriter),
-          ),
-          runtime,
-          cwd,
-          mode: 'single',
-          debug,
-          debugFormat,
-          projectConfigDir: runtime.loadedSettings.projectConfigDir,
-          permissionMode,
-          maxStepsPerTurn,
-          doomLoopThreshold,
-          prompt: runtime.resolvedRuntime.prompt,
-          outputAdapter,
-        });
-        return;
-      }
-
-      if (!process.stdin.isTTY) {
-        throw new Error(t('commands.chat.errors.emptyStdin'));
-      }
-
-      // 创建用户输入桥接器（用于 ask-user 工具）
-      const userInputBridge = new UserInputBridge();
-
-      const inputAdapter = new CliInputAdapter({
-        skillExecutor: runtime.skillExecutor,
-        userInputBridge,
-        permissionGate: runtime.permissionGate,
-      });
-
-      // 创建输出适配器
-      const outputAdapter = new CliOutputAdapter({
-        style: renderStyle,
-        onTurnComplete: () => inputAdapter.prompt(),
-        showThinking: runtime.loadedSettings.settings.runtime.showThinking,
-      });
-
-      const notificationBridge = new NotificationBridge();
-      const sessionInput$ = merge(inputAdapter.input$, notificationBridge.notification$);
-
+    .action(async (promptArg: string | undefined, options: ChatOptions) => {
       try {
-        await runChatSession({
-          input$: sessionInput$,
-          runtime,
-          cwd,
-          mode: 'interactive',
-          debug,
-          debugFormat,
-          projectConfigDir: runtime.loadedSettings.projectConfigDir,
-          permissionMode,
-          maxStepsPerTurn,
-          doomLoopThreshold,
-          prompt: runtime.resolvedRuntime.prompt,
-          outputAdapter,
-          userInputBridge,
-        });
-      } catch (error) {
-        notificationBridge.destroy();
-        inputAdapter.destroy();
-        throw error;
-      } finally {
-        notificationBridge.destroy();
-      }
+        let actualPromptArg: string | undefined;
+        let actualOptions: ChatOptions;
+        if (typeof promptArg === 'string') {
+          actualPromptArg = promptArg;
+          actualOptions = options ?? {};
+        } else if (promptArg && typeof promptArg === 'object' && !options) {
+          actualOptions = promptArg as ChatOptions;
+        } else {
+          actualOptions = options ?? {};
+        }
 
-      await inputAdapter.done;
+        const cwd = process.cwd();
+        initializeFileSinkFromEnv({ cwd, env: process.env });
+
+        const explicitPermissionMode = actualOptions.dangerouslySkipPermissions
+          ? 'bypass_permissions'
+          : actualOptions.permissionMode;
+
+        const runtime = await initializeRuntime({
+          cwd,
+          roleName: actualOptions.role,
+          providerName: actualOptions.provider,
+          mode: resolveAgentMode(actualOptions.mode),
+          permissionMode: explicitPermissionMode ? resolvePermissionMode(explicitPermissionMode) : undefined,
+        });
+
+        const permissionMode = runtime.resolvedRuntime.permissionMode;
+        const debug = actualOptions.debug === true || runtime.loadedSettings.settings.runtime.debug;
+        const debugFormat = resolveDebugFormat(actualOptions.debugFormat);
+        const maxStepsPerTurn = runtime.loadedSettings.settings.runtime.maxStepsPerTurn;
+        const doomLoopThreshold = runtime.loadedSettings.settings.runtime.doomLoopThreshold;
+
+        if (debug) {
+          enableDebugLog();
+        }
+
+        const isJsonOutput = actualOptions.json === true || actualOptions.outputFormat === 'json';
+        const tty = detectTTY();
+        const renderStyle = isJsonOutput ? 'classic' : (tty.stdoutIsTTY ? 'interactive' : 'classic');
+        const userPrompt = actualOptions.prompt ?? actualOptions.message ?? actualPromptArg;
+
+        // 单消息模式
+        if (userPrompt?.trim()) {
+          const commandWriter = new CliCommandWriter(process.stdout, runtime.skillExecutor);
+          const notificationBridge = new NotificationBridge();
+          const baseInput$ = createSingleTurnInput(userPrompt, 'message').pipe(
+            interceptCommands(commandWriter, { passthroughUnknown: true }),
+          );
+          const sessionInput$ = merge(baseInput$, notificationBridge.notification$);
+          const outputAdapter = isJsonOutput
+            ? undefined
+            : new CliOutputAdapter({ style: renderStyle });
+
+          try {
+            const outcome = await runChatSession({
+              input$: sessionInput$,
+              runtime,
+              cwd,
+              mode: 'single',
+              debug,
+              debugFormat,
+              projectConfigDir: runtime.loadedSettings.projectConfigDir,
+              permissionMode,
+              maxStepsPerTurn,
+              doomLoopThreshold,
+              prompt: runtime.resolvedRuntime.prompt,
+              outputAdapter,
+            });
+
+            const exitCode = resolveExitCode(outcome.finishReason);
+            if (isJsonOutput) {
+              process.stdout.write(
+                JSON.stringify(
+                  {
+                    sessionId: outcome.sessionId,
+                    status: outcome.finishReason === 'stop' ? 'success' : 'failed',
+                    finishReason: outcome.finishReason,
+                    exitCode,
+                    content: outcome.finalMessage,
+                    error: outcome.error,
+                  },
+                  null,
+                  2,
+                ) + '\n',
+              );
+            }
+            process.exitCode = exitCode;
+            return;
+          } finally {
+            notificationBridge.destroy();
+          }
+        }
+
+        // 管道输入模式
+        const pipedInput = await readPipedInput(process.stdin);
+        if (pipedInput) {
+          const commandWriter = new CliCommandWriter(process.stdout, runtime.skillExecutor);
+          const notificationBridge = new NotificationBridge();
+          const baseInput$ = createSingleTurnInput(pipedInput, 'stdin').pipe(
+            interceptCommands(commandWriter, { passthroughUnknown: true }),
+          );
+          const sessionInput$ = merge(baseInput$, notificationBridge.notification$);
+          const outputAdapter = isJsonOutput
+            ? undefined
+            : new CliOutputAdapter({ style: 'classic' });
+
+          try {
+            const outcome = await runChatSession({
+              input$: sessionInput$,
+              runtime,
+              cwd,
+              mode: 'single',
+              debug,
+              debugFormat,
+              projectConfigDir: runtime.loadedSettings.projectConfigDir,
+              permissionMode,
+              maxStepsPerTurn,
+              doomLoopThreshold,
+              prompt: runtime.resolvedRuntime.prompt,
+              outputAdapter,
+            });
+
+            const exitCode = resolveExitCode(outcome.finishReason);
+            if (isJsonOutput) {
+              process.stdout.write(
+                JSON.stringify(
+                  {
+                    sessionId: outcome.sessionId,
+                    status: outcome.finishReason === 'stop' ? 'success' : 'failed',
+                    finishReason: outcome.finishReason,
+                    exitCode,
+                    content: outcome.finalMessage,
+                    error: outcome.error,
+                  },
+                  null,
+                  2,
+                ) + '\n',
+              );
+            }
+            process.exitCode = exitCode;
+            return;
+          } finally {
+            notificationBridge.destroy();
+          }
+        }
+
+        if (!process.stdin.isTTY) {
+          throw new Error(t('commands.chat.errors.emptyStdin'));
+        }
+
+        // 交互式模式 (REPL / readline)
+        const userInputBridge = new UserInputBridge();
+        const inputAdapter = new CliInputAdapter({
+          skillExecutor: runtime.skillExecutor,
+          userInputBridge,
+          permissionGate: runtime.permissionGate,
+        });
+
+        const outputAdapter = new CliOutputAdapter({
+          style: renderStyle,
+          onTurnComplete: () => inputAdapter.prompt(),
+          showThinking: runtime.loadedSettings.settings.runtime.showThinking,
+        });
+
+        const notificationBridge = new NotificationBridge();
+        const sessionInput$ = merge(inputAdapter.input$, notificationBridge.notification$);
+
+        try {
+          await runChatSession({
+            input$: sessionInput$,
+            runtime,
+            cwd,
+            mode: 'interactive',
+            debug,
+            debugFormat,
+            projectConfigDir: runtime.loadedSettings.projectConfigDir,
+            permissionMode,
+            maxStepsPerTurn,
+            doomLoopThreshold,
+            prompt: runtime.resolvedRuntime.prompt,
+            outputAdapter,
+            userInputBridge,
+          });
+        } finally {
+          notificationBridge.destroy();
+          inputAdapter.destroy();
+        }
+
+        await inputAdapter.done;
+      } catch (error) {
+        process.exitCode = 1;
+        throw error;
+      }
     });
 }
 

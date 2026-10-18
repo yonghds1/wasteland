@@ -10,6 +10,8 @@ import type { SkillArgs, SkillResult } from '@core/skills/skill-types.js';
  * - "stdin": 通过标准输入管道传入
  * - "interactive": 交互式对话中用户主动输入
  */
+export type FinishReason = 'stop' | 'error' | 'max_steps' | 'abort';
+
 export type InputSource = 'message' | 'stdin' | 'interactive';
 
 /**
@@ -445,6 +447,8 @@ export type RuntimeEvent =
       /** 会话结束事件 */
       type: 'session_ended';
       sessionId: string;
+      finishReason?: FinishReason;
+      error?: string;
     }
   | {
       /** 子 Agent 创建事件 */

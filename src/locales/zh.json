@@ -227,7 +227,8 @@
         "debugFormat": "调试输出格式：pretty（默认）或 jsonl",
         "dangerouslySkipPermissions": "跳过所有权限检查直接执行（与 Claude Code 一致，高危）",
         "permissionMode": "权限模式：default | accept_edits | bypass_permissions",
-        "mode": "Agent 模式覆盖：single | multi（启动时生效）"
+        "mode": "Agent 模式覆盖：single | multi（启动时生效）",
+        "prompt": "单次执行的 Prompt 文本"
       },
       "errors": {
         "permissionMode": "当前不支持 permission mode:",

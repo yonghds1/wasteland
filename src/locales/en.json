@@ -227,7 +227,8 @@
         "debugFormat": "Debug output format: pretty (default) or jsonl",
         "dangerouslySkipPermissions": "Bypass all permission prompts (Claude Code compatible, high risk)",
         "permissionMode": "Permission mode: default | accept_edits | bypass_permissions",
-        "mode": "Agent mode override: single | multi (takes effect on startup)"
+        "mode": "Agent mode override: single | multi (takes effect on startup)",
+        "prompt": "Prompt text for single-turn execution"
       },
       "errors": {
         "permissionMode": "Permission mode not supported:",

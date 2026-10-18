@@ -85,7 +85,7 @@ export const handleSpawnAgentDispatch: PreDispatchHook = (params) => {
     askRequested$,
     confirmation$.pipe(
       concatMap(({ allowed, askEvents }) => {
-        const decision = resolveConfirmedDecision(rawDecision, allowed);
+        const decision = resolveConfirmedDecision(rawDecision, allowed, Boolean(params.userInputBridge));
 
         const permission$ = from(
           params.sessionManager.appendRecord(

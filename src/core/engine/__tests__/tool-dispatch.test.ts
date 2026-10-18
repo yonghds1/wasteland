@@ -302,5 +302,98 @@ describe('dispatchToolCall - 权限问询 agent 归属', () => {
   });
 });
 
+describe('dispatchToolCall - 无头模式 (headless / non-interactive)', () => {
+  function makeExecRegistry(): ToolRegistry {
+    const reg = new ToolRegistry();
+    reg.register({
+      name: 'bash',
+      riskLevel: 'execute',
+      async execute(): Promise<ToolExecutionResult> {
+        return { status: 'success', output: 'ok' };
+      },
+    });
+    return reg;
+  }
+
+  it('无头模式下调用 ask-user 未提供 default 时产生 tool_failed 且失败信息匹配规范', async () => {
+    const events$ = dispatchToolCall({
+      session: makeSession(),
+      sessionManager: makeSessionManagerStub(),
+      turn: 1,
+      call: makeCall('ask-user', 'c-ask-1', { question: '确定要删除吗？' }),
+      registry: makeRegistryWithReadFile(),
+      permissionGate: createPermissionGate({ mode: 'default' }),
+      cwd: '/tmp',
+      turnState: makeTurnState(),
+      userInputBridge: undefined,
+    });
+
+    const events = await firstValueFrom(events$.pipe(toArray()));
+    const failedEvent = events.find((e) => e.type === 'tool_failed');
+    expect(failedEvent).toBeDefined();
+    if (failedEvent && failedEvent.type === 'tool_failed') {
+      expect(failedEvent.status).toBe('error');
+      expect(failedEvent.error).toBe(
+        '[系统] 非交互/无头模式下无法进行用户询问 (ask-user)，且未提供 default 默认值。'
+      );
+    }
+    const resultEvent = events.find((e) => e.type === 'tool_result');
+    expect(resultEvent).toBeUndefined();
+  });
+
+  it('无头模式下调用 ask-user 且提供 default 时正确返回默认值', async () => {
+    const events$ = dispatchToolCall({
+      session: makeSession(),
+      sessionManager: makeSessionManagerStub(),
+      turn: 1,
+      call: makeCall('ask-user', 'c-ask-2', { question: '请确认配置', default: 'production' }),
+      registry: makeRegistryWithReadFile(),
+      permissionGate: createPermissionGate({ mode: 'default' }),
+      cwd: '/tmp',
+      turnState: makeTurnState(),
+      userInputBridge: undefined,
+    });
+
+    const events = await firstValueFrom(events$.pipe(toArray()));
+    const resultEvent = events.find((e) => e.type === 'tool_result');
+    expect(resultEvent).toBeDefined();
+    if (resultEvent && resultEvent.type === 'tool_result') {
+      expect(resultEvent.status).toBe('success');
+      expect(resultEvent.output).toBe('production');
+    }
+    const failedEvent = events.find((e) => e.type === 'tool_failed');
+    expect(failedEvent).toBeUndefined();
+  });
+
+  it('无头模式下调用高危工具触发 deny 时，reason 明确标注为（非交互无头环境自动阻断）', async () => {
+    const events$ = dispatchToolCall({
+      session: makeSession(),
+      sessionManager: makeSessionManagerStub(),
+      turn: 1,
+      call: makeCall('bash', 'c-bash-1', { command: 'rm -rf /tmp/danger' }),
+      registry: makeExecRegistry(),
+      permissionGate: createPermissionGate({ mode: 'default' }),
+      cwd: '/tmp',
+      turnState: makeTurnState(),
+      userInputBridge: undefined,
+    });
+
+    const events = await firstValueFrom(events$.pipe(toArray()));
+    const permEvent = events.find((e) => e.type === 'permission_decision');
+    expect(permEvent).toBeDefined();
+    if (permEvent && permEvent.type === 'permission_decision') {
+      expect(permEvent.decision).toBe('deny');
+      expect(permEvent.reason).toContain('（非交互无头环境自动阻断）');
+    }
+
+    const failedEvent = events.find((e) => e.type === 'tool_failed');
+    expect(failedEvent).toBeDefined();
+    if (failedEvent && failedEvent.type === 'tool_failed') {
+      expect(failedEvent.status).toBe('error');
+      expect(failedEvent.error).toContain('（非交互无头环境自动阻断）');
+    }
+  });
+});
+
 // 避免 lint 警告（of 在某些 test 中未使用）
 void of;

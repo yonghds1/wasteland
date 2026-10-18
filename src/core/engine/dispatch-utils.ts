@@ -133,17 +133,19 @@ export function createToolResultRecord(params: {
  */
 export function resolveConfirmedDecision(
   rawDecision: PermissionDecision,
-  allowed: boolean
+  allowed: boolean,
+  hasUserInputBridge = true
 ): PermissionDecision {
   if (!allowed) {
+    const suffix = hasUserInputBridge ? '（用户拒绝）' : '（非交互无头环境自动阻断）';
     return {
       ...rawDecision,
       decision: 'deny',
-      // 仅当原始决策是 ask 时才标注用户拒绝；规则本就 deny 的保持原文，
-      // 避免出现「规则拒绝（用户拒绝）」这种双重归因。
+      // 仅当原始决策是 ask 时才标注用户拒绝 / 非交互无头环境自动阻断；
+      // 规则本就 deny 的保持原文，避免出现「规则拒绝（用户拒绝）」这种双重归因。
       reason:
         rawDecision.decision === 'ask'
-          ? `${rawDecision.reason}（用户拒绝）`
+          ? `${rawDecision.reason}${suffix}`
           : rawDecision.reason,
     };
   }

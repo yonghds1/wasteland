@@ -90,6 +90,12 @@ describe('resolveConfirmedDecision', () => {
     expect(decision.reason).toContain('用户拒绝');
   });
 
+  it('ask + 拒绝 + hasUserInputBridge=false → deny，并在 reason 上标注非交互无头环境自动阻断', () => {
+    const decision = resolveConfirmedDecision(askDecision, false, false);
+    expect(decision.decision).toBe('deny');
+    expect(decision.reason).toContain('非交互无头环境自动阻断');
+  });
+
   it('本就 allow + 允许 → 原样透传，保留规则命中的 reason', () => {
     const ruleHit: PermissionDecision = {
       decision: 'allow',

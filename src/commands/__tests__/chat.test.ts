@@ -2,8 +2,8 @@
  * chat.test.ts - 统一 chat 命令集成测试
  */
 
-import { describe, it, expect, vi } from 'vitest';
-import { createChatCommand } from '../chat.js';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createChatCommand, resolveExitCode } from '../chat.js';
 
 // Mock 依赖
 vi.mock('@core/shared/initialize-runtime.js', () => ({
@@ -71,8 +71,13 @@ vi.mock('../../ui/debug-renderer.js', () => ({
   renderDebugTrace: vi.fn().mockResolvedValue(undefined),
 }));
 
+const mockCreateSingleTurnInput = vi.fn().mockReturnValue({
+  pipe: vi.fn().mockReturnValue({ subscribe: vi.fn() }),
+  subscribe: vi.fn(),
+});
+
 vi.mock('../../ui/readline-input.js', () => ({
-  createSingleTurnInput: vi.fn().mockReturnValue({ subscribe: vi.fn() }),
+  createSingleTurnInput: (...args: any[]) => mockCreateSingleTurnInput(...args),
   readPipedInput: vi.fn().mockResolvedValue(null),
 }));
 
@@ -89,6 +94,10 @@ vi.mock('@core/runtime/debug-logger.js', () => ({
 }));
 
 describe('createChatCommand', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('应该创建 chat 命令', () => {
     const command = createChatCommand();
 
@@ -96,12 +105,23 @@ describe('createChatCommand', () => {
     expect(command.name()).toBe('chat');
   });
 
-  it('应该有正确的选项', () => {
+  it('应该有正确的选项与参数定义', () => {
     const command = createChatCommand();
     const options = command.options;
 
-    expect(options.find((o) => o.long === '--message')).toBeDefined();
-    expect(options.find((o) => o.long === '--provider')).toBeDefined();
+    // -p 归还给 prompt，--provider 移除 -p 短参数
+    const promptOpt = options.find((o) => o.long === '--prompt');
+    expect(promptOpt).toBeDefined();
+    expect(promptOpt?.short).toBe('-p');
+
+    const messageOpt = options.find((o) => o.long === '--message');
+    expect(messageOpt).toBeDefined();
+    expect(messageOpt?.short).toBe('-m');
+
+    const providerOpt = options.find((o) => o.long === '--provider');
+    expect(providerOpt).toBeDefined();
+    expect(providerOpt?.short).toBeUndefined();
+
     expect(options.find((o) => o.long === '--role')).toBeDefined();
     expect(options.find((o) => o.long === '--debug')).toBeDefined();
     expect(options.find((o) => o.long === '--dangerously-skip-permissions')).toBeDefined();
@@ -131,5 +151,49 @@ describe('createChatCommand', () => {
     }
     expect(enableSpy).toHaveBeenCalledTimes(1);
     enableSpy.mockRestore();
+  });
+
+  it('使用 -p / --prompt 时触发单轮消息执行', async () => {
+    await createChatCommand().parseAsync(['-p', 'hello prompt'], { from: 'user' });
+    expect(mockCreateSingleTurnInput).toHaveBeenCalledWith('hello prompt', 'message');
+  });
+
+  it('--prompt 与 --message 同时提供时优先使用 --prompt', async () => {
+    await createChatCommand().parseAsync(['--message', 'old msg', '--prompt', 'new prompt'], { from: 'user' });
+    expect(mockCreateSingleTurnInput).toHaveBeenCalledWith('new prompt', 'message');
+  });
+
+  it('使用位置参数 [prompt] 时触发单轮消息执行', async () => {
+    await createChatCommand().parseAsync(['positional prompt'], { from: 'user' });
+    expect(mockCreateSingleTurnInput).toHaveBeenCalledWith('positional prompt', 'message');
+  });
+  it('应该支持 --output-format 与 --json 选项', () => {
+    const command = createChatCommand();
+    const options = command.options;
+
+    expect(options.find((o) => o.long === '--output-format')).toBeDefined();
+    expect(options.find((o) => o.long === '--json')).toBeDefined();
+  });
+
+  describe('resolveExitCode', () => {
+    it('stop 映射为 0', () => {
+      expect(resolveExitCode('stop')).toBe(0);
+    });
+
+    it('error 映射为 2', () => {
+      expect(resolveExitCode('error')).toBe(2);
+    });
+
+    it('max_steps 映射为 3', () => {
+      expect(resolveExitCode('max_steps')).toBe(3);
+    });
+
+    it('abort 映射为 130', () => {
+      expect(resolveExitCode('abort')).toBe(130);
+    });
+
+    it('其他未知原因映射为 1', () => {
+      expect(resolveExitCode('unknown' as any)).toBe(1);
+    });
   });
 });

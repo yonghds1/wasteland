@@ -50,10 +50,11 @@ type DispatchToolCallParams = Parameters<typeof dispatchToolCall>[0];
  * 处理用户输入请求，暂停 agent loop 等待用户响应。
  * 发出 user_input_requested/user_input_received 生命周期事件。
  */
-function handleAskUser(params: DispatchToolCallParams, requested$: Observable<RuntimeEvent>): Observable<RuntimeEvent> | null {
-  if (!params.userInputBridge) return null;
-
-  const input = params.call.input as { question: string; options?: string[] };
+function handleAskUser(
+  params: DispatchToolCallParams,
+  requested$: Observable<RuntimeEvent>
+): Observable<RuntimeEvent> {
+  const input = params.call.input as { question?: string; options?: string[]; default?: string } | undefined;
 
   // 权限检查（ask-user 是只读工具，自动允许）
   const decision = params.permissionGate.evaluate(params.call, 'read');
@@ -118,21 +119,77 @@ function handleAskUser(params: DispatchToolCallParams, requested$: Observable<Ru
     toolName: params.call.toolName,
   });
 
+  if (!params.userInputBridge) {
+    const defaultVal = input?.default;
+    const hasDefault = typeof defaultVal === 'string' && defaultVal.trim().length > 0;
+
+    if (hasDefault) {
+      const resultRecord = createToolResultRecord({
+        session: params.session,
+        turn: params.turn,
+        call: params.call,
+        status: 'success',
+        output: defaultVal,
+      });
+
+      const result$ = from(params.sessionManager.appendRecord(params.session, resultRecord)).pipe(
+        map(
+          (): RuntimeEvent => ({
+            type: 'tool_result',
+            sessionId: params.session.id,
+            turn: params.turn,
+            callId: params.call.id,
+            toolName: params.call.toolName,
+            status: 'success',
+            output: defaultVal,
+          })
+        )
+      );
+
+      return concat(requested$, permission$, started$, result$);
+    }
+
+    const errorMsg = '[系统] 非交互/无头模式下无法进行用户询问 (ask-user)，且未提供 default 默认值。';
+    const failedRecord = createToolResultRecord({
+      session: params.session,
+      turn: params.turn,
+      call: params.call,
+      status: 'error',
+      error: errorMsg,
+    });
+
+    const failed$ = from(params.sessionManager.appendRecord(params.session, failedRecord)).pipe(
+      map(
+        (): RuntimeEvent => ({
+          type: 'tool_failed',
+          sessionId: params.session.id,
+          turn: params.turn,
+          callId: params.call.id,
+          toolName: params.call.toolName,
+          status: 'error',
+          error: errorMsg,
+        })
+      )
+    );
+
+    return concat(requested$, permission$, started$, failed$);
+  }
+
   // 关键：必须立即发出 user_input_requested 事件，让 UI 立即呈现提问，再进入 await 等待
   const requestedEvent: RuntimeEvent = {
     type: 'user_input_requested',
     sessionId: params.session.id,
     turn: params.turn,
     callId: params.call.id,
-    question: `${agentScopePrefix(params.session)}${input.question}`,
-    options: input.options,
+    question: `${agentScopePrefix(params.session)}${input?.question ?? ''}`,
+    options: input?.options,
   };
   const askRequested$ = of(requestedEvent);
 
   // 等待用户输入并记录结果
   const result$ = defer(async () => {
     // 等待用户输入
-    const answer = await params.userInputBridge?.requestInput() ?? '';
+    const answer = (await params.userInputBridge?.requestInput()) ?? '';
 
     // 发出响应事件
     const receivedEvent: RuntimeEvent = {
@@ -375,7 +432,7 @@ export function dispatchToolCall(params: {
     askRequested$,
     confirmation$.pipe(
       concatMap(({ allowed, askEvents }) => {
-        const decision = resolveConfirmedDecision(rawDecision, allowed);
+        const decision = resolveConfirmedDecision(rawDecision, allowed, Boolean(params.userInputBridge));
 
         const permission$ = from(
           params.sessionManager.appendRecord(
