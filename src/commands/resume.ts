@@ -245,7 +245,7 @@ export function createResumeCommand(): Command {
 
       const debug = options.debug === true || loadedSettings.settings.runtime.debug;
       const debugFormat = options.debugFormat === 'jsonl' ? 'jsonl' : 'pretty';
-      const maxStepsPerTurn = loadedSettings.settings.runtime.maxStepsPerTurn ?? 8;
+      const maxStepsPerTurn = loadedSettings.settings.runtime.maxStepsPerTurn ?? 60;
       const doomLoopThreshold = loadedSettings.settings.runtime.doomLoopThreshold;
       const tty = detectTTY();
       const renderStyle = tty.stdoutIsTTY ? 'interactive' : 'classic';

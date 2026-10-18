@@ -742,7 +742,7 @@
           "title": "Field Descriptions",
           "defaultRole": "Default agent role (e.g. orchestrator)",
           "permissionMode": "Permission mode: default | accept_edits | bypass_permissions",
-          "maxStepsPerTurn": "Max tool steps per turn (default: 30)",
+          "maxStepsPerTurn": "Max tool steps per turn (default: 60)",
           "doomLoopThreshold": "Consecutive repeated tool call threshold (default: 3, 0 disables)",
           "language": "UI language: en | zh",
           "providerType": "API protocol: openai-compatible | anthropic | local"

@@ -265,7 +265,7 @@ export function buildInitialSettings(input: InitWizardInput): RawWastelandSettin
       defaultModel: INITIAL_MODEL_KEY,
       mode: isSingle ? 'single' : 'multi',
       skinId,
-      maxStepsPerTurn: 30,
+      maxStepsPerTurn: 60,
       doomLoopThreshold: 3,
       language: input.language ?? 'zh',
     },

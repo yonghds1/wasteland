@@ -165,7 +165,7 @@ describe('加载管线 合并优先级', () => {
 
     expect(settings.defaultProvider).toBe('local');
     expect(settings.runtime.permissionMode).toBe('default');
-    expect(settings.runtime.maxStepsPerTurn).toBe(30);
+    expect(settings.runtime.maxStepsPerTurn).toBe(60);
     expect(settings.runtime.skinId).toBe('warlord-immortal');
     expect(settings.runtime.language).toBe('en');
     expect(settings.runtime.debug).toBe(false);
@@ -180,7 +180,7 @@ describe('加载管线 合并优先级', () => {
     const { settings } = await getOrLoadSettings(workDir, envForTest());
 
     expect(settings.defaultProvider).toBe('user-provider');
-    expect(settings.runtime.maxStepsPerTurn).toBe(30); // 默认值保留
+    expect(settings.runtime.maxStepsPerTurn).toBe(60); // 默认值保留
   });
 
   it('项目文件覆盖用户文件', async () => {

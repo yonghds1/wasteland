@@ -205,7 +205,7 @@ export function runAgentLoop(params: {
       data: event.data,
     });
   };
-  const maxStepsPerTurn = params.maxStepsPerTurn ?? 30;
+  const maxStepsPerTurn = params.maxStepsPerTurn ?? 60;
   // doom loop 阈值兜底：未传时用 3（与 DEFAULT_WASTELAND_SETTINGS 一致）；
   // 显式传 0 表示关闭检测，不能用 ?? 把它吞掉。
   const doomLoopThreshold = params.doomLoopThreshold ?? 3;

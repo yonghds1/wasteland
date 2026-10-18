@@ -742,7 +742,7 @@
           "title": "配置项说明",
           "defaultRole": "默认 Agent 角色 (如 orchestrator)",
           "permissionMode": "权限模式: default | accept_edits | bypass_permissions",
-          "maxStepsPerTurn": "单轮最大工具步数 (默认: 30)",
+          "maxStepsPerTurn": "单轮最大工具步数 (默认: 60)",
           "doomLoopThreshold": "连续重复工具调用阈值 (默认: 3，0 表示关闭)",
           "language": "界面语言: en | zh",
           "providerType": "API 协议: openai-compatible | anthropic | local"

@@ -378,7 +378,7 @@ export const DEFAULT_WASTELAND_SETTINGS: ResolvedWastelandSettings = {
     skinId: 'warlord-immortal',
     mode: 'single',
     permissionMode: 'default',
-    maxStepsPerTurn: 30,
+    maxStepsPerTurn: 60,
     doomLoopThreshold: 3,
     childAgentTimeout: 600000,
     compactionBudgetRatio: 0.6,

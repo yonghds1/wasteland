@@ -58,6 +58,7 @@ type ChatOptions = {
   mode?: string;
   outputFormat?: OutputFormat;
   json?: boolean;
+  maxSteps?: number | string;
 };
 
 // ============================================================
@@ -175,6 +176,7 @@ export function configureChatCommand(cmd: Command): Command {
     .option('-m, --message <text>', t('commands.chat.options.once'))
     .option('--provider <name>', t('commands.chat.options.provider'))
     .option('-r, --role <name>', t('commands.chat.options.role'))
+    .option('--max-steps <number>', 'Maximum tool steps per turn (default: 60)')
     .option('--output-format <format>', 'Output format: text, json, stream-json', 'text')
     .option('--json', 'Output result in JSON format (shortcut for --output-format json)')
     .option('--debug', t('commands.chat.options.debug'))
@@ -213,7 +215,7 @@ export function configureChatCommand(cmd: Command): Command {
         const permissionMode = runtime.resolvedRuntime.permissionMode;
         const debug = actualOptions.debug === true || runtime.loadedSettings.settings.runtime.debug;
         const debugFormat = resolveDebugFormat(actualOptions.debugFormat);
-        const maxStepsPerTurn = runtime.loadedSettings.settings.runtime.maxStepsPerTurn;
+        const maxStepsPerTurn = actualOptions.maxSteps ? Number(actualOptions.maxSteps) : runtime.loadedSettings.settings.runtime.maxStepsPerTurn;
         const doomLoopThreshold = runtime.loadedSettings.settings.runtime.doomLoopThreshold;
 
         if (debug) {

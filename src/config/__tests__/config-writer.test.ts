@@ -39,7 +39,7 @@ describe('config-writer', () => {
         defaultModel: INITIAL_MODEL_KEY,
         mode: 'multi',
         skinId: 'warlord-immortal',
-        maxStepsPerTurn: 30,
+        maxStepsPerTurn: 60,
         doomLoopThreshold: 3,
         language: 'zh',
       });
