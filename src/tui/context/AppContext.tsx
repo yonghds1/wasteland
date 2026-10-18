@@ -145,6 +145,10 @@ export interface AppState {
    */
   viewFilter?: string;
 
+  /** 输入框回填草稿（如 /undo 回填上一轮 prompt） */
+  inputDraft?: string;
+  inputNonEmpty?: boolean;
+
   session: {
     agents: AgentNode[];
     messages: Message[];

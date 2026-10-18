@@ -13,6 +13,7 @@ import { loadAllMcpConfigs, saveGlobalMcpServerConfig } from '../../config/mcp-c
 import type { MCPServerConfig } from '../../tools/mcp/mcp-client.js';
 import type { AppState, PageName, HelpView, LogPageFilter } from '../context/AppContext.js';
 import type { TuiRuntimeContext } from '../types.js';
+import { useCheckpointCommands } from './useCheckpointCommands.js';
 
 export interface UseCommandDispatcherProps {
   state: AppState;
@@ -65,6 +66,12 @@ export function useCommandDispatcher({
   setShowHelp,
   setLogPageFilter,
 }: UseCommandDispatcherProps): UseCommandDispatcherReturn {
+  const { handleCheckpointCommand } = useCheckpointCommands({
+    state,
+    setState,
+    runtime,
+    peekTurn,
+  });
   const resetLogFilter = useCallback(() => {
     setState((prev) => ({ ...prev, logPageFilter: {} }));
   }, [setState]);
@@ -146,6 +153,11 @@ export function useCommandDispatcher({
 
       // 优先 /logs 系列路由
       if (dispatchLogsRoute(content)) {
+        return;
+      }
+
+      // Checkpoint 引擎命令拦截 (/undo, /redo, /diff, /checkpoints)
+      if (await handleCheckpointCommand(content)) {
         return;
       }
 
@@ -435,6 +447,7 @@ export function useCommandDispatcher({
     [
       runtime,
       dispatchLogsRoute,
+      handleCheckpointCommand,
       cyclePermissionMode,
       applyPermissionMode,
       state.session.messages,

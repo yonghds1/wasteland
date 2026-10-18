@@ -508,4 +508,17 @@ describe('ContextManager 状态管理', () => {
     manager.compact([]);
     expect(events).toBe(0);
   });
+
+  it('rollbackToHistory 重新估算 totalTokens 并重置 hasRealUsage', () => {
+    const manager = new ContextManager({ contextWindow: 1000 });
+    manager.reportUsage({ promptTokens: 500, completionTokens: 200, totalTokens: 700 });
+    expect(manager.getTotalTokens()).toBe(700);
+
+    const newHistory = [
+      { type: 'message' as const, role: 'user' as const, turn: 1, content: 'hello', timestamp: '2026-10-18T00:00:00Z' },
+    ];
+    manager.rollbackToHistory(newHistory);
+    expect(manager.getTotalTokens()).toBeGreaterThan(0);
+    expect(manager.getTotalTokens()).toBeLessThan(700);
+  });
 });

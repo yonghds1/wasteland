@@ -1,4 +1,3 @@
-
 import { useEffect } from 'react';
 import { useInput, useApp } from 'ink';
 import fs from 'node:fs';
@@ -58,6 +57,8 @@ export interface UseGlobalKeymapDispatcherProps {
   setInputMode: (mode: boolean) => void;
   setExitConfirmPending: (pending: boolean) => void;
   setShowHelp: (view: HelpView) => void;
+  sendMessage?: (content: string) => void | Promise<void>;
+  isInputEmpty?: () => boolean;
 }
 
 export function useGlobalKeymapDispatcher({
@@ -70,6 +71,8 @@ export function useGlobalKeymapDispatcher({
   setInputMode,
   setExitConfirmPending,
   setShowHelp,
+  sendMessage,
+  isInputEmpty,
 }: UseGlobalKeymapDispatcherProps): void {
   const { exit } = useApp();
 
@@ -110,6 +113,25 @@ export function useGlobalKeymapDispatcher({
         (next) => setState((prev) => ({ ...prev, permissionSelection: next })),
       );
       return;
+    }
+
+    // 快捷撤销与重做：在输入模式或正常按键处理中，当输入框为空且按下 Ctrl+Z 时触发 /undo；Ctrl+Y 触发 /redo
+    const isBlank = isInputEmpty
+      ? isInputEmpty()
+      : !state.inputNonEmpty && (!state.inputDraft || state.inputDraft.trim() === '');
+
+    if (key.ctrl && ((key as { name?: string }).name === 'z' || input === 'z' || input === '\x1a')) {
+      if (isBlank && sendMessage) {
+        void sendMessage('/undo');
+        return;
+      }
+    }
+
+    if (key.ctrl && ((key as { name?: string }).name === 'y' || input === 'y' || input === '\x19')) {
+      if (isBlank && sendMessage) {
+        void sendMessage('/redo');
+        return;
+      }
     }
 
     const action = getKeymapRegistry().findAction(input, key, {

@@ -224,3 +224,128 @@ describe('useGlobalKeymapDispatcher 权限单键最高优先级拦截与死锁�
     }
   });
 });
+
+describe("useGlobalKeymapDispatcher Ctrl+Z / Ctrl+Y 快捷撤销与重做", () => {
+  it("当输入框为空且按下 Ctrl+Z 时快捷触发 /undo", async () => {
+    const sendMessage = vi.fn();
+    const runtime = { userInputBridge: { isPending: () => false } } as unknown as TuiRuntimeContext;
+
+    const DispatcherHost = () => {
+      const [state, setState] = useState<AppState>(createMockAppState(null as any));
+
+      useGlobalKeymapDispatcher({
+        state: { ...state, inputDraft: "" },
+        setState,
+        runtime,
+        cyclePermissionMode: vi.fn(),
+        setCurrentPage: vi.fn(),
+        setFocusArea: vi.fn(),
+        setInputMode: vi.fn(),
+        setExitConfirmPending: vi.fn(),
+        setShowHelp: vi.fn(),
+        sendMessage,
+      });
+
+      return null;
+    };
+
+    const stdin = new FakeStdin();
+    const stdout = new FakeStdout();
+    const instance = render(<DispatcherHost />, {
+      stdin: stdin as unknown as NodeJS.ReadStream,
+      stdout: stdout as unknown as NodeJS.WriteStream,
+      patchConsole: false,
+    });
+    try {
+      await settle();
+      stdin.writeData("\x1a"); // Ctrl+Z
+      await settle();
+      expect(sendMessage).toHaveBeenCalledWith("/undo");
+    } finally {
+      instance.unmount();
+      await instance.waitUntilExit();
+    }
+  });
+
+  it("当输入框为空且按下 Ctrl+Y 时快捷触发 /redo", async () => {
+    const sendMessage = vi.fn();
+    const runtime = { userInputBridge: { isPending: () => false } } as unknown as TuiRuntimeContext;
+
+    const DispatcherHost = () => {
+      const [state, setState] = useState<AppState>(createMockAppState(null as any));
+
+      useGlobalKeymapDispatcher({
+        state: { ...state, inputDraft: "" },
+        setState,
+        runtime,
+        cyclePermissionMode: vi.fn(),
+        setCurrentPage: vi.fn(),
+        setFocusArea: vi.fn(),
+        setInputMode: vi.fn(),
+        setExitConfirmPending: vi.fn(),
+        setShowHelp: vi.fn(),
+        sendMessage,
+      });
+
+      return null;
+    };
+
+    const stdin = new FakeStdin();
+    const stdout = new FakeStdout();
+    const instance = render(<DispatcherHost />, {
+      stdin: stdin as unknown as NodeJS.ReadStream,
+      stdout: stdout as unknown as NodeJS.WriteStream,
+      patchConsole: false,
+    });
+    try {
+      await settle();
+      stdin.writeData("\x19"); // Ctrl+Y
+      await settle();
+      expect(sendMessage).toHaveBeenCalledWith("/redo");
+    } finally {
+      instance.unmount();
+      await instance.waitUntilExit();
+    }
+  });
+
+  it("当输入框非空时按下 Ctrl+Z 不触发 /undo", async () => {
+    const sendMessage = vi.fn();
+    const runtime = { userInputBridge: { isPending: () => false } } as unknown as TuiRuntimeContext;
+
+    const DispatcherHost = () => {
+      const [state, setState] = useState<AppState>(createMockAppState(null as any));
+
+      useGlobalKeymapDispatcher({
+        state: { ...state, inputDraft: "has text", inputNonEmpty: true },
+        setState,
+        runtime,
+        cyclePermissionMode: vi.fn(),
+        setCurrentPage: vi.fn(),
+        setFocusArea: vi.fn(),
+        setInputMode: vi.fn(),
+        setExitConfirmPending: vi.fn(),
+        setShowHelp: vi.fn(),
+        sendMessage,
+      });
+
+      return null;
+    };
+
+    const stdin = new FakeStdin();
+    const stdout = new FakeStdout();
+    const instance = render(<DispatcherHost />, {
+      stdin: stdin as unknown as NodeJS.ReadStream,
+      stdout: stdout as unknown as NodeJS.WriteStream,
+      patchConsole: false,
+    });
+    try {
+      await settle();
+      stdin.writeData("\x1a"); // Ctrl+Z
+      await settle();
+      expect(sendMessage).not.toHaveBeenCalled();
+    } finally {
+      instance.unmount();
+      await instance.waitUntilExit();
+    }
+  });
+});

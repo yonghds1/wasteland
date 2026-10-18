@@ -141,6 +141,23 @@ export function ChatInputBar({ width, sendMessage, runtime }: ChatInputBarProps)
     prevPendingRef.current = isPendingPermission;
   }, [isPendingPermission, input]);
 
+  useEffect(() => {
+    if (state.inputDraft !== undefined) {
+      setInput(state.inputDraft);
+      setCursorOffset(state.inputDraft.length);
+      draftRef.current = state.inputDraft;
+      preferredColRef.current = null;
+      setState((prev) => ({ ...prev, inputDraft: undefined, inputNonEmpty: Boolean(state.inputDraft && state.inputDraft.length > 0) }));
+    }
+  }, [state.inputDraft, setState]);
+
+  useEffect(() => {
+    const nonEmpty = input.length > 0;
+    if (state.inputNonEmpty !== nonEmpty) {
+      setState((prev) => ({ ...prev, inputNonEmpty: nonEmpty }));
+    }
+  }, [input, state.inputNonEmpty, setState]);
+
   useInput((inputChar, key) => {
     if (!state.inputMode) return;
 

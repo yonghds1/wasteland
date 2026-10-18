@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { TurnExecutor } from "./turn-executor.js";
+import { getCheckpointManager } from '@core/checkpoint/index.js';
 /** agent-loop.ts - 核心 Agent 循环逻辑 (RxJS 响应式模式) */
 
 import {
@@ -306,6 +307,17 @@ export function runAgentLoop(params: {
 
       const turns$ = params.input$.pipe(
         concatMap((turn) => {
+          try {
+            void getCheckpointManager().capturePreTurnCheckpoint({
+              cwd: params.cwd,
+              sessionId: session.id,
+              turnId: turn.turn,
+              prompt: turn.content,
+            });
+          } catch {
+            // 静默保护，不阻塞主流程
+          }
+
           // 创建历史快照（用于传递给 Provider）
           const historySnapshot = [...history];
 

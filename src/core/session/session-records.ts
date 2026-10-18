@@ -17,6 +17,7 @@ import type {
   SessionMessageRecord,
   SessionRecord,
   SessionUsageRecord,
+  SessionUndoRecord,
 } from '../runtime/event-types.js';
 
 /**
@@ -97,6 +98,24 @@ export function createSessionEndRecord(sessionId: string): SessionRecord {
     timestamp: createTimestamp(),
   };
 }
+
+/** 创建撤销记录 */
+export function createUndoRecord(
+  sessionId: string,
+  undoneTurn: number,
+  targetTurn: number,
+  restoredFiles: string[]
+): SessionUndoRecord {
+  return {
+    type: 'undo',
+    sessionId,
+    undoneTurn,
+    targetTurn,
+    restoredFiles,
+    timestamp: createTimestamp(),
+  };
+}
+
 
 /**
  * 持久化助手消息并发送 RuntimeEvent

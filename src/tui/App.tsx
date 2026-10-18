@@ -175,6 +175,7 @@ export function App({ runtime }: AppProps): React.ReactElement {
     setInputMode,
     setExitConfirmPending,
     setShowHelp,
+    sendMessage,
   });
 
   return (
