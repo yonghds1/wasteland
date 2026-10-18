@@ -1,3 +1,4 @@
+
 import { NotificationBridge } from "../core/runtime/notification-bridge.js";
 import { merge } from "rxjs";
 /**
@@ -29,6 +30,7 @@ import type { DebugFormat } from '@ui/debug-renderer.js';
 import { CliInputAdapter } from '@ui/cli-input-adapter.js';
 import { CliCommandWriter } from '@ui/cli-command-writer.js';
 import { CliOutputAdapter } from '@ui/cli-output-adapter.js';
+import { StreamJsonOutputAdapter } from '@ui/stream-json-output-adapter.js';
 import { createSingleTurnInput, readPipedInput } from '@ui/readline-input.js';
 import { detectTTY } from '@ui/tty-detect.js';
 import { t } from '@locales/index.js';
@@ -108,7 +110,7 @@ async function runChatSession(params: {
   maxStepsPerTurn: number;
   doomLoopThreshold: number;
   prompt?: string;
-  outputAdapter?: CliOutputAdapter;
+  outputAdapter?: { handleEvents(events$: Observable<RuntimeEvent>): Promise<void> };
   userInputBridge?: UserInputBridge;
 }): Promise<SessionOutcome> {
   const { runtime } = params;
@@ -223,21 +225,27 @@ export function configureChatCommand(cmd: Command): Command {
         }
 
         const isJsonOutput = actualOptions.json === true || actualOptions.outputFormat === 'json';
+        const isStreamJson = actualOptions.outputFormat === 'stream-json';
         const tty = detectTTY();
-        const renderStyle = isJsonOutput ? 'classic' : (tty.stdoutIsTTY ? 'interactive' : 'classic');
+        const renderStyle = isJsonOutput || isStreamJson ? 'classic' : (tty.stdoutIsTTY ? 'interactive' : 'classic');
         const userPrompt = actualOptions.prompt ?? actualOptions.message ?? actualPromptArg;
 
         // 单消息模式
         if (userPrompt?.trim()) {
-          const commandWriter = new CliCommandWriter(process.stdout, runtime.skillExecutor);
+          const commandWriter = new CliCommandWriter(
+            isStreamJson ? process.stderr : process.stdout,
+            runtime.skillExecutor,
+          );
           const notificationBridge = new NotificationBridge();
           const baseInput$ = createSingleTurnInput(userPrompt, 'message').pipe(
             interceptCommands(commandWriter, { passthroughUnknown: true }),
           );
           const sessionInput$ = merge(baseInput$, notificationBridge.notification$);
-          const outputAdapter = isJsonOutput
-            ? undefined
-            : new CliOutputAdapter({ style: renderStyle });
+          const outputAdapter = isStreamJson
+            ? new StreamJsonOutputAdapter({ stdout: process.stdout, stderr: process.stderr })
+            : isJsonOutput
+              ? undefined
+              : new CliOutputAdapter({ style: renderStyle });
 
           try {
             const outcome = await runChatSession({
@@ -282,15 +290,20 @@ export function configureChatCommand(cmd: Command): Command {
         // 管道输入模式
         const pipedInput = await readPipedInput(process.stdin);
         if (pipedInput) {
-          const commandWriter = new CliCommandWriter(process.stdout, runtime.skillExecutor);
+          const commandWriter = new CliCommandWriter(
+            isStreamJson ? process.stderr : process.stdout,
+            runtime.skillExecutor,
+          );
           const notificationBridge = new NotificationBridge();
           const baseInput$ = createSingleTurnInput(pipedInput, 'stdin').pipe(
             interceptCommands(commandWriter, { passthroughUnknown: true }),
           );
           const sessionInput$ = merge(baseInput$, notificationBridge.notification$);
-          const outputAdapter = isJsonOutput
-            ? undefined
-            : new CliOutputAdapter({ style: 'classic' });
+          const outputAdapter = isStreamJson
+            ? new StreamJsonOutputAdapter({ stdout: process.stdout, stderr: process.stderr })
+            : isJsonOutput
+              ? undefined
+              : new CliOutputAdapter({ style: 'classic' });
 
           try {
             const outcome = await runChatSession({
@@ -344,17 +357,23 @@ export function configureChatCommand(cmd: Command): Command {
           permissionGate: runtime.permissionGate,
         });
 
-        const outputAdapter = new CliOutputAdapter({
-          style: renderStyle,
-          onTurnComplete: () => inputAdapter.prompt(),
-          showThinking: runtime.loadedSettings.settings.runtime.showThinking,
-        });
+        const outputAdapter = isStreamJson
+          ? new StreamJsonOutputAdapter({
+              stdout: process.stdout,
+              stderr: process.stderr,
+              onTurnComplete: () => inputAdapter.prompt(),
+            })
+          : new CliOutputAdapter({
+              style: renderStyle,
+              onTurnComplete: () => inputAdapter.prompt(),
+              showThinking: runtime.loadedSettings.settings.runtime.showThinking,
+            });
 
         const notificationBridge = new NotificationBridge();
         const sessionInput$ = merge(inputAdapter.input$, notificationBridge.notification$);
 
         try {
-          await runChatSession({
+          const outcome = await runChatSession({
             input$: sessionInput$,
             runtime,
             cwd,
@@ -369,6 +388,7 @@ export function configureChatCommand(cmd: Command): Command {
             outputAdapter,
             userInputBridge,
           });
+          process.exitCode = resolveExitCode(outcome.finishReason);
         } finally {
           notificationBridge.destroy();
           inputAdapter.destroy();

@@ -1,12 +1,6 @@
 /**
  * ChatInputBar - 聊天输入框
- *
- * OpenCode 风格多行输入与智能补全:
- * - Shift/Alt+Enter: 换行
- * - Enter: 发送
- * - @: 触发工作区文件模糊拾取 (File Mentions)
- * - /: 触发斜杠命令面板 (Command Palette)
- * - Esc: 退出补全或切换焦点
+ * OpenCode 风格多行输入、智能补全与光标导航
  */
 
 import React, { useMemo, useState, useEffect, useRef } from 'react';
@@ -28,6 +22,16 @@ import {
 } from './command-completion.js';
 import { getWorkspaceFiles } from './mention/file-indexer.js';
 import { fuzzyMatchFiles } from './mention/fuzzy-match.js';
+import {
+  offsetToRowCol,
+  moveCursorVertical,
+  moveToLineStart,
+  moveToLineEnd,
+  deleteToLineStart,
+  deleteToLineEnd,
+  deleteWordBefore,
+  getVisibleLinesWindow,
+} from './text-buffer.js';
 import type { Skin } from '@skins/index.js';
 import type { TuiRuntimeContext } from '../types.js';
 
@@ -44,20 +48,16 @@ export function ChatInputBar({ width, sendMessage, runtime }: ChatInputBarProps)
   const [input, setInput] = useState('');
   const [cursorOffset, setCursorOffset] = useState(0);
 
-  // 输入历史（本会话，草稿隔离）
   const historyRef = useRef<string[]>([]);
   const draftRef = useRef('');
   const [histIdx, setHistIdx] = useState<number | null>(null);
+  const preferredColRef = useRef<number | null>(null);
 
-  // `/` 命令补全状态
   const [completionIdx, setCompletionIdx] = useState(0);
   const [completionDismissed, setCompletionDismissed] = useState(false);
-
-  // `@` 文件补全状态
   const [mentionIdx, setMentionIdx] = useState(0);
   const [mentionDismissed, setMentionDismissed] = useState(false);
 
-  // 1. `/` 命令补全项计算
   const completions = useMemo(() => {
     const items: CompletionItem[] = getCommandManager()
       .getAll()
@@ -68,21 +68,17 @@ export function ChatInputBar({ width, sendMessage, runtime }: ChatInputBarProps)
   const commandCompletionVisible =
     !completionDismissed && completions.length > 0 && input.startsWith('/') && !input.includes('\n');
 
-  // 2. `@` 文件补全项计算
   const mentionMatch = useMemo(() => {
     const beforeCursor = input.slice(0, cursorOffset);
     const match = /(?:^|\s)@([^\s]*)$/.exec(beforeCursor);
     if (!match) return null;
-    const query = match[1] ?? '';
-    const matchIndex = match.index + (match[0].startsWith(' ') ? 1 : 0);
-    return { query, matchIndex };
+    return { query: match[1] ?? '', matchIndex: match.index + (match[0].startsWith(' ') ? 1 : 0) };
   }, [input, cursorOffset]);
 
   const mentionCandidates = useMemo(() => {
     if (!mentionMatch || mentionDismissed) return [];
     try {
-      const files = getWorkspaceFiles();
-      return fuzzyMatchFiles(mentionMatch.query, files, 6);
+      return fuzzyMatchFiles(mentionMatch.query, getWorkspaceFiles(), 6);
     } catch {
       return [];
     }
@@ -90,13 +86,13 @@ export function ChatInputBar({ width, sendMessage, runtime }: ChatInputBarProps)
 
   const mentionVisible = Boolean(mentionMatch && !mentionDismissed && mentionCandidates.length > 0);
 
-  // 补全套用逻辑
   const applySelectedCompletion = () => {
     const item = completions[Math.min(completionIdx, completions.length - 1)];
     if (!item) return;
     const applied = applyCompletion(input, cursorOffset, item);
     setInput(applied.input);
     setCursorOffset(applied.cursor);
+    preferredColRef.current = null;
     setCompletionDismissed(true);
   };
 
@@ -104,50 +100,43 @@ export function ChatInputBar({ width, sendMessage, runtime }: ChatInputBarProps)
     if (!mentionMatch) return;
     const selectedFile = mentionCandidates[Math.min(mentionIdx, mentionCandidates.length - 1)];
     if (!selectedFile) return;
-
     const before = input.slice(0, mentionMatch.matchIndex);
-    const after = input.slice(cursorOffset);
     const replacement = `${selectedFile} `;
-    const nextInput = before + replacement + after;
-    setInput(nextInput);
+    setInput(before + replacement + input.slice(cursorOffset));
     setCursorOffset(before.length + replacement.length);
+    preferredColRef.current = null;
     setMentionDismissed(true);
   };
 
-  // 历史导航
   const pushHistory = (submitted: string) => {
     historyRef.current = [...historyRef.current, submitted];
     draftRef.current = '';
     setHistIdx(null);
+    preferredColRef.current = null;
   };
 
   const goHistory = (delta: -1 | 1) => {
     const nextIdx = navigateHistory(historyRef.current.length, histIdx, delta);
     if (nextIdx !== histIdx) {
-      if (histIdx === null && delta === -1) {
-        draftRef.current = input;
-      }
+      if (histIdx === null && delta === -1) draftRef.current = input;
       setHistIdx(nextIdx);
       const nextVal = nextIdx === null ? draftRef.current : historyRef.current[nextIdx] ?? '';
       setInput(nextVal);
       setCursorOffset(nextVal.length);
+      preferredColRef.current = null;
     }
   };
 
-  // 草稿自动暂存保护
   const isPendingPermission = Boolean(runtime?.userInputBridge?.isPending());
   const prevPendingRef = useRef(false);
 
   useEffect(() => {
     if (isPendingPermission && !prevPendingRef.current) {
-      if (input.trim()) {
-        draftRef.current = input;
-      }
-    } else if (!isPendingPermission && prevPendingRef.current) {
-      if (draftRef.current) {
-        setInput(draftRef.current);
-        setCursorOffset(draftRef.current.length);
-      }
+      if (input.trim()) draftRef.current = input;
+    } else if (!isPendingPermission && prevPendingRef.current && draftRef.current) {
+      setInput(draftRef.current);
+      setCursorOffset(draftRef.current.length);
+      preferredColRef.current = null;
     }
     prevPendingRef.current = isPendingPermission;
   }, [isPendingPermission, input]);
@@ -155,135 +144,80 @@ export function ChatInputBar({ width, sendMessage, runtime }: ChatInputBarProps)
   useInput((inputChar, key) => {
     if (!state.inputMode) return;
 
-    // 0. 优先处理权限确认交互（↑/↓ 选择 + Enter 确认，或 1/2/3/Y/A/N/Esc 单键秒级响应）
+    // 0. 权限确认拦截
     const bridge = runtime?.userInputBridge;
     if (bridge?.isPending()) {
       const pending = state.permission?.pending ?? null;
       const pattern = pending ? describeAllowPattern(pending.toolName, pending.input) : null;
       const gate = runtime?.permissionGate;
       const canRemember = pattern !== null && typeof gate?.addSessionRule === 'function';
-
-      const resetSelection = (): void => {
+      const resetSel = (): void => {
         setState((prev) => ({ ...prev, permissionSelection: 0 }));
         setInput('');
         setCursorOffset(0);
+        preferredColRef.current = null;
       };
-      const confirmOnce = (): void => {
-        bridge.provideInput('yes');
-        resetSelection();
-      };
+      const confirmOnce = (): void => { bridge.provideInput('yes'); resetSel(); };
       const confirmAlways = (): void => {
-        if (!pattern || !gate?.addSessionRule) {
-          confirmOnce();
-          return;
-        }
+        if (!pattern || !gate?.addSessionRule) { confirmOnce(); return; }
         gate.addSessionRule({
-          toolName: pending?.toolName ?? '',
-          decision: 'allow',
+          toolName: pending?.toolName ?? '', decision: 'allow',
           inputPrefix: { key: pattern.key, prefix: pattern.prefix },
           reason: `ask-user always: ${pattern.label}`,
         });
         bridge.provideInput('always');
-        resetSelection();
+        resetSel();
       };
-      const deny = (): void => {
-        bridge.provideInput('no');
-        resetSelection();
-      };
-      const moveSel = (dir: 1 | -1): void => {
-        setState((prev) => {
-          let next = (prev.permissionSelection + dir + 3) % 3;
-          if (!canRemember && next === 1) next = (next + dir + 3) % 3;
-          return { ...prev, permissionSelection: next };
-        });
-      };
+      const deny = (): void => { bridge.provideInput('no'); resetSel(); };
+      const moveSel = (dir: 1 | -1): void => setState((prev) => {
+        let next = (prev.permissionSelection + dir + 3) % 3;
+        if (!canRemember && next === 1) next = (next + dir + 3) % 3;
+        return { ...prev, permissionSelection: next };
+      });
 
-      if (key.upArrow) {
-        moveSel(-1);
-        return;
-      }
-      if (key.downArrow) {
-        moveSel(1);
-        return;
-      }
-
+      if (key.upArrow) { moveSel(-1); return; }
+      if (key.downArrow) { moveSel(1); return; }
       if (key.return) {
         if (state.permissionSelection === 1) confirmAlways();
         else if (state.permissionSelection === 2) deny();
         else confirmOnce();
         return;
       }
-
       const token = inputChar.trim().toLowerCase();
-      if (key.escape || token === '3' || token === 'n' || token === 'no') {
-        deny();
-        return;
-      }
-      if (token === '2' || token === 'a' || token === 'always') {
-        confirmAlways();
-        return;
-      }
-      if (token === '1' || token === 'y' || token === 'yes' || token === '是') {
-        confirmOnce();
-        return;
-      }
+      if (key.escape || token === '3' || token === 'n' || token === 'no') { deny(); return; }
+      if (token === '2' || token === 'a' || token === 'always') { confirmAlways(); return; }
+      if (token === '1' || token === 'y' || token === 'yes' || token === '是') { confirmOnce(); return; }
       return;
     }
 
-    // 1. `@` 文件补全键位拦截
+    // 1. `@` 文件补全拦截
     if (mentionVisible) {
-      if (key.upArrow) {
-        setMentionIdx((cur) => (cur - 1 + mentionCandidates.length) % mentionCandidates.length);
-        return;
-      }
-      if (key.downArrow) {
-        setMentionIdx((cur) => (cur + 1) % mentionCandidates.length);
-        return;
-      }
-      if (key.tab || (key.return && !key.shift && !key.meta)) {
-        applySelectedMention();
-        return;
-      }
-      if (key.escape) {
-        setMentionDismissed(true);
-        return;
-      }
+      if (key.upArrow) { setMentionIdx((cur) => (cur - 1 + mentionCandidates.length) % mentionCandidates.length); return; }
+      if (key.downArrow) { setMentionIdx((cur) => (cur + 1) % mentionCandidates.length); return; }
+      if (key.tab || (key.return && !key.shift && !key.meta)) { applySelectedMention(); return; }
+      if (key.escape) { setMentionDismissed(true); return; }
     }
 
-    // 2. `/` 命令补全键位拦截
+    // 2. `/` 命令补全拦截
     if (commandCompletionVisible) {
-      if (key.upArrow) {
-        setCompletionIdx((cur) => moveCompletionIndex(cur, -1, completions.length));
-        return;
-      }
-      if (key.downArrow) {
-        setCompletionIdx((cur) => moveCompletionIndex(cur, 1, completions.length));
-        return;
-      }
-      if (key.tab || (key.return && !input.includes(' ') && !input.includes('\n'))) {
-        applySelectedCompletion();
-        return;
-      }
-      if (key.escape) {
-        setCompletionDismissed(true);
-        return;
-      }
+      if (key.upArrow) { setCompletionIdx((cur) => moveCompletionIndex(cur, -1, completions.length)); return; }
+      if (key.downArrow) { setCompletionIdx((cur) => moveCompletionIndex(cur, 1, completions.length)); return; }
+      if (key.tab || (key.return && !input.includes(' ') && !input.includes('\n'))) { applySelectedCompletion(); return; }
+      if (key.escape) { setCompletionDismissed(true); return; }
     }
 
-    // 3. Enter 逻辑：Shift/Alt+Enter 换行，纯 Enter 发送
+    // 3. Enter 逻辑：换行或发送
     if (key.return) {
+      preferredColRef.current = null;
       if (key.shift || key.meta) {
         setInput((prev) => prev.slice(0, cursorOffset) + '\n' + prev.slice(cursorOffset));
         setCursorOffset((prev) => prev + 1);
       } else if (input.trim()) {
         sendMessage(input);
         pushHistory(input);
-        setInput('');
-        setCursorOffset(0);
-        setCompletionIdx(0);
-        setCompletionDismissed(false);
-        setMentionIdx(0);
-        setMentionDismissed(false);
+        setInput(''); setCursorOffset(0);
+        setCompletionIdx(0); setCompletionDismissed(false);
+        setMentionIdx(0); setMentionDismissed(false);
       }
       return;
     }
@@ -294,48 +228,47 @@ export function ChatInputBar({ width, sendMessage, runtime }: ChatInputBarProps)
       return;
     }
 
-    if (key.leftArrow) {
-      setCursorOffset((prev) => Math.max(0, prev - 1));
-      return;
-    }
-    if (key.rightArrow) {
-      setCursorOffset((prev) => Math.min(input.length, prev + 1));
+    // 4. 水平光标移动
+    if (key.leftArrow) { preferredColRef.current = null; setCursorOffset((p) => Math.max(0, p - 1)); return; }
+    if (key.rightArrow) { preferredColRef.current = null; setCursorOffset((p) => Math.min(input.length, p + 1)); return; }
+
+    // 5. 纵向光标跨行移动与历史逃逸
+    if (!key.shift && !key.ctrl && !key.meta && (key.upArrow || key.downArrow)) {
+      const dir = key.upArrow ? -1 : 1;
+      const res = moveCursorVertical(input, cursorOffset, dir, preferredColRef.current);
+      if (res.escaped) {
+        goHistory(dir);
+        preferredColRef.current = null;
+      } else {
+        setCursorOffset(res.nextOffset);
+        preferredColRef.current = res.newPreferredCol;
+      }
       return;
     }
 
-    // 历史翻阅（仅单行且无弹出浮层时）
-    if (!commandCompletionVisible && !mentionVisible && !input.includes('\n') && !key.shift && !key.ctrl && !key.meta) {
-      if (key.upArrow) {
-        goHistory(-1);
-        return;
-      }
-      if (key.downArrow) {
-        goHistory(1);
-        return;
-      }
+    // 6. 快捷编辑导航
+    if (key.home || (key.ctrl && (inputChar === 'a' || inputChar === 'A'))) {
+      preferredColRef.current = null; setCursorOffset(moveToLineStart(input, cursorOffset)); return;
     }
-
-    if (key.home) {
-      setCursorOffset(0);
-      return;
-    }
-    if (key.end) {
-      setCursorOffset(input.length);
-      return;
+    if (key.end || (key.ctrl && (inputChar === 'e' || inputChar === 'E'))) {
+      preferredColRef.current = null; setCursorOffset(moveToLineEnd(input, cursorOffset)); return;
     }
     if (key.ctrl && (inputChar === 'u' || inputChar === 'U')) {
-      setInput((prev) => prev.slice(cursorOffset));
-      setCursorOffset(0);
-      setHistIdx(null);
-      return;
+      preferredColRef.current = null; const res = deleteToLineStart(input, cursorOffset);
+      setInput(res.text); setCursorOffset(res.offset); setHistIdx(null); return;
     }
     if (key.ctrl && (inputChar === 'k' || inputChar === 'K')) {
-      setInput((prev) => prev.slice(0, cursorOffset));
-      setHistIdx(null);
-      return;
+      preferredColRef.current = null; const res = deleteToLineEnd(input, cursorOffset);
+      setInput(res.text); setCursorOffset(res.offset); setHistIdx(null); return;
+    }
+    if (key.ctrl && (inputChar === 'w' || inputChar === 'W')) {
+      preferredColRef.current = null; const res = deleteWordBefore(input, cursorOffset);
+      setInput(res.text); setCursorOffset(res.offset); setHistIdx(null); return;
     }
 
+    // 7. 退格与删除
     if (key.backspace || key.delete) {
+      preferredColRef.current = null;
       if (cursorOffset > 0) {
         setInput((prev) => prev.slice(0, cursorOffset - 1) + prev.slice(cursorOffset));
         setCursorOffset((prev) => prev - 1);
@@ -345,23 +278,18 @@ export function ChatInputBar({ width, sendMessage, runtime }: ChatInputBarProps)
       return;
     }
 
-    if (key.pageUp || key.pageDown || ((key.shift || key.ctrl) && (key.upArrow || key.downArrow))) {
-      return;
-    }
+    if (key.pageUp || key.pageDown || ((key.shift || key.ctrl) && (key.upArrow || key.downArrow))) return;
 
-    // 字符输入
+    // 8. 文本字符录入
     if (
       inputChar &&
       !inputChar.startsWith('\x1b') &&
       !inputChar.includes('[<') &&
       !/\[<\d+;\d+;\d+[Mm]/.test(inputChar) &&
       !(inputChar === '<' && input.endsWith('[')) &&
-      !key.ctrl &&
-      !key.meta &&
-      inputChar !== '\r' &&
-      inputChar !== '\n' &&
-      !key.tab
+      !key.ctrl && !key.meta && inputChar !== '\r' && inputChar !== '\n' && !key.tab
     ) {
+      preferredColRef.current = null;
       setInput((prev) => prev.slice(0, cursorOffset) + inputChar + prev.slice(cursorOffset));
       setCursorOffset((prev) => prev + inputChar.length);
       setHistIdx(null);
@@ -380,6 +308,8 @@ export function ChatInputBar({ width, sendMessage, runtime }: ChatInputBarProps)
 
   const lines = displayInput.split('\n');
   const MAX_VISIBLE_INPUT_ROWS = 5;
+  const { row: cursorRow } = offsetToRowCol(input, cursorOffset);
+  const { visibleLines, startLineIndex } = getVisibleLinesWindow(lines, cursorRow, MAX_VISIBLE_INPUT_ROWS);
   const contentColor = isCommand ? wastelandTheme.colors.secondary : wastelandTheme.colors.success;
 
   const pendingPermission = state.permission?.pending ?? null;
@@ -388,9 +318,9 @@ export function ChatInputBar({ width, sendMessage, runtime }: ChatInputBarProps)
 
   const renderPermissionBadge = () => {
     const mode = state.config?.permissionMode ?? 'default';
-    if (mode === 'bypass_permissions') return <Text color={wastelandTheme.colors.error} bold>skip-all</Text>;
-    if (mode === 'accept_edits') return <Text color={wastelandTheme.colors.warning}>auto-edit</Text>;
-    return <Text color={wastelandTheme.colors.muted} dimColor>default</Text>;
+    return mode === 'bypass_permissions' ? <Text color={wastelandTheme.colors.error} bold>skip-all</Text>
+      : mode === 'accept_edits' ? <Text color={wastelandTheme.colors.warning}>auto-edit</Text>
+      : <Text color={wastelandTheme.colors.muted} dimColor>default</Text>;
   };
 
   const popupWidth = Math.max(30, width - 4);
@@ -401,67 +331,47 @@ export function ChatInputBar({ width, sendMessage, runtime }: ChatInputBarProps)
         <PermissionPromptBar card={pendingPermission} queuedCount={queuedCount} selection={permissionSelection} />
       ) : (
         <Box flexDirection="column">
-          {/* 状态徽章 */}
           <Box flexDirection="row" justifyContent="flex-start" marginBottom={0}>
-            <Text color={wastelandTheme.colors.muted} dimColor>
-              {t('tui.session.input.statusBar.permission')}:{' '}
-            </Text>
+            <Text color={wastelandTheme.colors.muted} dimColor>{t('tui.session.input.statusBar.permission')}: </Text>
             {renderPermissionBadge()}
           </Box>
 
-          {/* `@` 文件补全卡片 */}
-          {mentionVisible && (
-            <MentionPopup candidates={mentionCandidates} selectedIndex={mentionIdx} width={popupWidth} />
-          )}
+          {mentionVisible && <MentionPopup candidates={mentionCandidates} selectedIndex={mentionIdx} width={popupWidth} />}
+          {commandCompletionVisible && <CommandPalettePopup candidates={completions} selectedIndex={completionIdx} width={popupWidth} />}
 
-          {/* `/` 斜杠命令卡片 */}
-          {commandCompletionVisible && (
-            <CommandPalettePopup candidates={completions} selectedIndex={completionIdx} width={popupWidth} />
-          )}
-
-          {/* 输入内容区 */}
           {input ? (
             <>
-              {lines.slice(-MAX_VISIBLE_INPUT_ROWS).map((line, i) => (
-                <Box key={i} flexDirection="row">
-                  <Text color={state.inputMode ? wastelandTheme.colors.primary : wastelandTheme.colors.muted} bold={state.inputMode}>
-                    {i === 0 ? '❯ ' : '  '}
-                  </Text>
-                  <Text color={contentColor} dimColor={!state.inputMode}>
-                    {line}
-                  </Text>
-                </Box>
-              ))}
+              {visibleLines.map((line, i) => {
+                const isFirstAbsoluteLine = startLineIndex + i === 0;
+                return (
+                  <Box key={startLineIndex + i} flexDirection="row">
+                    <Text color={state.inputMode ? wastelandTheme.colors.primary : wastelandTheme.colors.muted} bold={state.inputMode}>
+                      {isFirstAbsoluteLine ? '❯ ' : '  '}
+                    </Text>
+                    <Text color={contentColor} dimColor={!state.inputMode}>{line}</Text>
+                  </Box>
+                );
+              })}
             </>
           ) : (
             <Box flexDirection="row">
-              <Text color={state.inputMode ? wastelandTheme.colors.primary : wastelandTheme.colors.muted} bold={state.inputMode}>
-                ❯{' '}
-              </Text>
-              {state.inputMode ? (
-                <Text color={wastelandTheme.colors.primary}>{wastelandTheme.decorations.streamingCursor}</Text>
-              ) : null}
+              <Text color={state.inputMode ? wastelandTheme.colors.primary : wastelandTheme.colors.muted} bold={state.inputMode}>❯ </Text>
+              {state.inputMode && <Text color={wastelandTheme.colors.primary}>{wastelandTheme.decorations.streamingCursor}</Text>}
               <Text color={wastelandTheme.colors.muted} dimColor>
-                {state.inputMode
-                  ? ' ' + t('tui.session.input.placeholder.focused')
-                  : ' ' + t('tui.session.input.placeholder.unfocused')}
+                {state.inputMode ? ' ' + t('tui.session.input.placeholder.focused') : ' ' + t('tui.session.input.placeholder.unfocused')}
               </Text>
             </Box>
           )}
         </Box>
       )}
 
-      {/* 帮助提示 */}
-      {!isPendingPermission && input === '' && (
-        <Box flexDirection="row" marginTop={1}>
-          <Text color={wastelandTheme.colors.muted} dimColor>{t('tui.session.input.hints.default')}</Text>
-        </Box>
-      )}
-      {isPendingPermission && (
-        <Box flexDirection="row" marginTop={1}>
+      <Box flexDirection="row" marginTop={1}>
+        {isPendingPermission ? (
           <Text color={wastelandTheme.colors.muted} dimColor>{t('tui.session.input.hints.permission')}</Text>
-        </Box>
-      )}
+        ) : input === '' ? (
+          <Text color={wastelandTheme.colors.muted} dimColor>{t('tui.session.input.hints.default')}</Text>
+        ) : null}
+      </Box>
     </Box>
   );
 }

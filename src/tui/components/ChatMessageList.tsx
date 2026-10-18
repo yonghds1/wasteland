@@ -218,7 +218,7 @@ export function ChatMessageList({
       setScrollOffset(maxOffset);
       return;
     }
-    if (key.pageUp || (key.ctrl && input === 'u')) {
+    if (key.pageUp || (!state.inputMode && key.ctrl && input === 'u')) {
       setStickToBottom(false);
       setScrollOffset((prev) => Math.max(0, prev - halfPage));
     } else if (key.pageDown || (key.ctrl && input === 'd')) {

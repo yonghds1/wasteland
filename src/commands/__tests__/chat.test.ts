@@ -4,6 +4,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createChatCommand, resolveExitCode } from '../chat.js';
+import { StreamJsonOutputAdapter } from '@ui/stream-json-output-adapter.js';
 
 // Mock 依赖
 vi.mock('@core/shared/initialize-runtime.js', () => ({
@@ -167,6 +168,16 @@ describe('createChatCommand', () => {
     await createChatCommand().parseAsync(['positional prompt'], { from: 'user' });
     expect(mockCreateSingleTurnInput).toHaveBeenCalledWith('positional prompt', 'message');
   });
+  it('指定 --output-format stream-json 时调用 StreamJsonOutputAdapter', async () => {
+    const handleSpy = vi.spyOn(StreamJsonOutputAdapter.prototype, 'handleEvents').mockResolvedValue(undefined);
+    try {
+      await createChatCommand().parseAsync(['-p', 'hi', '--output-format', 'stream-json'], { from: 'user' });
+      expect(handleSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      handleSpy.mockRestore();
+    }
+  });
+
   it('应该支持 --output-format 与 --json 选项', () => {
     const command = createChatCommand();
     const options = command.options;

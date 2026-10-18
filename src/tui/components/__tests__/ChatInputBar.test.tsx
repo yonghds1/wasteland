@@ -302,3 +302,47 @@ describe('ChatInputBar 框内权限渲染', () => {
     expect(output).toContain('hints.no');
   });
 });
+
+describe('ChatInputBar 快捷编辑与光标导航', () => {
+  it('支持 Ctrl+A/E/U/K/W 编辑快捷键与 Enter 发送', async () => {
+    const { instance, stdin, sendMessage } = renderBar(null, { isPending: false });
+    try {
+      await settle();
+      stdin.writeData('hello world');
+      await settle();
+      stdin.writeData('\x17'); // Ctrl+W: 'hello '
+      await settle();
+      stdin.writeData('\x01'); // Ctrl+A: 行首
+      await settle();
+      stdin.writeData('pre ');
+      await settle();
+      stdin.writeData('\x0b'); // Ctrl+K: 删至行尾
+      await settle();
+      stdin.writeData('\r');
+      await settle();
+      expect(sendMessage).toHaveBeenCalledWith('pre ');
+    } finally {
+      instance.unmount();
+      await instance.waitUntilExit();
+    }
+  });
+
+  it('支持 Ctrl+U 删至行首', async () => {
+    const { instance, stdin, sendMessage } = renderBar(null, { isPending: false });
+    try {
+      await settle();
+      stdin.writeData('discard me');
+      await settle();
+      stdin.writeData('\x15'); // Ctrl+U
+      await settle();
+      stdin.writeData('keep me');
+      await settle();
+      stdin.writeData('\r');
+      await settle();
+      expect(sendMessage).toHaveBeenCalledWith('keep me');
+    } finally {
+      instance.unmount();
+      await instance.waitUntilExit();
+    }
+  });
+});
