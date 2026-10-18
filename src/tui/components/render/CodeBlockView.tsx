@@ -39,16 +39,16 @@ export function CodeBlockView({
         const lineNumStr = String(idx + 1).padStart(lineNumWidth, ' ');
         return (
           <Box key={idx} flexDirection="row" width={contentWidth} overflow="hidden">
-            <Text color={wastelandTheme.colors.muted} dimColor>
-              │
-            </Text>
-            {showLineNumbers && (
+            <Text wrap="truncate-end">
               <Text color={wastelandTheme.colors.muted} dimColor>
-                {' '}
-                {lineNumStr} │{' '}
+                │
               </Text>
-            )}
-            <Box flexDirection="row" flexGrow={1} overflow="hidden">
+              {showLineNumbers && (
+                <Text color={wastelandTheme.colors.muted} dimColor>
+                  {' '}
+                  {lineNumStr} │{' '}
+                </Text>
+              )}
               {lineTokens.map((t, tIdx) => (
                 <Text
                   key={tIdx}
@@ -60,9 +60,6 @@ export function CodeBlockView({
                   {t.text}
                 </Text>
               ))}
-            </Box>
-            <Text color={wastelandTheme.colors.muted} dimColor>
-              │
             </Text>
           </Box>
         );

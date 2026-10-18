@@ -53,16 +53,13 @@ export function UnifiedDiffView({ diffText, filename, width }: UnifiedDiffViewPr
 
         return (
           <Box key={idx} flexDirection="row" width={contentWidth} overflow="hidden">
-            <Text color={wastelandTheme.colors.muted} dimColor>
-              │{' '}
-            </Text>
-            <Box flexGrow={1} overflow="hidden">
+            <Text wrap="truncate-end">
+              <Text color={wastelandTheme.colors.muted} dimColor>
+                │{' '}
+              </Text>
               <Text color={color} bold={bold} dimColor={dim}>
                 {line || ' '}
               </Text>
-            </Box>
-            <Text color={wastelandTheme.colors.muted} dimColor>
-              {' '}│
             </Text>
           </Box>
         );
