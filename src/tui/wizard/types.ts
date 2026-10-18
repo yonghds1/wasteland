@@ -21,6 +21,11 @@ export type ProviderPreset = {
 };
 
 export type SubAgentStrategy = 'unified' | 'inherit_main' | 'role_by_role';
+export const SUB_AGENT_STRATEGIES: readonly SubAgentStrategy[] = [
+  'unified',
+  'inherit_main',
+  'role_by_role',
+];
 
 export type Step =
   | 'language-select'
@@ -45,19 +50,21 @@ export type Step =
   | 'done'
   | 'error';
 
+export type WizardResultPaths = {
+  settingsPath: string;
+  authPath: string;
+  skinsPath: string;
+  rolesPath: string;
+};
+
 export type InitWizardResult =
-  | { kind: 'submitted'; settingsPath: string; authPath: string; skinsPath: string; rolesPath: string }
+  | ({ kind: 'submitted' } & WizardResultPaths)
   | { kind: 'cancelled' }
   | { kind: 'error'; message: string };
 
 export interface InitWizardProps {
   onComplete: (result: InitWizardResult) => void;
-  writeConfig: (input: InitWizardInput) => Promise<{
-    settingsPath: string;
-    authPath: string;
-    skinsPath: string;
-    rolesPath: string;
-  }>;
+  writeConfig: (input: InitWizardInput) => Promise<WizardResultPaths>;
 }
 
 export type { InitWizardInput, WizardProviderConfig, WizardRoleBinding };
