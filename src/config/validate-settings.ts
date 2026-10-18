@@ -1,3 +1,4 @@
+
 /**
  * validate-settings.ts - settings.json schema 校验簇
  *
@@ -209,9 +210,12 @@ export function validateMCPServers(value: unknown, sourcePath: string): MCPServe
       throw new Error(`配置文件 ${sourcePath} 中 mcpServers.${serverName} 必须是对象。`);
     }
 
-    if (typeof serverConfig.command !== 'string' || serverConfig.command.trim().length === 0) {
+    const hasCommand = typeof serverConfig.command === 'string' && serverConfig.command.trim().length > 0;
+    const hasUrl = typeof serverConfig.url === 'string' && serverConfig.url.trim().length > 0;
+
+    if (!hasCommand && !hasUrl) {
       throw new Error(
-        `配置文件 ${sourcePath} 中 mcpServers.${serverName}.command 必须是非空字符串。`
+        `配置文件 ${sourcePath} 中 mcpServers.${serverName} 必须包含非空的 command (stdio) 或 url (sse)。`
       );
     }
 
@@ -237,6 +241,12 @@ export function validateMCPServers(value: unknown, sourcePath: string): MCPServe
       }
     }
 
+    if ('headers' in serverConfig && serverConfig.headers !== undefined) {
+      if (!isRecord(serverConfig.headers)) {
+        throw new Error(`配置文件 ${sourcePath} 中 mcpServers.${serverName}.headers 必须是对象。`);
+      }
+    }
+
     if (
       'cwd' in serverConfig &&
       serverConfig.cwd !== undefined &&
@@ -259,7 +269,8 @@ export function validateMCPServers(value: unknown, sourcePath: string): MCPServe
 
     servers[serverName] = {
       ...serverConfig,
-      command: serverConfig.command.trim(),
+      command: typeof serverConfig.command === 'string' ? serverConfig.command.trim() : undefined,
+      url: typeof serverConfig.url === 'string' ? serverConfig.url.trim() : undefined,
     } as MCPServerConfig;
   }
 

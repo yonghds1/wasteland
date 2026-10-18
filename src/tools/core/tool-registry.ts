@@ -21,4 +21,34 @@ export class ToolRegistry {
   list(): string[] {
     return Array.from(this.tools.keys());
   }
+
+  /** 动态注销单个工具 */
+  unregister(toolName: string): boolean {
+    return this.tools.delete(toolName);
+  }
+
+  /** 根据名称前缀动态注销一组工具（如 "serverName/"） */
+  unregisterByPrefix(prefix: string): string[] {
+    const removed: string[] = [];
+    for (const name of this.tools.keys()) {
+      if (name.startsWith(prefix)) {
+        this.tools.delete(name);
+        removed.push(name);
+      }
+    }
+    return removed;
+  }
+
+  /** 动态热替换指定 MCP Server 的全部工具 */
+  replaceServerTools(serverName: string, newTools: AgentTool[]): void {
+    this.unregisterByPrefix(`${serverName}/`);
+    for (const tool of newTools) {
+      this.register(tool);
+    }
+  }
+
+  /** 获取所有工具实例列表 */
+  getAll(): AgentTool[] {
+    return Array.from(this.tools.values());
+  }
 }

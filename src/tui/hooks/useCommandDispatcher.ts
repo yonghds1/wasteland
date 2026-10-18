@@ -9,6 +9,8 @@ import type { PermissionMode } from '@core/engine/permission-gate.js';
 import { t } from '@locales/index.js';
 import { buildTabs, selectTabViewFilter, type AgentTab } from '../components/AgentTabs.js';
 import { copyToClipboard } from '../clipboard/index.js';
+import { loadAllMcpConfigs, saveGlobalMcpServerConfig } from '../../config/mcp-config-loader.js';
+import type { MCPServerConfig } from '../../tools/mcp/mcp-client.js';
 import type { AppState, PageName, HelpView, LogPageFilter } from '../context/AppContext.js';
 import type { TuiRuntimeContext } from '../types.js';
 
@@ -243,6 +245,90 @@ export function useCommandDispatcher({
         } else {
           pushSystemMessage(setState, `⚠️ 未找到匹配的 Agent: "${arg}"。`, 'tab-err');
         }
+        return;
+      }
+
+      // 处理 /mcp 命令族 (/mcp list, /mcp reload, /mcp add)
+      if (firstWord === '/mcp') {
+        const parts = trimmedContent.split(/\s+/);
+        const subCmd = parts[1]?.toLowerCase();
+
+        if (!subCmd || subCmd === 'list') {
+          const configs = loadAllMcpConfigs();
+          const serverNames = Object.keys(configs);
+          if (serverNames.length === 0) {
+            pushSystemMessage(
+              setState,
+              'ℹ️ 当前尚未配置 MCP 服务器。\n提示：可在 ~/.wasteland/mcp.json 或项目 .mcp.json 中配置，或使用 /mcp add <name> <command|url> 添加。',
+              'mcp-list',
+            );
+            return;
+          }
+
+          const lines = serverNames.map((name) => {
+            const s = configs[name];
+            const target = s?.url ? `(SSE) ${s.url}` : `(stdio) ${s?.command} ${(s?.args ?? []).join(' ')}`;
+            return `• ${name}: ${target}`;
+          });
+
+          pushSystemMessage(
+            setState,
+            `🔌 已配置的 MCP 服务器清单 (${serverNames.length} 个)：\n${lines.join('\n')}\n提示：输入 /mcp reload 重新加载配置。`,
+            'mcp-list',
+          );
+          return;
+        }
+
+        if (subCmd === 'add') {
+          const name = parts[2];
+          const target = parts[3];
+          const extraArgs = parts.slice(4);
+
+          if (!name || !target) {
+            pushSystemMessage(
+              setState,
+              '⚠️ 用法错误。正确用法：/mcp add <name> <command|url> [args...]',
+              'mcp-add-err',
+            );
+            return;
+          }
+
+          const isUrl = target.startsWith('http://') || target.startsWith('https://');
+          const serverConfig: MCPServerConfig = isUrl
+            ? { url: target }
+            : { command: target, args: extraArgs.length > 0 ? extraArgs : undefined };
+
+          try {
+            saveGlobalMcpServerConfig(name, serverConfig);
+            pushSystemMessage(
+              setState,
+              `✓ 已添加 MCP 服务器 "${name}" 到 ~/.wasteland/mcp.json！\n输入 /mcp reload 生效。`,
+              'mcp-add-success',
+            );
+          } catch (e) {
+            pushSystemMessage(
+              setState,
+              `⚠️ 保存 MCP 配置失败: ${e instanceof Error ? e.message : String(e)}`,
+              'mcp-add-fail',
+            );
+          }
+          return;
+        }
+
+        if (subCmd === 'reload') {
+          pushSystemMessage(
+            setState,
+            '🔄 已重新读取 ~/.wasteland/mcp.json 与项目 .mcp.json 配置！',
+            'mcp-reload',
+          );
+          return;
+        }
+
+        pushSystemMessage(
+          setState,
+          `⚠️ 未知 MCP 子命令: "${subCmd}"。可选: /mcp list | /mcp reload | /mcp add`,
+          'mcp-err',
+        );
         return;
       }
 
