@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Text, Box } from 'ink';
 import { wastelandTheme } from '@theme/wasteland/index.js';
@@ -16,8 +17,7 @@ import {
   formatTimeHHMM,
 } from '../chat-message-utils.js';
 import { splitMarkdownBlocks } from '../render/markdown-splitter.js';
-import { CodeBlockView } from '../render/CodeBlockView.js';
-import { UnifiedDiffView } from '../render/UnifiedDiffView.js';
+import { renderCodeBlockLines, renderDiffLines } from './render-code-diff-lines.js';
 import type { AppState, Message } from '../../context/AppContext.js';
 
 export interface FlattenContext {
@@ -276,23 +276,23 @@ export function flattenSingleMessage(
       blocks.forEach((block, bIdx) => {
         if (block.type === 'code' && block.codeData) {
           lines.push(
-            <CodeBlockView
-              key={`${message.id}-b${bIdx}-code`}
-              code={block.codeData.code}
-              lang={block.codeData.lang}
-              filename={block.codeData.filename}
-              width={contentWidth}
-              showLineNumbers={true}
-            />
+            ...renderCodeBlockLines(
+              block.codeData.code,
+              block.codeData.lang,
+              block.codeData.filename,
+              contentWidth,
+              `${message.id}-b${bIdx}`,
+              true
+            )
           );
         } else if (block.type === 'diff') {
           lines.push(
-            <UnifiedDiffView
-              key={`${message.id}-b${bIdx}-diff`}
-              diffText={block.content}
-              filename={block.codeData?.filename}
-              width={contentWidth}
-            />
+            ...renderDiffLines(
+              block.content,
+              block.codeData?.filename,
+              contentWidth,
+              `${message.id}-b${bIdx}`
+            )
           );
         } else {
           const textLines = wrapTextToLines(block.content, contentWidth - 2);
