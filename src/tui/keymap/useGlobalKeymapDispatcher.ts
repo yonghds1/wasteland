@@ -1,3 +1,4 @@
+
 import { useEffect } from 'react';
 import { useInput, useApp } from 'ink';
 import fs from 'node:fs';
@@ -6,8 +7,32 @@ import { resolveUserConfigDir } from '@config/paths.js';
 import { getKeymapRegistry } from './index.js';
 import { buildTabs, selectTabViewFilter } from '../components/AgentTabs.js';
 import { handlePermissionKey } from '../components/chat/PermissionPromptBar.js';
+import { copyToClipboard } from '../clipboard/index.js';
 import type { AppState, PageName, FocusArea, HelpView } from '../context/AppContext.js';
 import type { TuiRuntimeContext } from '../types.js';
+
+function pushSystemMessage(
+  setState: React.Dispatch<React.SetStateAction<AppState>>,
+  content: string,
+  prefix = 'system',
+): void {
+  setState((prev) => ({
+    ...prev,
+    session: {
+      ...prev.session,
+      messages: [
+        ...prev.session.messages,
+        {
+          id: `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          timestamp: new Date().toISOString(),
+          agentId: 'system',
+          type: 'system' as const,
+          content,
+        },
+      ],
+    },
+  }));
+}
 
 export function shouldEnterInputModeOnReturn(state: {
   inputMode: boolean;
@@ -148,6 +173,22 @@ export function useGlobalKeymapDispatcher({
       const nextPage = cycle[nextIdx];
       if (nextPage) {
         setCurrentPage(nextPage);
+      }
+      return;
+    }
+
+    // 7. Ctrl+Y: 非输入模式下一键复制最新助手回答到系统剪贴板 (OSC 52)
+    if (!state.inputMode && key.ctrl && (input === 'y' || input === 'Y' || input === '\x19')) {
+      const lastAssistant = [...state.session.messages].reverse().find((m) => m.type === 'assistant');
+      if (!lastAssistant || !lastAssistant.content) {
+        pushSystemMessage(setState, 'ℹ️ 当前没有可复制的助手回答。', 'copy-empty');
+        return;
+      }
+      const ok = copyToClipboard(lastAssistant.content);
+      if (ok) {
+        pushSystemMessage(setState, '✓ [OSC 52] 已将最新回答正文复制到系统剪贴板！', 'copy-success');
+      } else {
+        pushSystemMessage(setState, '⚠️ 复制失败：内容为空。', 'copy-fail');
       }
       return;
     }

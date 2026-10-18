@@ -1,5 +1,5 @@
+
 import { useCallback } from 'react';
-import { Buffer } from 'node:buffer';
 import { executeCommand, isLocalCommand, type ActionResult } from '@core/shared/command-executor.js';
 import { getCommandManager } from '@core/shared/command-manager.js';
 import { routeLogsCommand, toPageName } from '../route-logs-command.js';
@@ -8,6 +8,7 @@ import { setAgentMode } from '@config/agent-mode-state.js';
 import type { PermissionMode } from '@core/engine/permission-gate.js';
 import { t } from '@locales/index.js';
 import { buildTabs, selectTabViewFilter, type AgentTab } from '../components/AgentTabs.js';
+import { copyToClipboard } from '../clipboard/index.js';
 import type { AppState, PageName, HelpView, LogPageFilter } from '../context/AppContext.js';
 import type { TuiRuntimeContext } from '../types.js';
 
@@ -177,7 +178,7 @@ export function useCommandDispatcher({
         return;
       }
 
-      // 处理 /copy 复制命令
+      // 处理 /copy 复制命令（支持 /copy 和 /copy code，穿透 tmux/screen）
       if (firstWord === '/copy' || firstWord === '/cp') {
         const lastAssistant = [...state.session.messages].reverse().find((m) => m.type === 'assistant');
         if (!lastAssistant || !lastAssistant.content) {
@@ -185,16 +186,23 @@ export function useCommandDispatcher({
           return;
         }
 
-        const cleanContent = lastAssistant.content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+        const isCodeOnly = trimmedContent.split(/\s+/)[1]?.toLowerCase() === 'code';
+        const ok = copyToClipboard(lastAssistant.content, { codeOnly: isCodeOnly });
 
-        if (process.stdout.isTTY) {
-          const b64 = Buffer.from(cleanContent, 'utf8').toString('base64');
-          process.stdout.write(`\x1b]52;c;${b64}\x07`);
+        if (!ok) {
+          pushSystemMessage(
+            setState,
+            isCodeOnly ? 'ℹ️ 最新回答中未找到可提取的代码块。' : '⚠️ 复制失败：内容为空。',
+            'copy-fail',
+          );
+          return;
         }
 
         pushSystemMessage(
           setState,
-          `✓ 已将最新回答（共 ${cleanContent.length} 字符）复制到系统剪贴板！`,
+          isCodeOnly
+            ? '✓ [OSC 52] 已将最新代码块写入系统剪贴板！'
+            : '✓ [OSC 52] 已将最新回答正文写入系统剪贴板！',
           'copy-success',
         );
         return;

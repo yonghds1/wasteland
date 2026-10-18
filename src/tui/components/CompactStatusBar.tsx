@@ -1,3 +1,4 @@
+
 /**
  * CompactStatusBar - 窄屏单行状态条（R4）
  *
@@ -75,13 +76,14 @@ export function CompactStatusBar({ width }: CompactStatusBarProps): React.ReactE
       flexShrink={0}
       width={width}
       paddingX={1}
+      overflow="hidden"
       borderStyle="single"
       borderTop={false}
       borderLeft={false}
       borderRight={false}
       borderBottomColor={wastelandTheme.colors.borderDim}
     >
-      <Text color={wastelandTheme.colors.muted} dimColor>
+      <Text color={wastelandTheme.colors.muted} dimColor wrap="truncate-end">
         {formatCompactStatus({
           modeLabel: t('tui.inspector.mode'),
           mode: summary.mode,
