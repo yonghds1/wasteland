@@ -1,3 +1,4 @@
+
 /**
  * ChatMessageList - 聊天消息列表
  *
@@ -20,27 +21,22 @@ import React from 'react';
 import { Text, Box, useInput, useStdout } from 'ink';
 import { useAppContext } from '../context/AppContext.js';
 import { t } from '@locales/index.js';
-import { getSkin, type Skin } from '@skins/index.js';
+import { type Skin } from '@skins/index.js';
 import { resolvePalette } from '@theme/palette.js';
 import { wastelandTheme } from '@theme/wasteland/index.js';
-import { splitThinkTags } from '@ui/think-tags.js';
 import { Scrollbar } from './Scrollbar.js';
 import { buildStreamingLines } from './streaming-status.js';
 import { useMouseWheel } from '../mouse/useMouseWheel.js';
 import {
   countNewLines,
-  wrapTextToLines,
-  parsePermissionQuestion,
   useSpinnerFrame,
   useElapsedTimer,
   getRoleCatchphrase,
-  getMessageColor,
-  getMessageLabel,
-  parseSemanticTool,
-  isErrorContent,
-  isWarnContent,
-  formatTimeHHMM,
 } from './chat-message-utils.js';
+import {
+  flattenSingleMessage,
+  type FlattenContext,
+} from './chat/flattenMessageToLines.js';
 
 
 interface ChatMessageListProps {
@@ -110,183 +106,21 @@ export function ChatMessageList({
     );
   }
 
-  // (2) 消息列表展平
+  // (2) 消息列表展平（含代码高亮、Diff 对比与两级渲染缓存）
+  const flattenCtx: FlattenContext = {
+    contentWidth,
+    palette,
+    selectedSkin,
+    state,
+    showThinking,
+    showDetails,
+  };
+
   for (let mIdx = 0; mIdx < messages.length; mIdx++) {
     const message = messages[mIdx];
     if (!message) continue;
-    const timePrefix = formatTimeHHMM(message.timestamp);
-    const timePrefixRender = timePrefix
-      ? <Text color={wastelandTheme.colors.muted}>[{timePrefix}] </Text>
-      : null;
-
-    if (message.type === 'tool' || (message.type === 'system' && message.content.startsWith('['))) {
-      const toolInfo = parseSemanticTool(message.content);
-      const iconColor = toolInfo.isError ? wastelandTheme.colors.error : wastelandTheme.colors.success;
-      visualLines.push(
-        <Box key={`${message.id}-tool`} width={contentWidth} height={1} overflow="hidden" flexDirection="row">
-          {timePrefixRender}
-          <Text color={iconColor} bold>{toolInfo.icon} </Text>
-          <Text color={wastelandTheme.colors.textEmphasized} bold>{toolInfo.action} </Text>
-          <Text color={wastelandTheme.colors.primary}>{toolInfo.target} </Text>
-          {toolInfo.meta ? <Text color={wastelandTheme.colors.muted} dimColor>{toolInfo.meta}</Text> : null}
-        </Box>
-      );
-      // R9 详情态：展开完整原文多行（默认仍单行摘要）
-      if (showDetails) {
-        const fullLines = wrapTextToLines(message.content, contentWidth - 4);
-        fullLines.forEach((line, idx) => {
-          visualLines.push(
-            <Box key={`${message.id}-tool-full-${idx}`} width={contentWidth} height={1} overflow="hidden" paddingLeft={2}>
-              <Text color={wastelandTheme.colors.muted} dimColor>{line}</Text>
-            </Box>
-          );
-        });
-      }
-    } else if (message.type === 'system') {
-      const permInfo = parsePermissionQuestion(message.content);
-      if (permInfo) {
-        const { toolName, detail } = permInfo;
-        // 统一模型：仅 pending 高亮可交互，历史置灰并显结果
-        const pending = state.session.permission?.pending ?? state.permission?.pending ?? null;
-        const isPending = !!pending && message.content === `? ${pending.question}`;
-        const historyEntry = !isPending
-          ? (state.session.permission?.history ?? state.permission?.history ?? []).find(
-              (h) => `? ${h.question}` === message.content
-            )
-          : null;
-
-        // 历史记录已完成态：只读展示结果徽章与详情
-        if (historyEntry) {
-          const badge =
-            historyEntry.decision === 'allow'
-              ? ' [已允许]'
-              : historyEntry.decision === 'allow_always'
-                ? ' [已允许·本会话]'
-                : ' [已拒绝]';
-          const badgeColor =
-            historyEntry.decision === 'deny' ? wastelandTheme.colors.error : wastelandTheme.colors.success;
-          visualLines.push(
-            <Box key={`${message.id}-perm-head`} width={contentWidth} height={1} flexDirection="row">
-              {timePrefixRender}
-              <Text color={wastelandTheme.colors.muted} dimColor>
-                · [Permission: {toolName}]{badge}
-              </Text>
-              <Text color={badgeColor} bold>
-                {badge}
-              </Text>
-            </Box>
-          );
-          if (detail) {
-            const detailLines = wrapTextToLines(detail, contentWidth - 12);
-            detailLines.forEach((line, idx) => {
-              visualLines.push(
-                <Box key={`${message.id}-perm-detail-${idx}`} width={contentWidth} height={1} overflow="hidden">
-                  <Text color={wastelandTheme.colors.muted} dimColor>
-                    {idx === 0 ? '  Command: ' : '           '}
-                  </Text>
-                  <Text color={wastelandTheme.colors.muted} dimColor>
-                    {line}
-                  </Text>
-                </Box>
-              );
-            });
-          }
-        }
-        // 移除消息流中对 pending 态权限的重复交互式表单渲染，仅保留历史记录已完成徽章（只读），消除视觉割裂
-        continue;
-      }
-
-      const systemColor = isErrorContent(message.content)
-        ? wastelandTheme.colors.error
-        : isWarnContent(message.content)
-          ? wastelandTheme.colors.warning
-          : wastelandTheme.colors.muted;
-      const sysLines = wrapTextToLines(message.content, contentWidth - 4);
-      sysLines.forEach((line, idx) => {
-        visualLines.push(
-          <Box key={`${message.id}-sys-${idx}`} width={contentWidth} height={1} overflow="hidden">
-            {idx === 0 ? timePrefixRender : null}
-            <Text color={systemColor} bold={isErrorContent(message.content)}> {line}</Text>
-          </Box>
-        );
-      });
-    } else {
-      // user / assistant
-      const split = splitThinkTags(message.content);
-      const msgAgent = state.session.agents.find((a) => a.id === message.agentId);
-      const msgSkin = msgAgent?.skinId ? getSkin(msgAgent.skinId) : selectedSkin;
-      const label = getMessageLabel(message.type, msgSkin);
-      const labelColor = getMessageColor(message.type);
-      const thinkingColor = palette.thinking;
-
-      if (mIdx > 0) {
-        visualLines.push(<Box key={`${message.id}-space`} width={contentWidth} height={1} />);
-      }
-
-      // Header 行
-      visualLines.push(
-        <Box key={`${message.id}-header`} width={contentWidth} height={1} flexDirection="row">
-          {timePrefixRender}
-          <Text color={labelColor} bold>{label}</Text>
-        </Box>
-      );
-
-      // Thinking 块展平（OpenCode 风格：正文存在时默认单行优雅收起，不挤占视口）
-      // R8 详情态（Ctrl+T）：展开完整思考行
-      if (showThinking && split.thinking) {
-        const lineCount = split.thinking.split('\n').filter((l) => l.trim().length > 0).length || 1;
-        const content = split.content || '';
-        if (content.trim().length > 0 && !showDetails) {
-          // 正文已有，思考过程折叠为 1 行紧凑摘要
-          visualLines.push(
-            <Box key={`${message.id}-think-collapsed`} width={contentWidth} height={1} paddingLeft={2}>
-              <Text color={thinkingColor ?? wastelandTheme.colors.muted} dimColor italic>
-                💭 思考过程 (共 {lineCount} 行，已折叠)
-              </Text>
-            </Box>
-          );
-        } else {
-          // 纯思考消息（无正文）
-          visualLines.push(
-            <Box key={`${message.id}-think-head`} width={contentWidth} height={1} paddingLeft={2}>
-              <Text color={thinkingColor ?? wastelandTheme.colors.muted} dimColor italic>
-                💭 {t('ui.streaming.thinking')}
-              </Text>
-            </Box>
-          );
-          const thinkLines = wrapTextToLines(split.thinking, contentWidth - 4);
-          thinkLines.forEach((tLine, idx) => {
-            visualLines.push(
-              <Box key={`${message.id}-think-${idx}`} width={contentWidth} height={1} overflow="hidden" paddingLeft={4}>
-                <Text color={thinkingColor ?? wastelandTheme.colors.muted} dimColor italic>{tLine}</Text>
-              </Box>
-            );
-          });
-        }
-      }
-
-      // 正文展平
-      const content = split.content || '';
-      if (content.trim().length > 0) {
-        const textLines = wrapTextToLines(content, contentWidth - 2);
-        const textColor = message.type === 'assistant' ? palette.text : wastelandTheme.colors.text;
-        textLines.forEach((cLine, idx) => {
-          visualLines.push(
-            <Box key={`${message.id}-line-${idx}`} width={contentWidth} height={1} overflow="hidden">
-              <Text color={textColor}>{cLine}</Text>
-            </Box>
-          );
-        });
-      } else if (split.thinking) {
-        visualLines.push(
-          <Box key={`${message.id}-think-done`} width={contentWidth} height={1} paddingLeft={2}>
-            <Text color={thinkingColor ?? wastelandTheme.colors.muted} dimColor italic>
-              {t('ui.streaming.thinkingCompleted')}
-            </Text>
-          </Box>
-        );
-      }
-    }
+    const isLast = mIdx === messages.length - 1;
+    visualLines.push(...flattenSingleMessage(message, mIdx, flattenCtx, isLast));
   }
 
   // (3) 流式输出 + 后台状态尾部（抽至 streaming-status，零逻辑改动）
