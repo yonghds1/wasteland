@@ -6,7 +6,7 @@
  * 窄屏（<120 列）由 ChatArea 直接不挂载本组件。
  */
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Box, Text } from 'ink';
 
 import { useAppContext } from '../context/AppContext.js';
@@ -14,7 +14,7 @@ import { t } from '@locales/index.js';
 import { wastelandTheme } from '@theme/wasteland/index.js';
 import { getAgentMode } from '@config/agent-mode-state.js';
 import { resolveContextWindow } from '@core/memory/context-manager.js';
-import { statusIcon } from './AgentTabs.js';
+import { AgentTreeView } from './agent-tree/AgentTreeView.js';
 
 interface InspectorPanelProps {
   width: number;
@@ -29,12 +29,9 @@ function formatDuration(ms: number | undefined): string {
 }
 
 export function InspectorPanel({ width, height }: InspectorPanelProps): React.ReactElement {
-  const { state } = useAppContext();
+  const { state, setState } = useAppContext();
 
-  const subAgents = useMemo(
-    () => state.session.agents.filter((a) => a.depth >= 1),
-    [state.session.agents]
-  );
+  const agents = state.session.agents;
   const tools = state.session.tools;
   const runningTool = [...tools].reverse().find((t) => t.status === 'running');
   const focusTool = runningTool ?? (tools.length > 0 ? tools[tools.length - 1] : undefined);
@@ -47,6 +44,7 @@ export function InspectorPanel({ width, height }: InspectorPanelProps): React.Re
     state.fullConfig?.models?.['default']?.contextWindow;
   const contextWindow = resolveContextWindow(state.config.model, configuredContextWindow);
   const usageRatio = contextWindow > 0 ? usage.totalTokens / contextWindow : 0;
+  const contentInnerWidth = Math.max(10, width - 4);
 
   return (
     <Box
@@ -105,28 +103,15 @@ export function InspectorPanel({ width, height }: InspectorPanelProps): React.Re
           }
         })()}
 
-        {/* 活跃智能体 */}
-        {subAgents.length > 0 && (
+        {/* 智能体全景树状看板 */}
+        {agents.length > 0 && (
           <Box flexDirection="column" marginBottom={1}>
             <Text color={wastelandTheme.colors.muted} dimColor>{t('tui.inspector.subagents')}</Text>
-            {subAgents.map((a) => {
-              const color =
-                a.status === 'failed'
-                  ? wastelandTheme.colors.error
-                  : a.status === 'timeout'
-                    ? wastelandTheme.colors.warning
-                    : a.status === 'running'
-                      ? wastelandTheme.colors.primary
-                      : wastelandTheme.colors.muted;
-              return (
-                <Box key={a.id} flexDirection="row">
-                  <Text color={color} bold={a.status === 'running'}>
-                    {statusIcon(a.status)} {a.roleName ?? a.name}
-                    {a.status === 'running' && a.currentAction ? ` · ${a.currentAction}` : ''}
-                  </Text>
-                </Box>
-              );
-            })}
+            <AgentTreeView
+              agents={agents}
+              width={contentInnerWidth}
+              onSelectAgent={(targetId) => setState((prev) => ({ ...prev, viewFilter: targetId }))}
+            />
           </Box>
         )}
 
@@ -151,9 +136,7 @@ export function InspectorPanel({ width, height }: InspectorPanelProps): React.Re
         )}
       </Box>
 
-      {/* 下半部分：固定会话状态（沉底展示）。
-          model 不在这里显示：顶栏品牌区已有全局 model，重复属冗余。
-          （若未来支持按 agent 切换 model，此处改为显示选中 agent 的 model。） */}
+      {/* 下半部分：固定会话状态（沉底展示） */}
       <Box flexDirection="column">
         <Text color={wastelandTheme.colors.muted} dimColor>
           {t('tui.inspector.mode')}: {state.config.mode ?? getAgentMode()}
