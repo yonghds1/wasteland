@@ -3,7 +3,10 @@
 const distEntry = new URL("../dist/cli.js", import.meta.url);
 
 try {
-  await import(distEntry);
+  const cli = await import(distEntry);
+  if (typeof cli.run === "function") {
+    await cli.run();
+  }
 } catch (error) {
   if (error && typeof error === "object" && "code" in error && error.code === "ERR_MODULE_NOT_FOUND") {
     console.error("Built CLI not found. Run `npm run build` first.");

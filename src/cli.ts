@@ -158,6 +158,8 @@ export async function run(argv = process.argv): Promise<void> {
   clearLoadedSettings();
 }
 
-if (process.env.NODE_ENV !== 'test') {
+// 仅当作为主模块直接被 node/tsx 启动时才自动运行
+const isMain = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
+if (isMain) {
   void run();
 }
