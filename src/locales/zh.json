@@ -699,7 +699,8 @@
         "streaming": "流式中",
         "autoScrollPaused": "(已暂停自动滚动)",
         "newLines": "▼ {{count}} 行新消息，按 End 回到底部",
-        "stopHint": "Ctrl+C 停止"
+        "stopHint": "Ctrl+C 停止",
+        "welcomeTitle": "欢迎使用"
       }
     },
     "inspector": {

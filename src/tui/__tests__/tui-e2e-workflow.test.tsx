@@ -1,3 +1,4 @@
+import { initI18n } from "@locales/index.js";
 /**
  * tui-e2e-workflow.test.tsx - TUI 端到端交互与屏幕快照测试
  *
@@ -226,6 +227,10 @@ function TestTuiWorkbench({
     </AppContext.Provider>
   );
 }
+
+beforeAll(async () => {
+  await initI18n('zh');
+});
 
 describe('TUI 端到端交互与快照测试 (E2E Workflow)', () => {
   beforeAll(async () => {

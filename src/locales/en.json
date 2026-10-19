@@ -699,7 +699,8 @@
         "streaming": "Streaming",
         "autoScrollPaused": "(Auto-scroll paused)",
         "newLines": "▼ {{count}} new messages, press End to jump back",
-        "stopHint": "Ctrl+C to stop"
+        "stopHint": "Ctrl+C to stop",
+        "welcomeTitle": "Welcome"
       }
     },
     "inspector": {
