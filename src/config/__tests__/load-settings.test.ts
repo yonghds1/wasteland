@@ -35,7 +35,7 @@ describe('parseSettings mcpServers', () => {
   it('throws when command is missing', async () => {
     await expect(
       parseSettings({ mcpServers: { fs: { args: [] } } }, 'test-settings.json')
-    ).rejects.toThrow('mcpServers.fs.command 必须是非空字符串');
+    ).rejects.toThrow('必须包含非空的 command (stdio) 或 url (sse)');
   });
 
   it('throws when args is not a string array', async () => {

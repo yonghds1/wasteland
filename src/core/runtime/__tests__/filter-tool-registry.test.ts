@@ -49,6 +49,7 @@ describe('MAIN_AGENT_TOOL_NAMES', () => {
       'list-directory',
       'glob',
       'grep',
+      'find-symbol',
       'bash',
       'tui_update_panel',
     ]);
