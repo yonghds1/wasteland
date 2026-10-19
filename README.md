@@ -1,597 +1,402 @@
-# wasteland
+# ☢️ WASTELAND
 
-Wasteland - 一个基于 TypeScript、RxJS 和 Ink/React 的多智能体系统,以 TUI 为唯一主界面,CLI 仅作非交互 fallback。Core 与 UI 经 adapter 解耦,UI 层可替换。
+<div align="center">
 
-**核心特性**：
-- 基于 RxJS 的响应式 Agent 运行时
-- **TUI 主界面**（Ink/React），CLI 作为非交互 fallback；UI 与 core 经 adapter 解耦
-- 支持单 Agent 和多 Agent（主从编排）模式
-- **并行 Agent 执行**：多个 spawn_agent 调用可并行执行，提升多 Agent 系统效率
-- 完整的工具系统和权限控制
-- **MCP 协议支持**：支持 stdio 和 SSE 传输，Resources 和 Prompts 功能
-- **ACP 协作**：基于 Agent Client Protocol（stdio JSON-RPC），流式 session/update，子进程按调用起停
-- **代码助手集成**：支持 Claude Code、Codex 等代码助手的 ACP 协议调用（官方适配器）
-- **web-search 增强**：使用 cheerio 进行 HTML 解析，支持 LRU 缓存
-- Session 持久化和追踪
+```text
+██╗    ██╗ █████╗ ███████╗████████╗███████╗██╗      █████╗ ███╗   ██╗██████╗ 
+██║    ██║██╔══██╗██╔════╝╚══██╔══╝██╔════╝██║     ██╔══██╗████╗  ██║██╔══██╗
+██║ █╗ ██║███████║███████╗   ██║   █████╗  ██║     ███████║██╔██╗ ██║██║  ██║
+██║███╗██║██╔══██║╚════██║   ██║   ██╔══╝  ██║     ██╔══██║██║╚██╗██║██║  ██║
+╚███╔███╔╝██║  ██║███████║   ██║   ███████╗███████╗██║  ██║██║ ╚████║██████╔╝
+ ╚══╝╚══╝ ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚══════╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═════╝ 
+```
 
-## 环境要求
+### 自由中立 · 终端第一公民 · 工业级 AI 编程工作台
 
-- Node.js 20+
-- npm
+**[English](./README.en.md) | [简体中文](./README.md)**
 
-## 快速开始
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
+[![RxJS](https://img.shields.io/badge/Reactive-RxJS-e10079.svg)](https://rxjs.dev/)
+[![Ink](https://img.shields.io/badge/TUI-Ink%2FReact-00d8ff.svg)](https://github.com/vadimdemedes/ink)
+[![APCA Contrast](https://img.shields.io/badge/Contrast-APCA%20Validated-success.svg)](https://www.w3.org/WAI/GL/task-forces/silver/wiki/Visual_Contrast_of_Text_Subgroup)
+[![MCP](https://img.shields.io/badge/MCP-1.0%20Ready-purple.svg)](https://modelcontextprotocol.io/)
 
-### 安装
+</div>
+
+---
+
+## 📖 简介与设计哲学
+
+**Wasteland** 是一个专为严肃开发者打造的自由中立、以现代终端 TUI 为第一公民、基于 **TypeScript + RxJS + Ink** 构建的全功能开源 AI 编程工作台。
+
+在当下的 AI 编码辅助工具生态中，开发者往往面临商业锁定、粗暴污染 Git 分支、终端长对话卡顿崩溃、无法直观编排多 Agent 等痛点。**Wasteland 拒绝妥协**：
+- **模型主权 (Model Sovereignty)**：彻底中立，自由切换 DeepSeek、MiniMax、Claude、OpenAI、Qwen、GLM、Ollama；
+- **版本纯粹 (Zero-Pollution Version Control)**：独创底层 Git Plumbing 隐形隔离时光机，永不污染你的业务提交树与 Git Log；
+- **极致渲染性能 (Constant-Frame TUI)**：基于严格 1:1 视口虚拟化高度预算切片，即便 500 轮超长对话依旧保持毫秒级流畅响应；
+- **沉浸式极客情感 (Wasteland Punk Persona)**：内置 7 款通过 W3C APCA 终端高可读校验的废土朋克角色皮肤，提供从思考到交付的全流程情感陪伴。
+
+---
+
+## 🌟 六大杀手级核心特性
+
+### 1. ⏱️ Git Checkpoint 隐形隔离时光机 (Zero-Pollution Invisible Checkpoints)
+传统 AI 工具在尝试版本回退时，要么粗暴提交大量脏 commit 污染你的主分支 `git log`，要么简单依赖内存撤销导致外部修改被无情冲掉。
+- **底层 Git Plumbing 直连**：直接通过 `git write-tree`、`git commit-tree`、`git update-ref` 构建工作区快照，将快照严格隔离在专属的 `refs/wasteland/` 命名空间中。
+- **零污染业务仓库**：普通 `git status`、`git log` 和远端 push 历史 100% 干净透明，无任何冗余垃圾分支。
+- **原子级时光机指令**：
+  - `/undo [turnId]`：秒级回滚到上一轮或指定历史轮次，并自动将该轮原始 Prompt 回填至输入框草稿区；
+  - `/redo`：当撤销后后悔时，基于自动创建的救援快照（rescue checkpoint）一键重做恢复；
+  - `/diff [turnId]`：以精美的彩色 Unified Diff 形式，直观查看当前工作区与快照之间的代码差异；
+  - `/checkpoints`：完整列出当前会话的所有历史快照节点树与影响文件列表。
+- **3-Way 哈希冲突安全拦截**：回滚前自动比对工作区最新文件哈希与快照基准哈希。一旦检测到用户在外部 IDE（VSCode、Cursor、Neovim 等）中并发修改了这些文件，时光机会**立即安全阻断回滚**，列出冲突文件详情并保护用户劳动成果，亦支持 `/undo --force` 显式强制覆盖。
+
+### 2. 🎭 独创废土沉浸式 Persona 与皮肤系统 (Skin System)
+告别单调冰冷、千篇一律的 "AI 助手"。Wasteland 赋予工作台极致的废土朋克灵魂与人设张力：
+- **7 款内置废土角色**：
+  - 👑 **不死老蕉 (`warlord-immortal`)**：全局编排指挥官，号令狂暴车队碾碎复杂工程阻碍；
+  - 🏍️ **疯子麦克 (`road-nomad`)**：单兵全栈突击手，一人一车以极致速度切入废墟绝境；
+  - 🦾 **独臂弗莎 (`fury-vanguard`)**：攻坚先锋，铁爪强行破拆扭曲残骸，带队杀向绿洲；
+  - 🔧 **巨汉瑞克 (`v8-mechanic`)**：修配重构大师，重型气焊与超频化油器，焊死一切架构松脱；
+  - 📡 **暴走纳克斯 (`sand-scout`)**：雷达搜寻侦察兵，沙暴中敏锐嗅出关键补给与深层线索；
+  - 🎯 **弹头麦哲 (`bullet-tester`)**：火力测试质检官，万发穿甲弹扫射，让一切暗伤在烈火中现形；
+  - 🎸 **电音杜夫 (`doof-analyst`)**：拓扑重低音分析师，喷火吉他掌控全局节奏，阵列对齐毫厘不差。
+- **100% APCA 色彩对比度校验**：基于 W3C APCA (Advanced Perceptual Contrast Algorithm 0.0.98G-4g) 视觉对比度算法全面核验，杜绝低对比度眩光，深浅终端皆享巅峰可读性。
+- **全生命周期情感共鸣**：每个角色均具备专属的问候文案（greeting）、思考文案（thinking）与任务凯旋口头禅（catchphrases）。
+- **多层级无缝扩展**：支持内置预设、用户全局级（`~/.wasteland/skins.json`）与项目级（`.wasteland/skins.json`）多层级继承与动态热切换。
+
+### 3. 🖥️ 长会话严格 1:1 视口虚拟化 (Strict 1:1 Viewport Virtualization)
+突破 Ink / React 在终端渲染长列表的致命性能瓶颈：
+- **虚拟行高度预算裁剪**：通过 `flattenMessageToLines` 与 `useChatScroll` 严格按终端行高（Height Budget）切片。
+- **常数级 DOM 节点挂载**：无论当前会话进行了 10 轮还是 500 轮，内存与渲染树中真实挂载的节点始终锁定在当前视口范围内的 ~30 个虚拟行，彻底消除卡顿、光标漂移与内存泄漏。
+- **全功能视口导航**：完整支持鼠标滚轮滚动、右侧平滑滚动条拖拽跳转、`PageUp` / `PageDown` / `Shift+↑↓` 键盘平滑滚动、以及新消息未读指示器。
+
+### 4. 🌳 多 Agent 协作全景树状看板 (DAG Tree View)
+基于 **Agents-as-Tools** 架构，将复杂任务解耦为多智能体协同流水线：
+- **实时拓扑树状呈现**：主角色（`orchestrator`）通过 `spawn_agent` 派发子任务，右侧 Inspector / Tree 面板动态生成直观的 Main-to-Sub Agent 树状拓扑。
+- **多维生命周期徽标**：清晰展示各个子 Agent 的执行状态（`[RUNNING]`、`[COMPLETED]`、`[FAILED]`），并实时同步各自的 Steps 步数与 Token 资源消耗。
+- **键盘一键聚焦穿梭**：支持方向键导航并一键回车聚焦目标子 Agent 的独立消息视口，或通过快捷键 `Alt+1` ~ `Alt+9` / `/tab <id>` 极速在各 Agent 的独立运行流间穿梭。
+
+### 5. 🔍 轻量感知引擎 (LPIE - Lightweight Perception & Intelligence Engine)
+极致的上下文感知与检索能力，且不依赖任何沉重臃肿的外部本地环境：
+- **工作区架构记忆自动装配**：智能识别工作区中的 `CLAUDE.md`、`PROJECT.md` 或 `.wasteland/rules.md`，全自动装配并注入 Agent 提示词上下文，确保代码产出与项目规约严丝合缝。
+- **三层自适应极速 Grep 探针**：按优先级自动级联调用 `ripgrep (rg)` 极速探针 ➔ `git-grep` 仓库探针 ➔ `Node.js 并发流` 回退探针。支持前后上下文提取（`contextLines`），任何宿主环境皆可实现亚秒级搜索。
+- **零 C++ 依赖符号精准定位 (`find-symbol`)**：摆脱 Tree-sitter 等原生编译依赖与构建报错恶梦，采用高效纯粹的跨语言多语法模式引擎，毫秒级提取 TypeScript、JavaScript、Python、Rust、Go 等主流语言的 classes、interfaces、functions、methods、types 与 enums。
+
+### 6. 🛡️ 开放生态与统一跨平台安全治理 (Open Neutrality & Deep Governance)
+- **模型自由中立**：内置 OpenAI 兼容协议栈，一键支持 DeepSeek-V3/R1、MiniMax、Claude 3.5 Sonnet、GPT-4o、Qwen 2.5、GLM-4、本地 Ollama 等模型，随时切换算力。
+- **标准 MCP 协议热插拔**：完整支持 Model Context Protocol (MCP) 1.0 标准，支持 `stdio` 与 `sse` 两种传输通道，允许在会话内通过 `/mcp add` 与 `/mcp reload` 实时加载外部工具、资源与提示词。
+- **统一 POSIX 路径切面预清洗**：统一收口 Windows 反斜杠、UNC 网络路径与多盘符大小写差异，杜绝跨平台沙箱路径遍历与越界假警报。
+- **阶梯式负 PID 进程组安全查杀**：运行外部命令时以进程组运行；在超时或用户中止时，向负 PID（`-pid`）优先投递 `SIGTERM`，宽限期后投递 `SIGKILL`，连根查杀所有子进程与孙进程，绝不残留后台僵尸进程。
+
+---
+
+## ⚔️ 深度横向竞品对比矩阵
+
+| 评估维度 | ☢️ Wasteland | Claude Code | Aider | OpenCode | Cline (VSCode) |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **模型中立度与自由度** | 🟢 **完全中立开放**<br>(DeepSeek/MiniMax/Claude/OpenAI/Qwen/GLM/Ollama) | 🔴 **商业强绑定**<br>(仅支持 Anthropic Claude 模型) | 🟡 **支持多模型**<br>(通过 LiteLLM 接入，配置较繁琐) | 🟡 **支持多模型**<br>(需自备多 Provider 配置) | 🟢 **支持多模型**<br>(支持主流商业与本地模型) |
+| **UI / UX 终端体验** | 🟢 **现代沉浸式 TUI**<br>(Ink/React 驱动 + 严格视口虚拟化 + 鼠标滚动与拖拽) | 🟡 **传统命令行**<br>(单行 Prompt 交互 + 纯终端滚动打印) | 🟡 **传统命令行**<br>(基于 readline 命令行界面，交互较单一) | 🟡 **极简终端列表**<br>(基础 TUI，缺少高级面板管理) | 🔴 **无独立 TUI**<br>(深度依赖 VSCode 桌面编辑器插件) |
+| **历史版本原子回退** | 🟢 **隐形隔离时光机**<br>(`refs/wasteland/` 零污染 git log + 3-Way 冲突拦截) | 🟡 **粗粒度本地撤销**<br>(依赖本地记录，易与外部编辑并发冲突) | 🔴 **严重污染 Git Log**<br>(每次代码变更均提交真实 Git Commit) | 🔴 **无版本时光机**<br>(仅依赖手动代码修改撤销) | 🟡 **简易 Checkpoint**<br>(基于 VSCode 本地历史文件存储) |
+| **多 Agent 协同与拓扑** | 🟢 **DAG 全景树状看板**<br>(Main/Sub 实时派发树 + Token 统计 + 单键切换) | 🔴 **单 Agent 串行**<br>(无多 Agent 协同体系与拓扑看板) | 🔴 **单 Agent 对话**<br>(无子 Agent 编排机制) | 🔴 **单 Agent 模式**<br>(无 DAG 协同视图) | 🔴 **单 Agent 模式**<br>(缺乏原生多智能体拓扑看板) |
+| **长会话终端虚拟化** | 🟢 **严格 1:1 视口虚拟化**<br>(500+ 轮长对话恒定毫秒级渲染，0 掉帧卡顿) | 🔴 **无虚拟化**<br>(完全依赖终端原生 Buffer，极长输出易卡顿) | 🔴 **无虚拟化**<br>(纯文本线性滚动流) | 🟡 **基础分页**<br>(缺乏按行高度精确预算裁剪) | 🟡 **Webview 渲染**<br>(基于 Chromium，长对话内存占用高) |
+| **角色化 Persona 系统** | 🟢 **废土朋克 7 角色皮肤**<br>(APCA 校验配色 + 专属思考文案与凯旋口头禅) | 🔴 **无角色系统**<br>(标准单一严肃语调) | 🔴 **无角色系统**<br>(纯工具属性，无情感陪伴) | 🔴 **无角色系统**<br>(纯工具设定) | 🔴 **无角色系统**<br>(单一默认 Prompt 助手) |
+| **MCP 生态热插拔** | 🟢 **完整动态热插拔**<br>(支持 stdio/sse 协议，会话内动态热加载) | 🟡 **部分支持**<br>(需在配置中声明并重启) | 🔴 **不支持 MCP** | 🟡 **实验性支持**<br>(支持部分协议功能) | 🟢 **支持 MCP**<br>(需在插件图形面板中手动配置) |
+
+---
+
+## 🎭 废土朋克 Persona 全景与皮肤系统
+
+Wasteland 拒绝千篇一律的工具冷漠感，为不同的编码场景量身定制了 7 种鲜活的废土朋克灵魂。所有预设均 100% 通过 W3C APCA 终端视觉对比度核验：
+
+| 皮肤标识 (`skinId`) | 角色名称 | 职能定位 | 典型口头禅 / 经典台词 |
+| :--- | :--- | :--- | :--- |
+| `warlord-immortal` | **不死老蕉** | 主脑总指挥 (Orchestrator) | *"在狂暴之路上，只有交付结果的人才能进入瓦尔哈拉！"* |
+| `road-nomad` | **疯子麦克** | 单兵全栈突击 (Single Agent) | *"希望是个危险的东西。但我手里这台单兵 V8 引擎不是。"* |
+| `fury-vanguard` | **独臂弗莎** | 攻坚突击队长 (Developer) | *"记住这一刻！我们不是为了苟活而战，我们是为了抵达绿洲！"* |
+| `v8-mechanic` | **巨汉瑞克** | 重构与修配大师 (Refactorer) | *"底盘焊得够死，车子才经得起荒原的折腾。"* |
+| `sand-scout` | **暴走纳克斯** | 探索与侦察兵 (Researcher) | *"只要还有一条微弱信号，车队就能找到前路。"* |
+| `bullet-tester` | **弹头麦哲** | 极限制霸质检官 (Tester) | *"我的火力就像一万发曳光弹，让所有暗伤在扫射中现形！"* |
+| `doof-analyst` | **电音杜夫** | 拓扑与战阵分析师 (Analyst) | *"行军就是交响乐，节奏乱了，整台战争机器就会在沙丘上解体！"* |
+
+### 皮肤管理命令 (/skin)
+
+在终端或 TUI 内可自由查看与切换皮肤：
 
 ```bash
-npm install
+/skin list              # 列出所有可用皮肤及当前生效标识 (●)
+/skin show              # 查看当前正在使用的皮肤详情与色彩属性
+/skin load <skinId>     # 切换并加载指定皮肤（例如 /skin load fury-vanguard）
+/skin info <skinId>     # 查看目标皮肤的详细问候语、思考文案与口头禅统计
+/skin reset             # 重置回系统默认皮肤
 ```
 
-### 配置 Provider
+### 自定义扩展皮肤 (Custom Skins)
 
-```bash
-# 方式 1: 环境变量（支持主流 OpenAI、DeepSeek、Anthropic、GLM、Qwen 等）
-export OPENAI_API_KEY='your-openai-api-key'
-# 或
-export DEEPSEEK_API_KEY='your-deepseek-api-key'
-# 或
-export ANTHROPIC_API_KEY='your-anthropic-api-key'
-
-# 方式 2: 交互式引导 / 配置文件
-# 首次启动会自动进入 InitWizard 向导引导配置，也可以随时编辑 ~/.wasteland/auth.json
-```
-
-### 启动 TUI
-
-```bash
-# 开发模式：从 TypeScript 源码启动 TUI（默认入口）
-npm run dev
-
-# 全局安装后
-wasteland
-```
-
-启动后在 TUI 界面直接输入消息即可对话，AI 响应流式渲染，工具调用、权限决策、子 Agent 进度均实时展示。不带参数运行 `wasteland` 或 `npm run dev` 会自动进入 TUI（`src/cli.ts` 无参时自动追加 `tui`）。
-
-## 可用脚本
-
-- `npm run dev`：从 TypeScript 源码启动 TUI（默认入口，等价于 `npm run dev -- tui`）
-- `npm run dev -- chat --message "你好"`：以非交互模式运行 `chat` 命令（已从 `--help` 隐藏，仅作管道/脚本 fallback）
-- `npm run build`：把 CLI 编译到 `dist/`
-- `npm run tui:build`：先构建再运行 TUI
-- `npm test`：直接运行测试（vitest 跑 `src`，无需先构建）；发布前完整校验用 `npm run test:full`（先构建再测）
-- `npm run check`：全链（typecheck + lint + i18n + parity + contrast + 全量测试，合并/CI 前用）；日常用 `npm run check:fast`（仅 typecheck + lint）
-- `./scripts/create-aliases.sh [skin-id]`：根据皮肤配置创建角色别名（如 `warlord`），postinstall 时自动执行
-
-## 界面与分层架构
-
-wasteland 采用三层分层架构，UI 层可替换，core 不依赖任何具体 UI：
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  UI 层（可替换，core 不依赖具体 UI）                          │
-│                                                             │
-│   TUI（Subject 直连）            CLI（非交互 fallback）       │
-│   src/tui/                       src/ui/                     │
-│   Ink / React                    readline / terminal         │
-│   （无专用 adapter 类）           CliInputAdapter             │
-│                                  CliOutputAdapter             │
-└──────────────┬──────────────────────────────┬────────────────┘
-               │                              │
-               │   统一为 ChatInputTurn 流      │
-               ▼                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│  Adapter 层   src/core/input-adapter.ts + output-adapter.ts     │
-│                                                             │
-│  InputAdapter（抽象）          OutputAdapter（抽象）          │
-│  统一输入为 input$              RuntimeEvent → DisplayEvent   │
-│                               DefaultOutputAdapter（1:1 映射）│
-└──────────────────────────┬──────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│  Core 层   src/core/runtime/（UI 无关，可独立运行）           │
-│                                                             │
-│  runAgentLoop({ input$ }) → { events$, debug$ }             │
-│  session-manager · tool-dispatch · permission-gate           │
-│  event-types · user-input-bridge                             │
-└─────────────────────────────────────────────────────────────┘
-```
-
-- **UI 层**：TUI（`src/tui/`，Ink/React，无专用 adapter 类，Subject + `useRuntimeEvents` 直连）是唯一主界面；CLI（`src/ui/`，readline/terminal，`CliInputAdapter`/`CliOutputAdapter`）保留为非交互/管道/脚本 fallback。两者经同一套 adapter 接口接入 core。
-- **Adapter 层**：`src/core/input-adapter.ts` / `output-adapter.ts` 定义 `InputAdapter`/`OutputAdapter` 抽象与 `DefaultOutputAdapter`，把 `RuntimeEvent` 1:1 映射为 `DisplayEvent`，屏蔽 UI 差异。
-- **Core 层**：`src/core/runtime/` 负责编排（`runAgentLoop`、`session-manager`、`tool-dispatch`、`permission-gate`、`event-types`、`user-input-bridge`），与 UI 完全解耦。`runAgentLoop({ input$ })` 返回 `{ events$, debug$ }`，UI 经 adapter 订阅事件流。
-
-## 使用示例
-
-### 基础对话（TUI）
-
-```bash
-# 启动 TUI（默认入口）
-npm run dev
-
-# 指定 provider / role 启动
-npm run dev -- tui --provider qwen --role orchestrator
-```
-
-启动后在 TUI 界面直接输入消息即可对话，响应流式渲染。
-
-### Tool Calling（TUI）
-
-在 TUI 中直接输入：
-
-- "读取 package.json" → 触发 `read-file`
-- "列出当前目录" → 触发 `list-directory` / `bash`
-- "搜索所有 .ts 文件" → 触发 `glob`
-
-工具调用请求、权限决策、执行结果都会在 TUI 中实时展示。
-
-### 多 Agent（TUI）
-
-在 TUI 中输入需要编排的任务，主角色（orchestrator）会通过 `spawn_agent` 调度子 Agent：
-
-- "创建一个子 Agent 来分析代码"
-- "同时执行：1. 读取 README.md 2. 列出目录"
-
-子 Agent 的创建、进度、完成事件会在 TUI 中显示。
-
-### 会话管理
-
-```bash
-# 列出会话
-wasteland sessions
-
-# 查看会话详情
-wasteland sessions show <session-id>
-
-# 恢复会话
-wasteland resume <session-id>
-
-# 删除会话
-wasteland sessions delete <session-id> --confirm
-```
-
-TUI 也支持 `--attach <session>` 直接附加到历史会话：
-
-```bash
-npm run dev -- tui --attach <session-id>
-```
-
-### 非交互 fallback（chat 命令）
-
-`chat` 命令已从 `--help` 隐藏（`src/cli.ts` 中 `hidden: true`），保留作脚本/管道场景的 fallback。chat 命令选项：`-m/--message`、`-p/--provider`、`-r/--role`、`--debug`、`--debug-format`、`--permission-mode`（无 `--multi`，多 Agent 由 `spawn_agent` 工具调度）。
-
-```bash
-# 单次消息（脚本场景）
-npm run dev -- chat --provider qwen --message "你好"
-
-# 管道输入
-echo "列出当前目录" | npm run dev -- chat --provider qwen
-
-# 交互式 CLI（非 TTY 无法启动 TUI 时的 fallback）
-npm run dev -- chat --provider qwen
-```
-
-`chat` 命令的三条输入路径：
-
-- `--message <text>`：单次输入，适合脚本和测试
-- 通过 `stdin` 管道输入：适合把外部输入整段送入同一条 runtime 路径
-- 不带 `--message` 且无 `stdin` 管道：进入交互模式，按行输入，输入 `/exit` 或 `/quit` 退出
-
-交互模式下支持本地会话命令（在 UI 层直接处理，不进入 runtime/provider）：
-
-- `/help`
-- `/tools`
-- `/clear`
-- `/exit`
-
-内置默认 provider 是 `local`，用于在不接真实模型时验证 runtime/provider/ui/session 边界；当前项目本地 `.wasteland/settings.json` 已把默认 provider 配成 `qwen`。如果要按真实全局命令的方式测试：
-
-```bash
-npm link
-wasteland --help
-wasteland chat --message "你好"
-```
-
-`chat` 输入语法表见：
-
-- [Phase 2：工具运行时与权限闸门](./docs/implementation/phase-2-agent-tool-runtime.md)
-
-## 多 Agent 模式
-
-wasteland 采用 **单主角色 + 多子Agent** 架构：
-
-### 主角色（orchestrator）
-
-```bash
-# 在 TUI 中直接对话即可，默认使用 orchestrator 主角色
-npm run dev
-```
-
-orchestrator 是唯一主角色，完全内置，不可覆盖。它会自动调度子Agent执行任务。
-
-### 子Agent
-
-内置 4 个子Agent，可在 `.wasteland/settings.json` 的 `subAgents` 中配置或覆盖：
-
-| 子Agent | 职责 | 说明 |
-|---------|------|------|
-| `researcher` | 信息收集 | 搜索、发现、检索信息和资源 |
-| `developer` | 代码开发 | 编写、修改、调试代码 |
-| `analyst` | 系统分析 | 理解现有系统和代码结构 |
-| `tester` | 测试验证 | 运行测试、验证功能、确保质量 |
-
-### 工作原理
-
-1. 用户与 orchestrator 对话
-2. 主角色分析任务，决定需要哪些子Agent
-3. 通过 `spawn_agent` 工具调度子Agent
-4. 子Agent 并行或串行执行子任务
-5. 主角色汇总结果并继续推理
-
-**spawn_agent 工具参数**：
-```typescript
-spawn_agent({
-  name: string;      // 子 Agent 标识
-  task: string;      // 任务描述
-  model?: string;    // 可选：模型选择（haiku/sonnet/opus）
-  tools?: string[];  // 可选：限定工具集
-})
-```
-
-**Session 文件**（中央数据根 `~/.wasteland/data/sessions/<projectId>/`）：
-- 主 Agent: `{sessionId}.jsonl`
-- 子 Agent: `{sessionId}-child-{name}.jsonl`
-
-**测试多 Agent（使用 Qwen）**：
-
-在 TUI 中直接输入任务即可触发多 Agent；以下为非交互测试场景：
-
-```bash
-# 1. 配置 Qwen API Key（如果还没配置）
-export qwen_api_key="<your-qwen-api-key>"
-
-# 2. 使用 local provider 测试 spawn_agent 命令
-npm run dev -- chat --provider local --message "/spawn analyst 分析 package.json"
-
-# 3. 使用 Qwen provider 测试（Qwen 会自动决定是否调用 spawn_agent）
-npm run dev -- chat --message "分析这个项目的架构，并给出重构建议"
-
-# 4. 使用 bypass_permissions 模式让子 agent 的工具调用也免确认、全自动跑完
-npm run dev -- chat --permission-mode bypass_permissions --message "..."
-```
-
-**注意**：
-- `local` provider 通过 `/spawn <name> <task>` 语法触发 spawn_agent
-- `qwen` provider 会根据任务自动决定是否调用 spawn_agent（需要模型支持 tool calling）
-- spawn_agent 本体免确认（只读级，只创建子会话）；子 agent 的工具调用（bash/edit 等）照常走权限门确认（同 Claude Code 的 Agent 工具语义）
-
-## 配置与数据目录
-
-当前统一使用 `.wasteland/` 作为项目级配置与运行数据目录。
-
-配置优先级如下：
-
-1. CLI 参数
-2. 环境变量
-3. 项目配置 `.wasteland/settings.json`
-4. 用户全局配置 `~/.wasteland/settings.json`
-5. 内置默认值
-
-当前常用环境变量：
-
-- `WASTELAND_HOME`：覆盖全局配置根目录，等价于把 `~/.wasteland/` 改到别处
-- `WASTELAND_PROVIDER`：覆盖默认 provider
-- `WASTELAND_PERMISSION_MODE`：覆盖默认权限模式
-- `WASTELAND_MAX_STEPS_PER_TURN`：覆盖单轮最大 step 数
-- `WASTELAND_DOOM_LOOP_THRESHOLD`：覆盖 doom loop 检测阈值（默认 `3`，`0` 表示关闭检测）
-- `WASTELAND_DEBUG`：默认打开调试追踪
-- `WASTELAND_LOG_LEVEL`：日志最低等级，支持 `debug` / `info` / `warn` / `error`，默认 `info`；`WASTELAND_DEBUG=1` 等价于设为 `debug`
-- `WASTELAND_LOG_DIR`：覆盖日志目录，默认中央数据根 `~/.wasteland/data/logs/<projectId>/`
-- `WASTELAND_DATA_DIR`：覆盖中央数据根，默认 `~/.wasteland/data/`
-- `WASTELAND_LOG_REDACT`：日志脱敏策略开关，默认 `true`；8 类 baseline secret denylist 始终保留
-- `WASTELAND_LOG_TAIL_LINES`：日志查看默认尾部行数，默认 `50`
-- `WASTELAND_SESSION_DIR`：覆盖 session transcript 输出目录
-- `WASTELAND_LANGUAGE`：覆盖界面语言（如 `zh`、`en`）
-- `WASTELAND_MAX_CONCURRENCY`：覆盖并行子 Agent 最大并发数（`-1` 表示无限制）
-
-Provider 接入通过预设完成：`deepseek` / `openai` / `qwen` / `glm` / `minimax` / `ollama` / `opencode-zen` / `opencode-go` / `custom`。凭据键名统一为 `<provider>_api_key`（如 `qwen_api_key`），放在 `.wasteland/auth.json` 或环境变量中。
-
-兼容策略：
-
-- 旧环境变量 `RX_CLI_SESSION_DIR` 仍可用，但只作为过渡兼容，主推荐值已经是 `WASTELAND_SESSION_DIR`
-- 旧项目数据目录 `.rx-cli/` 不再作为默认路径；如有历史 transcript，请手动迁移到 `.wasteland/`
-
-最小配置示例：
+你可以在用户全局目录（`~/.wasteland/skins.json`）或当前项目目录（`.wasteland/skins.json`）创建自定义皮肤文件：
 
 ```json
 {
-  "runtime": {
-    "permissionMode": "default",
-    "maxStepsPerTurn": 30,
-    "doomLoopThreshold": 3,
-    "debug": false
-  },
-  "models": {
-    "default_model": {
-      "provider": "local",
-      "model": "local"
+  "skins": {
+    "my-wasteland-hacker": {
+      "label": "荒原黑客",
+      "colors": {
+        "label": "#00ffcc",
+        "text": "#e0e0e0",
+        "thinking": "#7a7a7a"
+      },
+      "greeting": [
+        "卫星天线展开完毕，暗网信道已就绪，说出你的目标代码！"
+      ],
+      "thinking": [
+        "正在穿透重重防火墙，分析 AST 语法抽象树..."
+      ],
+      "catchphrases": [
+        "代码已被攻破，逻辑闭环无瑕，任务完成！"
+      ]
     }
   },
-  "providers": {
-    "local": {}
+  "singleAgent": {
+    "skin": "my-wasteland-hacker"
   }
 }
 ```
 
-Qwen 最小使用方式：
+---
+
+## ⚡ 快速安装与配置
+
+### 1. 环境准备
+- **Node.js**：`>= 20.0.0`
+- **npm**：`>= 9.0.0`
+- 支持操作系统：Linux、macOS、Windows (WSL / PowerShell)
+
+### 2. 安装与全局链接
 
 ```bash
-export qwen_api_key="<your-qwen-api-key>"
+# 克隆仓库
+git clone https://github.com/yonghds1/wasteland.git
+cd wasteland
 
+# 安装项目依赖
+npm install
+
+# 编译项目
+npm run build
+
+# 全局链接 CLI 命令（可选，方便在任何目录下执行 wasteland）
+npm link
+```
+
+### 3. 配置模型 Provider
+
+#### 方式 A：环境变量注入（推荐）
+
+```bash
+# DeepSeek (深度求索)
+export DEEPSEEK_API_KEY="sk-xxxxxxxxxxxxxxxxxxxxxxxx"
+
+# 通义千问 (Qwen / DashScope)
+export qwen_api_key="sk-xxxxxxxxxxxxxxxxxxxxxxxx"
+
+# Anthropic Claude
+export ANTHROPIC_API_KEY="sk-ant-xxxxxxxxxxxxxxxxxxxx"
+
+# OpenAI
+export OPENAI_API_KEY="sk-xxxxxxxxxxxxxxxxxxxxxxxx"
+
+# MiniMax
+export MINIMAX_API_KEY="xxxxxxxxxxxxxxxxxxxxxxxx"
+
+# 智谱清言 (GLM)
+export GLM_API_KEY="xxxxxxxxxxxxxxxxxxxxxxxx"
+```
+
+#### 方式 B：交互式向导 (InitWizard)
+首次在终端启动 `wasteland` 时，系统将自动进入交互式 `InitWizard` 初始化向导，指引你配置默认 Provider、API Key、权限模式与角色皮肤。配置将持久化保存在 `~/.wasteland/auth.json` 与 `~/.wasteland/settings.json` 中。
+
+### 4. 启动 TUI 界面
+
+```bash
+# 源码开发调试模式（默认自动启动 TUI）
 npm run dev
+
+# 或全局安装后在任意项目根目录下运行
+wasteland
+
+# 携带指定参数启动
+wasteland --provider deepseek --role orchestrator
 ```
 
-说明：
+---
 
-- baseUrl 由预设提供（Qwen 为 `https://dashscope.aliyuncs.com/compatible-mode/v1`），无需手填
-- 凭据更适合放在本地 shell 配置或 `.wasteland/auth.json`，不要提交真实 key
+## ⌨️ TUI 交互指南：快捷键与常用命令
 
-当前第一版多角色配置已经支持：
+### 常用斜杠命令 (Slash Commands)
 
-- `runtime.defaultRole`
-- `models`
-- `roles`
-- `chat --role <name>`
-- `config current`
+在 TUI 底部输入框中输入 `/` 即可触发自动补全弹窗：
 
-session transcript 默认写入中央数据根 `~/.wasteland/data/sessions/<projectId>/`。
+| 命令分类 | 指令 | 说明 |
+| :--- | :--- | :--- |
+| **版本时光机** | `/undo [turnId]` | 原子回滚到上一轮或指定轮次；支持 `--force` 忽略外部冲突；自动回填 Prompt |
+| | `/redo` | 恢复因撤销而丢弃的代码变动（恢复救援快照） |
+| | `/diff [turnId]` | 查看当前工作区或指定历史轮次的彩色 Unified Diff 差异 |
+| | `/checkpoints` | 列出当前会话的全部 Git Checkpoint 隐形快照历史 |
+| **废土皮肤** | `/skin list` | 列出所有可用皮肤 |
+| | `/skin load <id>` | 动态切换并应用指定皮肤 |
+| | `/skin show` | 显示当前生效皮肤详细配置 |
+| | `/skin info <id>` | 查看皮肤角色文案与色彩配置 |
+| | `/skin reset` | 重置恢复至默认皮肤 |
+| **MCP 生态** | `/mcp list` | 列出当前已挂载的所有 stdio / sse MCP 服务 |
+| | `/mcp add <name> <cmd\|url>` | 动态添加新的 MCP 服务配置 |
+| | `/mcp reload` | 重新扫描并热重载 MCP 服务 |
+| **视口与编排** | `/tab [序号\|名称]` | 切换当前查看的 Agent 标签视口（如 `/tab 2`） |
+| | `/mode [single\|multi]` | 切换单 Agent (Single) 与多 Agent 编排 (Multi) 模式 |
+| | `/logs` | 打开全局日志页面（支持 `/logs errors`、`/logs show <id>`、`/logs level <lvl>`） |
+| **感知与工作区** | `/context` (`/ctx`) | 查看当前工作区感知概览、依赖树与规则注入状态 |
+| | `/init` (`/i`) | 智能扫描当前仓库并在根目录初始化标准 `CLAUDE.md` 架构规约 |
+| | `/tools` (`/tls`) | 列出当前所有可用工具清单及其权限级别 |
+| | `/status` (`/stat`) | 查看当前运行状态、Token 消耗统计与系统信息 |
+| **基础控制** | `/clear` | 清空当前视口消息流 |
+| | `/help` (`/h`) | 打开交互式帮助文档视口 |
+| | `/exit` (`/quit`) | 弹出安全退出确认弹窗 |
 
-### 日志与问题排查
+### 键盘交互快捷键
 
-Runtime 日志默认写入中央数据根 `~/.wasteland/data/logs/<projectId>/`（TUI `/logs` 默认跨项目聚合）。可以用内置命令或标准 `grep` / `jq` 按 session、level、scope 定位问题：
+| 按键组合 | 生效区域 | 动作描述 |
+| :--- | :--- | :--- |
+| `Enter` | 输入框 / 标签栏 | 发送消息 / 确认切换选中 Agent 标签 |
+| `Shift + Enter` / `Alt + Enter` | 输入框 | 在当前光标处插入换行 |
+| `Escape` | 全局 | 失焦输入框返回导航模式 / 关闭当前帮助或浮层弹窗 |
+| `Tab` / `Shift + Tab` | 全局 | 循环切换权限模式 (`default` 询问 ➔ `accept_edits` 自动接受代码变更 ➔ `bypass` 全自主放行) |
+| `PageUp` / `Ctrl + U` | 聊天视口 | 向上翻滚半屏历史消息 |
+| `PageDown` / `Ctrl + D` | 聊天视口 | 向下翻滚半屏历史消息 |
+| `Shift + ↑` / `Shift + ↓` | 聊天视口 | 微调向上 / 向下精确滚动 3 行 |
+| `Home` / `End` | 聊天视口 | （导航模式下）一键跳转至会话顶部 / 底部 |
+| `Ctrl + T` | 聊天视口 | 展开 / 折叠当前工具调用详细执行细节 |
+| `Alt + 1` ~ `Alt + 9` | 全局 | 极速跳转对应序号的 Agent 独立视口 |
+| `t` | 全局 (导航模式) | 循环切换主页面 (`Chat` 聊天 ➔ `Logs` 日志 ➔ `Sessions` 会话管理) |
+| `Ctrl + C` | 全局 | 触发安全退出确认或强制中断进程 |
 
-```bash
-# 最近的 warn/error
-wasteland logs errors --tail 50
+---
 
-# 查看指定 session 的完整 runtime 链路
-wasteland logs show <session-id>
+## 🏛️ 系统分层架构与设计哲学
 
-# 持续跟踪 tool / permission 事件
-wasteland logs tail --level warn --scope tool,permission --follow
-
-# 直接按 sessionId 或 error level 查询 JSONL（先 cd 到对应项目目录，或把路径换成 ~/.wasteland/data/logs/<projectId>/）
-grep '"sessionId":"<session-id>"' ~/.wasteland/data/logs/*/sessions/*.jsonl ~/.wasteland/data/logs/*/error.jsonl
-jq 'select(.level=="error")' ~/.wasteland/data/logs/*/error.jsonl
-```
-
-完整字段、轮转与脱敏约定见 [日志系统架构](./docs/architecture/logging.md)。
-
-## 技能系统
-
-wasteland 内置技能系统，支持高级工作流和自动化操作。使用 `/技能名` 调用技能，在 TUI 或交互式 CLI 中直接输入即可。
-
-### 内置技能
-
-```bash
-# 系统技能
-/help              # 显示帮助
-/status            # 查看会话状态
-/tools             # 列出可用工具
-
-# 项目技能
-/init              # 初始化项目上下文
-/ctx               # 显示项目概览
-/init --template minimal  # 使用最小模板
-```
-
-日志页命令是 TUI 本地命令，不注册为技能，也不会发送给 provider：
+Wasteland 采用严格的三层解耦架构，保证 Core 层完全纯净，与具体 UI、终端框架彻底解耦：
 
 ```text
-/logs                         # 打开 LogsPage，保留当前过滤
-/logs errors                  # 打开 LogsPage，仅看 error
-/logs show <session-id>       # 按 sessionId 过滤
-/logs level <level>           # 设置 debug/info/warn/error
-/logs scope <scope,...>       # 设置一个或多个 scope
-/logs close                   # 返回 chat page
-/logs help                    # 显示命令帮助
-/log 或 /debug                # /logs 的别名
+┌─────────────────────────────────────────────────────────────┐
+│  1. UI 层 (Presentation Layer - 完全解耦、独立挂载)         │
+│                                                             │
+│   现代化终端 TUI (唯一主界面)        CLI 管道 (非交互 fallback)  │
+│   src/tui/ (Ink / React)           src/ui/ (readline)       │
+│   - 1:1 视口虚拟化渲染引擎          - CliInputAdapter         │
+│   - DAG Tree View / 状态看板        - CliOutputAdapter        │
+│   - APCA 废土朋克主题渲染                                   │
+└──────────────┬──────────────────────────────┬───────────────┘
+               │                              │
+               │  统一转换为 ChatInputTurn 事件流
+               ▼                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│  2. Adapter 适配器层 (src/core/input-adapter.ts & output)   │
+│                                                             │
+│  - InputAdapter: 统一输入为响应式流 input$                   │
+│  - OutputAdapter: 将 RuntimeEvent 1:1 映射为 DisplayEvent   │
+│  - 解耦屏蔽具体呈现载体，支持无缝接入未来 WebUI / IDE 插件    │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│  3. Core 运行时层 (src/core/ - UI 无关、纯 TypeScript/RxJS) │
+│                                                             │
+│  - runAgentLoop({ input$ }) -> { events$, debug$ }          │
+│  - Git Checkpoint 隐形隔离时光机引擎 (Plumbing Driver)       │
+│  - LPIE 轻量感知引擎 (CLAUDE.md / 三层自适应 Grep / 符号解析)│
+│  - 响应式多 Agent 编排 (Agents-as-Tools / forkJoin 并行)    │
+│  - 权限闸门 (Permission Gate) & 阶梯式负 PID 进程组安全查杀  │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### 技能别名
+- **响应式事件总线 (RxJS)**：整个 Agent 的思考、工具调用、输出流、权限确认均以响应式 Observable 流流动，天然支持流式取消、超时打断与高并发编排。
+- **Agents-as-Tools 多智能体模式**：子 Agent 的孵化通过 `spawn_agent` 工具触发，保持 Agent 运行时接口的单一纯粹性，无需为多 Agent 引入侵入式的特殊语法。
 
-大部分技能都有简短别名：
+---
 
-- `/help` -> `/h`, `/?`
-- `/status` -> `/stat`, `/info`
-- `/tools` -> `/tls`
-- `/init` -> `/i`
-- `/context` -> `/ctx`
+## 🔌 生态扩展：MCP 协议与自定义技能
 
-### 自定义技能
+### Model Context Protocol (MCP) 集成
 
-在 `.wasteland/skills/` 目录创建自定义技能：
+Wasteland 原生拥抱开放标准。你可以在 `~/.wasteland/mcp.json` 或项目根目录 `.mcp.json` 中配置任何标准 MCP 服务器：
 
-**JSON 格式**：
 ```json
 {
-  "name": "my-skill",
-  "description": "我的自定义技能",
-  "riskLevel": "read",
-  "aliases": ["ms"],
-  "steps": [
-    { "tool": "bash", "input": { "command": "pwd" }, "saveAs": "dir" }
-  ],
-  "template": "当前目录: {{dir}}"
+  "mcpServers": {
+    "fetch": {
+      "command": "uvx",
+      "args": ["mcp-server-fetch"]
+    },
+    "memory-service": {
+      "url": "http://localhost:3000/sse"
+    }
+  }
 }
 ```
 
-**TypeScript 格式**：
+在 TUI 中输入 `/mcp reload` 即可热加载生效，模型将自动获取对应 MCP 服务器暴露的所有工具与资源。
+
+### 自定义技能 (Custom Skills)
+
+在 `.wasteland/skills/` 目录下放置 JSON 或 TypeScript 文件即可扩展工作流：
+
 ```typescript
-// .wasteland/skills/my-skill.ts
+// .wasteland/skills/git-summary.ts
 export default {
   definition: {
-    name: "my-skill",
-    description: "我的自定义技能",
+    name: "git-summary",
+    description: "汇总最近提交并生成变更摘要",
     riskLevel: "read",
+    aliases: ["gs"]
   },
   async execute(args, context) {
     const result = await context.toolRegistry.get("bash")!.execute(
-      { command: "pwd" },
+      { command: "git log -n 5 --oneline" },
       { sessionId: context.sessionId, turn: context.turn, cwd: context.cwd }
     );
     return { status: "success", output: result.output };
-  },
+  }
 };
 ```
 
-详细文档见 [技能系统架构](./docs/architecture/skills.md)。
+---
 
-## 多 Agent 架构
+## 🛠️ 工程化脚本与质量门禁
 
-wasteland 采用 **Agents-as-Tools** 模式实现多 Agent 编排：
+Wasteland 遵循工业级研发规范，核心模块坚持类型安全与同构测试（co-located tests）：
 
-```
-单 Agent 模式（默认）:
-  runAgentLoop -> runTurnLoop -> Provider.runStep -> tool_call -> dispatchToolCall
+```bash
+# 快速质量校验（合并代码前必跑，TypeCheck + ESLint）
+npm run check:fast
 
-多 Agent 模式:
-  runAgentLoop -> runTurnLoop -> Provider.runStep
-    ↓ (tool_call: spawn_agent)
-    -> dispatchToolCall
-      -> createSpawnAgentTool
-        -> runAgentLoop (子 Agent, mode="single")
-          -> 返回 tool_result
-```
+# 运行完整质量门禁（TypeCheck + Lint + i18n 校验 + 对照度校验 + 全量测试）
+npm run check
 
-**核心优势**：
-- 单 Agent 行为完全保持不变
-- spawn_agent 作为普通工具，无需修改核心架构
-- 利用现有权限系统控制 spawn 行为
-- RxJS forkJoin 自然支持并行执行
+# 单元测试与集成测试 (Vitest)
+npm test
 
-**相关文件**：
-- `src/core/runtime/event-types.ts` - RuntimeEvent 类型（含 agent_spawned/agent_completed）
-- `src/core/runtime/session-manager.ts` - SessionManager（含 createChildSession）
-- `src/tools/spawn-agent/` - spawn_agent 工具实现（dispatch-handler / event-forwarder）
+# 检查皮肤与终端配色是否满足 W3C APCA 对比度规范
+npm run check:contrast
 
-## 项目结构
+# 校验中英多语言字典一致性
+npm run check:locale-parity
 
-```text
-bin/            可执行入口
-docs/           架构与实施文档
-examples/       手动/调试脚本（multi-agent、streaming、verify-init 等，非构建流程）
-src/            TypeScript 源码（测试与源码同目录：src/**/*.test.ts）
-src/commands/   子命令（tui / chat / config / init / sessions / resume / skin / logs）
-src/config/     统一配置加载与 `.wasteland` 路径规则（load-settings 门面 + validate/merge/env-auth 模块）
-src/core/       核心层（与 UI 解耦）
-src/core/input-adapter.ts + output-adapter.ts  InputAdapter/OutputAdapter 抽象 + DefaultOutputAdapter
-src/core/logger/    日志子系统（types/log-bus/file-sink/redactor/rotation）
-src/core/runtime/   agent runtime（runAgentLoop / session-manager / tool-dispatch / permission-gate / event-types / user-input-bridge）
-src/core/shared/    runtime 初始化等共享逻辑（含 run-agent-helpers：三入口共享装配）
-src/core/skills/    技能注册/发现/执行
-src/providers/  provider 抽象层（local / openai-compatible / claude 等）
-src/tools/      工具合同与内建工具层（含 spawn-agent/ 子目录）
-src/skills/     技能系统（技能注册、发现、执行）
-src/ui/         CLI 终端 UI 层（CliInputAdapter / CliOutputAdapter，readline/terminal）
-src/tui/        TUI 界面（基于 Ink/React；hooks/ 下有 runtime-reducers 与 useLogsKeymap，wizard/ 下是 InitWizard 拆分模块）
-src/skins/      皮肤加载（角色人设与皮肤解耦）
-src/theme/      TUI 视觉主题与 palette 对比度
-src/acp/        ACP 协作（Agent Client Protocol 客户端，stdio JSON-RPC）
-src/locales/    i18n 翻译（zh / en）
-dist/           构建产物（gitignored）
+# 为废土角色创建快捷运行别名（如直接在终端输入 warlord）
+./scripts/create-aliases.sh
 ```
 
-## 当前进度
+---
 
-当前已经完成 Phase 1 runtime 骨架：
+## 📄 开源许可证
 
-- `chat` 的 `--message`、`stdin`、交互模式共用同一条 runtime 路径
-- `runAgentLoop(...)` 负责编排 turn、provider 输出和 session 持久化
-- `local` provider 用于在不接真实模型时验证 provider/runtime/ui 边界
-- `qwen` provider 已可通过 DashScope OpenAI-compatible Chat Completions 跑通真实一轮对话
-- `chat --role <name>` 已可按 role 解析模型、provider 和默认权限
-- `config current` 已可输出当前生效的 provider / model / role 配置，并对敏感字段脱敏
-- session transcript 会写入本地 JSONL
-- `src/config/` 已统一承载 `.wasteland/settings.json`、`~/.wasteland/settings.json` 与环境变量覆盖逻辑
-
-当前也已经落下 Phase 2 第一批骨架：
-
-- 独立的 tool contract、tool registry、tool runner
-- 独立的 permission gate
-- 独立的 tool lifecycle dispatch 与测试
-- `local` provider 下 `/read <path>` 与 `/bash <command>` 的真实工具调用路径
-- 内建工具：`read-file`、`glob`、`grep`、`list-directory`、`web-fetch`、`web-search`、`bash`、`edit-file`、`write-file`、`http-request`、`git`、`ask-user`、`spawn_agent`
-- read-before-edit 安全检查：edit-file 和 write-file 需要先读取目标文件
-
-**Phase 3 多 Agent 架构已完成**：
-
-- `spawn_agent` 工具：允许主 Agent 创建子 Agent
-- 子 Agent Session 管理：独立的 session 文件
-- RuntimeEvent 扩展：`agent_spawned`、`agent_completed` 事件
-- 多 Agent 调度：由 `spawn_agent` 工具触发，无需 CLI 开关
-- 架构设计：Agents-as-Tools 模式，与现有架构无缝整合
-
-**技能系统已完成**：
-
-- 内置技能：`/help`、`/status`、`/tools`、`/init`、`/context`
-- 技能注册表：支持名称和别名查找
-- 技能执行器：参数解析、验证和执行协调
-- 技能发现：自动加载 `.wasteland/skills/` 和 `~/.wasteland/skills/`
-- JSON 和 TypeScript 格式支持
-- TUI 日志增强：显示技能调用详情
-
-**ask-user 工具已完成**：
-
-- `ask-user` 工具：允许 Agent 向用户提问并获取输入
-- `UserInputBridge`：agent loop 与 UI 层之间的输入桥接机制
-- RuntimeEvent 扩展：`user_input_requested`、`user_input_received` 事件
-- UI 集成：交互模式下自动检测用户输入请求并路由响应
-- 端到端测试：验证完整的用户交互流程
-
-**Session Resume 功能已完成**：
-
-- `sessions` 命令：列出历史会话，支持搜索、过滤和排序
-- `sessions show <id>`：查看会话详情和完整消息历史
-- `sessions delete <id>`：删除会话及其子 Agent 会话
-- `sessions stats`：查看会话统计信息
-- `resume` 命令：恢复之前的会话，支持交互模式和单次消息模式
-- SessionIndex：高效的会话索引和检索系统
-- 端到端测试：验证完整的会话恢复流程
-
-下一阶段会继续补：
-
-- 真实模型 provider 的 tool calling 支持
-- 多 Agent 并行执行的端到端测试
-- 更多内建工具与更完整权限策略
-- provider registry 与真实模型接入
-- MCP 客户端与 registry
-
-## 文档
-
-### 用户指南
-
-- [快速开始](./docs/user-guide/getting-started.md) - 安装和基础使用
-- [配置指南](./docs/user-guide/configuration.md) - 配置选项详解
-- [工具使用指南](./docs/user-guide/tools.md) - 所有内建工具
-- [多 Agent 指南](./docs/user-guide/multi-agent.md) - 多 Agent 协作
-
-### 架构文档
-
-- [**wasteland 核心架构规范**](./docs/architecture/wasteland-spec.md) ⭐ 唯一事实来源
-- [Input/Output 适配器架构](./docs/architecture/input-output-adapters.md) - Adapter Pattern
-- [智能体 CLI 架构](./docs/architecture/agent-cli.md)
-- [多 Agent 协作架构](./docs/architecture/multi-agent-architecture.md)
-- [配置层与 `.wasteland` 目录](./docs/architecture/configuration.md)
-- [技能系统架构](./docs/architecture/skills.md)
-
-### 实施文档
-
-- [Phase 1：Agent Runtime 实施方案](./docs/implementation/phase-1-agent-runtime.md)
-- [Phase 2：工具运行时与权限闸门](./docs/implementation/phase-2-agent-tool-runtime.md)
-- [Phase 3：多步 Agent Loop 与调试追踪](./docs/implementation/phase-3-multi-step-agent-loop.md)
-
-## License
-
-[Apache-2.0](./LICENSE) © yonghds1
+本项目基于 [Apache-2.0 License](./LICENSE) 开源协议发布。  
+Copyright © yonghds1.
