@@ -13,7 +13,7 @@ import { initI18n } from '@locales/i18n.js';
 // ============================================================
 
 describe('PromptAssembler 内置角色模板', () => {
-  const cwd = process.cwd();
+  const cwd = join(tmpdir(), "wasteland-empty-cwd");
   const baseContext = (): PromptAssemblyContext => ({ cwd, variables: {} });
 
   beforeAll(async () => {
@@ -71,7 +71,7 @@ describe('PromptAssembler 内置角色模板', () => {
 // ============================================================
 
 describe('PromptAssembler 简单字符串引用', () => {
-  const cwd = process.cwd();
+  const cwd = join(tmpdir(), "wasteland-empty-cwd");
   const context = (): PromptAssemblyContext => ({ cwd, variables: {} });
 
   it('非内置、非文件后缀的字符串作为简单提示词', () => {
@@ -94,7 +94,7 @@ describe('PromptAssembler 简单字符串引用', () => {
 // ============================================================
 
 describe('PromptAssembler 内联模板', () => {
-  const cwd = process.cwd();
+  const cwd = join(tmpdir(), "wasteland-empty-cwd");
   const context = (): PromptAssemblyContext => ({ cwd, variables: {} });
 
   it('按 order 升序重新排列乱序段落', () => {
@@ -150,7 +150,7 @@ describe('PromptAssembler 内联模板', () => {
 // ============================================================
 
 describe('PromptAssembler 输出格式', () => {
-  const cwd = process.cwd();
+  const cwd = join(tmpdir(), "wasteland-empty-cwd");
   const context = (): PromptAssemblyContext => ({ cwd, variables: {} });
 
   it('markdown 用 ## 标题包裹', () => {
@@ -299,7 +299,7 @@ describe('PromptAssembler 错误处理', () => {
 // ============================================================
 
 describe('PromptAssembler 变量插值语义', () => {
-  const cwd = process.cwd();
+  const cwd = join(tmpdir(), "wasteland-empty-cwd");
 
   it('context.variables 不会注入到段落内容（保持原样）', () => {
     const template: PromptTemplate = {
@@ -330,7 +330,7 @@ describe('PromptAssembler 变量插值语义', () => {
 // ============================================================
 
 describe('assemblePrompt 便捷函数', () => {
-  const cwd = process.cwd();
+  const cwd = join(tmpdir(), "wasteland-empty-cwd");
 
   it('返回组装后的纯文本 content', () => {
     const text = assemblePrompt('role-worker', { cwd, variables: {} });

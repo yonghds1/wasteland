@@ -1,32 +1,34 @@
 /**
- * grep.ts - 文本搜索工具
+ * grep.ts - 极速文本搜索探针
  *
  * 在文件中搜索匹配指定模式的文本行。
- *
- * ## 功能特性
- * - 支持正则表达式和普通字符串搜索
- * - 支持指定搜索目录（默认为当前工作目录）
- * - 支持文件包含/排除模式过滤
- * - 返回匹配行及行号，附带文件路径
+ * 支持三层引擎检测降级（ripgrep > git-grep > node fallback），
+ * 支持上下文行（contextLines）与最大匹配限制（maxMatches）。
  *
  * ## 风险等级
  * read - 只读操作，不修改文件系统
- *
- * ## 参数
- * - pattern: 搜索模式（必需，支持正则表达式）
- * - path: 搜索路径（可选，默认为当前工作目录）
- * - include: 文件包含模式（可选，如 "*.ts"）
- * - ignoreCase: 是否忽略大小写（可选，默认 false）
  */
 
-import { readFile, stat } from 'node:fs/promises';
+import { execFile } from 'node:child_process';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import { join, relative } from 'node:path';
+import { promisify } from 'node:util';
 import { z } from 'zod';
 import { zodToJsonSchema } from '@alcyone-labs/zod-to-json-schema';
 
 import { resolveWithinCwd } from '../utils/path-utils.js';
-import type { AgentTool, ToolExecutionResult } from '../core/tool-types.js';
-import type { JsonSchema } from '../core/tool-types.js';
+import type { AgentTool, JsonSchema, ToolExecutionResult } from '../core/tool-types.js';
+import { detectSearchEngine } from './grep/search-engine-detector.js';
+import {
+  formatGrepOutput,
+  globToRegex,
+  parseRawGrepOutput,
+  truncateLine,
+  type FileGrepResult,
+  type GrepLineItem,
+} from './grep/grep-formatter.js';
+
+const execFileAsync = promisify(execFile);
 
 // ============================================================
 // Zod Schema
@@ -34,9 +36,11 @@ import type { JsonSchema } from '../core/tool-types.js';
 
 export const grepInputSchema = z.object({
   pattern: z.string().min(1).describe('搜索模式（支持正则表达式）'),
-  path: z.string().optional().describe('搜索路径（默认当前工作目录）'),
+  path: z.string().optional().describe('搜索相对路径（默认当前工作目录）'),
   include: z.string().optional().describe('文件包含模式（如 "*.ts"）'),
   ignoreCase: z.boolean().default(false).describe('是否忽略大小写'),
+  contextLines: z.number().int().min(0).max(10).default(2).describe('匹配行前后的上下文行数'),
+  maxMatches: z.number().int().min(1).max(500).default(100).describe('最大匹配数'),
 });
 
 export type GrepInput = z.infer<typeof grepInputSchema>;
@@ -45,19 +49,9 @@ export type GrepInput = z.infer<typeof grepInputSchema>;
 // 配置常量
 // ============================================================
 
-/** 单文件最大搜索行数 */
+const MAX_FILES_TO_SEARCH = 200;
 const MAX_LINES_PER_FILE = 2000;
 
-/** 最大搜索文件数 */
-const MAX_FILES_TO_SEARCH = 100;
-
-/** 最大匹配结果数 */
-const MAX_MATCHES = 200;
-
-/** 单行最大截断长度 */
-const MAX_LINE_LENGTH = 300;
-
-/** 默认忽略的目录 */
 const DEFAULT_IGNORE_DIRS = new Set([
   'node_modules',
   '.git',
@@ -71,29 +65,12 @@ const DEFAULT_IGNORE_DIRS = new Set([
 ]);
 
 // ============================================================
-// 类型定义
-// ============================================================
-
-type GrepMatch = {
-  filePath: string;
-  line: number;
-  content: string;
-};
-
-// ============================================================
 // 辅助函数
 // ============================================================
 
-/**
- * 编译正则表达式
- *
- * @param pattern - 搜索模式
- * @param ignoreCase - 是否忽略大小写
- * @returns 编译后的正则表达式，或错误信息
- */
-function compilePattern(
+export function compilePattern(
   pattern: string,
-  ignoreCase: boolean
+  ignoreCase: boolean,
 ): { regex: RegExp } | { error: string } {
   try {
     const flags = ignoreCase ? 'gim' : 'gm';
@@ -103,31 +80,10 @@ function compilePattern(
   }
 }
 
-/**
- * 截断过长的行
- *
- * @param line - 原始行内容
- * @returns 截断后的行内容
- */
-function truncateLine(line: string): string {
-  if (line.length <= MAX_LINE_LENGTH) {
-    return line;
-  }
-  return line.slice(0, MAX_LINE_LENGTH) + '…';
-}
-
-/**
- * 收集需要搜索的文件列表
- *
- * @param searchDir - 搜索根目录
- * @param include - 文件包含模式（glob）
- * @param maxDepth - 最大递归深度
- * @returns 文件路径数组
- */
 async function collectFiles(
   searchDir: string,
   include?: string,
-  maxDepth: number = 10
+  maxDepth = 10,
 ): Promise<string[]> {
   const files: string[] = [];
   const includeRegex = include ? globToRegex(include) : null;
@@ -139,7 +95,6 @@ async function collectFiles(
 
     let entries;
     try {
-      const { readdir } = await import('node:fs/promises');
       entries = await readdir(dir, { withFileTypes: true });
     } catch {
       return;
@@ -172,99 +127,151 @@ async function collectFiles(
   return files;
 }
 
-/**
- * 将简单 glob 模式转换为正则表达式
- *
- * 仅支持 * 和 ? 通配符
- *
- * @param pattern - glob 模式
- * @returns 对应的正则表达式
- */
-function globToRegex(pattern: string): RegExp {
-  const escaped = pattern
-    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
-    .replace(/\*/g, '.*')
-    .replace(/\?/g, '.');
-  return new RegExp(`^${escaped}$`);
-}
+// ============================================================
+// 三层引擎实现
+// ============================================================
 
-/**
- * 在单个文件中搜索匹配
- *
- * @param filePath - 文件路径
- * @param regex - 搜索正则
- * @param baseDir - 基准目录（用于计算相对路径）
- * @returns 匹配结果数组
- */
-async function searchInFile(
-  filePath: string,
-  regex: RegExp,
-  baseDir: string
-): Promise<GrepMatch[]> {
-  const matches: GrepMatch[] = [];
+async function runRipgrep(
+  pattern: string,
+  searchRelPath: string | undefined,
+  include: string | undefined,
+  ignoreCase: boolean,
+  contextLines: number,
+  maxMatches: number,
+  cwd: string,
+): Promise<FileGrepResult[]> {
+  const args = ['-n', '--color=never', '--no-heading'];
+  if (contextLines > 0) {
+    args.push('-C', String(contextLines));
+  }
+  if (ignoreCase) {
+    args.push('-i');
+  }
+  if (include) {
+    args.push('--glob', include);
+  }
+  args.push('--max-count', String(maxMatches));
+  args.push(pattern);
+  if (searchRelPath) {
+    args.push(searchRelPath);
+  }
 
   try {
-    const content = await readFile(filePath, 'utf-8');
-    const lines = content.split('\n');
-
-    const lineLimit = Math.min(lines.length, MAX_LINES_PER_FILE);
-
-    for (let i = 0; i < lineLimit; i++) {
-      // 重置正则 lastIndex（因为有 g 标志）
-      regex.lastIndex = 0;
-
-      if (regex.test(lines[i])) {
-        matches.push({
-          filePath: relative(baseDir, filePath),
-          line: i + 1,
-          content: truncateLine(lines[i]),
-        });
-      }
+    const { stdout } = await execFileAsync('rg', args, {
+      cwd,
+      maxBuffer: 10 * 1024 * 1024,
+    });
+    return parseRawGrepOutput(stdout, maxMatches, include);
+  } catch (error: unknown) {
+    if (typeof error === 'object' && error !== null && 'code' in error && (error as { code: number }).code === 1) {
+      return [];
     }
-  } catch {
-    // 跳过无法读取的文件（二进制文件、权限不足等）
+    throw error;
   }
-
-  return matches;
 }
 
-/**
- * 格式化搜索结果
- *
- * @param matches - 所有匹配结果
- * @param pattern - 搜索模式
- * @param baseDir - 搜索目录
- * @returns 格式化后的输出文本
- */
-function formatResult(matches: GrepMatch[], pattern: string): string {
-  if (matches.length === 0) {
-    return `🔍 grep "${pattern}" — no matches found`;
+async function runGitGrep(
+  pattern: string,
+  searchRelPath: string | undefined,
+  include: string | undefined,
+  ignoreCase: boolean,
+  contextLines: number,
+  maxMatches: number,
+  cwd: string,
+): Promise<FileGrepResult[]> {
+  const args = ['grep', '-n', '--no-color'];
+  if (contextLines > 0) {
+    args.push('-C', String(contextLines));
+  }
+  if (ignoreCase) {
+    args.push('-i');
+  }
+  args.push('-e', pattern);
+  args.push('--');
+  if (searchRelPath) {
+    args.push(searchRelPath);
   }
 
-  // 按文件分组
-  const grouped = new Map<string, GrepMatch[]>();
-  for (const match of matches) {
-    const group = grouped.get(match.filePath) ?? [];
-    group.push(match);
-    grouped.set(match.filePath, group);
+  try {
+    const { stdout } = await execFileAsync('git', args, {
+      cwd,
+      maxBuffer: 10 * 1024 * 1024,
+    });
+    return parseRawGrepOutput(stdout, maxMatches, include);
+  } catch (error: unknown) {
+    if (typeof error === 'object' && error !== null && 'code' in error && (error as { code: number }).code === 1) {
+      return [];
+    }
+    throw error;
+  }
+}
+
+export async function runNodeFallback(
+  regex: RegExp,
+  searchDir: string,
+  include: string | undefined,
+  contextLines: number,
+  maxMatches: number,
+  cwd: string,
+): Promise<FileGrepResult[]> {
+  const s = await stat(searchDir);
+  const files = s.isFile() ? [searchDir] : await collectFiles(searchDir, include);
+  const results: FileGrepResult[] = [];
+  let totalMatches = 0;
+
+  for (const filePath of files) {
+    if (totalMatches >= maxMatches) {
+      break;
+    }
+
+    try {
+      const content = await readFile(filePath, 'utf-8');
+      const lines = content.split('\n');
+      const lineLimit = Math.min(lines.length, MAX_LINES_PER_FILE);
+
+      const matchedIndices = new Set<number>();
+      for (let i = 0; i < lineLimit; i++) {
+        regex.lastIndex = 0;
+        if (regex.test(lines[i])) {
+          matchedIndices.add(i);
+          totalMatches++;
+          if (totalMatches >= maxMatches) {
+            break;
+          }
+        }
+      }
+
+      if (matchedIndices.size === 0) {
+        continue;
+      }
+
+      const neededLineIndices = new Set<number>();
+      for (const idx of matchedIndices) {
+        const start = Math.max(0, idx - contextLines);
+        const end = Math.min(lines.length - 1, idx + contextLines);
+        for (let l = start; l <= end; l++) {
+          neededLineIndices.add(l);
+        }
+      }
+
+      const fileLines: GrepLineItem[] = Array.from(neededLineIndices)
+        .sort((a, b) => a - b)
+        .map((idx) => ({
+          lineNum: idx + 1,
+          isMatch: matchedIndices.has(idx),
+          content: truncateLine(lines[idx]),
+        }));
+
+      results.push({
+        filePath: relative(cwd, filePath),
+        lines: fileLines,
+      });
+    } catch {
+      // 忽略无法读取的文件
+    }
   }
 
-  const header = `🔍 grep "${pattern}" — ${matches.length} ${matches.length === 1 ? 'match' : 'matches'} in ${grouped.size} ${grouped.size === 1 ? 'file' : 'files'}\n${'─'.repeat(48)}`;
-
-  const body = Array.from(grouped.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([filePath, fileMatches]) => {
-      const matchLines = fileMatches
-        .map((m) => `  ${String(m.line).padStart(4)} │ ${m.content}`)
-        .join('\n');
-      return `📄 ${filePath}\n${matchLines}`;
-    })
-    .join('\n\n');
-
-  const truncationNote =
-    matches.length >= MAX_MATCHES ? `\n\n⚠ Results truncated at ${MAX_MATCHES} matches.` : '';
-
-  return `${header}\n\n${body}${truncationNote}`;
+  return results;
 }
 
 // ============================================================
@@ -275,18 +282,16 @@ export function createGrepTool(): AgentTool {
   return {
     name: 'grep',
     riskLevel: 'read',
-    description: '在文件中搜索匹配指定模式的文本行',
+    description: '在文件中搜索匹配指定模式的文本行（支持上下文行与极速引擎加速）',
     inputSchema: zodToJsonSchema(grepInputSchema) as JsonSchema,
 
     async execute(input, context): Promise<ToolExecutionResult> {
       const parsed = grepInputSchema.safeParse(input);
       if (!parsed.success) {
-        return { status: 'error', error: parsed.error.issues.map(i => i.message).join(', ') };
+        return { status: 'error', error: parsed.error.issues.map((i) => i.message).join(', ') };
       }
 
-      // 编译正则表达式
       const compiled = compilePattern(parsed.data.pattern, parsed.data.ignoreCase);
-
       if ('error' in compiled) {
         return {
           status: 'error',
@@ -294,7 +299,6 @@ export function createGrepTool(): AgentTool {
         };
       }
 
-      // 解析搜索路径（基于 realpath 防止符号链接穿越与路径遍历）
       const searchDir = parsed.data.path
         ? await resolveWithinCwd(context.cwd, parsed.data.path)
         : context.cwd;
@@ -306,15 +310,8 @@ export function createGrepTool(): AgentTool {
         };
       }
 
-      // 验证路径存在且是目录
       try {
-        const s = await stat(searchDir);
-        if (!s.isDirectory()) {
-          return {
-            status: 'error',
-            error: `路径 "${parsed.data.path}" 不是一个目录。`,
-          };
-        }
+        await stat(searchDir);
       } catch {
         return {
           status: 'error',
@@ -322,32 +319,58 @@ export function createGrepTool(): AgentTool {
         };
       }
 
+      const searchRelPath = parsed.data.path ? relative(context.cwd, searchDir) : undefined;
+      let engine = await detectSearchEngine(context.cwd);
+      let results: FileGrepResult[];
+
       try {
-        // 收集文件
-        const files = await collectFiles(searchDir, parsed.data.include);
-
-        // 在所有文件中搜索
-        const allMatches: GrepMatch[] = [];
-
-        for (const file of files) {
-          if (allMatches.length >= MAX_MATCHES) {
-            break;
-          }
-
-          const fileMatches = await searchInFile(file, compiled.regex, searchDir);
-          allMatches.push(...fileMatches);
+        if (engine === 'ripgrep') {
+          results = await runRipgrep(
+            parsed.data.pattern,
+            searchRelPath,
+            parsed.data.include,
+            parsed.data.ignoreCase,
+            parsed.data.contextLines,
+            parsed.data.maxMatches,
+            context.cwd,
+          );
+        } else if (engine === 'git-grep') {
+          results = await runGitGrep(
+            parsed.data.pattern,
+            searchRelPath,
+            parsed.data.include,
+            parsed.data.ignoreCase,
+            parsed.data.contextLines,
+            parsed.data.maxMatches,
+            context.cwd,
+          );
+        } else {
+          results = await runNodeFallback(
+            compiled.regex,
+            searchDir,
+            parsed.data.include,
+            parsed.data.contextLines,
+            parsed.data.maxMatches,
+            context.cwd,
+          );
         }
-
-        return {
-          status: 'success',
-          output: formatResult(allMatches.slice(0, MAX_MATCHES), parsed.data.pattern),
-        };
-      } catch (error) {
-        return {
-          status: 'error',
-          error: error instanceof Error ? error.message : String(error),
-        };
+      } catch {
+        // 当外部工具发生意外异常时，平滑降级到 Node 兜底引擎
+        engine = 'node';
+        results = await runNodeFallback(
+          compiled.regex,
+          searchDir,
+          parsed.data.include,
+          parsed.data.contextLines,
+          parsed.data.maxMatches,
+          context.cwd,
+        );
       }
+
+      return {
+        status: 'success',
+        output: formatGrepOutput(results, engine),
+      };
     },
   };
 }

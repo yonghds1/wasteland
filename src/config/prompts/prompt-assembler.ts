@@ -18,6 +18,7 @@ import type {
   PromptTemplateRef,
   ResolvedPrompt,
 } from './prompt-types.js';
+import { getProjectRulesSection } from './project-rules-loader.js';
 import { getBuiltinRole, isBuiltinRoleId } from './role-templates.js';
 import { t } from '@locales/index.js';
 
@@ -27,21 +28,9 @@ import { t } from '@locales/index.js';
 
 /**
  * 解析模板引用
- *
- * 支持多种形式：
- * 1. 字符串 ID（内置模板）→ 查找预定义模板
- * 2. 字符串路径（文件）→ 加载 JSON 文件
- * 3. 简单字符串 → 包装成简单模板
- * 4. 内联对象 → 直接使用
- *
- * @param ref - 模板引用
- * @param cwd - 工作目录（用于解析文件路径）
- * @returns 解析后的模板
  */
 function resolveTemplateRef(ref: PromptTemplateRef, cwd: string): PromptTemplate {
-  // 字符串引用
   if (typeof ref === 'string') {
-    // 检查是否为内置角色 ID
     if (isBuiltinRoleId(ref)) {
       const template = getBuiltinRole(ref);
       if (!template) {
@@ -50,25 +39,16 @@ function resolveTemplateRef(ref: PromptTemplateRef, cwd: string): PromptTemplate
       return template;
     }
 
-    // 检查是否为文件路径
     if (ref.endsWith('.json') || ref.endsWith('.md') || ref.endsWith('.txt')) {
       return loadTemplateFile(resolve(cwd, ref));
     }
 
-    // 其他字符串作为简单提示词处理
     return {
       name: 'simple-prompt',
-      sections: [
-        {
-          id: 'main',
-          content: ref,
-          order: 10,
-        },
-      ],
+      sections: [{ id: 'main', content: ref, order: 10 }],
     };
   }
 
-  // 内联定义
   if ('sections' in ref) {
     return ref;
   }
@@ -78,9 +58,6 @@ function resolveTemplateRef(ref: PromptTemplateRef, cwd: string): PromptTemplate
 
 /**
  * 从文件加载模板
- *
- * @param filePath - 文件路径
- * @returns 模板对象
  */
 function loadTemplateFile(filePath: string): PromptTemplate {
   if (!existsSync(filePath)) {
@@ -89,21 +66,13 @@ function loadTemplateFile(filePath: string): PromptTemplate {
 
   const content = readFileSync(filePath, 'utf-8');
 
-  // JSON 文件
   if (filePath.endsWith('.json')) {
     return JSON.parse(content) as PromptTemplate;
   }
 
-  // Markdown/Text 文件 → 转为简单模板
   return {
     name: `template:${filePath}`,
-    sections: [
-      {
-        id: 'main',
-        content: content.trim(),
-        order: 10,
-      },
-    ],
+    sections: [{ id: 'main', content: content.trim(), order: 10 }],
   };
 }
 
@@ -112,20 +81,13 @@ function loadTemplateFile(filePath: string): PromptTemplate {
 // ============================================================
 
 /**
- * 加载段落内容
- *
- * 支持字符串内容或文件引用 { $ref: "path" }
- *
- * @param section - 段落定义
- * @param cwd - 工作目录
- * @returns 段落内容字符串
+ * 加载段落内容（支持字符串内容或文件引用 { $ref: "path" }）
  */
 function loadSectionContent(section: PromptSection, cwd: string): string {
   if (typeof section.content === 'string') {
     return section.content;
   }
 
-  // 文件引用
   const filePath = resolve(cwd, section.content.$ref);
   if (!existsSync(filePath)) {
     throw new Error(t('prompts.sectionFileNotFound', { filePath }));
@@ -140,29 +102,29 @@ function loadSectionContent(section: PromptSection, cwd: string): string {
 
 /**
  * 组装提示词
- *
- * @param template - 模板定义
- * @param context - 组装上下文
- * @param format - 输出格式：'markdown'（## 标题）或 'xml'（<section> 标签）
- * @returns 组装结果
  */
 function assembleTemplate(
   template: PromptTemplate,
   context: PromptAssemblyContext,
   format: 'markdown' | 'xml' = 'markdown'
 ): ResolvedPrompt {
-  // 加载每个段落
+  const sectionsToAssemble = [...template.sections];
+
+  // 自动探测并注入工作区项目规则（若工作区存在规则且模板未显式定义 project-rules）
+  if (context.cwd && !sectionsToAssemble.some((s) => s.id === 'project-rules')) {
+    const rulesSection = getProjectRulesSection(context.cwd);
+    if (rulesSection) {
+      sectionsToAssemble.push(rulesSection);
+    }
+  }
+
   const resolvedSections: Array<{ id: string; content: string; order: number }> = [];
 
-  for (const section of template.sections) {
-    // 加载内容
+  for (const section of sectionsToAssemble) {
     const content = loadSectionContent(section, context.cwd);
-
-    // 跳过空内容
     if (!content.trim()) {
       continue;
     }
-
     resolvedSections.push({
       id: section.id,
       content,
@@ -178,7 +140,6 @@ function assembleTemplate(
     if (format === 'xml') {
       return `<${s.id}>\n${s.content}\n</${s.id}>`;
     }
-    // markdown: 用 ## 标题 + 内容
     const title = s.id
       .replace(/-/g, ' ')
       .replace(/\b\w/g, (c) => c.toUpperCase());
@@ -206,23 +167,12 @@ export class PromptAssembler {
     this.cwd = params.cwd;
   }
 
-  /**
-   * 组装提示词
-   *
-   * @param ref - 模板引用
-   * @param context - 组装上下文
-   * @param format - 输出格式：'markdown'（## 标题）或 'xml'（<section> 标签）
-   * @returns 组装结果
-   */
   assemble(
     ref: PromptTemplateRef,
     context: PromptAssemblyContext,
     format: 'markdown' | 'xml' = 'markdown'
   ): ResolvedPrompt {
-    // 解析模板引用
     const template = resolveTemplateRef(ref, this.cwd);
-
-    // 组装
     return assembleTemplate(template, context, format);
   }
 }
@@ -233,11 +183,6 @@ export class PromptAssembler {
 
 /**
  * 组装提示词（便捷函数）
- *
- * @param ref - 模板引用
- * @param context - 组装上下文
- * @param format - 输出格式：'markdown'（## 标题）或 'xml'（<section> 标签）
- * @returns 组装后的提示词字符串
  */
 export function assemblePrompt(
   ref: PromptTemplateRef,
