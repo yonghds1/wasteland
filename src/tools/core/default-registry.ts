@@ -2,6 +2,7 @@ import { createBashTool } from '../sys/bash.js';
 import { createEditFileTool } from '../fs/edit-file.js';
 import { createGlobTool } from '../fs/glob.js';
 import { createGrepTool } from '../sys/grep.js';
+import { createFindSymbolTool } from '../code/find-symbol.js';
 import { createGitTool } from '../sys/git.js';
 import { createListDirectoryTool } from '../fs/list-directory.js';
 import { ToolRegistry } from './tool-registry.js';
@@ -111,6 +112,7 @@ export function createDefaultToolRegistry(
     createReadFileTool(),
     createGlobTool(),
     createGrepTool(),
+    createFindSymbolTool(),
     createListDirectoryTool(),
     createWebFetchTool(),
     createWebSearchTool(),
