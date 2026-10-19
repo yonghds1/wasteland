@@ -594,6 +594,12 @@
           "follow": "持续监控文件新条目"
         }
       }
+    },
+    "doctor": {
+      "description": "诊断系统健康状况与环境依赖",
+      "options": {
+        "json": "以 JSON 格式输出诊断报告"
+      }
     }
   },
   "tui": {

@@ -594,6 +594,12 @@
           "follow": "Keep watching the file for new entries"
         }
       }
+    },
+    "doctor": {
+      "description": "Diagnose system health and environment dependencies",
+      "options": {
+        "json": "Output diagnostics report in JSON format"
+      }
     }
   },
   "tui": {

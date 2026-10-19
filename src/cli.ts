@@ -14,6 +14,7 @@ import { createSkinCommand } from './commands/skin.js';
 import { createExportCommand } from './commands/export.js';
 import { createLogsCommand } from './commands/logs.js';
 import { createSkillsCommand } from './commands/skills.js';
+import { createDoctorCommand } from './commands/doctor.js';
 import { createContextCommand, createContextHistoryCommand, createContextCompactionCommand, createContextTrendCommand } from './commands/context.js';
 import { isConfigEmpty } from './config/config-writer.js';
 import { ensureRoleAliases } from './config/symlink-manager.js';
@@ -35,6 +36,7 @@ export const REGISTERED_SUBCOMMANDS = new Set([
   'skills',
   'context',
   'chat',
+  'doctor',
 ]);
 
 export function resolveEffectiveArgv(argv: string[], isStdinTTY = process.stdin.isTTY): string[] {
@@ -75,6 +77,7 @@ function registerRootCommands(program: Command): void {
   program.addCommand(createExportCommand());
   program.addCommand(createLogsCommand());
   program.addCommand(createSkillsCommand());
+  program.addCommand(createDoctorCommand());
 
   // Context 命令
   const contextCmd = createContextCommand();
@@ -123,6 +126,7 @@ export async function run(argv = process.argv): Promise<void> {
   const isConfigCommand =
     cliArgs[0] === 'init' ||
     cliArgs[0] === 'setup' ||
+    cliArgs[0] === 'doctor' ||
     cliArgs.includes('--help') ||
     cliArgs.includes('-h') ||
     cliArgs.includes('--version') ||
