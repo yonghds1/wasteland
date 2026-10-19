@@ -9,6 +9,7 @@ import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { getGitExcludePathspecs, isIgnoredOrSensitive } from './safety-guard.js';
+import { toPosixPath } from '../../tools/utils/path-utils.js';
 
 const pExecFile = promisify(execFile);
 
@@ -152,7 +153,7 @@ export class GitPlumbingDriver {
         affectedFiles = diffOut
           .trim()
           .split('\n')
-          .map((f) => f.trim())
+          .map((f) => toPosixPath(f.trim()))
           .filter((f) => f.length > 0 && !isIgnoredOrSensitive(f));
       } catch {
         // 忽略 diff 异常
@@ -176,10 +177,13 @@ export class GitPlumbingDriver {
       const env = { GIT_INDEX_FILE: tempIndex };
       const restoredFiles: string[] = [];
 
-      if (files && files.length > 0) {
+      // 确保所有传递给 git 的文件路径数组全部通过 toPosixPath 转换，杜绝反斜杠污染
+      const normalizedFiles = files?.map((f) => toPosixPath(f));
+
+      if (normalizedFiles && normalizedFiles.length > 0) {
         // 单文件 / 指定文件列表恢复
         const targetFilesSet = new Set(await this.listTreeFiles(ctx, commitHash));
-        for (const file of files) {
+        for (const file of normalizedFiles) {
           if (isIgnoredOrSensitive(file)) continue;
           if (targetFilesSet.has(file)) {
             await execGit(ctx, ['restore', `--source=${commitHash}`, '--worktree', '--', file], env);
@@ -214,7 +218,8 @@ export class GitPlumbingDriver {
         const lines = diffStatusOut.trim().split('\n');
         for (const line of lines) {
           if (!line) continue;
-          const [status, filePath] = line.split('\t');
+          const [status, rawPath] = line.split('\t');
+          const filePath = rawPath ? toPosixPath(rawPath) : '';
           if (filePath && !isIgnoredOrSensitive(filePath)) {
             restoredFiles.push(filePath);
             if (status === 'A') {
@@ -246,7 +251,7 @@ export class GitPlumbingDriver {
     return withTempIndex(ctx, async (tempIndex) => {
       const env = { GIT_INDEX_FILE: tempIndex };
       await execGit(ctx, ['read-tree', commitHash], env);
-      const targetPaths = files && files.length > 0 ? files : ['.'];
+      const targetPaths = files && files.length > 0 ? files.map((f) => toPosixPath(f)) : ['.'];
       return await execGit(ctx, ['diff', commitHash, '--', ...targetPaths], env);
     });
   }
@@ -261,7 +266,7 @@ export class GitPlumbingDriver {
       return out
         .trim()
         .split('\n')
-        .map((f) => f.trim())
+        .map((f) => toPosixPath(f.trim()))
         .filter((f) => f.length > 0 && !isIgnoredOrSensitive(f));
     } catch {
       return [];

@@ -1,3 +1,4 @@
+
 /**
  * git-checkpoint.test.ts - Git Checkpoint 与 /undo 底层机制单元测试
  */
@@ -119,6 +120,27 @@ describe('Git Checkpoint & Undo Infrastructure', () => {
 
       const restored = await fs.readFile(path.join(tempDir, 'file.txt'), 'utf-8');
       expect(restored).toBe('v1 in bare repo\n');
+    });
+
+    it('支持传递 Windows 反斜杠路径到 restoreSnapshot 与 getDiff', async () => {
+      const driver = new GitPlumbingDriver();
+      await fs.mkdir(path.join(tempDir, 'sub'), { recursive: true });
+      await fs.writeFile(path.join(tempDir, 'sub', 'file.txt'), 'v1\n');
+
+      const snap = await driver.createSnapshotTree(tempDir, 'win-test', 1);
+      await fs.writeFile(path.join(tempDir, 'sub', 'file.txt'), 'v2\n');
+
+      // 使用 Windows 反斜杠路径获取 diff
+      const diff = await driver.getDiff(tempDir, snap.commitHash, ['sub\\file.txt']);
+      expect(diff).toContain('-v1');
+      expect(diff).toContain('+v2');
+
+      // 使用 Windows 反斜杠路径恢复单文件
+      const restored = await driver.restoreSnapshot(tempDir, snap.commitHash, ['sub\\file.txt']);
+      expect(restored).toEqual(['sub/file.txt']);
+
+      const content = await fs.readFile(path.join(tempDir, 'sub', 'file.txt'), 'utf-8');
+      expect(content).toBe('v1\n');
     });
   });
 

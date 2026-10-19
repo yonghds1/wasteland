@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { z } from 'zod';
 import { zodToJsonSchema } from '@alcyone-labs/zod-to-json-schema';
 
@@ -22,16 +22,24 @@ function getShellCommand(command: string): { file: string; args: string[] } {
 }
 
 /**
- * 阶梯式进程树查杀：超时后先投递 SIGTERM，若 1.5s 后仍未退出则升级为 SIGKILL 强杀负 PID 进程组。
+ * 跨平台进程树查杀：
+ * - POSIX 系统使用负 PID 组发送信号（SIGTERM / SIGKILL）实现进程组级清理；
+ * - Windows 系统通过 taskkill /T /F 强杀子进程树，避免 ESRCH 或负 PID 不支持导致的崩溃。
  */
 export async function killProcessTree(pid: number, gracePeriodMs = 1500): Promise<void> {
-  const isPosix = process.platform !== 'win32';
+  if (process.platform === 'win32') {
+    await new Promise<void>((resolve) => {
+      execFile('taskkill', ['/pid', String(pid), '/T', '/F'], () => {
+        // 忽略 taskkill 错误（如进程已退出）
+        resolve();
+      });
+    });
+    return;
+  }
+
+  // POSIX 系统实现：先投递 SIGTERM，超时后若存活则 SIGKILL
   try {
-    if (isPosix) {
-      process.kill(-pid, 'SIGTERM');
-    } else {
-      process.kill(pid, 'SIGTERM');
-    }
+    process.kill(-pid, 'SIGTERM');
   } catch {
     return;
   }
@@ -42,11 +50,7 @@ export async function killProcessTree(pid: number, gracePeriodMs = 1500): Promis
 
   try {
     process.kill(pid, 0);
-    if (isPosix) {
-      process.kill(-pid, 'SIGKILL');
-    } else {
-      process.kill(pid, 'SIGKILL');
-    }
+    process.kill(-pid, 'SIGKILL');
   } catch {
     // 进程已退出
   }

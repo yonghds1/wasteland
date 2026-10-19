@@ -53,5 +53,15 @@ describe('bash tool', () => {
     it('清理已退出或无效 pid 不抛异常', async () => {
       await expect(killProcessTree(999999, 10)).resolves.not.toThrow();
     });
+
+    it('在 Windows 平台下执行清理安全降级且不崩溃抛错', async () => {
+      const originalPlatform = process.platform;
+      try {
+        Object.defineProperty(process, 'platform', { value: 'win32' });
+        await expect(killProcessTree(12345)).resolves.not.toThrow();
+      } finally {
+        Object.defineProperty(process, 'platform', { value: originalPlatform });
+      }
+    });
   });
 });

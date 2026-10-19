@@ -1,5 +1,6 @@
 import { ToolRegistry } from './tool-registry.js';
 import type { ToolCall, ToolExecutionContext, ToolExecutionResult } from './tool-types.js';
+import { normalizeToolInputPaths } from '../utils/path-utils.js';
 
 export async function executeToolCall(params: {
   registry: ToolRegistry;
@@ -15,8 +16,11 @@ export async function executeToolCall(params: {
     };
   }
 
+  // 跨平台路径统一清洗：在工具执行网关入口处将所有路径字段规整为 POSIX 规范
+  const cleanedInput = normalizeToolInputPaths(params.call.input);
+
   try {
-    return await tool.execute(params.call.input, params.context);
+    return await tool.execute(cleanedInput, params.context);
   } catch (error) {
     return {
       status: 'error',
